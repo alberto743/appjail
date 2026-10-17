@@ -42,7 +42,7 @@ Implemented in `bjail/github.py` (client with injectable transport) and `bjail/t
 Other forges (GitLab, Codeberg, SourceForge, vendor sites) are later resolvers.
 
 ## `add` (implemented in `bjail/cli.py`, `bjail/jail.py`, `bjail/fetcher.py`)
-`bin/bjail add owner/repo [--name N] [--prerelease] [--tag TAG] [--dir PATH[:ro|:rw]] [--allow network|portals] [--no-audio] [--no-gpu] [--display wayland|xwayland]`. `--tag` pins a specific release (looked up with `/releases/tags/<tag>`) instead of the latest; the manifest records the version, and `update` will move such an app to the latest release unless told otherwise (to be decided with `update`).
+`bin/bjail add owner/repo [--name N] [--prerelease] [--tag TAG] [--dir PATH[:ro|:rw]] [--allow network|portals] [--no-audio] [--no-gpu] [--display wayland|xwayland]`. `--tag` pins a specific release (looked up with `/releases/tags/<tag>`) instead of the latest; the manifest records the version, and `update` moves such an app to the latest stable release (see "Update flow").
 1. Refuse early if the name exists. Fetch repo data and show the review (owner, id, account age, stars, fork/archived/renamed warnings).
 2. Resolve the release, select the AppImage (ask on several, abort on none), show GitHub's digest and whether an attestation exists.
 3. Ask before downloading. The download runs `bjail/fetcher.py` inside the network-only jail: `--unshare-all --share-net --cap-drop ALL --clearenv --new-session --die-with-parent`, system dirs and `/etc/ssl` read-only, only the staging dir writable, root remounted read-only. The fetcher follows only https redirects within github.com / *.githubusercontent.com and stops at the size GitHub announced.
@@ -117,6 +117,17 @@ Most AppImages will only reach tiers 3-4. That proves "unchanged, same account",
 5. User approves; the manifest is committed to the user's git repo.
 
 A tier downgrade or an owner change blocks the update.
+
+### As implemented: `bjail update [app] [--prerelease] [--quarantine DAYS]`, `list`, `remove`, `perms`
+- Without `app`, every installed app is checked in name order; one failure does not stop the others, and the exit status is 1 if any app was blocked or failed.
+- **Resolve:** `repo_info` on the pinned `source`, then the latest release (stable only unless `--prerelease`). The asset is the one `asset_pattern` selects (the user chooses if several match). Apps added with `--tag` or `--prerelease` follow the latest stable release on update. A release published before the installed one is never installed (it is reported instead), so a pre-release install is not "downgraded" to an older stable one.
+- **Up to date** means the GitHub digest equals the pinned sha256 (tier 3), or, without a digest (tier 4), the same tag and `published_at`. Rolling tags such as `continuous` are therefore detected by hash or publication time, never by tag alone. Limitation: a tier 4 asset swapped in place without a new publication time cannot be seen without downloading.
+- **Blocks** (no override, no download, no pending state): the repository's owner account id differs from the pinned `owner_id`; the evidence tier would get weaker (digest gone: 3 -> 4). To go on anyway, `remove` the app and `add` it again after checking the repository. **Cautions** (shown, not blocking): no `owner_id` pinned yet (it is filled in by the update), repository renamed or transferred (the new canonical name is recorded), repository archived.
+- **Quarantine:** a candidate is identified by its GitHub digest, or by tag, publication time and size when there is none. The first time it is seen is stored in `apps/<name>/pending.json` (`key`, `tag`, `first_seen`). It can be installed once `first_seen` plus the delay (7 days, `--quarantine DAYS`, 0 disables with a warning) has passed. A different candidate (including a swapped asset in the same release) starts a new clock. Nothing is downloaded while waiting.
+- **Install:** confirm, jailed download (as in `add`), size and digest checks, AppImage check, and for tier 4 the new sha256 is shown and confirmed again. The new image is extracted into the staging directory first; only then are tree, image, marker and manifest replaced. A failure at any point restores the previous tree and image. Permissions are never changed by an update. The manifest in `~/.config/bjail` is rewritten but not committed: committing is left to the user's own git.
+- `bjail list`: name, version, source, tier, granted permissions, directories and any update seen.
+- `bjail remove APP [--yes]`: deletes the manifest and the app directory, including the private home (its settings and data); asks first.
+- `bjail perms APP [--allow|--deny network|audio|gpu|portals] [--display wayland|xwayland] [--add-dir PATH[:ro|:rw]] [--rm-dir PATH] [--yes]`: shows the permissions, or shows before/after and asks before saving. `--add-dir` uses the same validation as `add --dir`. The pinned release is untouched. `portals` and `xwayland` can be recorded but the runner still refuses to start such an app (see "Permissions the manifest accepts but bjail does not enforce yet").
 
 ## AM as lookup-only index
 - Local snapshot of ivan-hc/AM pinned by commit; read as text only (never sourced or executed); terminal escape sequences stripped.

@@ -11,7 +11,7 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 5. `index update` / `index rollback`.
 6. `update [app]` (added to the MVP by the user): re-resolve, download in the jail, verify evidence, show the diff (hashes, tier, permissions, release link), quarantine delay (default 7 days, overridable), user approval. A tier downgrade or an owner change blocks the update. `list`, `remove` and `perms` come with it.
 
-Progress (update with every milestone): steps 1-5 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch), all tests in native pytest, REUSE-compliant. Next: 6 `update`, `list`, `remove`, `perms`.
+Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. Next: final hardening, doc review and a full run.
 
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 
@@ -43,6 +43,7 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - Full suite: `tests/vm/test.sh` (syncs the project into the guest, runs `python3 -m pytest` there). Pass pytest arguments through, e.g. `tests/vm/test.sh -k appimage -x`.
 - Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m pytest tests/test_github.py -k live'`.
 - End to end with a real download (skyjake/lagrange, 11 MB; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_e2e.py -v'`. It adds the app, runs the GUI under headless weston inside the jail, checks the real home stays untouched, and checks the tamper refusal.
+- Real `update` (appimagetool, two small downloads; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_update_e2e.py -v'`.
 - Real AM index update/rollback (network, text only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_index_e2e.py -v'`.
 - Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
 - Do not install test tools on the host.
