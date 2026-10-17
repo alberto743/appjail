@@ -42,7 +42,7 @@ GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, F
 - No sudo for Claude (the sudo lines in the VM recipe are for the user to run on a new machine). Install nothing outside this directory and the tool's own data directory (`~/.local/share/bjail`, `~/.config/bjail`).
 - Ask before downloading any AppImage or other binary. Tests that need the network should use small, well-known repos the user names.
 - The tool has no self-update and must never fetch code to run.
-- Work in the git repository in this directory. The user asked for progress to be traced, so commit at each completed, tested milestone with a clear message. Never push, never rewrite history, never commit `vm/` or secrets.
+- Work in the git repository in this directory. The user asked for progress to be traced, so commit at each completed, tested milestone with a clear message. Commit with the repository's own git identity (`.git/config`: GitHub noreply address); never override `user.name`/`user.email` with `-c`. Never push, never rewrite pushed history, never commit `vm/` or secrets.
 - Keep the project self-consistent: when code, decisions or the environment change, update CLAUDE.md, DESIGN.md and the tests/scripts in the same commit.
 
 ## Reference material
