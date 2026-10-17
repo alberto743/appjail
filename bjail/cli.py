@@ -103,7 +103,8 @@ def hash_file(path):
     return h.hexdigest()
 
 
-def cmd_add(args, client, console, download=jail.download, now=None):
+def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,
+            extract_ok=appimage.have_unsquashfs):
     name = args.name or default_name(args.source.partition("/")[2])
     if not manifest.NAME_RE.fullmatch(name or "!"):
         raise Abort("cannot derive a valid app name; pass --name")
@@ -147,6 +148,13 @@ def cmd_add(args, client, console, download=jail.download, now=None):
     granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
     console.out("Permissions: " + ", ".join(granted))
 
+    fallback = False
+    if not extract_ok():
+        fallback = console.confirm("unsquashfs is not installed. Run the AppImage's own extractor "
+                                   "(--appimage-extract) inside a jail with no network instead?")
+        if not fallback:
+            raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
+
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail?"):
         raise Abort("cancelled")
 
@@ -173,12 +181,18 @@ def cmd_add(args, client, console, download=jail.download, now=None):
         try:
             os.chmod(staged, 0o600)
             os.replace(staged, dest)
+            try:
+                entries, size = extract(dest, store.root_path(name), fallback)
+            except (appimage.UnsupportedImage, appimage.ExtractError, appimage.UnsafeTree) as e:
+                raise Abort(f"cannot extract the AppImage: {e}") from e
+            store.root_marker(name).write_text(digest + "\n")
             manifest.dump(store.manifest_path(name), record)
         except BaseException:
-            shutil.rmtree(dest.parent, ignore_errors=True)
+            appimage.remove_tree(dest.parent)
             raise
     finally:
         shutil.rmtree(stage, ignore_errors=True)
+    console.out(f"Extracted  : {entries} entries, {human_size(size)}")
     console.out(f"Added '{name}' {release.tag}: sha256 {digest}, evidence tier {tier}")
     console.out(f"Manifest   : {store.manifest_path(name)}")
 

@@ -86,6 +86,7 @@ class AddTests(unittest.TestCase):
         env.start()
         self.addCleanup(env.stop)
         self.downloads = []
+        self.extractions = []
 
     def fake_download(self, content=FAKE_APPIMAGE):
         def download(url, stage, filename, expected_size):
@@ -95,10 +96,17 @@ class AddTests(unittest.TestCase):
             return path
         return download
 
-    def add(self, client=None, answers=("y",), extra=(), download=None, **kw):
+    def fake_extract(self, appimage, dest, fallback=False):
+        self.extractions.append((Path(appimage), Path(dest), fallback))
+        (Path(dest) / "usr").mkdir(parents=True)
+        (Path(dest) / "AppRun").write_text("#!/bin/sh\n")
+        return 2, 20
+
+    def add(self, client=None, answers=("y",), extra=(), download=None, extract=None, extract_ok=lambda: True, **kw):
         console = Script(answers)
         cli.cmd_add(args(extra=list(extra), **kw), client or FakeClient(), console,
-                    download=download or self.fake_download(), now=NOW)
+                    download=download or self.fake_download(), now=NOW,
+                    extract=extract or self.fake_extract, extract_ok=extract_ok)
         return console
 
     def assert_nothing_installed(self, name="app"):
@@ -116,6 +124,30 @@ class AddTests(unittest.TestCase):
         self.assertEqual(store.appimage_path("app").stat().st_mode & 0o777, 0o600)
         self.assertEqual(list(store.staging_root().iterdir()), [])
         self.assertIn("attestation: present (not verified)", console.text)
+
+    def test_extraction_runs_on_stored_file_and_marks_source_hash(self):
+        self.add()
+        appimage_, dest, fallback = self.extractions[0]
+        self.assertEqual((appimage_, dest, fallback), (store.appimage_path("app"), store.root_path("app"), False))
+        self.assertEqual(store.root_marker("app").read_text().strip(), SHA)
+
+    def test_extraction_failure_leaves_nothing(self):
+        from bjail import appimage
+
+        def bad(appimage_, dest, fallback=False):
+            raise appimage.UnsupportedImage("DwarFS AppImages are not supported (only SquashFS)")
+
+        with self.assertRaisesRegex(Abort, "DwarFS"):
+            self.add(extract=bad)
+        self.assert_nothing_installed()
+
+    def test_missing_unsquashfs_needs_consent_for_runtime_fallback(self):
+        with self.assertRaisesRegex(Abort, "squashfs-tools"):
+            self.add(answers=("n",), extract_ok=lambda: False)
+        self.assertEqual(self.downloads, [])  # asked before downloading anything
+        console = self.add(answers=("y", "y"), extract_ok=lambda: False)  # fallback consent, then download
+        self.assertTrue(self.extractions[-1][2])
+        self.assertIn("unsquashfs is not installed", console.text)
 
     def test_default_permissions_are_minimal(self):
         self.add()

@@ -34,3 +34,13 @@ def manifest_path(name):
 
 def staging_root():
     return data_dir() / "staging"
+
+
+def root_path(name):
+    """Extracted AppImage tree (contains AppRun)."""
+    return app_dir(name) / "root"
+
+
+def root_marker(name):
+    """Holds the sha256 of the AppImage the tree was extracted from."""
+    return app_dir(name) / "root.sha256"

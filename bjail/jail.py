@@ -8,7 +8,9 @@ Argument builders are pure functions so they can be unit-tested without bwrap.
 
 import os
 import shutil
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 FETCHER = Path(__file__).with_name("fetcher.py")
@@ -68,13 +70,64 @@ def download_args(stage_dir, command, fetcher=FETCHER):
             + ["--remount-ro", "/", "--chdir", "/stage", "--"] + command)
 
 
-def run(args, timeout=1800):
-    """Run bwrap with a minimal host environment; returns CompletedProcess (text, captured)."""
-    try:
-        return subprocess.run([find_bwrap(), *args], capture_output=True, text=True, timeout=timeout,
-                              stdin=subprocess.DEVNULL, env={"PATH": "/usr/bin:/bin"})
-    except subprocess.TimeoutExpired as e:
-        raise JailError("jailed command timed out") from e
+def tree_usage(path):
+    """(disk bytes, entries) under path, never following symlinks."""
+    total = count = 0
+    stack = [str(path)]
+    while stack:
+        try:
+            with os.scandir(stack.pop()) as it:
+                for e in it:
+                    st = e.stat(follow_symlinks=False)
+                    total += st.st_blocks * 512
+                    count += 1
+                    if e.is_dir(follow_symlinks=False):
+                        stack.append(e.path)
+        except OSError:
+            continue
+    return total, count
+
+
+def supervise(argv, timeout=1800, watch=None, env=None):
+    """Run argv; kill it when the timeout passes or the watched tree outgrows its limits.
+
+    watch is (directory, max_bytes, max_entries). Returns CompletedProcess (text, captured).
+    """
+    proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, env=env or {"PATH": "/usr/bin:/bin"}, start_new_session=True)
+    deadline = time.monotonic() + timeout
+    reason = None
+    while reason is None:
+        try:
+            out, err = proc.communicate(timeout=0.25)
+            break
+        except subprocess.TimeoutExpired:
+            pass
+        if time.monotonic() > deadline:
+            reason = "timed out"
+        elif watch:
+            used, entries = tree_usage(watch[0])
+            if used > watch[1] or entries > watch[2]:
+                reason = "output too large"
+    if reason:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
+        raise JailError(f"jailed command aborted: {reason}")
+    return subprocess.CompletedProcess(argv, proc.returncode, out, err)
+
+
+def run(args, timeout=1800, watch=None):
+    """Run bwrap with a minimal host environment."""
+    return supervise([find_bwrap(), *args], timeout=timeout, watch=watch)
+
+
+def extract_args(appimage, outdir, command):
+    """No network, root read-only; the AppImage is read-only and only outdir is writable."""
+    return (common_args() + ["--ro-bind", str(appimage), "/app.AppImage", "--bind", str(outdir), "/out",
+                             "--remount-ro", "/", "--chdir", "/out", "--"] + command)
 
 
 def download(url, stage_dir, filename, expected_size):
