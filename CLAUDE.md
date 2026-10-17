@@ -36,6 +36,8 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 
 ## Running tests
 - Host unit tests: `python3 -m unittest` from this directory (no network, stdlib only).
+- Jail integration tests (real bwrap, guest only): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_INTEGRATION=1 python3 -m unittest'`.
+- CLI entry points: `bin/bjail ...` or `python3 -m bjail ...`. Use `BJAIL_DATA_DIR` / `BJAIL_CONFIG_DIR` to point at a scratch tree when trying commands.
 - Live GitHub metadata check (cli/cli, no downloads): `BJAIL_LIVE=1 python3 -m unittest tests.test_github.LiveTests`. Uses 4 requests of the 60/hour limit.
 - In the guest: `tests/vm/sync.sh` then `tests/vm/ssh.sh 'cd ~/bjail && python3 -m unittest'`.
 

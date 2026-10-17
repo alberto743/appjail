@@ -29,7 +29,7 @@ DISPLAYS = ("wayland", "xwayland")
 
 TOP_KEYS = {
     "schema", "name", "source", "asset_pattern", "version", "sha256",
-    "evidence_tier", "published_at", "permissions",
+    "evidence_tier", "published_at", "owner_id", "permissions",
 }
 PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "dirs"}
 
@@ -59,6 +59,7 @@ class Manifest:
     sha256: str
     evidence_tier: int
     published_at: str  # UTC, YYYY-MM-DDTHH:MM:SSZ
+    owner_id: int = None  # GitHub account id of the owner; pins the account, not just the name
     permissions: Permissions = field(default_factory=Permissions)
 
 
@@ -149,6 +150,8 @@ def validate(m):
     if type(m.evidence_tier) is not int or m.evidence_tier not in TIERS:
         raise ManifestError(f"evidence_tier must be one of {TIERS}")
     _published_at(m.published_at)
+    if m.owner_id is not None and (type(m.owner_id) is not int or m.owner_id < 1):
+        raise ManifestError("owner_id must be a positive integer")
     p = m.permissions
     for key in ("network", "audio", "gpu", "portals"):
         _bool(getattr(p, key), f"permissions.{key}")
@@ -169,13 +172,13 @@ def loads(text):
     _unknown(data, TOP_KEYS, "manifest")
     if data.get("schema") != SCHEMA_VERSION:
         raise ManifestError(f"schema must be {SCHEMA_VERSION}")
-    missing = sorted(TOP_KEYS - {"permissions"} - {"schema"} - set(data))
+    missing = sorted(TOP_KEYS - {"permissions", "owner_id", "schema"} - set(data))
     if missing:
         raise ManifestError(f"missing key(s): {', '.join(missing)}")
     return validate(Manifest(
         name=data["name"], source=data["source"], asset_pattern=data["asset_pattern"],
         version=data["version"], sha256=data["sha256"], evidence_tier=data["evidence_tier"],
-        published_at=data["published_at"], permissions=_permissions(data.get("permissions", {})),
+        published_at=data["published_at"], owner_id=data.get("owner_id"), permissions=_permissions(data.get("permissions", {})),
     ))
 
 
@@ -213,6 +216,7 @@ def dumps(m):
         f"sha256 = {_quote(m.sha256)}",
         f"evidence_tier = {m.evidence_tier}",
         f"published_at = {_quote(m.published_at)}",
+        *([f"owner_id = {m.owner_id}"] if m.owner_id is not None else []),
         "",
         "[permissions]",
         f"network = {str(p.network).lower()}",

@@ -41,6 +41,16 @@ Implemented in `bjail/github.py` (client with injectable transport) and `bjail/t
 
 Other forges (GitLab, Codeberg, SourceForge, vendor sites) are later resolvers.
 
+## `add` (implemented in `bjail/cli.py`, `bjail/jail.py`, `bjail/fetcher.py`)
+`bin/bjail add owner/repo [--name N] [--prerelease] [--allow network|portals] [--no-audio] [--no-gpu] [--display wayland|xwayland]`
+1. Refuse early if the name exists. Fetch repo data and show the review (owner, id, account age, stars, fork/archived/renamed warnings).
+2. Resolve the release, select the AppImage (ask on several, abort on none), show GitHub's digest and whether an attestation exists.
+3. Ask before downloading. The download runs `bjail/fetcher.py` inside the network-only jail: `--unshare-all --share-net --cap-drop ALL --clearenv --new-session --die-with-parent`, system dirs and `/etc/ssl` read-only, only the staging dir writable, root remounted read-only. The fetcher follows only https redirects within github.com / *.githubusercontent.com and stops at the size GitHub announced.
+4. On the host: size must equal the announced size, sha256 is computed, a GitHub digest must match, the file must be a type-2 AppImage (ELF + `AI\x02`). Any failure deletes the staging directory and writes nothing.
+5. Tier 3 if GitHub gave a digest, else tier 4 (with a warning). An attestation that merely exists is shown but not counted: tier 1 needs real verification (deferred).
+6. Move the file to `~/.local/share/bjail/apps/<name>/app.AppImage` and write the manifest (with `owner_id`) last. Defaults: audio and gpu on, network and portals off, Wayland.
+- Known limitation: `--share-net` shares the host network namespace, so the download jail can reach localhost and LAN services. Only our own fetcher runs there and it connects solely to the URL chain above, but a per-jail network (pasta/slirp4netns) would be stricter. Extraction and runtime jails use `--unshare-net`.
+
 ## Manifest (TOML, stored in the user's own git repo)
 `source` (github owner/repo), `asset_pattern`, `version`, `sha256`, `evidence_tier`, `published_at`, `permissions` (network, audio, gpu, display = wayland|xwayland, dbus_filter, portals, dirs[]).
 

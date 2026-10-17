@@ -19,6 +19,7 @@ version = "v2.102.0"
 sha256 = "{SHA}"
 evidence_tier = 3
 published_at = "2026-09-30T02:40:02Z"
+owner_id = 59704711
 
 [permissions]
 network = true
@@ -43,6 +44,7 @@ class ParseTests(unittest.TestCase):
         m = manifest.loads(GOOD)
         self.assertEqual(m.source, "cli/cli")
         self.assertEqual(m.evidence_tier, 3)
+        self.assertEqual(m.owner_id, 59704711)
         self.assertTrue(m.permissions.network)
         self.assertEqual(m.permissions.dirs, ("~/Downloads:rw", "/usr/share/fonts"))
 
@@ -81,6 +83,7 @@ class ParseTests(unittest.TestCase):
             "published_at": ["2026-09-30", "2026-13-30T02:40:02Z", "2026-09-30T02:40:02+00:00"],
             "asset_pattern": ["", "a/b", "a\x00b"],
             "version": ["", "v" * 129, "v\n1"],
+            "owner_id": [0, -1, True, "5", 1.5],
         }
         for field_, values in cases.items():
             for v in values:
@@ -125,6 +128,12 @@ class WriteTests(unittest.TestCase):
     def test_dumps_deterministic(self):
         m = make(permissions=Permissions(audio=True, dirs=("~/x:rw",)))
         self.assertEqual(manifest.dumps(m), manifest.dumps(manifest.loads(manifest.dumps(m))))
+
+    def test_owner_id_optional_and_round_trips(self):
+        self.assertIsNone(manifest.loads(GOOD.replace("owner_id = 59704711\n", "")).owner_id)
+        m = make(owner_id=7)
+        self.assertEqual(manifest.loads(manifest.dumps(m)).owner_id, 7)
+        self.assertNotIn("owner_id", manifest.dumps(make()))
 
     def test_quoting(self):
         m = make(asset_pattern='a"b\\c*.AppImage', version="v1 ü")
