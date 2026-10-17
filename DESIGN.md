@@ -132,6 +132,14 @@ A tier downgrade or an owner change blocks the update.
   - AM commit signatures (checked on the last 200 commits up to d739e48): 139 carry a PGP signature (GitHub web-flow key), 2 SSH, 59 unsigned. The pinned commit d739e48 and the maintainer's own commits are unsigned. Signatures therefore cannot prove maintainer authenticity. The controls are pinning by commit hash and the diff review above; verifying the web-flow signature is at most a weak "came through GitHub" signal.
 - The index only affects `search`. Installed apps never depend on it.
 
+## Search (implemented in `bjail/index.py`)
+`bjail search KEYWORD... [--limit N] [--all]` reads the local snapshot at `~/.local/share/bjail/index/tree/` (filled by `index update`, step 5; the pinned commit is in `index/PINNED`) and prints suggestions only.
+- Matching: every keyword must occur (case-insensitive) in the name or the description. Ranking: exact name, name prefix, all keywords in the name, any keyword in the name, description only; alphabetical within a rank.
+- For each shown hit the install script `programs/x86_64/<name>` is read as text (256 KiB cap, regular files only, symlinks refused, `O_NOFOLLOW`) and the first `SITE=` / `SITE2=` assignments are extracted with a regex, comment lines ignored. Nothing is sourced, expanded or executed (a test plants `$(touch ...)` in a script and checks it never runs).
+- A `SITE` that is `owner/repo` (or a github.com URL) becomes "source owner/repo -> bjail add owner/repo". Anything else (vendor site, shell variable, other forge) is flagged "resolve manually: ...". A `SITE2` is flagged "repackager ...".
+- List lines must look like `<bullet> name : description` with a plain name, so `../x` style entries are dropped before any file name is built. All text is cleaned of escape sequences and control characters.
+- Measured on AM at d739e48 in the guest: 8,140 list entries, 7,855 with a GitHub source, 284 flagged "resolve manually", 1 without any source, 63 flagged as repackager; parsing takes 0.05 s, resolving every entry 1 s, a search 0.05 s.
+
 ## Runtime jail (bwrap)
 - `--unshare-all`, private home per app, read-only system.
 - Wayland socket by default. X11 only through a rootless Xwayland (a raw X11 socket allows keylogging).

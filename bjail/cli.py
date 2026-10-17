@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import appimage, github, jail, manifest, runner, store, textsafe
+from . import appimage, github, index, jail, manifest, runner, store, textsafe
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
@@ -208,6 +208,21 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     console.out(f"Manifest   : {store.manifest_path(name)}")
 
 
+def cmd_search(args, console):
+    hits, total = index.search(args.keywords, limit=args.limit if not args.all else 10 ** 9)
+    commit = index.pinned_commit()
+    console.out(f"{total} match(es)" + (f" in the AM index at {commit[:12]}" if commit else "")
+                + (f", showing {len(hits)}" if len(hits) < total else ""))
+    for h in hits:
+        console.out(f"{h.name}: {h.description}")
+        if h.source:
+            console.out(f"    source {h.source}   ->  bjail add {h.source}")
+        if h.note:
+            console.out(f"    ({h.note})")
+    if hits:
+        console.out("A hit is only a suggestion: check the owner and repository yourself before `bjail add`.")
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="bjail", description="Sandboxed AppImage manager")
     sub = p.add_subparsers(dest="command", required=True)
@@ -223,6 +238,10 @@ def build_parser():
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")
     add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland")
+    search = sub.add_parser("search", help="search the local AM index (suggestions only, never installs)")
+    search.add_argument("keywords", nargs="+")
+    search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
+    search.add_argument("--all", action="store_true", help="show every match")
     run = sub.add_parser("run", help="run an installed app in its jail")
     run.add_argument("name")
     run.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
@@ -243,13 +262,15 @@ def main(argv=None, client=None, console=None):
             if not manifest.SOURCE_RE.fullmatch(args.source):
                 raise Abort("source must be a GitHub owner/repo")
             cmd_add(args, client or github.Client(), console)
+        elif args.command == "search":
+            cmd_search(args, console)
         elif args.command == "run":
             extra_dirs = dirs_from_args(args.dir)
             return runner.launch(args.name, app_args, say=console.out, extra_dirs=extra_dirs)
     except Abort as e:
         console.out(str(e))
         return 1
-    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, OSError) as e:
+    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, index.IndexProblem, OSError) as e:
         console.out(f"error: {e}")
         return 1
     return 0
