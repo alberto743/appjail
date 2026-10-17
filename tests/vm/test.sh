@@ -2,9 +2,9 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Sync the project into the guest and run the full test suite there (never on the host).
-# Extra arguments are passed to unittest, e.g. tests/vm/test.sh -v tests.test_appimage
+# Sync the project into the guest and run the full pytest suite there (never on the host).
+# Extra arguments are passed to pytest, e.g. tests/vm/test.sh -k appimage -x
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 "$here/sync.sh"
-"$here/ssh.sh" "cd ~/bjail && BJAIL_INTEGRATION=1 python3 -m unittest $*"
+"$here/ssh.sh" "cd ~/bjail && BJAIL_INTEGRATION=1 python3 -m pytest $*"

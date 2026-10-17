@@ -29,15 +29,16 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - The VM is reproducible from tracked files only; `vm/` (base image, disk, ssh key, console log) is gitignored and can be deleted and rebuilt at any time.
 - Recreate on a new machine:
   1. Host packages (Debian 13): `sudo apt install qemu-system-x86 qemu-utils cloud-image-utils squashfs-tools`; check `/dev/kvm` is readable and writable by the user (`getfacl /dev/kvm`, or join the `kvm` group).
-  2. `tests/vm/create.sh` downloads the Debian 13 genericcloud image (~340 MB, binary download: ask first), verifies it against Debian's `SHA512SUMS`, creates an overlay disk, an ssh key and the cloud-init seed from `tests/vm/user-data.tmpl`. `--force` rebuilds the overlay and seed. `PACKAGES="..."` overrides the guest package list (default: bubblewrap squashfs-tools git python3 ca-certificates; add weston/pipewire only for GUI/audio tests).
+  2. `tests/vm/create.sh` downloads the Debian 13 genericcloud image (~340 MB, binary download: ask first), verifies it against Debian's `SHA512SUMS`, creates an overlay disk, an ssh key and the cloud-init seed from `tests/vm/user-data.tmpl`. `--force` rebuilds the overlay and seed. `PACKAGES="..."` overrides the guest package list (default: bubblewrap squashfs-tools git python3 python3-pytest ca-certificates weston pipewire pipewire-pulse wireplumber pulseaudio-utils).
   3. `tests/vm/start.sh` boots it (ssh on 127.0.0.1:2222, user `tester`, passwordless sudo inside the guest only). Wait with `tests/vm/ssh.sh 'cloud-init status --wait'` (about 1-2 minutes on first boot).
   4. `tests/vm/sync.sh` copies the project into `~/bjail` in the guest (tar over ssh, no host mounts); `tests/vm/ssh.sh <cmd>` runs commands; `tests/vm/down.sh` stops the guest.
 - The guest NIC must be virtio (`-nic user,model=virtio-net-pci`, already in `start.sh`); the default NIC left the guest without DNS and cloud-init failed. The cloud-init seed only runs on a fresh overlay.
 - Verified guest (2026-10-17): bubblewrap 0.12.0, unsquashfs, git, Python 3.13.5, unprivileged user namespaces, HTTPS to api.github.com from Python.
 
 ## Running tests (guest only)
-- Full suite: `tests/vm/test.sh` (syncs the project into the guest, runs `BJAIL_INTEGRATION=1 python3 -m unittest` there). Pass unittest arguments through, e.g. `tests/vm/test.sh -v tests.test_appimage`.
-- Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m unittest tests.test_github.LiveTests'`.
+- Test framework: pytest (guest package `python3-pytest`; a development dependency only, the tool itself stays stdlib-only). Config in `pytest.ini`. Existing unittest-style tests run unchanged under pytest; write new tests in native pytest style (plain `assert`, fixtures, `parametrize`, `skipif`).
+- Full suite: `tests/vm/test.sh` (syncs the project into the guest, runs `BJAIL_INTEGRATION=1 python3 -m pytest` there). Pass pytest arguments through, e.g. `tests/vm/test.sh -k appimage -x`.
+- Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m pytest tests/test_github.py -k Live'`.
 - Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
 - Tests that need tools missing on the host (`bwrap` use, `mksquashfs`, `unsquashfs`) skip when run elsewhere; do not install them on the host.
 
