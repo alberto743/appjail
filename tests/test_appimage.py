@@ -3,18 +3,18 @@
 
 import os
 import shutil
-import stat
 import struct
 import subprocess
-import tempfile
-import unittest
 from pathlib import Path
 from unittest import mock
+
+import pytest
 
 from bjail import appimage, jail
 from bjail.appimage import ExtractError, UnsafeTree, UnsupportedImage
 
 HAVE_TOOLS = bool(shutil.which("bwrap") and shutil.which("mksquashfs") and appimage.have_unsquashfs())
+needs_tools = pytest.mark.skipif(not HAVE_TOOLS, reason="needs bwrap, mksquashfs and unsquashfs (run in the test guest)")
 
 
 def stub(extra=b""):
@@ -32,246 +32,283 @@ def write_image(path, fs):
     Path(path).write_bytes(stub(fs))
 
 
-class OffsetTests(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.path = Path(self.tmp.name) / "a.AppImage"
-
-    def test_squashfs_offset(self):
-        write_image(self.path, b"hsqs" + b"\0" * 100)
-        self.assertEqual(appimage.fs_offset(self.path), 64)
-
-    def test_offset_uses_section_table(self):
-        data = bytearray(stub(b"x" * 200 + b"hsqs" + b"\0" * 50))
-        struct.pack_into("<Q", data, 0x28, 200)  # shoff 200 + 1 header of 64 bytes -> filesystem at 264
-        struct.pack_into("<HH", data, 0x3A, 64, 1)
-        data[264:268] = b"hsqs"
-        self.path.write_bytes(bytes(data))
-        self.assertEqual(appimage.fs_offset(self.path), 264)
-
-    def test_dwarfs_rejected_with_clear_message(self):
-        write_image(self.path, b"DWARFS" + b"\0" * 100)
-        with self.assertRaisesRegex(UnsupportedImage, "DwarFS"):
-            appimage.fs_offset(self.path)
-
-    def test_unknown_filesystem_and_bad_headers(self):
-        write_image(self.path, b"\0" * 100)
-        with self.assertRaises(UnsupportedImage):
-            appimage.fs_offset(self.path)
-        self.path.write_bytes(b"\x7fELF\x01\x01" + b"\0" * 100)  # 32-bit
-        with self.assertRaises(UnsupportedImage):
-            appimage.fs_offset(self.path)
-        self.path.write_bytes(stub()[:70])  # offset beyond the end
-        with self.assertRaises(UnsupportedImage):
-            appimage.fs_offset(self.path)
+# -- offset detection -----------------------------------------------------------------------
 
 
-class TreeTests(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.addCleanup(appimage.remove_tree, self.tmp.name)
-        self.root = Path(self.tmp.name) / "root"
-        (self.root / "usr/bin").mkdir(parents=True)
-        self.app = self.root / "usr/bin/app"
-        self.app.write_text("#!/bin/sh\n")
-        self.app.chmod(0o755)
-
-    def link_apprun(self, target):
-        (self.root / "AppRun").symlink_to(target)
-
-    def test_apprun_regular_file(self):
-        (self.root / "AppRun").write_text("x")
-        (self.root / "AppRun").chmod(0o755)
-        self.assertEqual(appimage.resolve_entry(self.root), str(self.root.resolve() / "AppRun"))
-
-    def test_apprun_relative_symlink_chain(self):
-        (self.root / "usr/bin/link").symlink_to("app")
-        self.link_apprun("usr/bin/link")
-        self.assertEqual(appimage.resolve_entry(self.root), str(self.app.resolve()))
-
-    def test_apprun_rejections(self):
-        cases = {"absolute": "/usr/bin/env", "escape": "../../etc/passwd", "missing": "usr/bin/none"}
-        for label, target in cases.items():
-            with self.subTest(label):
-                (self.root / "AppRun").unlink(missing_ok=True)
-                self.link_apprun(target)
-                with self.assertRaises(UnsafeTree):
-                    appimage.resolve_entry(self.root)
-
-    def test_apprun_loop_and_not_executable_and_dir(self):
-        (self.root / "AppRun").symlink_to("AppRun")
-        with self.assertRaisesRegex(UnsafeTree, "too many symlinks"):
-            appimage.resolve_entry(self.root)
-        (self.root / "AppRun").unlink()
-        (self.root / "AppRun").write_text("x")
-        (self.root / "AppRun").chmod(0o644)
-        with self.assertRaisesRegex(UnsafeTree, "not an executable"):
-            appimage.resolve_entry(self.root)
-        (self.root / "AppRun").unlink()
-        (self.root / "AppRun").mkdir()
-        with self.assertRaises(UnsafeTree):
-            appimage.resolve_entry(self.root)
-
-    def test_intermediate_absolute_symlink_rejected(self):
-        (self.root / "bin").symlink_to("/usr/bin")
-        self.link_apprun("bin/env")
-        with self.assertRaises(UnsafeTree):
-            appimage.resolve_entry(self.root)
-
-    def test_check_tree_clears_setid_fixes_dirs_and_counts(self):
-        self.app.chmod(0o4755)
-        ro = self.root / "ro"
-        ro.mkdir()
-        (ro / "f").write_text("12345")
-        ro.chmod(0o555)
-        entries, size = appimage.check_tree(self.root)
-        self.assertEqual(self.app.stat().st_mode & 0o7777, 0o755)
-        self.assertTrue(ro.stat().st_mode & 0o200)
-        self.assertEqual(entries, 5)  # usr, usr/bin, app, ro, ro/f
-        self.assertGreaterEqual(size, 15)
-
-    def test_check_tree_rejects_special_files(self):
-        os.mkfifo(self.root / "pipe")
-        with self.assertRaisesRegex(UnsafeTree, "special file"):
-            appimage.check_tree(self.root)
-
-    def test_check_tree_does_not_follow_symlinks(self):
-        outside = Path(self.tmp.name) / "outside"
-        outside.mkdir()
-        (outside / "f").write_text("x")
-        outside.chmod(0o555)
-        (self.root / "out").symlink_to(outside)
-        appimage.check_tree(self.root)
-        self.assertEqual(outside.stat().st_mode & 0o777, 0o555)
-        outside.chmod(0o755)
-
-    def test_remove_tree_handles_readonly_dirs(self):
-        d = self.root / "ro"
-        d.mkdir()
-        (d / "f").write_text("x")
-        d.chmod(0o555)
-        appimage.remove_tree(self.root)
-        self.assertFalse(self.root.exists())
+@pytest.fixture
+def image(tmp_path):
+    return tmp_path / "a.AppImage"
 
 
-class SuperviseTests(unittest.TestCase):
-    def test_runs_and_captures(self):
-        proc = jail.supervise(["/bin/sh", "-c", "echo out; echo err >&2; exit 3"])
-        self.assertEqual((proc.returncode, proc.stdout.strip(), proc.stderr.strip()), (3, "out", "err"))
-
-    def test_timeout(self):
-        with self.assertRaisesRegex(jail.JailError, "timed out"):
-            jail.supervise(["/bin/sleep", "30"], timeout=0.5)
-
-    def test_watchdog_kills_oversized_output(self):
-        with tempfile.TemporaryDirectory() as d:
-            cmd = ["/bin/sh", "-c", f"head -c 3000000 /dev/urandom > {d}/big; sleep 30"]
-            with self.assertRaisesRegex(jail.JailError, "too large"):
-                jail.supervise(cmd, timeout=20, watch=(d, 1_000_000, 100))
-
-    def test_watchdog_entry_limit(self):
-        with tempfile.TemporaryDirectory() as d:
-            cmd = ["/bin/sh", "-c", f"for i in $(seq 1 200); do : > {d}/f$i; done; sleep 30"]
-            with self.assertRaisesRegex(jail.JailError, "too large"):
-                jail.supervise(cmd, timeout=20, watch=(d, 10 ** 9, 50))
+def test_squashfs_offset(image):
+    write_image(image, b"hsqs" + b"\0" * 100)
+    assert appimage.fs_offset(image) == 64
 
 
-@unittest.skipUnless(HAVE_TOOLS, "needs bwrap, mksquashfs and unsquashfs (run in the test guest)")
-class ExtractIntegrationTests(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.addCleanup(appimage.remove_tree, self.tmp.name)
-        self.base = Path(self.tmp.name)
-        self.src = self.base / "src"
-        self.src.mkdir()
-
-    def build(self, name="a.AppImage"):
-        fs = self.base / "fs.sqsh"
-        subprocess.run(["mksquashfs", str(self.src), str(fs), "-noappend", "-no-progress", "-quiet"], check=True)
-        img = self.base / name
-        write_image(img, fs.read_bytes())
-        return img
-
-    def good_tree(self):
-        (self.src / "AppRun").write_text("#!/bin/sh\necho hi\n")
-        (self.src / "AppRun").chmod(0o755)
-        (self.src / "usr/share").mkdir(parents=True)
-        (self.src / "usr/share/data").write_text("data")
-
-    def test_extracts_and_validates(self):
-        self.good_tree()
-        dest = self.base / "root"
-        entries, size = appimage.extract(self.build(), dest)
-        self.assertEqual((dest / "usr/share/data").read_text(), "data")
-        self.assertTrue(os.access(dest / "AppRun", os.X_OK))
-        self.assertEqual(entries, 4)
-        self.assertFalse((self.base / "root.tmp").exists())
-
-    def test_setuid_and_readonly_dirs_neutralised(self):
-        self.good_tree()
-        (self.src / "usr/share/data").chmod(0o4755)
-        (self.src / "usr/share").chmod(0o555)
-        self.addCleanup((self.src / "usr/share").chmod, 0o755)
-        dest = self.base / "root"
-        appimage.extract(self.build(), dest)
-        self.assertEqual((dest / "usr/share/data").stat().st_mode & 0o7000, 0)
-        self.assertTrue((dest / "usr/share").stat().st_mode & 0o200)
-
-    def test_absolute_apprun_symlink_rejected_and_nothing_left(self):
-        (self.src / "AppRun").symlink_to("/usr/bin/env")
-        dest = self.base / "root"
-        with self.assertRaises(UnsafeTree):
-            appimage.extract(self.build(), dest)
-        self.assertEqual(sorted(p.name for p in self.base.iterdir() if p.name.startswith("root")), [])
-
-    def test_missing_apprun_rejected(self):
-        (self.src / "x").write_text("x")
-        with self.assertRaisesRegex(UnsafeTree, "AppRun not found"):
-            appimage.extract(self.build(), self.base / "root")
-
-    def test_fifo_in_image_rejected(self):
-        self.good_tree()
-        os.mkfifo(self.src / "pipe")
-        with self.assertRaisesRegex(UnsafeTree, "special file"):
-            appimage.extract(self.build(), self.base / "root")
-
-    def test_decompression_bomb_stopped(self):
-        self.good_tree()
-        with open(self.src / "pattern", "wb") as f:
-            for _ in range(400):
-                f.write(b"A" * 1024 * 1024)  # 400 MiB that compresses to almost nothing
-        with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
-            with self.assertRaisesRegex(jail.JailError, "too large"):
-                appimage.extract(self.build(), self.base / "root")
-        self.assertEqual(sorted(p.name for p in self.base.iterdir() if p.name.startswith("root")), [])
-
-    def test_sparse_huge_file_rejected_by_apparent_size(self):
-        self.good_tree()
-        with open(self.src / "sparse", "wb") as f:
-            f.truncate(400 * 1024 * 1024)  # holes: no disk blocks, but a huge apparent size
-        with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
-            with self.assertRaisesRegex(UnsafeTree, "too large"):
-                appimage.extract(self.build(), self.base / "root")
-        self.assertEqual(sorted(p.name for p in self.base.iterdir() if p.name.startswith("root")), [])
-
-    def test_not_a_filesystem(self):
-        img = self.base / "bad.AppImage"
-        write_image(img, b"hsqs" + b"\xff" * 200)
-        with self.assertRaisesRegex(ExtractError, "extraction failed"):
-            appimage.extract(img, self.base / "root")
-
-    def test_jail_has_no_network_and_cannot_see_home(self):
-        proc = jail.run(jail.extract_args(self.base, self.base, ["/usr/bin/python3", "-I", "-c",
-            "import socket,os;print(sorted(os.listdir('/')));"
-            "s=socket.socket();s.settimeout(3)\n"
-            "try:\n s.connect(('1.1.1.1',443));print('NET')\nexcept OSError:\n print('NONET')"]), timeout=30)
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("NONET", proc.stdout)
-        self.assertNotIn("home", proc.stdout)
+def test_offset_uses_section_table(image):
+    data = bytearray(stub(b"x" * 200 + b"hsqs" + b"\0" * 50))
+    struct.pack_into("<Q", data, 0x28, 200)  # shoff 200 + 1 header of 64 bytes -> filesystem at 264
+    struct.pack_into("<HH", data, 0x3A, 64, 1)
+    data[264:268] = b"hsqs"
+    image.write_bytes(bytes(data))
+    assert appimage.fs_offset(image) == 264
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_dwarfs_rejected_with_clear_message(image):
+    write_image(image, b"DWARFS" + b"\0" * 100)
+    with pytest.raises(UnsupportedImage, match="DwarFS"):
+        appimage.fs_offset(image)
+
+
+@pytest.mark.parametrize("content", [stub(b"\0" * 100), b"\x7fELF\x01\x01" + b"\0" * 100, stub()[:70]],
+                         ids=["unknown-fs", "elf32", "offset-past-end"])
+def test_unknown_filesystem_and_bad_headers(image, content):
+    image.write_bytes(content)
+    with pytest.raises(UnsupportedImage):
+        appimage.fs_offset(image)
+
+
+# -- tree validation ------------------------------------------------------------------------
+
+
+@pytest.fixture
+def tree(tmp_path):
+    root = tmp_path / "root"
+    (root / "usr/bin").mkdir(parents=True)
+    app = root / "usr/bin/app"
+    app.write_text("#!/bin/sh\n")
+    app.chmod(0o755)
+    yield root
+    appimage.remove_tree(tmp_path)
+
+
+def test_apprun_regular_file(tree):
+    (tree / "AppRun").write_text("x")
+    (tree / "AppRun").chmod(0o755)
+    assert appimage.resolve_entry(tree) == str(tree.resolve() / "AppRun")
+
+
+def test_apprun_relative_symlink_chain(tree):
+    (tree / "usr/bin/link").symlink_to("app")
+    (tree / "AppRun").symlink_to("usr/bin/link")
+    assert appimage.resolve_entry(tree) == str((tree / "usr/bin/app").resolve())
+
+
+@pytest.mark.parametrize("target", ["/usr/bin/env", "../../etc/passwd", "usr/bin/none"],
+                         ids=["absolute", "escape", "missing"])
+def test_apprun_rejections(tree, target):
+    (tree / "AppRun").symlink_to(target)
+    with pytest.raises(UnsafeTree):
+        appimage.resolve_entry(tree)
+
+
+def test_apprun_loop(tree):
+    (tree / "AppRun").symlink_to("AppRun")
+    with pytest.raises(UnsafeTree, match="too many symlinks"):
+        appimage.resolve_entry(tree)
+
+
+def test_apprun_not_executable_or_directory(tree):
+    (tree / "AppRun").write_text("x")
+    (tree / "AppRun").chmod(0o644)
+    with pytest.raises(UnsafeTree, match="not an executable"):
+        appimage.resolve_entry(tree)
+    (tree / "AppRun").unlink()
+    (tree / "AppRun").mkdir()
+    with pytest.raises(UnsafeTree):
+        appimage.resolve_entry(tree)
+
+
+def test_intermediate_absolute_symlink_rejected(tree):
+    (tree / "bin").symlink_to("/usr/bin")
+    (tree / "AppRun").symlink_to("bin/env")
+    with pytest.raises(UnsafeTree):
+        appimage.resolve_entry(tree)
+
+
+def test_check_tree_clears_setid_fixes_dirs_and_counts(tree):
+    app = tree / "usr/bin/app"
+    app.chmod(0o4755)
+    ro = tree / "ro"
+    ro.mkdir()
+    (ro / "f").write_text("12345")
+    ro.chmod(0o555)
+    entries, size = appimage.check_tree(tree)
+    assert app.stat().st_mode & 0o7777 == 0o755
+    assert ro.stat().st_mode & 0o200
+    assert entries == 5  # usr, usr/bin, app, ro, ro/f
+    assert size >= 15
+
+
+def test_check_tree_rejects_special_files(tree):
+    os.mkfifo(tree / "pipe")
+    with pytest.raises(UnsafeTree, match="special file"):
+        appimage.check_tree(tree)
+
+
+def test_check_tree_does_not_follow_symlinks(tree, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "f").write_text("x")
+    outside.chmod(0o555)
+    (tree / "out").symlink_to(outside)
+    appimage.check_tree(tree)
+    assert outside.stat().st_mode & 0o777 == 0o555
+    outside.chmod(0o755)
+
+
+def test_remove_tree_handles_readonly_dirs(tree):
+    d = tree / "ro"
+    d.mkdir()
+    (d / "f").write_text("x")
+    d.chmod(0o555)
+    appimage.remove_tree(tree)
+    assert not tree.exists()
+
+
+# -- supervision -------------------------------------------------------------------------------
+
+
+def test_supervise_captures_output():
+    proc = jail.supervise(["/bin/sh", "-c", "echo out; echo err >&2; exit 3"])
+    assert (proc.returncode, proc.stdout.strip(), proc.stderr.strip()) == (3, "out", "err")
+
+
+def test_supervise_timeout():
+    with pytest.raises(jail.JailError, match="timed out"):
+        jail.supervise(["/bin/sleep", "30"], timeout=0.5)
+
+
+def test_watchdog_kills_oversized_output(tmp_path):
+    cmd = ["/bin/sh", "-c", f"head -c 3000000 /dev/urandom > {tmp_path}/big; sleep 30"]
+    with pytest.raises(jail.JailError, match="too large"):
+        jail.supervise(cmd, timeout=20, watch=(tmp_path, 1_000_000, 100))
+
+
+def test_watchdog_entry_limit(tmp_path):
+    cmd = ["/bin/sh", "-c", f"for i in $(seq 1 200); do : > {tmp_path}/f$i; done; sleep 30"]
+    with pytest.raises(jail.JailError, match="too large"):
+        jail.supervise(cmd, timeout=20, watch=(tmp_path, 10 ** 9, 50))
+
+
+# -- real extraction (guest only) ---------------------------------------------------------------
+
+
+@pytest.fixture
+def lab(tmp_path):
+    """A source tree plus a helper that packs it into a synthetic type-2 AppImage."""
+    src = tmp_path / "src"
+    src.mkdir()
+
+    class Lab:
+        base = tmp_path
+
+        def good_tree(self):
+            (src / "AppRun").write_text("#!/bin/sh\necho hi\n")
+            (src / "AppRun").chmod(0o755)
+            (src / "usr/share").mkdir(parents=True)
+            (src / "usr/share/data").write_text("data")
+
+        def build(self, name="a.AppImage"):
+            fs = tmp_path / "fs.sqsh"
+            subprocess.run(["mksquashfs", str(src), str(fs), "-noappend", "-no-progress", "-quiet"], check=True)
+            img = tmp_path / name
+            write_image(img, fs.read_bytes())
+            return img
+
+        src_dir = src
+
+        def leftovers(self):
+            return sorted(p.name for p in tmp_path.iterdir() if p.name.startswith("root"))
+
+    yield Lab()
+    for p in src.rglob("*"):
+        if p.is_dir() and not p.is_symlink():
+            p.chmod(0o755)
+    appimage.remove_tree(tmp_path)
+
+
+@needs_tools
+def test_extracts_and_validates(lab):
+    lab.good_tree()
+    dest = lab.base / "root"
+    entries, _ = appimage.extract(lab.build(), dest)
+    assert (dest / "usr/share/data").read_text() == "data"
+    assert os.access(dest / "AppRun", os.X_OK)
+    assert entries == 4
+    assert not (lab.base / "root.tmp").exists()
+
+
+@needs_tools
+def test_setuid_and_readonly_dirs_neutralised(lab):
+    lab.good_tree()
+    (lab.src_dir / "usr/share/data").chmod(0o4755)
+    (lab.src_dir / "usr/share").chmod(0o555)
+    dest = lab.base / "root"
+    appimage.extract(lab.build(), dest)
+    assert (dest / "usr/share/data").stat().st_mode & 0o7000 == 0
+    assert (dest / "usr/share").stat().st_mode & 0o200
+
+
+@needs_tools
+def test_absolute_apprun_symlink_rejected_and_nothing_left(lab):
+    (lab.src_dir / "AppRun").symlink_to("/usr/bin/env")
+    with pytest.raises(UnsafeTree):
+        appimage.extract(lab.build(), lab.base / "root")
+    assert lab.leftovers() == []
+
+
+@needs_tools
+def test_missing_apprun_rejected(lab):
+    (lab.src_dir / "x").write_text("x")
+    with pytest.raises(UnsafeTree, match="AppRun not found"):
+        appimage.extract(lab.build(), lab.base / "root")
+
+
+@needs_tools
+def test_fifo_in_image_rejected(lab):
+    lab.good_tree()
+    os.mkfifo(lab.src_dir / "pipe")
+    with pytest.raises(UnsafeTree, match="special file"):
+        appimage.extract(lab.build(), lab.base / "root")
+
+
+@needs_tools
+def test_decompression_bomb_stopped(lab):
+    lab.good_tree()
+    with open(lab.src_dir / "pattern", "wb") as f:
+        for _ in range(400):
+            f.write(b"A" * 1024 * 1024)  # 400 MiB that compresses to almost nothing
+    with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
+        with pytest.raises(jail.JailError, match="too large"):
+            appimage.extract(lab.build(), lab.base / "root")
+    assert lab.leftovers() == []
+
+
+@needs_tools
+def test_sparse_huge_file_rejected_by_apparent_size(lab):
+    lab.good_tree()
+    with open(lab.src_dir / "sparse", "wb") as f:
+        f.truncate(400 * 1024 * 1024)  # holes: no disk blocks, but a huge apparent size
+    with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
+        with pytest.raises(UnsafeTree, match="too large"):
+            appimage.extract(lab.build(), lab.base / "root")
+    assert lab.leftovers() == []
+
+
+@needs_tools
+def test_not_a_filesystem(lab):
+    img = lab.base / "bad.AppImage"
+    write_image(img, b"hsqs" + b"\xff" * 200)
+    with pytest.raises(ExtractError, match="extraction failed"):
+        appimage.extract(img, lab.base / "root")
+
+
+@needs_tools
+def test_extraction_jail_has_no_network_and_cannot_see_home(lab):
+    code = ("import socket,os;print(sorted(os.listdir('/')));s=socket.socket();s.settimeout(3)\n"
+            "try:\n s.connect(('1.1.1.1',443));print('NET')\nexcept OSError:\n print('NONET')")
+    proc = jail.run(jail.extract_args(lab.base, lab.base, ["/usr/bin/python3", "-I", "-c", code]), timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    assert "NONET" in proc.stdout
+    assert "home" not in proc.stdout

@@ -169,6 +169,9 @@ def dir_binds(dirs, home):
             real = host.resolve(strict=True)
         except OSError:
             raise RunError(f"granted directory does not exist: {host}") from None
+        home_real = Path(home).resolve()
+        if real == home_real or real in home_real.parents:
+            raise RunError(f"granted directory {host} would expose the whole home directory")
         for guard in _guard_dirs():
             if real == guard or guard in real.parents or real in guard.parents:
                 raise RunError(f"granted directory {host} would expose bjail's own data")

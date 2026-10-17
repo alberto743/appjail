@@ -10,6 +10,7 @@ import secrets
 import shutil
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 from . import appimage, github, jail, manifest, runner, store, textsafe
 
@@ -85,9 +86,26 @@ def show_review(console, info, now=None):
         console.warn("the repository has very few stars")
 
 
+def dirs_from_args(specs, home=None, cwd=None):
+    """Canonical, existing directories for --dir options."""
+    home, cwd = home or Path.home(), cwd or Path.cwd()
+    out = []
+    for spec in specs:
+        try:
+            entry = manifest.normalize_dir(spec, home, cwd)
+        except manifest.ManifestError as e:
+            raise Abort(f"--dir {spec}: {e}") from e
+        host = Path(home) / entry[2:] if entry.startswith("~/") else Path(entry)
+        if not Path(str(host).removesuffix(":rw")).is_dir():
+            raise Abort(f"--dir {spec}: not a directory")
+        out.append(entry)
+    return tuple(out)
+
+
 def permissions_from_args(args):
     allowed = set(args.allow)
     return manifest.Permissions(
+        dirs=dirs_from_args(args.dir),
         network="network" in allowed, portals="portals" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
@@ -102,13 +120,16 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     if store.manifest_path(name).exists() or store.app_dir(name).exists():
         raise Abort(f"'{name}' is already added")
 
+    perms = permissions_from_args(args)  # validates --dir before any network access
+
     info = client.repo_info(args.source)
     show_review(console, info, now)
     if info.renamed and not console.confirm(f"Continue with {info.full_name}?"):
         raise Abort("cancelled")
     source = info.full_name
 
-    release = client.latest_release(source, args.prerelease)
+    release = (client.release_by_tag(source, args.tag) if args.tag
+               else client.latest_release(source, args.prerelease))
     console.out(f"Release    : {release.tag}, published {release.published_at}"
                 + ("  (pre-release)" if release.prerelease else ""))
     console.out(f"             {release.html_url}")
@@ -135,7 +156,6 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     tier = 3 if asset.sha256 else 4
     if tier == 4:
         console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4)")
-    perms = permissions_from_args(args)
     granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
     console.out("Permissions: " + ", ".join(granted))
 
@@ -195,6 +215,9 @@ def build_parser():
     add.add_argument("source", help="GitHub owner/repo")
     add.add_argument("--name", help="local app name (default: repo name)")
     add.add_argument("--prerelease", action="store_true", help="allow pre-releases")
+    add.add_argument("--tag", help="use this release tag instead of the latest release")
+    add.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
+                     help="let the app see this directory (read-only unless :rw); repeatable")
     add.add_argument("--allow", action="append", default=[], choices=["network", "portals"],
                      help="grant a permission (repeatable); audio and gpu are on by default")
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
@@ -202,11 +225,17 @@ def build_parser():
     add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland")
     run = sub.add_parser("run", help="run an installed app in its jail")
     run.add_argument("name")
-    run.add_argument("app_args", nargs=argparse.REMAINDER, help="arguments passed to the app (after --)")
+    run.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
+                     help="grant this directory for this run only (manifest unchanged); repeatable")
     return p
 
 
 def main(argv=None, client=None, console=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    app_args = []
+    if "--" in argv:  # everything after -- belongs to the app
+        i = argv.index("--")
+        argv, app_args = argv[:i], argv[i + 1:]
     args = build_parser().parse_args(argv)
     console = console or Console()
     try:
@@ -215,8 +244,8 @@ def main(argv=None, client=None, console=None):
                 raise Abort("source must be a GitHub owner/repo")
             cmd_add(args, client or github.Client(), console)
         elif args.command == "run":
-            extra = args.app_args[1:] if args.app_args[:1] == ["--"] else args.app_args
-            return runner.launch(args.name, extra, say=console.out)
+            extra_dirs = dirs_from_args(args.dir)
+            return runner.launch(args.name, app_args, say=console.out, extra_dirs=extra_dirs)
     except Abort as e:
         console.out(str(e))
         return 1

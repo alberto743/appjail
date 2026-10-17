@@ -6,77 +6,101 @@ import io
 import json
 import os
 import tempfile
-import unittest
 from pathlib import Path
+
+import pytest
 
 from bjail import fetcher, jail
 
-
-class ArgsTests(unittest.TestCase):
-    def setUp(self):
-        self.stage = tempfile.mkdtemp()
-        self.addCleanup(os.rmdir, self.stage)
-        self.args = jail.download_args(self.stage, ["/usr/bin/python3", "-I", "/fetcher.py", "u", "o", "1"])
-
-    def pairs(self, flag):
-        a = self.args
-        return [tuple(a[i + 1:i + 3]) for i, x in enumerate(a) if x == flag]
-
-    def test_isolation_flags(self):
-        for flag in ("--unshare-all", "--share-net", "--die-with-parent", "--new-session", "--clearenv"):
-            self.assertIn(flag, self.args)
-        self.assertEqual(self.args[self.args.index("--cap-drop") + 1], "ALL")
-        self.assertLess(self.args.index("--unshare-all"), self.args.index("--share-net"))
-
-    def test_root_is_remounted_read_only_after_all_mounts(self):
-        i = self.args.index("--remount-ro")
-        self.assertEqual(self.args[i + 1], "/")
-        self.assertEqual([x for x in self.args[i + 2:] if x.startswith("--")][:2], ["--chdir", "--"])
-
-    def test_only_stage_is_writable(self):
-        self.assertEqual(self.pairs("--bind"), [(self.stage, "/stage")])
-        self.assertEqual(self.pairs("--dev-bind"), [])
-
-    def test_no_home_or_runtime_dir_exposed(self):
-        home = str(Path.home())
-        runtime = os.environ.get("XDG_RUNTIME_DIR", "/run/user")
-        for a in self.args:
-            self.assertFalse(a.startswith(home) and a not in (self.stage, str(jail.FETCHER)), a)
-            self.assertFalse(a.startswith(runtime), a)
-
-    def test_command_after_separator(self):
-        i = self.args.index("--")
-        self.assertEqual(self.args[i + 1], "/usr/bin/python3")
-        self.assertIn(("/fetcher.py",), [(x,) for x in self.args])
-
-    def test_env_whitelist(self):
-        sets = {self.args[i + 1]: self.args[i + 2] for i, x in enumerate(self.args) if x == "--setenv"}
-        self.assertEqual(set(sets), set(jail.SAFE_ENV))
+integration = pytest.mark.skipif(os.environ.get("BJAIL_INTEGRATION") != "1",
+                                 reason="real bwrap: run in the test guest (BJAIL_INTEGRATION=1)")
 
 
-class FetcherPolicyTests(unittest.TestCase):
-    def test_allowed(self):
-        for url in ("https://github.com/o/r/releases/download/v1/a.AppImage",
-                    "https://objects.githubusercontent.com/x", "https://release-assets.githubusercontent.com/y"):
-            self.assertTrue(fetcher.allowed(url), url)
-
-    def test_refused(self):
-        for url in ("http://github.com/o/r", "https://evil.example/", "https://github.com.evil.example/",
-                    "https://notgithub.com/", "https://user@github.com/", "https://github.com:8443/",
-                    "https://evilgithubusercontent.com/", "file:///etc/passwd", "ftp://github.com/x"):
-            self.assertFalse(fetcher.allowed(url), url)
-
-    def test_main_refuses_bad_url_without_network(self):
-        with contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(fetcher.main(["f", "http://github.com/x", "/nonexistent/out", "1"]), 2)
-            self.assertEqual(fetcher.main(["f"]), 2)
+@pytest.fixture
+def stage():
+    with tempfile.TemporaryDirectory() as d:
+        yield d
 
 
-@unittest.skipUnless(os.environ.get("BJAIL_INTEGRATION") == "1", "run in the test guest with BJAIL_INTEGRATION=1")
-class JailIntegrationTests(unittest.TestCase):
-    """Real bwrap. Run inside the qemu guest: tests/vm/ssh.sh 'cd ~/bjail && BJAIL_INTEGRATION=1 python3 -m unittest'."""
+@pytest.fixture
+def args(stage):
+    return jail.download_args(stage, ["/usr/bin/python3", "-I", "/fetcher.py", "u", "o", "1"])
 
-    CODE = r'''
+
+def pairs(argv, flag):
+    return [tuple(argv[i + 1:i + 3]) for i, x in enumerate(argv) if x == flag]
+
+
+# -- download jail arguments -------------------------------------------------------------
+
+
+def test_isolation_flags(args):
+    for flag in ("--unshare-all", "--share-net", "--die-with-parent", "--new-session", "--clearenv"):
+        assert flag in args
+    assert args[args.index("--cap-drop") + 1] == "ALL"
+    assert args.index("--unshare-all") < args.index("--share-net")
+
+
+def test_root_is_remounted_read_only_after_all_mounts(args):
+    i = args.index("--remount-ro")
+    assert args[i + 1] == "/"
+    assert [x for x in args[i + 2:] if x.startswith("--")][:2] == ["--chdir", "--"]
+
+
+def test_only_stage_is_writable(args, stage):
+    assert pairs(args, "--bind") == [(stage, "/stage")]
+    assert pairs(args, "--dev-bind") == []
+
+
+def test_no_home_or_runtime_dir_exposed(args, stage):
+    home = str(Path.home())
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "/run/user")
+    for a in args:
+        assert not (a.startswith(home) and a not in (stage, str(jail.FETCHER))), a
+        assert not a.startswith(runtime), a
+
+
+def test_command_after_separator(args):
+    i = args.index("--")
+    assert args[i + 1] == "/usr/bin/python3"
+    assert "/fetcher.py" in args
+
+
+def test_env_whitelist(args):
+    names = {args[i + 1] for i, x in enumerate(args) if x == "--setenv"}
+    assert names == set(jail.SAFE_ENV)
+
+
+# -- fetcher policy -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("url", [
+    "https://github.com/o/r/releases/download/v1/a.AppImage",
+    "https://objects.githubusercontent.com/x",
+    "https://release-assets.githubusercontent.com/y",
+])
+def test_fetcher_allows_github_hosts(url):
+    assert fetcher.allowed(url)
+
+
+@pytest.mark.parametrize("url", [
+    "http://github.com/o/r", "https://evil.example/", "https://github.com.evil.example/",
+    "https://notgithub.com/", "https://user@github.com/", "https://github.com:8443/",
+    "https://evilgithubusercontent.com/", "file:///etc/passwd", "ftp://github.com/x",
+])
+def test_fetcher_refuses_other_urls(url):
+    assert not fetcher.allowed(url)
+
+
+def test_fetcher_main_refuses_bad_url_without_network():
+    with contextlib.redirect_stderr(io.StringIO()):
+        assert fetcher.main(["f", "http://github.com/x", "/nonexistent/out", "1"]) == 2
+        assert fetcher.main(["f"]) == 2
+
+
+# -- real bwrap (guest only) --------------------------------------------------------------
+
+CODE = r'''
 import json, os, urllib.request
 def can_write(p):
     try:
@@ -96,22 +120,21 @@ print(json.dumps({
 }))
 '''
 
-    def test_jail_properties(self):
-        marker = Path("/tmp/host-marker")
-        marker.write_text("x")
-        self.addCleanup(marker.unlink)
-        with tempfile.TemporaryDirectory() as stage:
-            proc = jail.run(jail.download_args(stage, ["/usr/bin/python3", "-I", "-c", self.CODE]), timeout=120)
-            self.assertEqual(proc.returncode, 0, proc.stderr)
-            r = json.loads(proc.stdout)
-        self.assertEqual(r["net"], 200)
-        self.assertEqual(r["caps"], "0000000000000000")
-        self.assertLess(r["pid"], 10)
-        self.assertEqual(set(r["env"]) - {"PWD"}, set(jail.SAFE_ENV))
-        self.assertFalse(r["home_exists"] or r["host_marker"] or r["run_user"])
-        self.assertTrue(r["write_stage"] and r["write_tmp"])
-        self.assertFalse(r["write_root"] or r["write_usr"])
 
-
-if __name__ == "__main__":
-    unittest.main()
+@integration
+def test_download_jail_properties(stage):
+    marker = Path("/tmp/host-marker")
+    marker.write_text("x")
+    try:
+        proc = jail.run(jail.download_args(stage, ["/usr/bin/python3", "-I", "-c", CODE]), timeout=120)
+    finally:
+        marker.unlink()
+    assert proc.returncode == 0, proc.stderr
+    r = json.loads(proc.stdout)
+    assert r["net"] == 200
+    assert r["caps"] == "0000000000000000"
+    assert r["pid"] < 10
+    assert set(r["env"]) - {"PWD"} == set(jail.SAFE_ENV)
+    assert not (r["home_exists"] or r["host_marker"] or r["run_user"])
+    assert r["write_stage"] and r["write_tmp"]
+    assert not (r["write_root"] or r["write_usr"])

@@ -26,6 +26,7 @@ MAX_BODY = 8 * 1024 * 1024
 MAX_REDIRECTS = 3
 TIMEOUT = 20
 
+TAG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
 ARCH_TOKENS = {
     "x86_64": ("x86_64", "x86-64", "amd64", "x64"),
     "aarch64": ("aarch64", "arm64"),
@@ -173,6 +174,12 @@ class Client:
         else:
             data = self._get(f"/repos/{source}/releases/latest")
         return _release(source, data)
+
+    def release_by_tag(self, source, tag):
+        _check_source(source)
+        if not TAG_RE.fullmatch(tag or ""):
+            raise GitHubError(f"not a valid release tag: {textsafe.clean(tag, 60)!r}")
+        return _release(source, self._get(f"/repos/{source}/releases/tags/{urllib.parse.quote(tag)}"))
 
     def has_attestation(self, source, sha256):
         """True if GitHub holds at least one attestation for this digest (existence only)."""

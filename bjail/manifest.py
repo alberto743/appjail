@@ -101,6 +101,38 @@ def _check_dir(entry):
     return entry
 
 
+def normalize_dir(spec, home, cwd):
+    """Canonical `permissions.dirs` entry for a user-typed PATH[:ro|:rw].
+
+    Relative paths resolve against cwd; paths below home become `~/...`. No symlinks are resolved.
+    """
+    path, mode = spec, ""
+    if spec.endswith((":ro", ":rw")):
+        path, mode = spec[:-3], spec[-3:]
+    if not path:
+        raise ManifestError("directory path is empty")
+    if path.startswith("~/"):
+        path = os.path.join(str(home), path[2:])
+    path = os.path.normpath(os.path.join(str(cwd), path))
+    home = os.path.normpath(str(home))
+    if path == home or home.startswith(path.rstrip(os.sep) + os.sep) or path == os.sep:
+        raise ManifestError("the home directory itself (or a parent of it) cannot be granted")
+    if path.startswith(home + os.sep):
+        path = "~/" + path[len(home) + 1:]
+    entry = path + (":rw" if mode == ":rw" else "")
+    return _check_dir(_text(entry, "directory"))
+
+
+def merge_dirs(base, extra):
+    """Union of two dirs lists keyed by path; read-write wins over read-only."""
+    merged = {}
+    for entry in (*base, *extra):
+        path, _, mode = entry.partition(":")
+        if merged.get(path) != "rw":
+            merged[path] = "rw" if mode == "rw" else ""
+    return tuple(p + (":rw" if m else "") for p, m in merged.items())
+
+
 def _unknown(table, allowed, where):
     extra = sorted(set(table) - allowed)
     if extra:

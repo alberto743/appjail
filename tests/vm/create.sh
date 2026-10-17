@@ -9,11 +9,11 @@
 # Downloads one binary (the Debian cloud image, ~340 MB); the SHA512 is verified
 # against Debian's SHA512SUMS before use. Run it only when you agree to that download.
 #
-# Env: VM_DIR (default <project>/vm), PACKAGES (guest packages, space separated).
+# Env: VM_DIR (default <project>/vm), PACKAGES (guest packages, default tests/vm/packages.txt).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 vm=${VM_DIR:-$here/../../vm}
-packages=${PACKAGES:-bubblewrap squashfs-tools git python3 python3-pytest ca-certificates weston pipewire pipewire-pulse wireplumber pulseaudio-utils}
+packages=${PACKAGES:-$(sed 's/#.*//' "$here/packages.txt" | tr -s ' \n' ' ')}
 base_url=https://cloud.debian.org/images/cloud/trixie/latest
 img=debian-13-genericcloud-amd64.qcow2
 force=0; [ "${1:-}" = --force ] && force=1
@@ -35,4 +35,4 @@ if [ "$force" = 1 ] || [ ! -f "$vm/run/disk.qcow2" ]; then
 	printf 'instance-id: bjail-vm-%s\nlocal-hostname: bjail-vm\n' "$(date +%s)" > "$vm/run/meta-data"
 	cloud-localds "$vm/run/seed.iso" "$vm/run/user-data" "$vm/run/meta-data"
 fi
-echo "guest ready: run tests/vm/start.sh, wait for cloud-init (tests/vm/ssh.sh 'cloud-init status --wait')"
+echo "guest ready: run tests/vm/start.sh, wait for cloud-init (tests/vm/ssh.sh 'cloud-init status --wait'), then tests/vm/provision.sh"

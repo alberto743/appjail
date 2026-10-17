@@ -11,7 +11,7 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 5. `index update` / `index rollback`.
 6. `update [app]` (added to the MVP by the user): re-resolve, download in the jail, verify evidence, show the diff (hashes, tier, permissions, release link), quarantine delay (default 7 days, overridable), user approval. A tier downgrade or an owner change blocks the update. `list`, `remove` and `perms` come with it.
 
-Progress (update with every milestone): steps 1-3 done (manifest; `add` with jailed download, digest, extraction; `run` with the bwrap runtime jail). Next: 4 `search`, 5 `index update/rollback`, 6 `update`, `list`, `remove`, `perms`.
+Progress (update with every milestone): steps 1-3 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`), all tests in native pytest, REUSE-compliant. Next: 4 `search`, 5 `index update/rollback`, 6 `update`, `list`, `remove`, `perms`.
 
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 
@@ -25,24 +25,26 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 ## Testing environment
 - Never use the host system for this work, except to edit files and run git in this directory and to run qemu itself. All execution happens in the qemu-kvm guest: unit tests, integration tests, `bin/bjail`, network access (GitHub API probes included), downloads, extraction and bwrap. Do not run project code, tests or network clients on the host.
 - Host status (checked 2026-10-17): qemu 10.0.13 with KVM, `qemu-img`, `cloud-localds`, `genisoimage` and OVMF are installed; the user has rw access to `/dev/kvm` via ACL. Do not install anything else.
-- The guest needs a Wayland or headless compositor for GUI tests, user namespaces enabled, bubblewrap, and `unsquashfs`. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
-- Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ`. cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
+- The guest needs a headless Wayland compositor for GUI tests, user namespaces, bubblewrap, `unsquashfs`, and a kernel with DRM drivers. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
+- Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ` (needs glibc 2.43; Debian 13 has 2.41, so it cannot run in the guest, and the older v16 release is too new as well), and `skyjake/lagrange` (the GUI test app, chosen by Claude on the user's delegation: 11 MB, SDL, runs in the guest). cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
 - Ask before creating or downloading a guest image (it is a binary download).
 - The VM is reproducible from tracked files only; `vm/` (base image, disk, ssh key, console log) is gitignored and can be deleted and rebuilt at any time.
 - Recreate on a new machine:
-  1. Host packages (Debian 13): `sudo apt install qemu-system-x86 qemu-utils cloud-image-utils squashfs-tools`; check `/dev/kvm` is readable and writable by the user (`getfacl /dev/kvm`, or join the `kvm` group).
-  2. `tests/vm/create.sh` downloads the Debian 13 genericcloud image (~340 MB, binary download: ask first), verifies it against Debian's `SHA512SUMS`, creates an overlay disk, an ssh key and the cloud-init seed from `tests/vm/user-data.tmpl`. `--force` rebuilds the overlay and seed. `PACKAGES="..."` overrides the guest package list (default: bubblewrap squashfs-tools git python3 python3-pytest ca-certificates weston pipewire pipewire-pulse wireplumber pulseaudio-utils).
-  3. `tests/vm/start.sh` boots it (ssh on 127.0.0.1:2222, user `tester`, passwordless sudo inside the guest only). Wait with `tests/vm/ssh.sh 'cloud-init status --wait'` (about 1-2 minutes on first boot).
-  4. `tests/vm/sync.sh` copies the project into `~/bjail` in the guest (tar over ssh, no host mounts); `tests/vm/ssh.sh <cmd>` runs commands; `tests/vm/down.sh` stops the guest.
+  1. Host packages (Debian 13): `sudo apt install qemu-system-x86 qemu-utils cloud-image-utils`; check `/dev/kvm` is readable and writable by the user (`getfacl /dev/kvm`, or join the `kvm` group).
+  2. `tests/vm/create.sh` downloads the Debian 13 genericcloud image (~340 MB, binary download: ask first), verifies it against Debian's `SHA512SUMS`, creates an overlay disk, an ssh key and the cloud-init seed from `tests/vm/user-data.tmpl`. `--force` rebuilds the overlay and seed. The guest package list lives in `tests/vm/packages.txt` (one commented line per package: this is the trace of the guest requirements; change it there, never ad hoc in the guest). `PACKAGES="..."` overrides it for one run.
+  3. `tests/vm/start.sh` boots it (ssh on 127.0.0.1:2222, user `tester`, passwordless sudo inside the guest only; virtio NIC and a virtio-gpu device). Wait with `tests/vm/ssh.sh 'cloud-init status --wait'` (1-2 minutes on first boot).
+  4. `tests/vm/provision.sh` brings the running guest to the expected state: installs `packages.txt`, replaces the cloud kernel (no DRM drivers, so no `/dev/dri`) with the regular `linux-image-amd64`, adds `tester` to `video` and `render`, and reboots when the kernel changed. Idempotent; run it again after editing `packages.txt`.
+  5. `tests/vm/sync.sh` copies the project into `~/bjail` in the guest (tar over ssh, no host mounts); `tests/vm/ssh.sh <cmd>` runs commands; `tests/vm/test.sh` syncs and runs the suite; `tests/vm/down.sh` stops the guest.
 - The guest NIC must be virtio (`-nic user,model=virtio-net-pci`, already in `start.sh`); the default NIC left the guest without DNS and cloud-init failed. The cloud-init seed only runs on a fresh overlay.
-- Verified guest (2026-10-17): bubblewrap 0.12.0, unsquashfs, git, Python 3.13.5, unprivileged user namespaces, HTTPS to api.github.com from Python.
+- Verified guest (2026-10-17): Debian 13, kernel 6.12.113+deb13-amd64 with `/dev/dri/{card0,card1,renderD128}` (virtio-gpu), bubblewrap 0.12.0, unsquashfs 4.6.1, Python 3.13.5, pytest 8.3.5, reuse 5.0.2, weston 14.0.2, unprivileged user namespaces, HTTPS to api.github.com from Python. Supplementary groups survive inside the jail, so group-owned render nodes stay usable.
 
 ## Running tests (guest only)
-- Test framework: pytest (guest package `python3-pytest`; a development dependency only, the tool itself stays stdlib-only). Config in `pytest.ini`. Existing unittest-style tests run unchanged under pytest; write new tests in native pytest style (plain `assert`, fixtures, `parametrize`, `skipif`).
-- Full suite: `tests/vm/test.sh` (syncs the project into the guest, runs `BJAIL_INTEGRATION=1 python3 -m pytest` there). Pass pytest arguments through, e.g. `tests/vm/test.sh -k appimage -x`.
-- Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m pytest tests/test_github.py -k Live'`.
+- Test framework: pytest (guest package `python3-pytest`; a development dependency only, the tool itself stays stdlib-only). Config in `pytest.ini`. All tests are native pytest (plain `assert`, fixtures, `parametrize`, `skipif`); write new ones the same way. Guest-only tests are skipped elsewhere via `BJAIL_INTEGRATION=1`, which `tests/vm/test.sh` sets.
+- Full suite: `tests/vm/test.sh` (syncs the project into the guest, runs `python3 -m pytest` there). Pass pytest arguments through, e.g. `tests/vm/test.sh -k appimage -x`.
+- Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m pytest tests/test_github.py -k live'`.
+- End to end with a real download (skyjake/lagrange, 11 MB; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_e2e.py -v'`. It adds the app, runs the GUI under headless weston inside the jail, checks the real home stays untouched, and checks the tamper refusal.
 - Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
-- Tests that need tools missing on the host (`bwrap` use, `mksquashfs`, `unsquashfs`) skip when run elsewhere; do not install them on the host.
+- Do not install test tools on the host.
 
 ## Verification status (done; results in DESIGN.md "Findings")
 GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, Flatpak comparison. Re-verify only if DESIGN.md is contradicted by new evidence.
@@ -53,6 +55,8 @@ GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, F
 - Ask before downloading any AppImage or other binary. Tests that need the network should use small, well-known repos the user names.
 - The tool has no self-update and must never fetch code to run.
 - Work in the git repository in this directory. The user asked for progress to be traced, so commit at each completed, tested milestone with a clear message. Commit with the repository's own git identity (`.git/config`: GitHub noreply address); never override `user.name`/`user.email` with `-c`. Never push, never rewrite pushed history, never commit `vm/` or secrets.
+- No personal data in tracked files or commit messages: no home paths, usernames, session or scratchpad paths, hostnames or emails. Use `~` and placeholders. The only identity in history is the repository's configured GitHub noreply author.
+- Licensing: the project is MPL-2.0 and must stay REUSE-compliant at every commit. Every code file starts with `SPDX-FileCopyrightText: 2026 Alberto P` and `SPDX-License-Identifier: MPL-2.0` (after a shebang if there is one); other files (Markdown, config, templates) are covered by `REUSE.toml`; the license text is in `LICENSES/MPL-2.0.txt`. `tests/test_reuse.py` runs `reuse lint` in the guest. New file types need a header or a `REUSE.toml` entry in the same commit.
 - Keep the project self-consistent: when code, decisions or the environment change, update CLAUDE.md, DESIGN.md and the tests/scripts in the same commit.
 
 ## Reference material

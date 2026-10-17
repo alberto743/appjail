@@ -12,5 +12,6 @@ exec qemu-system-x86_64 \
 	-drive file="$run/disk.qcow2",if=virtio \
 	-drive file="$run/seed.iso",if=virtio,format=raw,readonly=on \
 	-nic user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:2222-:22 \
+	-device virtio-gpu-pci \
 	-display none -serial file:"$run/console.log" \
 	-pidfile "$run/qemu.pid" -daemonize

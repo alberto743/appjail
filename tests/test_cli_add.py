@@ -1,19 +1,19 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-import os
-import tempfile
-import unittest
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
-from bjail import cli, github, manifest, store
+import pytest
+
+from bjail import appimage, cli, github, manifest, store
 from bjail.cli import Abort
 
 NOW = datetime(2026, 10, 17, tzinfo=timezone.utc)
 FAKE_APPIMAGE = b"\x7fELF\x02\x01\x01\x00AI\x02" + b"payload" * 10
-SHA = __import__("hashlib").sha256(FAKE_APPIMAGE).hexdigest()
+SHA = hashlib.sha256(FAKE_APPIMAGE).hexdigest()
 
 
 def info(**kw):
@@ -28,8 +28,8 @@ def asset(name="App-1.0-x86_64.AppImage", sha=SHA, size=len(FAKE_APPIMAGE)):
     return github.Asset(name, size, sha, f"https://github.com/o/App/releases/download/v1.0/{name}")
 
 
-def release(*assets):
-    return github.Release("v1.0", "2026-09-30T02:40:02Z", False, "https://github.com/o/App/releases/tag/v1.0", tuple(assets))
+def release(*assets, tag="v1.0"):
+    return github.Release(tag, "2026-09-30T02:40:02Z", False, f"https://github.com/o/App/releases/tag/{tag}", tuple(assets))
 
 
 class FakeClient:
@@ -45,6 +45,10 @@ class FakeClient:
         self.calls.append(("latest_release", source))
         return self._release
 
+    def release_by_tag(self, source, tag):
+        self.calls.append(("release_by_tag", source, tag))
+        return self._release
+
     def has_attestation(self, source, sha):
         return self._att
 
@@ -53,8 +57,7 @@ class Script(cli.Console):
     """Console with scripted answers; records output instead of printing."""
 
     def __init__(self, answers=()):
-        self.answers = list(answers)
-        self.lines = []
+        self.answers, self.lines = list(answers), []
 
     def out(self, line=""):
         self.lines.append(line)
@@ -73,22 +76,11 @@ class Script(cli.Console):
         return "\n".join(self.lines)
 
 
-def args(**kw):
-    ns = cli.build_parser().parse_args(["add", kw.pop("source", "o/App")] + kw.pop("extra", []))
-    return ns
+class Harness:
+    def __init__(self):
+        self.downloads, self.extractions = [], []
 
-
-class AddTests(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        env = mock.patch.dict(os.environ, {"BJAIL_DATA_DIR": f"{self.tmp.name}/data", "BJAIL_CONFIG_DIR": f"{self.tmp.name}/config"})
-        env.start()
-        self.addCleanup(env.stop)
-        self.downloads = []
-        self.extractions = []
-
-    def fake_download(self, content=FAKE_APPIMAGE):
+    def download(self, content=FAKE_APPIMAGE):
         def download(url, stage, filename, expected_size):
             self.downloads.append((url, expected_size))
             path = Path(stage) / filename
@@ -96,162 +88,216 @@ class AddTests(unittest.TestCase):
             return path
         return download
 
-    def fake_extract(self, appimage, dest, fallback=False):
-        self.extractions.append((Path(appimage), Path(dest), fallback))
+    def extract(self, appimage_, dest, fallback=False):
+        self.extractions.append((Path(appimage_), Path(dest), fallback))
         (Path(dest) / "usr").mkdir(parents=True)
         (Path(dest) / "AppRun").write_text("#!/bin/sh\n")
         return 2, 20
 
-    def add(self, client=None, answers=("y",), extra=(), download=None, extract=None, extract_ok=lambda: True, **kw):
+    def add(self, client=None, answers=("y",), extra=(), download=None, extract=None, extract_ok=lambda: True,
+            source="o/App"):
         console = Script(answers)
-        cli.cmd_add(args(extra=list(extra), **kw), client or FakeClient(), console,
-                    download=download or self.fake_download(), now=NOW,
-                    extract=extract or self.fake_extract, extract_ok=extract_ok)
+        parsed = cli.build_parser().parse_args(["add", source, *extra])
+        cli.cmd_add(parsed, client or FakeClient(), console, download=download or self.download(), now=NOW,
+                    extract=extract or self.extract, extract_ok=extract_ok)
         return console
 
     def assert_nothing_installed(self, name="app"):
-        self.assertFalse(store.manifest_path(name).exists())
-        self.assertFalse(store.app_dir(name).exists())
-        self.assertEqual(list(store.staging_root().iterdir()), [])
-
-    def test_success_with_digest(self):
-        console = self.add()
-        m = manifest.load(store.manifest_path("app"))
-        self.assertEqual((m.source, m.version, m.sha256, m.evidence_tier, m.owner_id), ("o/App", "v1.0", SHA, 3, 42))
-        self.assertEqual(m.asset_pattern, "App-*-x86_64.AppImage")
-        self.assertEqual(store.appimage_path("app").read_bytes(), FAKE_APPIMAGE)
-        self.assertEqual(self.downloads[0][0], asset().url)
-        self.assertEqual(store.appimage_path("app").stat().st_mode & 0o777, 0o600)
-        self.assertEqual(list(store.staging_root().iterdir()), [])
-        self.assertIn("attestation: present (not verified)", console.text)
-
-    def test_extraction_runs_on_stored_file_and_marks_source_hash(self):
-        self.add()
-        appimage_, dest, fallback = self.extractions[0]
-        self.assertEqual((appimage_, dest, fallback), (store.appimage_path("app"), store.root_path("app"), False))
-        self.assertEqual(store.root_marker("app").read_text().strip(), SHA)
-
-    def test_extraction_failure_leaves_nothing(self):
-        from bjail import appimage
-
-        def bad(appimage_, dest, fallback=False):
-            raise appimage.UnsupportedImage("DwarFS AppImages are not supported (only SquashFS)")
-
-        with self.assertRaisesRegex(Abort, "DwarFS"):
-            self.add(extract=bad)
-        self.assert_nothing_installed()
-
-    def test_missing_unsquashfs_needs_consent_for_runtime_fallback(self):
-        with self.assertRaisesRegex(Abort, "squashfs-tools"):
-            self.add(answers=("n",), extract_ok=lambda: False)
-        self.assertEqual(self.downloads, [])  # asked before downloading anything
-        console = self.add(answers=("y", "y"), extract_ok=lambda: False)  # fallback consent, then download
-        self.assertTrue(self.extractions[-1][2])
-        self.assertIn("unsquashfs is not installed", console.text)
-
-    def test_default_permissions_are_minimal(self):
-        self.add()
-        p = manifest.load(store.manifest_path("app")).permissions
-        self.assertEqual((p.network, p.audio, p.gpu, p.portals, p.display), (False, True, True, False, "wayland"))
-
-    def test_permission_flags(self):
-        self.add(extra=["--allow", "network", "--no-audio", "--display", "xwayland"])
-        p = manifest.load(store.manifest_path("app")).permissions
-        self.assertEqual((p.network, p.audio, p.gpu, p.display), (True, False, True, "xwayland"))
-
-    def test_no_digest_is_tier4_with_warning(self):
-        client = FakeClient(release_=release(asset(sha="")))
-        console = self.add(client=client)
-        self.assertEqual(manifest.load(store.manifest_path("app")).evidence_tier, 4)
-        self.assertIn("trust on first use", console.text)
-
-    def test_digest_mismatch_aborts_and_cleans(self):
-        client = FakeClient(release_=release(asset(sha="0" * 64)))
-        with self.assertRaisesRegex(Abort, "sha256 mismatch"):
-            self.add(client=client)
-        self.assert_nothing_installed()
-
-    def test_size_mismatch_aborts(self):
-        with self.assertRaisesRegex(Abort, "size"):
-            self.add(client=FakeClient(release_=release(asset(size=5))), download=self.fake_download())
-        self.assert_nothing_installed()
-
-    def test_not_an_appimage_aborts(self):
-        data = b"#!/bin/sh\necho pwned\n" * 5
-        client = FakeClient(release_=release(asset(sha="", size=len(data))))
-        with self.assertRaisesRegex(Abort, "not a usable AppImage"):
-            self.add(client=client, download=self.fake_download(data))
-        self.assert_nothing_installed()
-
-    def test_declined_downloads_nothing(self):
-        with self.assertRaisesRegex(Abort, "cancelled"):
-            self.add(answers=("n",))
-        self.assertEqual(self.downloads, [])
-        self.assertFalse(store.staging_root().exists())
-
-    def test_empty_answer_means_no(self):
-        with self.assertRaises(Abort):
-            self.add(answers=("",))
-        self.assertEqual(self.downloads, [])
-
-    def test_existing_name_refused_before_network(self):
-        self.add()
-        client = FakeClient()
-        with self.assertRaisesRegex(Abort, "already added"):
-            self.add(client=client)
-        self.assertEqual(client.calls, [])
-
-    def test_choose_between_candidates(self):
-        a, b = asset("A-x86_64.AppImage"), asset("B-x86_64.AppImage")
-        self.add(client=FakeClient(release_=release(a, b)), answers=("2", "y"))
-        self.assertEqual(self.downloads[0][0], b.url)
-
-    def test_invalid_choice_aborts(self):
-        a, b = asset("A-x86_64.AppImage"), asset("B-x86_64.AppImage")
-        with self.assertRaisesRegex(Abort, "invalid choice"):
-            self.add(client=FakeClient(release_=release(a, b)), answers=("9",))
-        self.assertEqual(self.downloads, [])
-
-    def test_no_candidates(self):
-        other = github.Asset("App.tar.gz", 1, "", "https://github.com/o/App/releases/download/v1.0/App.tar.gz")
-        with self.assertRaisesRegex(Abort, "no x86_64 AppImage"):
-            self.add(client=FakeClient(release_=release(other)))
-
-    def test_renamed_repo_requires_confirmation_and_pins_canonical_name(self):
-        client = FakeClient(info_=info(full_name="new/App", renamed=True))
-        console = self.add(client=client, answers=("y", "y"))
-        self.assertEqual(manifest.load(store.manifest_path("app")).source, "new/App")
-        self.assertIn("renamed or transferred", console.text)
-        with self.assertRaisesRegex(Abort, "cancelled"):
-            self.add(client=FakeClient(info_=info(full_name="new/App", renamed=True)), answers=("n",),
-                     extra=["--name", "other"])
-        self.assertFalse(store.manifest_path("other").exists())
-
-    def test_review_warnings(self):
-        client = FakeClient(info_=info(fork=True, parent="up/App", archived=True, stars=1,
-                                       owner_created_at="2026-10-01T00:00:00Z"))
-        console = self.add(client=client)
-        for text in ("fork of up/App", "archived", "very few stars", "16 days old"):
-            self.assertIn(text, console.text)
-
-    def test_terminal_escapes_in_api_text_are_neutralised(self):
-        out = []
-        console = cli.Console()
-        with mock.patch("builtins.print", side_effect=lambda *a, **k: out.append(" ".join(a))):
-            console.out("evil \x1b]0;pwn\x07 text")
-            console.warn("a\x1b[2Jb")
-        self.assertEqual(out, ["evil  text", "WARNING: ab"])
-
-    def test_names(self):
-        self.assertEqual(cli.default_name("My_App.v2"), "my_app.v2")
-        self.assertEqual(cli.default_name("App Name!"), "app-name-")
-        self.assertEqual(cli.default_name("___"), "")
-
-    def test_main_rejects_bad_source(self):
-        console = Script()
-        self.assertEqual(cli.main(["add", "https://github.com/o/r"], client=FakeClient(), console=console), 1)
-        self.assertIn("owner/repo", console.text)
+        assert not store.manifest_path(name).exists()
+        assert not store.app_dir(name).exists()
+        assert list(store.staging_root().iterdir()) == []
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.fixture
+def h(tmp_path, monkeypatch):
+    monkeypatch.setenv("BJAIL_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("BJAIL_CONFIG_DIR", str(tmp_path / "config"))
+    return Harness()
+
+
+# -- success paths -----------------------------------------------------------------------
+
+
+def test_success_with_digest(h):
+    console = h.add()
+    m = manifest.load(store.manifest_path("app"))
+    assert (m.source, m.version, m.sha256, m.evidence_tier, m.owner_id) == ("o/App", "v1.0", SHA, 3, 42)
+    assert m.asset_pattern == "App-*-x86_64.AppImage"
+    assert store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
+    assert store.appimage_path("app").stat().st_mode & 0o777 == 0o600
+    assert h.downloads[0][0] == asset().url
+    assert list(store.staging_root().iterdir()) == []
+    assert "attestation: present (not verified)" in console.text
+
+
+def test_extraction_runs_on_stored_file_and_marks_source_hash(h):
+    h.add()
+    assert h.extractions[0] == (store.appimage_path("app"), store.root_path("app"), False)
+    assert store.root_marker("app").read_text().strip() == SHA
+
+
+def test_default_permissions_are_minimal(h):
+    h.add()
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert (p.network, p.audio, p.gpu, p.portals, p.display, p.dirs) == (False, True, True, False, "wayland", ())
+
+
+def test_permission_flags(h):
+    h.add(extra=["--allow", "network", "--no-audio", "--display", "xwayland"])
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert (p.network, p.audio, p.gpu, p.display) == (True, False, True, "xwayland")
+
+
+def test_no_digest_is_tier4_with_warning(h):
+    console = h.add(client=FakeClient(release_=release(asset(sha=""))))
+    assert manifest.load(store.manifest_path("app")).evidence_tier == 4
+    assert "trust on first use" in console.text
+
+
+def test_tag_selects_that_release(h):
+    client = FakeClient(release_=release(asset(), tag="v0.9"))
+    h.add(client=client, extra=["--tag", "v0.9"])
+    assert ("release_by_tag", "o/App", "v0.9") in client.calls
+    assert not any(c[0] == "latest_release" for c in client.calls)
+    assert manifest.load(store.manifest_path("app")).version == "v0.9"
+
+
+def test_dir_option_is_stored_canonically(h, tmp_path, monkeypatch):
+    home = tmp_path / "fakehome"
+    (home / "Docs").mkdir(parents=True)
+    (tmp_path / "shared").mkdir()
+    monkeypatch.setattr(Path, "home", lambda: home)
+    h.add(extra=["--dir", str(home / "Docs"), "--dir", f"{tmp_path / 'shared'}:rw"])
+    assert manifest.load(store.manifest_path("app")).permissions.dirs == ("~/Docs", f"{tmp_path / 'shared'}:rw")
+
+
+@pytest.mark.parametrize("spec", ["/definitely/not/here", "/", "~/", "relative-missing"])
+def test_bad_dir_option_aborts_before_any_network(h, spec):
+    client = FakeClient()
+    with pytest.raises(Abort, match="--dir"):
+        h.add(client=client, extra=["--dir", spec])
+    assert client.calls == []
+
+
+# -- failure paths leave nothing behind --------------------------------------------------
+
+
+def test_digest_mismatch_aborts_and_cleans(h):
+    with pytest.raises(Abort, match="sha256 mismatch"):
+        h.add(client=FakeClient(release_=release(asset(sha="0" * 64))))
+    h.assert_nothing_installed()
+
+
+def test_size_mismatch_aborts(h):
+    with pytest.raises(Abort, match="size"):
+        h.add(client=FakeClient(release_=release(asset(size=5))))
+    h.assert_nothing_installed()
+
+
+def test_not_an_appimage_aborts(h):
+    data = b"#!/bin/sh\necho pwned\n" * 5
+    with pytest.raises(Abort, match="not a usable AppImage"):
+        h.add(client=FakeClient(release_=release(asset(sha="", size=len(data)))), download=h.download(data))
+    h.assert_nothing_installed()
+
+
+def test_extraction_failure_leaves_nothing(h):
+    def bad(appimage_, dest, fallback=False):
+        raise appimage.UnsupportedImage("DwarFS AppImages are not supported (only SquashFS)")
+
+    with pytest.raises(Abort, match="DwarFS"):
+        h.add(extract=bad)
+    h.assert_nothing_installed()
+
+
+def test_declined_downloads_nothing(h):
+    with pytest.raises(Abort, match="cancelled"):
+        h.add(answers=("n",))
+    assert h.downloads == []
+    assert not store.staging_root().exists()
+
+
+def test_empty_answer_means_no(h):
+    with pytest.raises(Abort):
+        h.add(answers=("",))
+    assert h.downloads == []
+
+
+def test_existing_name_refused_before_network(h):
+    h.add()
+    client = FakeClient()
+    with pytest.raises(Abort, match="already added"):
+        h.add(client=client)
+    assert client.calls == []
+
+
+# -- choosing and warnings ---------------------------------------------------------------
+
+
+def test_choose_between_candidates(h):
+    a, b = asset("A-x86_64.AppImage"), asset("B-x86_64.AppImage")
+    h.add(client=FakeClient(release_=release(a, b)), answers=("2", "y"))
+    assert h.downloads[0][0] == b.url
+
+
+def test_invalid_choice_aborts(h):
+    a, b = asset("A-x86_64.AppImage"), asset("B-x86_64.AppImage")
+    with pytest.raises(Abort, match="invalid choice"):
+        h.add(client=FakeClient(release_=release(a, b)), answers=("9",))
+    assert h.downloads == []
+
+
+def test_no_candidates(h):
+    other = github.Asset("App.tar.gz", 1, "", "https://github.com/o/App/releases/download/v1.0/App.tar.gz")
+    with pytest.raises(Abort, match="no x86_64 AppImage"):
+        h.add(client=FakeClient(release_=release(other)))
+
+
+def test_renamed_repo_requires_confirmation_and_pins_canonical_name(h):
+    renamed = info(full_name="new/App", renamed=True)
+    console = h.add(client=FakeClient(info_=renamed), answers=("y", "y"))
+    assert manifest.load(store.manifest_path("app")).source == "new/App"
+    assert "renamed or transferred" in console.text
+    with pytest.raises(Abort, match="cancelled"):
+        h.add(client=FakeClient(info_=renamed), answers=("n",), extra=["--name", "other"])
+    assert not store.manifest_path("other").exists()
+
+
+def test_review_warnings(h):
+    client = FakeClient(info_=info(fork=True, parent="up/App", archived=True, stars=1,
+                                   owner_created_at="2026-10-01T00:00:00Z"))
+    console = h.add(client=client)
+    for text in ("fork of up/App", "archived", "very few stars", "16 days old"):
+        assert text in console.text
+
+
+def test_missing_unsquashfs_needs_consent_for_runtime_fallback(h):
+    with pytest.raises(Abort, match="squashfs-tools"):
+        h.add(answers=("n",), extract_ok=lambda: False)
+    assert h.downloads == []  # asked before downloading anything
+    console = h.add(answers=("y", "y"), extract_ok=lambda: False)  # fallback consent, then download
+    assert h.extractions[-1][2] is True
+    assert "unsquashfs is not installed" in console.text
+
+
+# -- console and naming ------------------------------------------------------------------
+
+
+def test_terminal_escapes_in_api_text_are_neutralised():
+    out = []
+    console = cli.Console()
+    with mock.patch("builtins.print", side_effect=lambda *a, **k: out.append(" ".join(a))):
+        console.out("evil \x1b]0;pwn\x07 text")
+        console.warn("a\x1b[2Jb")
+    assert out == ["evil  text", "WARNING: ab"]
+
+
+@pytest.mark.parametrize("repo,name", [("My_App.v2", "my_app.v2"), ("App Name!", "app-name-"), ("___", "")])
+def test_default_names(repo, name):
+    assert cli.default_name(repo) == name
+
+
+def test_main_rejects_bad_source(h):
+    console = Script()
+    assert cli.main(["add", "https://github.com/o/r"], client=FakeClient(), console=console) == 1
+    assert "owner/repo" in console.text

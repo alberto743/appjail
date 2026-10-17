@@ -144,6 +144,14 @@ def test_missing_granted_dir_is_an_error(sandbox, runtime):
         jail.runtime_args(**kw)
 
 
+@pytest.mark.parametrize("what", ["home", "parent"])
+def test_dirs_cannot_expose_the_whole_home(sandbox, runtime, what):
+    kw = build(sandbox, runtime, dirs=(str(sandbox if what == "home" else sandbox.parent),))
+    kw["host_home"] = sandbox
+    with pytest.raises(RunError, match="whole home"):
+        jail.runtime_args(**kw)
+
+
 @pytest.mark.parametrize("where", ["data", "config", "inside_data", "parent_of_data"])
 def test_dirs_cannot_expose_bjail_itself(sandbox, runtime, where):
     store.data_dir().mkdir(parents=True)
@@ -252,6 +260,23 @@ def test_passwd_and_private_home_created(sandbox):
     assert home.stat().st_mode & 0o777 == 0o700
 
 
+def test_launch_merges_temporary_directories_without_touching_the_manifest(sandbox, runtime):
+    install(sandbox)
+    granted = sandbox / "granted"
+    granted.mkdir()
+    captured = []
+    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
+    said = []
+    code = runner.launch("app", ["--x"], host_env=env, extract=Extractor(), say=said.append,
+                         runner=lambda argv: captured.append(argv) or 0, extra_dirs=(f"{granted}:rw",))
+    assert code == 0
+    argv = captured[0]
+    assert (str(granted), str(granted)) in pairs(argv, "--bind")
+    assert argv[-2:] == ["/app/AppRun", "--x"]
+    assert any("Temporary access" in line for line in said)
+    assert manifest.load(store.manifest_path("app")).permissions.dirs == ()
+
+
 # -- real bwrap (guest only) ---------------------------------------------------------------
 
 FACTS = r'''#!/usr/bin/python3
@@ -354,6 +379,17 @@ def test_audio_sockets_visible_only_when_granted(sandbox, runtime):
 def test_no_network_unless_granted(sandbox, runtime):
     assert facts(sandbox, runtime)["ifaces"] == ["lo"]
     assert len(facts(sandbox, runtime, network=True)["ifaces"]) > 1
+
+
+@integration
+@pytest.mark.skipif(not os.path.exists("/dev/dri/renderD128"), reason="no DRM render node (run provision.sh)")
+def test_gpu_nodes_only_when_granted(sandbox, runtime):
+    script = FACTS.replace('print(json.dumps({', 'print(json.dumps({"dri": ls("/dev/dri"), "render_open": can_open("/dev/dri/renderD128"), ')
+    script = script.replace('def connects', 'def can_open(p):\n    try:\n        os.close(os.open(p, os.O_RDWR)); return True\n    except OSError:\n        return False\n\ndef connects')
+    on = json.loads(run_in_jail(sandbox, runtime, script=script, gpu=True).stdout)
+    off = json.loads(run_in_jail(sandbox, runtime, script=script, gpu=False).stdout)
+    assert "renderD128" in on["dri"] and on["render_open"] is True
+    assert off["dri"] is None and off["render_open"] is False
 
 
 @integration

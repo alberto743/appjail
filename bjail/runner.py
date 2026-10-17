@@ -5,6 +5,7 @@
 
 import os
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from . import appimage, jail, manifest, store
@@ -51,12 +52,17 @@ def prepare(name, extract=appimage.extract, say=print):
     return m, root, home, etc
 
 
-def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None):
+def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
+           extra_dirs=()):
     """Start the app in its jail and return its exit status."""
     m, root, home, etc = prepare(name, extract, say)
+    perms = m.permissions
+    if extra_dirs:
+        perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
+        say("Temporary access for this run: " + ", ".join(extra_dirs))
     env = dict(os.environ if host_env is None else host_env)
     args = jail.runtime_args(
-        root=root, home=home, etc_dir=etc, perms=m.permissions, uid=os.getuid(), host_env=env,
+        root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
         command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home())
     argv = [jail.find_bwrap(), *args]
     run = runner or (lambda a: subprocess.call(a, env={"PATH": "/usr/bin:/bin"}))
