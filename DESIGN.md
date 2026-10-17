@@ -31,6 +31,14 @@ Goal: a small tool with declarative manifests, no remote code execution, no self
 4. Collect evidence: `published_at`, GitHub per-asset sha256 `digest` (verify it exists), attestation (`gh attestation verify` or the attestations API; verify), embedded GPG signature.
 5. Download in a throwaway network-only jail, hash, write manifest.
 
+Implemented in `bjail/github.py` (client with injectable transport) and `bjail/textsafe.py` (escape-sequence and control-character stripping for every untrusted string shown to the user):
+- Per `add`: `/repos/{o}/{r}`, `/users/{o}` (owner age), `/releases/latest` (or the first non-draft of `/releases` with prereleases), then one attestation lookup per chosen asset: 4 requests of the 60/hour budget.
+- `GITHUB_TOKEN` is optional and sent only to api.github.com. Redirects are followed by hand within that host (a moved repo yields `RepoInfo.renamed`); a redirect elsewhere is refused.
+- Assets whose download URL is not under `https://github.com/{owner}/{repo}/releases/download/`, or whose name has odd characters, are dropped. Digest `sha256:<hex>` is parsed; null or other algorithms mean "no digest".
+- AppImage selection: `.AppImage` suffix (case-insensitive), other architectures excluded by name token; explicitly x86_64/amd64 names win over untagged ones; several candidates means the caller asks the user. `.zsync` files never match.
+- `asset_pattern` is suggested by replacing the release version in the chosen name with `*`, and matched with `fnmatch`.
+- Open design point for `add`/`update`: a repo that is deleted and re-registered under the same owner name keeps the same `owner/repo` string. `RepoInfo.owner_id` allows pinning the account; adding an optional `owner_id` to the manifest is proposed so that "owner change blocks the update" holds in that case too.
+
 Other forges (GitLab, Codeberg, SourceForge, vendor sites) are later resolvers.
 
 ## Manifest (TOML, stored in the user's own git repo)

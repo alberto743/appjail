@@ -34,6 +34,11 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - The guest NIC must be virtio (`-nic user,model=virtio-net-pci`, already in `start.sh`); the default NIC left the guest without DNS and cloud-init failed. The cloud-init seed only runs on a fresh overlay.
 - Verified guest (2026-10-17): bubblewrap 0.12.0, unsquashfs, git, Python 3.13.5, unprivileged user namespaces, HTTPS to api.github.com from Python.
 
+## Running tests
+- Host unit tests: `python3 -m unittest` from this directory (no network, stdlib only).
+- Live GitHub metadata check (cli/cli, no downloads): `BJAIL_LIVE=1 python3 -m unittest tests.test_github.LiveTests`. Uses 4 requests of the 60/hour limit.
+- In the guest: `tests/vm/sync.sh` then `tests/vm/ssh.sh 'cd ~/bjail && python3 -m unittest'`.
+
 ## Verification status (done; results in DESIGN.md "Findings")
 GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, Flatpak comparison. Re-verify only if DESIGN.md is contradicted by new evidence.
 
