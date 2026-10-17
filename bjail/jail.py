@@ -248,3 +248,18 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     for k, v in env.items():
         args += ["--setenv", k, v]
     return args + ["--remount-ro", "/", "--chdir", APP_HOME, "--"] + command
+
+
+# -- git jail (index updates) ---------------------------------------------------------
+
+GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_TERMINAL_PROMPT": "0",
+           "GIT_ALLOW_PROTOCOL": "https", "GIT_LFS_SKIP_SMUDGE": "1"}
+
+
+def git_args(workdir, command):
+    """Network jail for git: only workdir (at /work) is writable; git's own config is neutralised."""
+    env = []
+    for k, v in GIT_ENV.items():
+        env += ["--setenv", k, v]
+    return (common_args() + ["--share-net"] + etc_args() + env
+            + ["--bind", str(workdir), "/work", "--remount-ro", "/", "--chdir", "/work", "--"] + command)

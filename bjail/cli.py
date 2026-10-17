@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import appimage, github, index, jail, manifest, runner, store, textsafe
+from . import appimage, github, index, indexsync, jail, manifest, runner, store, textsafe
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
@@ -223,6 +223,55 @@ def cmd_search(args, console):
         console.out("A hit is only a suggestion: check the owner and repository yourself before `bjail add`.")
 
 
+def cmd_index_update(args, console, fetch=indexsync.fetch):
+    base = store.data_dir() / "index"
+    base.mkdir(parents=True, exist_ok=True, mode=0o700)
+    work = base / f"work-{secrets.token_hex(6)}"
+    work.mkdir(mode=0o700)
+    try:
+        console.out(f"Fetching the AM index ({args.commit}) in a network-only jail…")
+        got = fetch(work, args.commit)
+        if got.commit == indexsync.current():
+            console.out(f"The index is already at {got.commit[:12]}.")
+            return
+        staged = base / f"staged-{got.commit[:12]}"
+        shutil.rmtree(staged, ignore_errors=True)
+        staged.mkdir(mode=0o700)
+        try:
+            copied, skipped = indexsync.collect(got.tree, staged)
+            console.out(f"Fetched commit {got.commit}: {copied} install scripts"
+                        + (f", {skipped} odd file names skipped" if skipped else "")
+                        + (", signature header present (not verified)" if got.signed else ", unsigned"))
+            old = indexsync.current()
+            if old and indexsync.snapshot_path(old).is_dir():
+                d = indexsync.diff(indexsync.snapshot_path(old), staged)
+                show_index_diff(console, old, d)
+            else:
+                console.out("There is no previous index to compare with.")
+            if not console.confirm("Accept this snapshot as the current index?"):
+                raise Abort("cancelled; the index is unchanged")
+            indexsync.install(staged, got.commit, got.signed)
+        finally:
+            shutil.rmtree(staged, ignore_errors=True)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    console.out(f"Index pinned at {got.commit[:12]}. Previous: {(indexsync.previous() or 'none')[:12]}.")
+
+
+def show_index_diff(console, old, d):
+    console.out(f"Changes since {old[:12]}: {len(d.added)} apps added, {len(d.removed)} removed, "
+                f"{len(d.owner_changed)} owner changes, {len(d.source_changed)} other source changes")
+    for label, names in (("added", d.added), ("removed", d.removed)):
+        if names:
+            console.out(f"  {label}: " + ", ".join(names[:15]) + (f", … (+{len(names) - 15})" if len(names) > 15 else ""))
+    for name, a, b in d.owner_changed:
+        console.warn(f"OWNER CHANGE for {name}: {a} -> {b}. Check this before adding it.")
+    for name, a, b in d.source_changed[:20]:
+        console.out(f"  source changed: {name}: {a} -> {b}")
+    if len(d.source_changed) > 20:
+        console.out(f"  … and {len(d.source_changed) - 20} more source changes")
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="bjail", description="Sandboxed AppImage manager")
     sub = p.add_subparsers(dest="command", required=True)
@@ -242,6 +291,12 @@ def build_parser():
     search.add_argument("keywords", nargs="+")
     search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
     search.add_argument("--all", action="store_true", help="show every match")
+    idx = sub.add_parser("index", help="manage the local AM search index")
+    isub = idx.add_subparsers(dest="index_command", required=True)
+    upd = isub.add_parser("update", help="fetch the AM index, review the changes, then pin it")
+    upd.add_argument("--commit", default="HEAD", help="fetch this commit (40 hex digits) instead of the remote HEAD")
+    isub.add_parser("rollback", help="go back to the previous index snapshot")
+    isub.add_parser("status", help="show the pinned index")
     run = sub.add_parser("run", help="run an installed app in its jail")
     run.add_argument("name")
     run.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
@@ -262,6 +317,15 @@ def main(argv=None, client=None, console=None):
             if not manifest.SOURCE_RE.fullmatch(args.source):
                 raise Abort("source must be a GitHub owner/repo")
             cmd_add(args, client or github.Client(), console)
+        elif args.command == "index":
+            if args.index_command == "update":
+                cmd_index_update(args, console)
+            elif args.index_command == "rollback":
+                a, b = indexsync.rollback()
+                console.out(f"Index rolled back from {a[:12]} to {b[:12]}.")
+            else:
+                cur = indexsync.current()
+                console.out(f"Pinned: {cur or 'no index yet'}" + (f"; previous: {indexsync.previous()}" if indexsync.previous() else ""))
         elif args.command == "search":
             cmd_search(args, console)
         elif args.command == "run":
@@ -270,7 +334,7 @@ def main(argv=None, client=None, console=None):
     except Abort as e:
         console.out(str(e))
         return 1
-    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, index.IndexProblem, OSError) as e:
+    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, index.IndexProblem, indexsync.IndexRefused, OSError) as e:
         console.out(f"error: {e}")
         return 1
     return 0
