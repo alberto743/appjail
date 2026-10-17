@@ -24,6 +24,7 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - Run integration tests (anything that downloads, extracts or runs an AppImage, or starts bwrap with a real app) in a dedicated qemu-kvm guest, not on the host, to avoid side effects. Pure unit tests (manifest parser, index parser) may run on the host.
 - Host status (checked 2026-10-17): qemu 10.0.13 with KVM, `qemu-img`, `cloud-localds`, `genisoimage` and OVMF are installed; the user has rw access to `/dev/kvm` via ACL. Do not install anything else.
 - The guest needs a Wayland or headless compositor for GUI tests, user namespaces enabled, bubblewrap, and `unsquashfs`. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
+- Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ`. cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
 - Ask before creating or downloading a guest image (it is a binary download).
 - The VM is reproducible from tracked files only; `vm/` (base image, disk, ssh key, console log) is gitignored and can be deleted and rebuilt at any time.
 - Recreate on a new machine:

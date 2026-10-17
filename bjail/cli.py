@@ -171,6 +171,7 @@ def cmd_add(args, client, console, download=jail.download, now=None):
         dest = store.appimage_path(name)
         dest.parent.mkdir(parents=True, mode=0o700)
         try:
+            os.chmod(staged, 0o600)
             os.replace(staged, dest)
             manifest.dump(store.manifest_path(name), record)
         except BaseException:

@@ -113,6 +113,7 @@ class AddTests(unittest.TestCase):
         self.assertEqual(m.asset_pattern, "App-*-x86_64.AppImage")
         self.assertEqual(store.appimage_path("app").read_bytes(), FAKE_APPIMAGE)
         self.assertEqual(self.downloads[0][0], asset().url)
+        self.assertEqual(store.appimage_path("app").stat().st_mode & 0o777, 0o600)
         self.assertEqual(list(store.staging_root().iterdir()), [])
         self.assertIn("attestation: present (not verified)", console.text)
 
