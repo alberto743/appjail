@@ -10,7 +10,7 @@ Review of the AM repo (ivan-hc/AM, commit d739e48) showed:
 - About 95% of apps come from GitHub releases (8,247 `SITE="owner/repo"` entries).
 - Its sandbox generates a wrapper around `sas` or `aisap` (bwrap frontends); see `AM/modules/install.am:723-1011`.
 
-Goal: a small tool with declarative manifests, no remote code execution, no self-update, and a clear evidence model for verifying downloads and updates. Nothing is built or installed yet.
+Goal: a small tool with declarative manifests, no remote code execution, no self-update, and a clear evidence model for verifying downloads and updates. The MVP described below is implemented in `bjail/` (Python, stdlib only).
 
 ## Principles
 1. Declarative manifests only (source, pinned hash, permissions). No shell from the network.
@@ -164,15 +164,15 @@ A tier downgrade or an owner change blocks the update.
 - PipeWire/Pulse socket; `/dev/dri` for GPU.
 - D-Bus through `xdg-dbus-proxy`; file dialogs through `xdg-desktop-portal`.
 - The AppImage is extracted and `AppRun` executed (FUSE mounts do not work well in user namespaces).
-- Extraction prefers `unsquashfs` on the SquashFS offset, so the untrusted AppImage runtime never runs. Fallback: `--appimage-extract` inside the throwaway network-only jail. (`unsquashfs` was not found on the host at the time of writing.)
+- Extraction prefers `unsquashfs` on the SquashFS offset, so the untrusted AppImage runtime never runs. Fallback: `--appimage-extract` inside the throwaway network-only jail.
 
-Host verified: bubblewrap 0.12.0, unprivileged user namespaces OK, fusermount3 present.
+Verified in the test guest: bubblewrap 0.12.0, unprivileged user namespaces, fusermount3 not needed.
 
 ## MVP scope
 Python 3 stdlib only (`tomllib`, `urllib`, `hashlib`, `subprocess`); not shell, no third-party dependencies. Components: manifest parser, `add` for GitHub with TOFU + digest, bwrap runner with Wayland/audio/GPU, `search`, `index update`/`rollback`, `update` (quarantine, diff, tier-downgrade and owner-change block), plus `list`, `remove`, `perms`.
 - DwarFS-based AppImages (rather than SquashFS) are rejected in the MVP with a clear message; `unsquashfs` cannot read them.
   - Checked 2026-10-17: Debian 13 (trixie) has no `dwarfs` or `dwarfs-tools` package (`apt-cache search dwarfs` is empty). The only source of `dwarfsextract` would be a static binary from GitHub, i.e. an extra download whose hash bjail itself would have to pin. Support is therefore deferred, not planned for the MVP. Revisit if a distro package appears.
-  - `squashfs-tools` 4.6.1 is in trixie/main but not installed on this host; bjail needs it (`apt install squashfs-tools`) and must report its absence clearly.
+  - `squashfs-tools` 4.6.1 is in trixie/main; bjail needs it (`apt install squashfs-tools`) and reports its absence clearly.
 
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 
@@ -197,16 +197,16 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - Flatpak already offers a mature sandbox, portals, signed OSTree remotes and permission overrides. It covers the need where the app exists on Flathub.
 - It does not cover: AppImages released only on GitHub, user-pinned per-release hashes with a quarantine delay, and declarative manifests in the user's own git repo. bjail targets that gap and does not replace Flatpak. Prefer Flatpak when the same app is available there.
 
-## Open items to verify before implementing
+## Open items (all verified)
 - ~~GitHub asset `digest` algorithm and attestations behaviour.~~ Verified live on cli/cli (see Findings: GitHub API).
 - ~~Build on `sas` or write bwrap flags directly.~~ Decided: direct bwrap (see Findings: sas).
 - ~~Whether AM commits are signed.~~ Verified: mostly GitHub web-flow signed, the maintainer's commits unsigned (see AM as lookup-only index).
 - ~~Flatpak as a baseline comparison.~~ Done (see Findings: Flatpak comparison).
 
-## Verification (for the eventual implementation)
-Integration tests run inside a dedicated qemu-kvm guest (rebuilt from `tests/vm/create.sh`; see CLAUDE.md "Testing environment") (snapshot or throwaway disk) so downloads, extraction and jailed apps cannot affect the host. Unit tests run on the host. The guest needs bubblewrap, `unsquashfs`, user namespaces and a compositor (Wayland, or headless for non-GUI checks).
+## Verification
+Integration tests run inside a dedicated qemu-kvm guest (rebuilt from `tests/vm/create.sh`; see CLAUDE.md "Testing environment") (snapshot or throwaway disk) so downloads, extraction and jailed apps cannot affect the host. All tests, unit and integration, run in the guest. It needs bubblewrap, `unsquashfs`, user namespaces and a compositor (Wayland, or headless for non-GUI checks).
 
 Test with 2-3 real GitHub AppImage repos:
 - `add`, then `run`: confirm home is private and Documents are invisible.
-- Tamper test: modify the pinned hash; `update` must refuse.
+- Tamper test: modify the pinned hash or the stored AppImage; `run` must refuse (`update` treats the changed digest as a new candidate and applies the quarantine).
 - `index update` diff output with a changed `SITE=`.
