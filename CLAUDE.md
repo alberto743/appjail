@@ -21,7 +21,7 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - GitHub `digest` (sha256:hex) and the repo-scoped attestations endpoint verified live on cli/cli; recorded in DESIGN.md. cli/cli is the user-approved repo for API metadata checks.
 
 ## Testing environment
-- Run integration tests (anything that downloads, extracts or runs an AppImage, or starts bwrap with a real app) in a dedicated qemu-kvm guest, not on the host, to avoid side effects. Pure unit tests (manifest parser, index parser) may run on the host.
+- Never use the host system for this work, except to edit files and run git in this directory and to run qemu itself. All execution happens in the qemu-kvm guest: unit tests, integration tests, `bin/bjail`, network access (GitHub API probes included), downloads, extraction and bwrap. Do not run project code, tests or network clients on the host.
 - Host status (checked 2026-10-17): qemu 10.0.13 with KVM, `qemu-img`, `cloud-localds`, `genisoimage` and OVMF are installed; the user has rw access to `/dev/kvm` via ACL. Do not install anything else.
 - The guest needs a Wayland or headless compositor for GUI tests, user namespaces enabled, bubblewrap, and `unsquashfs`. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
 - Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ`. cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
@@ -35,12 +35,11 @@ Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 - The guest NIC must be virtio (`-nic user,model=virtio-net-pci`, already in `start.sh`); the default NIC left the guest without DNS and cloud-init failed. The cloud-init seed only runs on a fresh overlay.
 - Verified guest (2026-10-17): bubblewrap 0.12.0, unsquashfs, git, Python 3.13.5, unprivileged user namespaces, HTTPS to api.github.com from Python.
 
-## Running tests
-- Host unit tests: `python3 -m unittest` from this directory (no network, stdlib only).
-- Jail integration tests (real bwrap, guest only): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_INTEGRATION=1 python3 -m unittest'`.
-- CLI entry points: `bin/bjail ...` or `python3 -m bjail ...`. Use `BJAIL_DATA_DIR` / `BJAIL_CONFIG_DIR` to point at a scratch tree when trying commands.
-- Live GitHub metadata check (cli/cli, no downloads): `BJAIL_LIVE=1 python3 -m unittest tests.test_github.LiveTests`. Uses 4 requests of the 60/hour limit.
-- In the guest: `tests/vm/sync.sh` then `tests/vm/ssh.sh 'cd ~/bjail && python3 -m unittest'`.
+## Running tests (guest only)
+- Full suite: `tests/vm/test.sh` (syncs the project into the guest, runs `BJAIL_INTEGRATION=1 python3 -m unittest` there). Pass unittest arguments through, e.g. `tests/vm/test.sh -v tests.test_appimage`.
+- Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m unittest tests.test_github.LiveTests'`.
+- Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
+- Tests that need tools missing on the host (`bwrap` use, `mksquashfs`, `unsquashfs`) skip when run elsewhere; do not install them on the host.
 
 ## Verification status (done; results in DESIGN.md "Findings")
 GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, Flatpak comparison. Re-verify only if DESIGN.md is contradicted by new evidence.
