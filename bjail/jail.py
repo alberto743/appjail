@@ -138,3 +138,110 @@ def download(url, stage_dir, filename, expected_size):
         from .textsafe import clean
         raise JailError("download failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
     return Path(stage_dir) / filename
+
+
+# -- runtime jail ------------------------------------------------------------------
+
+APP_HOME = "/home/app"
+APP_DIR = "/app"
+RUNTIME_ETC = ("/etc/fonts", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d", "/etc/localtime",
+               "/etc/alternatives")
+GPU_RO = ("/sys/dev/char", "/sys/devices", "/usr/share/glvnd", "/usr/share/vulkan", "/etc/vulkan", "/etc/glvnd")
+
+
+class RunError(Exception):
+    pass
+
+
+def _guard_dirs():
+    from . import store
+    return [store.data_dir().resolve(), store.config_dir().resolve()]
+
+
+def dir_binds(dirs, home):
+    """Bind arguments for permissions.dirs. Refuses anything that would expose bjail's own files."""
+    args = []
+    for entry in dirs:
+        path, _, mode = entry.partition(":")
+        host = Path(home) / path[2:] if path.startswith("~/") else Path(path)
+        dest = f"{APP_HOME}/{path[2:]}" if path.startswith("~/") else path
+        try:
+            real = host.resolve(strict=True)
+        except OSError:
+            raise RunError(f"granted directory does not exist: {host}") from None
+        for guard in _guard_dirs():
+            if real == guard or guard in real.parents or real in guard.parents:
+                raise RunError(f"granted directory {host} would expose bjail's own data")
+        args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]
+    return args
+
+
+def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home):
+    """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
+
+    Pure function of its inputs: nothing is read from the process environment. Anything the
+    manifest asks for but bjail cannot enforce yet is refused instead of ignored.
+    """
+    if perms.display != "wayland":
+        raise RunError(f"display = {perms.display} is not implemented yet (only wayland)")
+    if perms.portals or perms.dbus_filter:
+        raise RunError("portals and dbus_filter are not implemented yet; remove them from the manifest")
+
+    rt = f"/run/user/{uid}"
+    args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
+            "--hostname", "bjail"]
+    if perms.network:
+        args.append("--share-net")
+    args += system_args()
+    args += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run",
+             "--perms", "0700", "--dir", "/run/user", "--perms", "0700", "--dir", rt]
+    args += ["--ro-bind", str(Path(etc_dir) / "passwd"), "/etc/passwd",
+             "--ro-bind", str(Path(etc_dir) / "group"), "/etc/group"]
+    for f in RUNTIME_ETC:
+        if os.path.exists(f):
+            args += ["--ro-bind", os.path.realpath(f), f]
+    if perms.network:
+        args += etc_args()
+    args += ["--ro-bind", str(root), APP_DIR, "--bind", str(home), APP_HOME]
+
+    host_rt = host_env.get("XDG_RUNTIME_DIR", "")
+    wl = host_env.get("WAYLAND_DISPLAY", "wayland-0")
+    if "/" in wl or not wl or not host_rt:
+        raise RunError("no usable Wayland session (XDG_RUNTIME_DIR / WAYLAND_DISPLAY)")
+    sock = Path(host_rt) / wl
+    if not sock.is_socket():
+        raise RunError(f"Wayland socket not found: {sock}")
+    args += ["--ro-bind", str(sock), f"{rt}/wayland-0"]
+
+    env = {
+        "PATH": f"{APP_DIR}/usr/bin:/usr/local/bin:/usr/bin:/bin", "HOME": APP_HOME, "USER": "app",
+        "LOGNAME": "app", "SHELL": "/bin/sh", "LANG": host_env.get("LANG") or "C.UTF-8",
+        "XDG_RUNTIME_DIR": rt, "WAYLAND_DISPLAY": "wayland-0", "XDG_SESSION_TYPE": "wayland",
+        "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
+        "GDK_BACKEND": "wayland", "QT_QPA_PLATFORM": "wayland", "MOZ_ENABLE_WAYLAND": "1",
+        "ELECTRON_OZONE_PLATFORM_HINT": "wayland", "SDL_VIDEODRIVER": "wayland",
+    }
+    if host_env.get("TZ"):
+        env["TZ"] = host_env["TZ"]
+
+    if perms.audio:
+        pw, pulse = Path(host_rt) / "pipewire-0", Path(host_rt) / "pulse" / "native"
+        if pw.is_socket():
+            args += ["--ro-bind", str(pw), f"{rt}/pipewire-0"]
+        if pulse.is_socket():
+            args += ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
+            env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
+
+    if perms.gpu:
+        if os.path.isdir("/dev/dri"):
+            args += ["--dev-bind", "/dev/dri", "/dev/dri"]
+        for node in sorted(Path("/dev").glob("nvidia*")):
+            args += ["--dev-bind", str(node), str(node)]
+        for p in GPU_RO:
+            if os.path.exists(p):
+                args += ["--ro-bind", p, p]
+
+    args += dir_binds(perms.dirs, host_home)
+    for k, v in env.items():
+        args += ["--setenv", k, v]
+    return args + ["--remount-ro", "/", "--chdir", APP_HOME, "--"] + command

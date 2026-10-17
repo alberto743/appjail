@@ -44,3 +44,13 @@ def root_path(name):
 def root_marker(name):
     """Holds the sha256 of the AppImage the tree was extracted from."""
     return app_dir(name) / "root.sha256"
+
+
+def home_path(name):
+    """The app's private home (persistent, bound at /home/app)."""
+    return app_dir(name) / "home"
+
+
+def etc_path(name):
+    """Generated /etc/passwd and /etc/group for the app."""
+    return app_dir(name) / "etc"

@@ -11,6 +11,8 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 5. `index update` / `index rollback`.
 6. `update [app]` (added to the MVP by the user): re-resolve, download in the jail, verify evidence, show the diff (hashes, tier, permissions, release link), quarantine delay (default 7 days, overridable), user approval. A tier downgrade or an owner change blocks the update. `list`, `remove` and `perms` come with it.
 
+Progress (update with every milestone): steps 1-3 done (manifest; `add` with jailed download, digest, extraction; `run` with the bwrap runtime jail). Next: 4 `search`, 5 `index update/rollback`, 6 `update`, `list`, `remove`, `perms`.
+
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
 
 ## Decisions made

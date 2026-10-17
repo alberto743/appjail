@@ -4,7 +4,6 @@
 """Command line interface."""
 
 import argparse
-import hashlib
 import os
 import re
 import secrets
@@ -12,7 +11,7 @@ import shutil
 import sys
 from datetime import datetime, timezone
 
-from . import appimage, github, jail, manifest, store, textsafe
+from . import appimage, github, jail, manifest, runner, store, textsafe
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
@@ -95,14 +94,6 @@ def permissions_from_args(args):
     )
 
 
-def hash_file(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,
             extract_ok=appimage.have_unsquashfs):
     name = args.name or default_name(args.source.partition("/")[2])
@@ -164,7 +155,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         staged = download(asset.url, stage, "download.AppImage", asset.size)
         if staged.stat().st_size != asset.size:
             raise Abort("downloaded size differs from the size GitHub announced")
-        digest = hash_file(staged)
+        digest = appimage.sha256_file(staged)
         if asset.sha256 and digest != asset.sha256:
             raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
         try:
@@ -209,6 +200,9 @@ def build_parser():
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")
     add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland")
+    run = sub.add_parser("run", help="run an installed app in its jail")
+    run.add_argument("name")
+    run.add_argument("app_args", nargs=argparse.REMAINDER, help="arguments passed to the app (after --)")
     return p
 
 
@@ -220,10 +214,13 @@ def main(argv=None, client=None, console=None):
             if not manifest.SOURCE_RE.fullmatch(args.source):
                 raise Abort("source must be a GitHub owner/repo")
             cmd_add(args, client or github.Client(), console)
+        elif args.command == "run":
+            extra = args.app_args[1:] if args.app_args[:1] == ["--"] else args.app_args
+            return runner.launch(args.name, extra, say=console.out)
     except Abort as e:
         console.out(str(e))
         return 1
-    except (github.GitHubError, jail.JailError, manifest.ManifestError, OSError) as e:
+    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, OSError) as e:
         console.out(f"error: {e}")
         return 1
     return 0
