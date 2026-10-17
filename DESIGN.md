@@ -36,6 +36,11 @@ Other forges (GitLab, Codeberg, SourceForge, vendor sites) are later resolvers.
 ## Manifest (TOML, stored in the user's own git repo)
 `source` (github owner/repo), `asset_pattern`, `version`, `sha256`, `evidence_tier`, `published_at`, `permissions` (network, audio, gpu, display = wayland|xwayland, dbus_filter, portals, dirs[]).
 
+Implemented in `bjail/manifest.py` (schema 1), one file per app at `~/.config/bjail/apps/<name>.toml`:
+- Top level: `schema = 1`, `name` (`[a-z0-9][a-z0-9._-]{0,63}`), `source`, `asset_pattern` (fnmatch, no `/`), `version`, `sha256` (64 lowercase hex), `evidence_tier` (1-5), `published_at` (UTC `YYYY-MM-DDTHH:MM:SSZ`).
+- `[permissions]` is optional and everything defaults to denied: `network`, `audio`, `gpu`, `portals` (bool); `display` (`wayland` default, or `xwayland`); `dbus_filter` (list of D-Bus names, optional `.*` suffix); `dirs` (list of absolute or `~/` paths, optional `:ro`/`:rw`, default read-only; `/`, `~/` and `..` rejected).
+- Strict: unknown keys, wrong types, control characters and bad formats are errors. The writer is deterministic and atomic, and refuses invalid manifests.
+
 ## Trust tiers (never silently downgraded)
 1. Build attestation (Sigstore / GitHub artifact attestations).
 2. Pinned-key GPG signature.
