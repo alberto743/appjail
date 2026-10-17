@@ -15,6 +15,17 @@ Progress (update with every milestone): steps 1-6 done (manifest; `add` with jai
 
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`).
 
+## Open points (to resume)
+State: MVP steps 1-6 and D-Bus filtering are done and committed; 372 tests pass in the guest; the tree is clean; nothing is pushed. Candidates, each roughly $2-8 of work, in the order I would take them:
+1. Portals (`portals = true` is still refused): needs a portal-aware caller identity (no `/.flatpak-info` in a bjail jail), the document-portal mount for file-chooser results, and `xdg-desktop-portal` plus a backend in the guest to test against. Decide the design with the user first.
+2. Xwayland isolation (`display = "xwayland"` is still refused): rootless Xwayland per app inside the jail's namespaces; never bind the host X11 socket.
+3. Attestation verification (today an attestation is only displayed and does not raise the tier) and the GPG tier.
+4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
+5. Hardening: seccomp filter, blocking nested user namespaces (Electron/Chromium need them, so make it a permission), a private network namespace for the download and git jails (they share the host's today).
+6. Decide whether `--tag` / `--prerelease` choices should be recorded in the manifest (today `update` follows the latest stable release unless `--prerelease` is given).
+Known limits are listed in DESIGN.md ("Permissions the manifest accepts but bjail does not enforce yet", update flow limitation for tier 4 assets swapped in place).
+Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
+
 ## Decisions made
 - Language: Python 3, stdlib only (confirmed by the user's go-ahead on the plan).
 - Extraction: prefer `unsquashfs` on the SquashFS offset; fall back to `--appimage-extract` inside the network-only jail. Never run the AppImage runtime outside a jail.
