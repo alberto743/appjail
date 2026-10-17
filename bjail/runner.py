@@ -8,7 +8,9 @@ import subprocess
 from dataclasses import replace
 from pathlib import Path
 
-from . import appimage, jail, manifest, store
+import contextlib
+
+from . import appimage, dbusproxy, jail, manifest, store
 from .jail import RunError
 
 
@@ -53,7 +55,7 @@ def prepare(name, extract=appimage.extract, say=print):
 
 
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
-           extra_dirs=()):
+           extra_dirs=(), proxy=dbusproxy.Proxy):
     """Start the app in its jail and return its exit status."""
     m, root, home, etc = prepare(name, extract, say)
     perms = m.permissions
@@ -61,9 +63,9 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
     env = dict(os.environ if host_env is None else host_env)
-    args = jail.runtime_args(
-        root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-        command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home())
-    argv = [jail.find_bwrap(), *args]
     run = runner or (lambda a: subprocess.call(a, env={"PATH": "/usr/bin:/bin"}))
-    return run(argv)
+    with (proxy(perms, env) if dbusproxy.needed(perms) else contextlib.nullcontext()) as bus:
+        args = jail.runtime_args(
+            root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
+            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus)
+        return run([jail.find_bwrap(), *args])

@@ -179,7 +179,7 @@ def dir_binds(dirs, home):
     return args
 
 
-def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home):
+def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     Pure function of its inputs: nothing is read from the process environment. Anything the
@@ -187,8 +187,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     """
     if perms.display != "wayland":
         raise RunError(f"display = {perms.display} is not implemented yet (only wayland)")
-    if perms.portals or perms.dbus_filter:
-        raise RunError("portals and dbus_filter are not implemented yet; remove them from the manifest")
+    if perms.portals:
+        raise RunError("portals are not implemented yet (they need a portal-aware identity for the app); remove them from the manifest")
+    if perms.dbus_filter and not dbus_socket:
+        raise RunError("dbus_filter needs the filtered bus socket from bjail.dbusproxy")
 
     rt = f"/run/user/{uid}"
     args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
@@ -226,6 +228,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     }
     if host_env.get("TZ"):
         env["TZ"] = host_env["TZ"]
+
+    if perms.dbus_filter:
+        args += ["--ro-bind", str(dbus_socket), f"{rt}/bus"]
+        env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={rt}/bus"
 
     if perms.audio:
         pw, pulse = Path(host_rt) / "pipewire-0", Path(host_rt) / "pulse" / "native"

@@ -288,3 +288,45 @@ def test_main_dispatch(h, capsys):  # noqa: F811
     assert cli.main(["list"]) == 0
     assert "app  v1.0" in capsys.readouterr().out
     assert cli.main(["perms", "nope"]) == 1
+
+
+# -- D-Bus names ------------------------------------------------------------------------
+
+
+def test_add_records_dbus_names(h):  # noqa: F811
+    path = installed(h, extra=("--dbus", "org.freedesktop.Notifications", "--dbus", "org.freedesktop.Notifications",
+                               "--dbus", "org.mpris.MediaPlayer2.*"))
+    assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*")
+
+
+def test_add_refuses_dangerous_dbus_names_before_network(h):  # noqa: F811
+    client = FakeClient()
+    with pytest.raises(Abort, match="systemd1"):
+        h.add(client=client, extra=("--dbus", "org.freedesktop.systemd1"))
+    assert client.calls == []
+
+
+def test_add_warns_about_secret_service(h):  # noqa: F811
+    c = h.add(extra=("--dbus", "org.freedesktop.secrets"))
+    assert "stored secrets" in c.text
+
+
+def test_perms_add_and_remove_dbus(h):  # noqa: F811
+    path = installed(h)
+    c = perms(h, "--add-dbus", "org.freedesktop.Notifications", "--add-dbus", "org.freedesktop.secrets")
+    assert "stored secrets" in c.text and "dbus=org.freedesktop.Notifications" in c.text
+    assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications", "org.freedesktop.secrets")
+    perms(h, "--rm-dbus", "org.freedesktop.secrets")
+    assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications",)
+    with pytest.raises(Abort, match="not allowed"):
+        perms(h, "--rm-dbus", "org.example.Nope")
+    with pytest.raises(Abort):
+        perms(h, "--add-dbus", "org.gnome.Shell")
+    assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications",)
+
+
+def test_list_shows_dbus(h):  # noqa: F811
+    installed(h, extra=("--dbus", "org.freedesktop.Notifications"))
+    c = Script()
+    cli.cmd_list(c)
+    assert "dbus: org.freedesktop.Notifications" in c.text

@@ -103,10 +103,29 @@ def dirs_from_args(specs, home=None, cwd=None):
     return tuple(out)
 
 
+def dbus_from_args(names, current=()):
+    """Validated dbus_filter names merged into the current list (order kept, no duplicates)."""
+    out = list(current)
+    for name in names:
+        try:
+            manifest.check_dbus_name(name)
+        except manifest.ManifestError as e:
+            raise Abort(f"--dbus {name}: {e}") from e
+        if name not in out:
+            out.append(name)
+    return tuple(out)
+
+
+def warn_sensitive_dbus(console, names):
+    for n in names:
+        if n.startswith(manifest.DBUS_SENSITIVE):
+            console.warn(f"{n} gives access to stored secrets (passwords, keys)")
+
+
 def permissions_from_args(args):
     allowed = set(args.allow)
     return manifest.Permissions(
-        dirs=dirs_from_args(args.dir),
+        dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
         network="network" in allowed, portals="portals" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
@@ -159,6 +178,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4)")
     granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
     console.out("Permissions: " + ", ".join(granted))
+    warn_sensitive_dbus(console, perms.dbus_filter)
 
     fallback = False
     if not extract_ok():
@@ -369,6 +389,7 @@ def cmd_list(console):
         pending = updater.load_pending(name)
         console.out(f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
                     + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
+                    + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
                     + (f"  (update seen: {pending['tag']})" if pending else ""))
 
 
@@ -392,7 +413,7 @@ PERMISSION_FLAGS = ("network", "audio", "gpu", "portals")
 
 def describe_permissions(p):
     return ", ".join([f"{k}={getattr(p, k)}" for k in PERMISSION_FLAGS] + [f"display={p.display}"]
-                     + [f"dir={d}" for d in p.dirs]) or "none"
+                     + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter]) or "none"
 
 
 def cmd_perms(args, console):
@@ -428,6 +449,13 @@ def cmd_perms(args, console):
         dirs = manifest.merge_dirs(dirs, dirs_from_args(args.add_dir))
     if dirs != p.dirs:
         changes["dirs"] = dirs
+    bus = dbus_from_args(args.add_dbus, p.dbus_filter)
+    missing = [n for n in args.rm_dbus if n not in bus]
+    if missing:
+        raise Abort("not allowed: " + ", ".join(missing))
+    bus = tuple(n for n in bus if n not in args.rm_dbus)
+    if bus != p.dbus_filter:
+        changes["dbus_filter"] = bus
     if not changes:
         console.out(f"{name}: {describe_permissions(p)}")
         return
@@ -438,6 +466,7 @@ def cmd_perms(args, console):
     for risky, text in (("network", "network access"), ("portals", "portals")):
         if getattr(new.permissions, risky) and not getattr(p, risky):
             console.warn(f"this grants {text}")
+    warn_sensitive_dbus(console, set(new.permissions.dbus_filter) - set(p.dbus_filter))
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")
     manifest.dump(store.manifest_path(name), new)
@@ -518,6 +547,8 @@ def build_parser():
     add.add_argument("--tag", help="use this release tag instead of the latest release")
     add.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
                      help="let the app see this directory (read-only unless :rw); repeatable")
+    add.add_argument("--dbus", action="append", default=[], metavar="NAME",
+                     help="let the app talk to this session-bus name through a filtering proxy; repeatable")
     add.add_argument("--allow", action="append", default=[], choices=["network", "portals"],
                      help="grant a permission (repeatable); audio and gpu are on by default")
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
@@ -549,6 +580,8 @@ def build_parser():
     perms.add_argument("--display", choices=manifest.DISPLAYS)
     perms.add_argument("--add-dir", action="append", default=[], metavar="PATH[:ro|:rw]")
     perms.add_argument("--rm-dir", action="append", default=[], metavar="PATH")
+    perms.add_argument("--add-dbus", action="append", default=[], metavar="NAME", help="allow talking to this session-bus name")
+    perms.add_argument("--rm-dbus", action="append", default=[], metavar="NAME")
     perms.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     run = sub.add_parser("run", help="run an installed app in its jail")
     run.add_argument("name")

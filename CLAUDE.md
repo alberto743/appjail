@@ -11,9 +11,9 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 5. `index update` / `index rollback`.
 6. `update [app]` (added to the MVP by the user): re-resolve, download in the jail, verify evidence, show the diff (hashes, tier, permissions, release link), quarantine delay (default 7 days, overridable), user approval. A tier downgrade or an owner change blocks the update. `list`, `remove` and `perms` come with it.
 
-Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 341 passed). Deferred work: see below.
+Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 341 passed); D-Bus filtering added afterwards (guest needs `xdg-dbus-proxy` and `dbus-bin`, both in `tests/vm/packages.txt`; run `tests/vm/provision.sh` on an existing guest).
 
-Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges.
+Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`).
 
 ## Decisions made
 - Language: Python 3, stdlib only (confirmed by the user's go-ahead on the plan).

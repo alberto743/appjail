@@ -24,6 +24,14 @@ PUBLISHED_RE = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 DBUS_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)+(\.\*)?")
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
+# Talking to these on the session bus is equivalent to running commands on the host or taking over
+# the desktop, so a filter that allows them would not be a filter. Refused, never granted.
+DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedesktop.Flatpak",
+                "org.freedesktop.impl", "org.gnome.Shell", "org.gnome.SessionManager", "org.kde.KWin",
+                "org.kde.klauncher5", "org.kde.klauncher6", "org.freedesktop.portal")
+DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
+DBUS_MIN_WILDCARD_PARTS = 3
+
 TIERS = (1, 2, 3, 4, 5)
 DISPLAYS = ("wayland", "xwayland")
 
@@ -90,6 +98,19 @@ def _str_list(value, what):
     return [_text(v, f"{what} entry") for v in value]
 
 
+def check_dbus_name(name):
+    """A D-Bus name an app may be allowed to talk to; refuses names that hand over the host."""
+    _match(name, DBUS_NAME_RE, "permissions.dbus_filter entry")
+    base, wild = (name[:-2], True) if name.endswith(".*") else (name, False)
+    if wild and base.count(".") + 1 < DBUS_MIN_WILDCARD_PARTS:
+        raise ManifestError(f"dbus_filter entry {name!r}: a wildcard needs at least {DBUS_MIN_WILDCARD_PARTS} name parts before '.*'")
+    for blocked in DBUS_BLOCKED:
+        hit = base == blocked or base.startswith(blocked + ".") or (wild and blocked.startswith(base + "."))
+        if hit:
+            raise ManifestError(f"dbus_filter entry {name!r} is refused: it reaches {blocked}, which can control the host or the desktop")
+    return name
+
+
 def _check_dir(entry):
     path, _, mode = entry.partition(":")
     if mode not in ("", "ro", "rw"):
@@ -154,7 +175,7 @@ def _permissions(table):
     if "dbus_filter" in table:
         names = _str_list(table["dbus_filter"], "permissions.dbus_filter")
         for n in names:
-            _match(n, DBUS_NAME_RE, "permissions.dbus_filter entry")
+            check_dbus_name(n)
         perms["dbus_filter"] = tuple(names)
     if "dirs" in table:
         perms["dirs"] = tuple(_check_dir(d) for d in _str_list(table["dirs"], "permissions.dirs"))
@@ -190,7 +211,7 @@ def validate(m):
     if p.display not in DISPLAYS:
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
     for n in p.dbus_filter:
-        _match(n, DBUS_NAME_RE, "permissions.dbus_filter entry")
+        check_dbus_name(n)
     for d in p.dirs:
         _check_dir(_text(d, "permissions.dirs entry"))
     return m
