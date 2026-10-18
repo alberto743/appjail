@@ -136,7 +136,14 @@ def check_dbus_name(name):
 
 # Paths below the home directory (no leading "~/") that hold credentials or secrets: never granted.
 SECRET_HOME_DIRS = (".ssh", ".gnupg", ".aws", ".kube", ".docker", ".password-store", ".netrc", ".config/gcloud",
-                    ".config/gh", ".config/Bitwarden", ".local/share/keyrings", ".local/share/gnome-keyring")
+                    ".config/gh", ".config/Bitwarden", ".local/share/keyrings", ".local/share/gnome-keyring",
+                    ".git-credentials", ".pki", ".bash_history", ".zsh_history", ".zhistory", ".python_history",
+                    ".lesshst", ".psql_history", ".mysql_history", ".node_repl_history", ".local/share/fish",
+                    ".mozilla", ".thunderbird", ".mail", ".gnupg2", ".var", ".config/google-chrome",
+                    ".config/chromium", ".config/BraveSoftware", ".config/vivaldi", ".config/microsoft-edge",
+                    ".config/opera", ".config/mozilla", ".cache/mozilla", ".local/share/kwalletd", ".local/share/Trash")
+# Name patterns of password databases, wherever they sit below the home directory.
+SECRET_SUFFIXES = (".kdbx", ".kdb", ".key", ".pem", ".p12", ".pfx")
 # Too broad: they contain the secrets of other applications and the persistence locations below.
 BROAD_HOME_DIRS = (".config", ".local", ".local/share", ".local/state", ".cache")
 # Writable access would let the app run code outside the jail later (login, shell, desktop, systemd).
@@ -163,6 +170,8 @@ def sensitive_reason(path, mode):
         for d in SECRET_HOME_DIRS:
             if _within(rel, d):
                 return f"~/{d} holds credentials or secrets"
+        if rel.lower().endswith(SECRET_SUFFIXES):
+            return "files like this hold credentials or secrets (password databases, private keys)"
         for d in BROAD_HOME_DIRS:
             if rel == d:
                 return f"~/{d} is too broad: it contains the data of every other application"

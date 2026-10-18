@@ -209,6 +209,16 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/Documents", "rw", False),
     ("/mnt/data", "rw", False),
     ("/dev/dri", "", True),
+    ("~/.bash_history", "", True),
+    ("~/.git-credentials", "", True),
+    ("~/.pki/nssdb", "", True),
+    ("~/.mozilla/firefox", "", True),
+    ("~/.config/google-chrome/Default", "", True),
+    ("~/.thunderbird", "", True),
+    ("~/.var/app/org.x.App", "", True),
+    ("~/Vault/pass.KDBX", "", True),
+    ("~/.configuration", "", False),  # prefix of a rule is not the rule
+    ("~/.varnish", "", False),
 ])
 def test_sensitive_reason(path, mode, refused):
     assert bool(manifest.sensitive_reason(path, mode)) is refused
