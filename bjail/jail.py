@@ -222,8 +222,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     xwayland = perms.display == "xwayland"
     if xwayland:
         command = xwayland_command(command)
-    if (perms.dbus_filter or perms.portals) and not dbus_socket:
-        raise RunError("dbus_filter and portals need the filtered bus socket from bjail.dbusproxy")
+    if (perms.dbus_filter or perms.dbus_own or perms.portals) and not dbus_socket:
+        raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from bjail.dbusproxy")
     if perms.portals and not portal_docs:
         raise RunError("portals need the document portal's directory for this app (bjail.portal.doc_dir)")
 

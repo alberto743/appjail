@@ -31,6 +31,11 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 "org.kde.klauncher5", "org.kde.klauncher6", "org.freedesktop.portal")
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
+# Owning a name lets the app be the service behind it. Impersonating a desktop service (notifications, secrets,
+# polkit, the file manager, ...) would let the app intercept what other apps send there, so the desktop
+# namespaces cannot be owned, except the status-notifier names an app registers for its own tray icon.
+DBUS_NO_OWN = ("org.freedesktop.", "org.gnome.", "org.kde.", "org.a11y.", "com.canonical.", "org.ayatana.")
+DBUS_OWN_OK = ("org.freedesktop.StatusNotifierItem", "org.kde.StatusNotifierItem")
 
 # Portal interfaces (the part after org.freedesktop.portal.). `portals = true` allows the safe set; the
 # opt-in ones must be named in `portal_interfaces`; the last group is never available to an app.
@@ -48,7 +53,7 @@ TOP_KEYS = {
     "evidence_tier", "published_at", "owner_id", "channel", "permissions",
 }
 CHANNELS = ("stable", "prerelease", "pinned")
-PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "portal_interfaces", "userns", "dirs"}
+PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "dirs"}
 
 
 class ManifestError(ValueError):
@@ -62,7 +67,8 @@ class Permissions:
     audio: bool = False
     gpu: bool = False
     display: str = "wayland"
-    dbus_filter: tuple = ()
+    dbus_filter: tuple = ()  # session-bus names the app may talk to
+    dbus_own: tuple = ()  # session-bus names the app may own (and talk to): MPRIS players, single-instance names
     portals: bool = False
     portal_interfaces: tuple = ()  # opt-in portal interfaces beyond the safe set (see PORTAL_OPT_IN)
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
@@ -121,16 +127,28 @@ def check_portal_interface(name):
     return name
 
 
-def check_dbus_name(name):
+def check_dbus_name(name, key="dbus_filter"):
     """A D-Bus name an app may be allowed to talk to; refuses names that hand over the host."""
-    _match(name, DBUS_NAME_RE, "permissions.dbus_filter entry")
+    _match(name, DBUS_NAME_RE, f"permissions.{key} entry")
     base, wild = (name[:-2], True) if name.endswith(".*") else (name, False)
     if wild and base.count(".") + 1 < DBUS_MIN_WILDCARD_PARTS:
-        raise ManifestError(f"dbus_filter entry {name!r}: a wildcard needs at least {DBUS_MIN_WILDCARD_PARTS} name parts before '.*'")
+        raise ManifestError(f"{key} entry {name!r}: a wildcard needs at least {DBUS_MIN_WILDCARD_PARTS} name parts before '.*'")
     for blocked in DBUS_BLOCKED:
         hit = base == blocked or base.startswith(blocked + ".") or (wild and blocked.startswith(base + "."))
         if hit:
-            raise ManifestError(f"dbus_filter entry {name!r} is refused: it reaches {blocked}, which can control the host or the desktop")
+            raise ManifestError(f"{key} entry {name!r} is refused: it reaches {blocked}, which can control the host or the desktop")
+    return name
+
+
+def check_dbus_own(name):
+    """A D-Bus name an app may own: like a talk name, and never inside a desktop service namespace."""
+    check_dbus_name(name, "dbus_own")
+    base = name[:-2] if name.endswith(".*") else name
+    if base.startswith(DBUS_OWN_OK):
+        return name
+    if (base + ".").startswith(DBUS_NO_OWN) or any(n.startswith(base + ".") for n in DBUS_NO_OWN):
+        raise ManifestError(f"dbus_own entry {name!r} is refused: owning a name in a desktop service namespace "
+                            "would let the app impersonate that service")
     return name
 
 
@@ -260,6 +278,8 @@ def _permissions(table):
         for n in names:
             check_dbus_name(n)
         perms["dbus_filter"] = tuple(names)
+    if "dbus_own" in table:
+        perms["dbus_own"] = tuple(check_dbus_own(n) for n in _str_list(table["dbus_own"], "permissions.dbus_own"))
     if "portal_interfaces" in table:
         names = _str_list(table["portal_interfaces"], "permissions.portal_interfaces")
         perms["portal_interfaces"] = tuple(check_portal_interface(n) for n in names)
@@ -301,6 +321,8 @@ def validate(m):
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
     for n in p.dbus_filter:
         check_dbus_name(n)
+    for n in p.dbus_own:
+        check_dbus_own(n)
     for n in p.portal_interfaces:
         check_portal_interface(n)
     _portal_consistency(p)
@@ -370,6 +392,7 @@ def dumps(m):
         f"gpu = {str(p.gpu).lower()}",
         f"display = {_quote(p.display)}",
         f"dbus_filter = {_array(p.dbus_filter)}",
+        f"dbus_own = {_array(p.dbus_own)}",
         f"portals = {str(p.portals).lower()}",
         f"portal_interfaces = {_array(p.portal_interfaces)}",
         f"userns = {str(p.userns).lower()}",

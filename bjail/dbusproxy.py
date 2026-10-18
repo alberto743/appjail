@@ -4,7 +4,7 @@
 """Filtered session bus for an app: `xdg-dbus-proxy` runs outside the app's jail, in a jail of its own.
 
 The app never sees the real bus socket. It gets a socket served by the proxy, which hides every name
-and refuses every call except the names listed in `permissions.dbus_filter` (talk access).
+and refuses every call except the names listed in `permissions.dbus_filter` (talk access) and `permissions.dbus_own` (own access).
 """
 
 import os
@@ -22,7 +22,7 @@ READY_TIMEOUT = 5.0
 
 
 def needed(perms):
-    return bool(perms.dbus_filter or perms.portals)
+    return bool(perms.dbus_filter or perms.dbus_own or perms.portals)
 
 
 def host_bus(host_env):
@@ -39,8 +39,9 @@ def host_bus(host_env):
 
 
 def rules(perms):
-    """xdg-dbus-proxy options for the manifest: see nothing, talk to the listed names."""
+    """xdg-dbus-proxy options for the manifest: see nothing, talk to the listed names, own the owned ones."""
     return (["--filter"] + [f"--talk={manifest.check_dbus_name(n)}" for n in perms.dbus_filter]
+            + [f"--own={manifest.check_dbus_own(n)}" for n in perms.dbus_own]
             + portal.proxy_rules(perms))
 
 
@@ -64,7 +65,7 @@ class Proxy:
 
     def __enter__(self):
         if not os.access(PROXY, os.X_OK):
-            raise RunError("dbus_filter and portals need xdg-dbus-proxy (apt install xdg-dbus-proxy)")
+            raise RunError("dbus_filter, dbus_own and portals need xdg-dbus-proxy (apt install xdg-dbus-proxy)")
         bus = host_bus(self.host_env)
         self.dir = Path(tempfile.mkdtemp(prefix="bjail-", dir=self.host_env["XDG_RUNTIME_DIR"]))
         read_fd, write_fd = os.pipe()

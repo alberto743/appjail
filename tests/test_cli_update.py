@@ -325,6 +325,27 @@ def test_perms_add_and_remove_dbus(h):  # noqa: F811
     assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications",)
 
 
+def test_add_and_perms_dbus_own(h):  # noqa: F811
+    client = FakeClient()
+    with pytest.raises(Abort, match="impersonate"):
+        h.add(client=client, extra=("--dbus-own", "org.freedesktop.Notifications"))
+    assert client.calls == []
+    path = installed(h, extra=("--dbus-own", "org.mpris.MediaPlayer2.*"))
+    assert manifest.load(path).permissions.dbus_own == ("org.mpris.MediaPlayer2.*",)
+    c = perms(h, "--add-dbus-own", "org.example.App")
+    assert "may own this session-bus name" in c.text and "dbus-own=org.example.App" in c.text
+    assert manifest.load(path).permissions.dbus_own == ("org.mpris.MediaPlayer2.*", "org.example.App")
+    perms(h, "--rm-dbus-own", "org.mpris.MediaPlayer2.*")
+    assert manifest.load(path).permissions.dbus_own == ("org.example.App",)
+    with pytest.raises(Abort, match="not owned"):
+        perms(h, "--rm-dbus-own", "org.example.Nope")
+    with pytest.raises(Abort):
+        perms(h, "--add-dbus-own", "org.gnome.Shell")
+    c = Script()
+    cli.cmd_list(c)
+    assert "dbus-own: org.example.App" in c.text
+
+
 def test_list_shows_dbus(h):  # noqa: F811
     installed(h, extra=("--dbus", "org.freedesktop.Notifications"))
     c = Script()

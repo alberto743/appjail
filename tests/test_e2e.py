@@ -83,6 +83,33 @@ def test_gui_app_runs_in_jail_against_headless_weston(installed, tmp_path):
     assert not (Path.home() / ".config" / "lagrange").exists(), "nothing may reach the real home"
 
 
+@pytest.mark.skipif(not shutil.which("Xwayland"), reason="xwayland is installed in the test guest (packages.txt)")
+def test_gui_app_runs_through_a_private_xwayland(installed):
+    """Same app, forced onto X11 (no WAYLAND_DISPLAY, SDL_VIDEODRIVER=x11): it can only run through the jail's Xwayland."""
+    from dataclasses import replace
+    from bjail import jail
+    rt = Path(f"/run/user/{os.getuid()}")
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=bjail-e2x"],
+                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(50):
+            if (rt / "bjail-e2x").exists():
+                break
+            time.sleep(0.1)
+        env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "bjail-e2x", "LANG": "C.UTF-8"}
+        m, root, home, etc = runner.prepare("lagrange", say=lambda *_: None)
+        perms = replace(m.permissions, display="xwayland")
+        argv = [jail.find_bwrap(), *jail.runtime_args(
+            root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
+            command=["/usr/bin/timeout", "8", "/app/AppRun"], host_home=Path.home())]
+        proc = jail.supervise(argv, timeout=60)
+        assert proc.returncode == 124, proc.stderr
+    finally:
+        weston.terminate()
+        weston.wait(timeout=10)
+
+
 def test_tampered_image_is_refused(installed):
     with open(store.appimage_path("lagrange"), "ab") as f:
         f.write(b"x")

@@ -47,12 +47,50 @@ def test_blocked_names_are_refused_when_loading_a_manifest():
         manifest.loads(text.replace("org.example.A", "org.freedesktop.systemd1"))
 
 
+OWN = ("org.mpris.MediaPlayer2.myplayer", "org.example.App", "org.example.App.*", "org.kde.StatusNotifierItem.*")
+
+
+@pytest.mark.parametrize("name", OWN)
+def test_ordinary_owned_names_are_accepted(name):
+    assert manifest.check_dbus_own(name) == name
+
+
+@pytest.mark.parametrize("name", [
+    "org.freedesktop.Notifications", "org.freedesktop.secrets", "org.gnome.Mutter.ScreenCast", "org.kde.KWin",
+    "org.freedesktop.systemd1", "org.freedesktop.portal.Desktop", "org.kde.plasmashell", "org.freedesktop.*",
+    "org.gnome.*", "org.kde.*", "org.freedesktop.DBus", "not a name",
+])
+def test_owning_desktop_services_is_refused(name):
+    with pytest.raises(ManifestError):
+        manifest.check_dbus_own(name)
+
+
+def test_dbus_own_round_trips_and_is_checked_when_loading():
+    m = manifest.Manifest("a", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z",
+                          permissions=Permissions(dbus_own=("org.example.A",)))
+    text = manifest.dumps(m)
+    assert manifest.loads(text).permissions.dbus_own == ("org.example.A",)
+    with pytest.raises(ManifestError, match="dbus_own"):
+        manifest.loads(text.replace("org.example.A", "org.freedesktop.Notifications"))
+
+
 # -- argument building (pure) ---------------------------------------------------------------
 
 
 def test_rules_see_nothing_and_talk_to_the_listed_names():
     r = dbusproxy.rules(Permissions(dbus_filter=NAMES))
     assert r[0] == "--filter" and r[1:] == [f"--talk={n}" for n in NAMES]
+
+
+def test_rules_add_own_policy_and_a_bus_is_needed():
+    perms = Permissions(dbus_filter=NAMES[:1], dbus_own=("org.mpris.MediaPlayer2.*",))
+    assert dbusproxy.rules(perms) == ["--filter", f"--talk={NAMES[0]}", "--own=org.mpris.MediaPlayer2.*"]
+    assert dbusproxy.needed(Permissions(dbus_own=("org.example.A",)))
+
+
+def test_dbus_own_without_proxy_socket_is_refused(sandbox, runtime):
+    with pytest.raises(RunError, match="filtered bus socket"):
+        jail.runtime_args(**build(sandbox, runtime, dbus_own=("org.example.A",)))
 
 
 @pytest.mark.parametrize("env,expected", [
@@ -204,3 +242,36 @@ def test_proxy_dies_with_the_context(runtime, session_bus):
         assert Path(sock).is_socket()
     assert not Path(sock).exists()
     assert [p for p in runtime.iterdir() if p.name.startswith("bjail-")] == []
+
+
+OWN_PROBE = """#!/usr/bin/python3
+import json, dbus, dbus.service
+bus = dbus.SessionBus()
+def own(name):
+    try:
+        dbus.service.BusName(name, bus, do_not_queue=True)
+        return "ok"
+    except Exception as e:
+        return type(e).__name__ + ": " + str(e)[:120]
+print(json.dumps({"owned": own("org.example.Owned"), "wild": own("org.example.Family.one"),
+                  "other": own("org.example.Other"), "notif": own("org.freedesktop.Notifications")}))
+"""
+
+
+@integration
+@needs_proxy
+@pytest.mark.skipif(not shutil.which("python3") or subprocess.run(["python3", "-c", "import dbus"]).returncode != 0,
+                    reason="needs python3-dbus (run provision.sh)")
+def test_owning_a_granted_name_end_to_end(sandbox, runtime, session_bus):
+    perms = Permissions(dbus_own=("org.example.Owned", "org.example.Family.*"))
+    env = build(sandbox, runtime)["host_env"] | {"DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
+    with dbusproxy.Proxy(perms, env) as sock:
+        kw = build(sandbox, runtime, dbus_own=perms.dbus_own)
+        (kw["root"] / "AppRun").write_text(OWN_PROBE)
+        (kw["root"] / "AppRun").chmod(0o755)
+        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw, dbus_socket=sock)], timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    r = json.loads(proc.stdout)
+    assert r["owned"] == "ok" and r["wild"] == "ok"
+    assert "AccessDenied" in r["other"] or "not allowed" in r["other"].lower() or "Error" in r["other"]
+    assert r["other"] != "ok" and r["notif"] != "ok"

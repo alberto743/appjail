@@ -106,14 +106,14 @@ def dirs_from_args(specs, home=None, cwd=None):
     return tuple(out)
 
 
-def dbus_from_args(names, current=()):
-    """Validated dbus_filter names merged into the current list (order kept, no duplicates)."""
+def dbus_from_args(names, current=(), check=manifest.check_dbus_name, flag="--dbus"):
+    """Validated dbus_filter (or dbus_own) names merged into the current list (order kept, no duplicates)."""
     out = list(current)
     for name in names:
         try:
-            manifest.check_dbus_name(name)
+            check(name)
         except manifest.ManifestError as e:
-            raise Abort(f"--dbus {name}: {e}") from e
+            raise Abort(f"{flag} {name}: {e}") from e
         if name not in out:
             out.append(name)
     return tuple(out)
@@ -144,6 +144,11 @@ def warn_sensitive_dbus(console, names):
             console.warn(f"{n} gives access to stored secrets (passwords, keys)")
 
 
+def warn_owned_dbus(console, names):
+    for n in names:
+        console.warn(f"{n}: the app may own this session-bus name (be the service behind it) and talk to it")
+
+
 def permissions_from_args(args):
     allowed = set(args.allow)
     if args.portal and "portals" not in allowed:
@@ -151,6 +156,7 @@ def permissions_from_args(args):
     return manifest.Permissions(
         portal_interfaces=portals_from_args(args.portal),
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
+        dbus_own=dbus_from_args(args.dbus_own, check=manifest.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed, portals="portals" in allowed, userns="userns" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
@@ -228,6 +234,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
     console.out("Permissions: " + ", ".join(granted))
     warn_sensitive_dbus(console, perms.dbus_filter)
+    warn_owned_dbus(console, perms.dbus_own)
     warn_privileged_portals(console, perms.portal_interfaces)
 
     fallback = False
@@ -503,6 +510,7 @@ def cmd_list(console):
         console.out(f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
                     + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
                     + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
+                    + (f"  dbus-own: {', '.join(p.dbus_own)}" if p.dbus_own else "")
                     + (f"  portals: {', '.join(p.portal_interfaces)}" if p.portal_interfaces else "")
                     + (f"  channel: {m.channel}" if m.channel != "stable" else "")
                     + (f"  (update seen: {pending['tag']})" if pending else ""))
@@ -526,7 +534,7 @@ def cmd_remove(args, console):
 
 def describe_permissions(p):
     return ", ".join([f"{k}={getattr(p, k)}" for k in PERMISSION_FLAGS] + [f"display={p.display}"]
-                     + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter] + [f"portal={n}" for n in p.portal_interfaces]) or "none"
+                     + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter] + [f"dbus-own={n}" for n in p.dbus_own] + [f"portal={n}" for n in p.portal_interfaces]) or "none"
 
 
 def cmd_perms(args, console):
@@ -569,6 +577,13 @@ def cmd_perms(args, console):
     bus = tuple(n for n in bus if n not in args.rm_dbus)
     if bus != p.dbus_filter:
         changes["dbus_filter"] = bus
+    own = dbus_from_args(args.add_dbus_own, p.dbus_own, manifest.check_dbus_own, "--add-dbus-own")
+    missing = [n for n in args.rm_dbus_own if n not in own]
+    if missing:
+        raise Abort("not owned: " + ", ".join(missing))
+    own = tuple(n for n in own if n not in args.rm_dbus_own)
+    if own != p.dbus_own:
+        changes["dbus_own"] = own
     portal_names = portals_from_args(args.add_portal, p.portal_interfaces)
     missing = [n for n in args.rm_portal if n not in portal_names]
     if missing:
@@ -592,6 +607,7 @@ def cmd_perms(args, console):
         if getattr(new.permissions, risky) and not getattr(p, risky):
             console.warn(f"this grants {text}")
     warn_sensitive_dbus(console, set(new.permissions.dbus_filter) - set(p.dbus_filter))
+    warn_owned_dbus(console, set(new.permissions.dbus_own) - set(p.dbus_own))
     warn_privileged_portals(console, set(new.permissions.portal_interfaces) - set(p.portal_interfaces))
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")
@@ -676,6 +692,8 @@ def build_parser():
                      help="let the app see this directory (read-only unless :rw); repeatable")
     add.add_argument("--dbus", action="append", default=[], metavar="NAME",
                      help="let the app talk to this session-bus name through a filtering proxy; repeatable")
+    add.add_argument("--dbus-own", action="append", default=[], metavar="NAME",
+                     help="let the app own this session-bus name (MPRIS player, single-instance name); repeatable")
     add.add_argument("--portal", action="append", default=[], metavar="NAME",
                      help="also allow this privileged portal interface (needs --allow portals); repeatable")
     add.add_argument("--allow", action="append", default=[], choices=["network", "portals", "userns"],
@@ -720,6 +738,8 @@ def build_parser():
     perms.add_argument("--rm-dir", action="append", default=[], metavar="PATH")
     perms.add_argument("--add-dbus", action="append", default=[], metavar="NAME", help="allow talking to this session-bus name")
     perms.add_argument("--rm-dbus", action="append", default=[], metavar="NAME")
+    perms.add_argument("--add-dbus-own", action="append", default=[], metavar="NAME", help="allow owning this session-bus name")
+    perms.add_argument("--rm-dbus-own", action="append", default=[], metavar="NAME")
     perms.add_argument("--add-portal", action="append", default=[], metavar="NAME", help="also allow this privileged portal interface")
     perms.add_argument("--rm-portal", action="append", default=[], metavar="NAME")
     perms.add_argument("--yes", action="store_true", help="do not ask for confirmation")
