@@ -37,7 +37,16 @@ def prepare(name, extract=appimage.extract, say=print):
         raise RunError(f"{name}: the stored AppImage does not match the pinned sha256 "
                        f"(pinned {m.sha256[:16]}…, found {digest[:16]}…); refusing to run")
     root, marker = store.root_path(name), store.root_marker(name)
-    if not (root.is_dir() and marker.is_file() and marker.read_text().strip() == digest):
+    tree_mark = store.tree_marker(name)
+    valid = root.is_dir() and marker.is_file() and marker.read_text().strip() == digest
+    if valid:
+        try:
+            valid = tree_mark.read_text().strip() == appimage.tree_digest(root)
+        except OSError:
+            valid = False
+        if not valid:
+            say(f"Warning: the extracted tree of {name} is missing its record or was modified; extracting it again from the verified image.")
+    if not valid:
         say(f"Extracting {name} (no valid extracted tree)…")
         appimage.remove_tree(root)
         try:
@@ -45,6 +54,7 @@ def prepare(name, extract=appimage.extract, say=print):
         except (appimage.UnsupportedImage, appimage.ExtractError, appimage.UnsafeTree) as e:
             raise RunError(f"cannot extract {name}: {e}") from e
         marker.write_text(digest + "\n")
+        tree_mark.write_text(appimage.tree_digest(root) + "\n")
     home, etc = store.home_path(name), store.etc_path(name)
     for d in (home, etc):
         d.mkdir(mode=0o700, parents=True, exist_ok=True)

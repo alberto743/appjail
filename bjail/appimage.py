@@ -44,6 +44,37 @@ def sha256_file(path):
     return h.hexdigest()
 
 
+def tree_digest(root):
+    """sha256 over every path, type, permission bits, file content and link target of a tree.
+
+    Nothing is followed: a symlink contributes its target text only. Detects any later change
+    to the extracted tree, including added, removed or re-linked entries.
+    """
+    h = hashlib.sha256()
+    root = str(root)
+    stack = [""]
+    while stack:
+        rel = stack.pop()
+        with os.scandir(os.path.join(root, rel)) as it:
+            entries = sorted(it, key=lambda e: e.name)
+        for e in entries:
+            path = os.path.join(rel, e.name)
+            st = e.stat(follow_symlinks=False)
+            if stat.S_ISLNK(st.st_mode):
+                h.update(f"L {path}\0{os.readlink(e.path)}\0".encode("utf-8", "surrogateescape"))
+            elif stat.S_ISDIR(st.st_mode):
+                h.update(f"D {path}\0{stat.S_IMODE(st.st_mode):o}\0".encode("utf-8", "surrogateescape"))
+                stack.append(path)
+            else:
+                h.update(f"F {path}\0{stat.S_IMODE(st.st_mode):o}\0{st.st_size}\0".encode("utf-8", "surrogateescape"))
+                if stat.S_ISREG(st.st_mode):
+                    fd = os.open(e.path, os.O_RDONLY | os.O_NOFOLLOW)
+                    with os.fdopen(fd, "rb") as f:
+                        for chunk in iter(lambda: f.read(1 << 20), b""):
+                            h.update(chunk)
+    return h.hexdigest()
+
+
 def appimage_type(path):
     """Return 2 for a type-2 AppImage; raise NotAnAppImage otherwise (type 1 is unsupported)."""
     with open(path, "rb") as f:

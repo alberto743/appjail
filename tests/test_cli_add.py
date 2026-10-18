@@ -134,6 +134,7 @@ def test_extraction_runs_on_stored_file_and_marks_source_hash(h):
     h.add()
     assert h.extractions[0] == (store.appimage_path("app"), store.root_path("app"), False)
     assert store.root_marker("app").read_text().strip() == SHA
+    assert store.tree_marker("app").read_text().strip() == appimage.tree_digest(store.root_path("app"))
 
 
 def test_default_permissions_are_minimal(h):

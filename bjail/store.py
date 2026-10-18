@@ -46,6 +46,11 @@ def root_marker(name):
     return app_dir(name) / "root.sha256"
 
 
+def tree_marker(name):
+    """Holds the digest of the extracted tree itself, taken right after extraction."""
+    return app_dir(name) / "root.tree.sha256"
+
+
 def home_path(name):
     """The app's private home (persistent, bound at /home/app)."""
     return app_dir(name) / "home"

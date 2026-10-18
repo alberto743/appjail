@@ -218,6 +218,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
             except (appimage.UnsupportedImage, appimage.ExtractError, appimage.UnsafeTree) as e:
                 raise Abort(f"cannot extract the AppImage: {e}") from e
             store.root_marker(name).write_text(digest + "\n")
+            store.tree_marker(name).write_text(appimage.tree_digest(store.root_path(name)) + "\n")
             manifest.dump(store.manifest_path(name), record)
         except BaseException:
             appimage.remove_tree(dest.parent)
@@ -250,6 +251,8 @@ def swap_in(name, staged, stage, record, extract, fallback):
     dest, root, marker = store.appimage_path(name), store.root_path(name), store.root_marker(name)
     old_image, old_root = stage / "old.AppImage", stage / "old-root"
     old_marker = marker.read_text() if marker.is_file() else None
+    tree_mark = store.tree_marker(name)
+    old_tree_mark = tree_mark.read_text() if tree_mark.is_file() else None
     os.chmod(staged, 0o600)
     placed, backups = [], []  # new things in place, and (original path, where the original went)
     try:
@@ -263,6 +266,7 @@ def swap_in(name, staged, stage, record, extract, fallback):
         os.replace(staged, dest)
         placed.append(dest)
         marker.write_text(record.sha256 + "\n")
+        tree_mark.write_text(appimage.tree_digest(root) + "\n")
         manifest.dump(store.manifest_path(name), record)
     except BaseException:
         for path in placed:
@@ -271,6 +275,8 @@ def swap_in(name, staged, stage, record, extract, fallback):
             os.replace(backup, original)
         if old_marker is not None:
             marker.write_text(old_marker)
+        if old_tree_mark is not None:
+            tree_mark.write_text(old_tree_mark)
         raise
     return entries, size
 

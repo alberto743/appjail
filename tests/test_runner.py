@@ -243,6 +243,32 @@ def test_stale_or_missing_marker_forces_reextraction(sandbox):
     assert ex.calls == 3
 
 
+def test_modified_tree_is_extracted_again(sandbox):
+    install(sandbox)
+    ex, said = Extractor(), []
+    runner.prepare("app", extract=ex, say=said.append)
+    (store.root_path("app") / "usr" / "evil").write_text("x")
+    runner.prepare("app", extract=ex, say=said.append)
+    assert ex.calls == 2 and not (store.root_path("app") / "usr" / "evil").exists()
+    assert any("modified" in m for m in said)
+
+
+def test_tree_digest_sees_content_mode_and_links(tmp_path):
+    (tmp_path / "f").write_text("a")
+    (tmp_path / "l").symlink_to("f")
+    base = appimage.tree_digest(tmp_path)
+    assert appimage.tree_digest(tmp_path) == base
+    (tmp_path / "f").write_text("b")
+    changed = appimage.tree_digest(tmp_path)
+    assert changed != base
+    os.chmod(tmp_path / "f", 0o755)
+    assert appimage.tree_digest(tmp_path) != changed
+    mode = appimage.tree_digest(tmp_path)
+    (tmp_path / "l").unlink()
+    (tmp_path / "l").symlink_to("/etc/passwd")
+    assert appimage.tree_digest(tmp_path) != mode
+
+
 def test_extraction_error_becomes_run_error(sandbox):
     install(sandbox)
 
