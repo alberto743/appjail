@@ -21,7 +21,7 @@ Goal: a small tool with declarative manifests, no remote code execution, no self
 ## Commands
 - `search <kw>`: text-only lookup in the local AM index (candidates only, never installs).
 - `add owner/repo`: resolve, review, download, pin, write manifest.
-- `run <app>`, `update [app]`, `list`, `remove <app>`, `perms <app>` (edit permissions).
+- `run <app>`, `update [app]`, `list`, `remove <app>`, `perms <app>` (edit permissions), `history [app]` (recorded manifest changes).
 - `index update`, `index rollback`: refresh or roll back the AM search snapshot.
 
 ## Resolver (GitHub first)
@@ -140,6 +140,12 @@ A tier downgrade or an owner change blocks the update.
 - `bjail list`: name, version, source, tier, granted permissions, directories and any update seen.
 - `bjail remove APP [--yes]`: deletes the manifest and the app directory, including the private home (its settings and data); asks first.
 - `bjail perms APP [--allow|--deny network|audio|gpu|portals|userns] [--display wayland|xwayland] [--add-dir PATH[:ro|:rw]] [--rm-dir PATH] [--add-dbus NAME] [--rm-dbus NAME] [--yes]`: shows the permissions, or shows before/after and asks before saving. `--add-dir` uses the same validation as `add --dir`. The pinned release is untouched. `portals` and `xwayland` can be recorded but the runner still refuses to start such an app (see "Permissions the manifest accepts but bjail does not enforce yet").
+
+## Manifest history (implemented in `bjail/history.py`)
+Every change `add`, `update` (install and `--channel`), `perms` and `remove` make to `~/.config/bjail` is committed to a local git repository there (author `bjail`). The manifests hold the pins and sit where any process of the user can write, so this is the tamper evidence: `bjail run` warns when a manifest differs from the last commit, and `bjail history [APP] [--limit N]` lists the changes.
+- git runs inside a jail with no network that sees only the config directory (`jail.local_git_args`), with user and system git configuration ignored and hooks, fsmonitor and signing disabled. A hostile `.git/config` (filters, fsmonitor) can therefore run code only inside that jail.
+- Best effort by design: no git, or a config directory that already lies inside another repository (a dotfiles repo), means no history and no error; `history` then says so. Nothing is ever pushed anywhere.
+- It detects edits made outside bjail, not an attacker who also rewrites `.git`; it is not a substitute for protecting the account.
 
 ## AM as lookup-only index
 - Local snapshot of ivan-hc/AM pinned by commit; read as text only (never sourced or executed); terminal escape sequences stripped.

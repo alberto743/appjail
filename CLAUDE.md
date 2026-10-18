@@ -13,16 +13,16 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 
 Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 372 passed); D-Bus filtering added afterwards (guest needs `xdg-dbus-proxy` and `dbus-bin`, both in `tests/vm/packages.txt`; run `tests/vm/provision.sh` on an existing guest).
 
-Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`).
+Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`); hardening round (2026-10-18): sensitive-path refusal for `dirs`, extracted-tree digest checked at every launch, restricted Wayland socket via `wp_security_context_v1` (`bjail/wayland.py`), seccomp filter plus `userns` permission (`bjail/seccomp.py`), manifest `channel`, rate-limit-aware `update`, manifest history in a local git repo (`bjail/history.py`).
 
 ## Open points (to resume)
-State: MVP steps 1-6 and D-Bus filtering are done and committed; 372 tests pass in the guest; the tree is clean; pushed to the private GitHub repo `bjail`. Candidates, each roughly $2-8 of work, in the order I would take them:
+State: MVP steps 1-6, D-Bus filtering and the hardening round are done and committed; 426 tests pass in the guest (the opt-in e2e suites also pass); the tree is clean; pushed to the private GitHub repo `bjail`. Candidates, each roughly $2-8 of work, in the order I would take them:
 1. Portals (`portals = true` is still refused): needs a portal-aware caller identity (no `/.flatpak-info` in a bjail jail), the document-portal mount for file-chooser results, and `xdg-desktop-portal` plus a backend in the guest to test against. Decide the design with the user first.
 2. Xwayland isolation (`display = "xwayland"` is still refused): rootless Xwayland per app inside the jail's namespaces; never bind the host X11 socket.
 3. Attestation verification (today an attestation is only displayed and does not raise the tier) and the GPG tier.
 4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
-5. Hardening: seccomp filter, blocking nested user namespaces (Electron/Chromium need them, so make it a permission), a private network namespace for the download and git jails (they share the host's today).
-6. (done) `channel` is recorded in the manifest.
+5. Hardening still open: a private network namespace for the download and git jails (they share the host's today); seccomp for non-x86_64; a `mic`-style audio split is not possible without a portal (see DESIGN.md).
+6. DwarFS AppImages (evaluation requested by the user; see DESIGN.md "MVP scope" once written).
 Known limits are listed in DESIGN.md ("Permissions the manifest accepts but bjail does not enforce yet", update flow limitation for tier 4 assets swapped in place).
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
 

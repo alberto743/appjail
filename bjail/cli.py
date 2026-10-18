@@ -13,7 +13,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import appimage, github, index, indexsync, jail, manifest, runner, store, textsafe, updater
+from . import appimage, github, history, index, indexsync, jail, manifest, runner, store, textsafe, updater
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
@@ -230,6 +230,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     finally:
         shutil.rmtree(stage, ignore_errors=True)
     console.out(f"Extracted  : {entries} entries, {human_size(size)}")
+    history.record(f"add {name} {release.tag} (tier {tier})")
     console.out(f"Added '{name}' {release.tag}: sha256 {digest}, evidence tier {tier}")
     console.out(f"Manifest   : {store.manifest_path(name)}")
 
@@ -293,6 +294,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
     if args.channel and args.channel != m.channel:
         m = replace(m, channel=args.channel)
         manifest.dump(store.manifest_path(name), m)
+        history.record(f"channel {name} {m.channel}")
         console.out(f"  update channel is now {m.channel}")
     if m.channel == "pinned":
         console.out(f"  pinned to {m.version}: not checked (use --channel stable or prerelease to follow releases)")
@@ -365,6 +367,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
     finally:
         appimage.remove_tree(stage)
     updater.clear_pending(name)
+    history.record(f"update {name} {m.version} -> {release.tag} (tier {record.evidence_tier})")
     console.out(f"  updated {name}: {m.version} -> {release.tag}, sha256 {digest}, {entries} entries, {human_size(size)}")
     return "updated"
 
@@ -396,6 +399,16 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
     if len(names) > 1:
         console.out("Summary: " + ", ".join(f"{n}: {r}" for n, r in results.items()))
     return 1 if any(r in ("blocked", "failed") or r.startswith("not checked") for r in results.values()) else 0
+
+
+def cmd_history(args, console):
+    if args.app and not manifest.NAME_RE.fullmatch(args.app):
+        raise Abort("invalid app name")
+    lines = history.log(args.app, args.limit)
+    if not lines:
+        console.out("No recorded history (git is missing, or the config directory is part of your own repository).")
+    for line in lines:
+        console.out(line)
 
 
 def cmd_list(console):
@@ -430,6 +443,7 @@ def cmd_remove(args, console):
         raise Abort("cancelled")
     appimage.remove_tree(adir)
     mpath.unlink(missing_ok=True)
+    history.record(f"remove {name}")
     console.out(f"Removed {name}.")
 
 
@@ -493,6 +507,7 @@ def cmd_perms(args, console):
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")
     manifest.dump(store.manifest_path(name), new)
+    history.record(f"permissions {name}")
     console.out("Saved. The pinned release is unchanged.")
 
 
@@ -594,6 +609,9 @@ def build_parser():
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
     sub.add_parser("list", help="list installed apps")
+    hist = sub.add_parser("history", help="show the recorded changes to the manifests")
+    hist.add_argument("app", nargs="?")
+    hist.add_argument("--limit", type=int, default=20)
     rm = sub.add_parser("remove", help="delete an app, including its private home")
     rm.add_argument("app")
     rm.add_argument("--yes", action="store_true", help="do not ask for confirmation")
@@ -642,6 +660,8 @@ def main(argv=None, client=None, console=None):
             return cmd_update(args, client or github.Client(), console)
         elif args.command == "list":
             cmd_list(console)
+        elif args.command == "history":
+            cmd_history(args, console)
         elif args.command == "remove":
             cmd_remove(args, console)
         elif args.command == "perms":

@@ -279,6 +279,15 @@ GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_TE
            "GIT_ALLOW_PROTOCOL": "https", "GIT_LFS_SKIP_SMUDGE": "1"}
 
 
+def local_git_args(workdir, command):
+    """No network: git on a local repository. Only workdir (at /work) is visible and writable."""
+    env = []
+    for k, v in GIT_ENV.items():
+        env += ["--setenv", k, v]
+    return (common_args() + env
+            + ["--bind", str(workdir), "/work", "--remount-ro", "/", "--chdir", "/work", "--"] + command)
+
+
 def git_args(workdir, command):
     """Network jail for git: only workdir (at /work) is writable; git's own config is neutralised."""
     env = []

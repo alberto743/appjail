@@ -10,7 +10,7 @@ from pathlib import Path
 
 import contextlib
 
-from . import appimage, dbusproxy, jail, manifest, seccomp, store, wayland
+from . import appimage, dbusproxy, history, jail, manifest, seccomp, store, wayland
 from .jail import RunError
 
 
@@ -68,6 +68,9 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
            extra_dirs=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
     """Start the app in its jail and return its exit status."""
     m, root, home, etc = prepare(name, extract, say)
+    if history.modified(name):
+        say(f"Warning: the manifest of {name} was changed outside bjail since its last recorded change "
+            f"(see `bjail history {name}` and the config directory's git log).")
     perms = m.permissions
     if extra_dirs:
         perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
