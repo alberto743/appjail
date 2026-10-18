@@ -10,7 +10,7 @@ from pathlib import Path
 
 import contextlib
 
-from . import appimage, dbusproxy, jail, manifest, store, wayland
+from . import appimage, dbusproxy, jail, manifest, seccomp, store, wayland
 from .jail import RunError
 
 
@@ -73,8 +73,10 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
     env = dict(os.environ if host_env is None else host_env)
-    run = runner or (lambda a: subprocess.call(a, env={"PATH": "/usr/bin:/bin"}))
     with contextlib.ExitStack() as stack:
+        filter_fd = seccomp.open_fd(perms.userns)
+        stack.callback(os.close, filter_fd)
+        run = runner or (lambda a: subprocess.call(a, env={"PATH": "/usr/bin:/bin"}, pass_fds=(filter_fd,)))
         bus = stack.enter_context(proxy(perms, env)) if dbusproxy.needed(perms) else None
         wl_sock = stack.enter_context(restricted(env, app_id=name))
         if wl_sock is None:
@@ -82,5 +84,5 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
         args = jail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus, wayland_socket=wl_sock)
+            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus, wayland_socket=wl_sock, seccomp_fd=filter_fd)
         return run([jail.find_bwrap(), *args])

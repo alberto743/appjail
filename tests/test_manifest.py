@@ -218,3 +218,10 @@ def test_sensitive_reason(path, mode, refused):
 def test_normalize_dir_refuses_sensitive(spec):
     with pytest.raises(manifest.ManifestError, match="refused"):
         manifest.normalize_dir(spec, "/home/u", "/home/u/work")
+
+
+def test_userns_defaults_to_denied_and_round_trips():
+    assert Permissions().userns is False
+    m = make(permissions=Permissions(userns=True))
+    assert manifest.loads(manifest.dumps(m)).permissions.userns is True
+    assert "userns = false" in manifest.dumps(make())

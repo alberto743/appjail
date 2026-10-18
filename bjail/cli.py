@@ -20,6 +20,9 @@ YOUNG_ACCOUNT_DAYS = 90
 FEW_STARS = 10
 
 
+PERMISSION_FLAGS = ("network", "audio", "gpu", "portals", "userns")
+
+
 class Abort(Exception):
     """The user declined, or the operation cannot continue; message is shown as is."""
 
@@ -126,7 +129,7 @@ def permissions_from_args(args):
     allowed = set(args.allow)
     return manifest.Permissions(
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
-        network="network" in allowed, portals="portals" in allowed,
+        network="network" in allowed, portals="portals" in allowed, userns="userns" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
     )
@@ -391,7 +394,7 @@ def cmd_list(console):
             console.out(f"{name}: unreadable manifest ({e})")
             continue
         p = m.permissions
-        granted = [k for k in ("network", "audio", "gpu", "portals") if getattr(p, k)] + [f"display={p.display}"]
+        granted = [k for k in PERMISSION_FLAGS if getattr(p, k)] + [f"display={p.display}"]
         pending = updater.load_pending(name)
         console.out(f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
                     + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
@@ -412,9 +415,6 @@ def cmd_remove(args, console):
     appimage.remove_tree(adir)
     mpath.unlink(missing_ok=True)
     console.out(f"Removed {name}.")
-
-
-PERMISSION_FLAGS = ("network", "audio", "gpu", "portals")
 
 
 def describe_permissions(p):
@@ -469,7 +469,8 @@ def cmd_perms(args, console):
     manifest.validate(new)
     console.out(f"{name} before: {describe_permissions(p)}")
     console.out(f"{name} after : {describe_permissions(new.permissions)}")
-    for risky, text in (("network", "network access"), ("portals", "portals")):
+    for risky, text in (("network", "network access"), ("portals", "portals"),
+                        ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)")):
         if getattr(new.permissions, risky) and not getattr(p, risky):
             console.warn(f"this grants {text}")
     warn_sensitive_dbus(console, set(new.permissions.dbus_filter) - set(p.dbus_filter))
@@ -555,7 +556,7 @@ def build_parser():
                      help="let the app see this directory (read-only unless :rw); repeatable")
     add.add_argument("--dbus", action="append", default=[], metavar="NAME",
                      help="let the app talk to this session-bus name through a filtering proxy; repeatable")
-    add.add_argument("--allow", action="append", default=[], choices=["network", "portals"],
+    add.add_argument("--allow", action="append", default=[], choices=["network", "portals", "userns"],
                      help="grant a permission (repeatable); audio and gpu are on by default")
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")

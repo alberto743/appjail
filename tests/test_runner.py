@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from bjail import appimage, jail, manifest, runner, store
+from bjail import appimage, jail, manifest, runner, seccomp, store
 from bjail.jail import RunError
 from bjail.manifest import Manifest, Permissions
 
@@ -358,8 +358,12 @@ def run_in_jail(sandbox, runtime, script=FACTS, extra=(), **perms):
     (kw["root"] / "AppRun").write_text(script)
     (kw["root"] / "AppRun").chmod(0o755)
     kw["command"] = ["/app/AppRun", *extra]
-    args = jail.runtime_args(**kw)
-    return jail.supervise([jail.find_bwrap(), *args], timeout=60)
+    fd = seccomp.open_fd(kw["perms"].userns)
+    try:
+        args = jail.runtime_args(**kw, seccomp_fd=fd)
+        return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd,))
+    finally:
+        os.close(fd)
 
 
 def facts(sandbox, runtime, **perms):

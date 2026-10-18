@@ -90,13 +90,14 @@ def tree_usage(path):
     return total, count
 
 
-def supervise(argv, timeout=1800, watch=None, env=None):
+def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
     """Run argv; kill it when the timeout passes or the watched tree outgrows its limits.
 
     watch is (directory, max_bytes, max_entries). Returns CompletedProcess (text, captured).
     """
     proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True, env=env or {"PATH": "/usr/bin:/bin"}, start_new_session=True)
+                            text=True, env=env or {"PATH": "/usr/bin:/bin"}, start_new_session=True,
+                            pass_fds=pass_fds)
     deadline = time.monotonic() + timeout
     reason = None
     while reason is None:
@@ -188,7 +189,7 @@ def dir_binds(dirs, home):
     return args
 
 
-def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None):
+def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     Pure function of its inputs: nothing is read from the process environment. Anything the
@@ -204,6 +205,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     rt = f"/run/user/{uid}"
     args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
             "--hostname", "bjail"]
+    if not perms.userns:
+        args += ["--unshare-user", "--disable-userns"]
+    if seccomp_fd is not None:
+        args += ["--seccomp", str(seccomp_fd)]
     if perms.network:
         args.append("--share-net")
     args += system_args()

@@ -39,7 +39,7 @@ TOP_KEYS = {
     "schema", "name", "source", "asset_pattern", "version", "sha256",
     "evidence_tier", "published_at", "owner_id", "permissions",
 }
-PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "dirs"}
+PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "userns", "dirs"}
 
 
 class ManifestError(ValueError):
@@ -55,6 +55,7 @@ class Permissions:
     display: str = "wayland"
     dbus_filter: tuple = ()
     portals: bool = False
+    userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
 
@@ -211,7 +212,7 @@ def _permissions(table):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
     perms = {}
-    for key in ("network", "audio", "gpu", "portals"):
+    for key in ("network", "audio", "gpu", "portals", "userns"):
         if key in table:
             perms[key] = _bool(table[key], f"permissions.{key}")
     if "display" in table:
@@ -252,7 +253,7 @@ def validate(m):
     if m.owner_id is not None and (type(m.owner_id) is not int or m.owner_id < 1):
         raise ManifestError("owner_id must be a positive integer")
     p = m.permissions
-    for key in ("network", "audio", "gpu", "portals"):
+    for key in ("network", "audio", "gpu", "portals", "userns"):
         _bool(getattr(p, key), f"permissions.{key}")
     if p.display not in DISPLAYS:
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
@@ -324,6 +325,7 @@ def dumps(m):
         f"display = {_quote(p.display)}",
         f"dbus_filter = {_array(p.dbus_filter)}",
         f"portals = {str(p.portals).lower()}",
+        f"userns = {str(p.userns).lower()}",
         f"dirs = {_array(p.dirs)}",
         "",
     ]

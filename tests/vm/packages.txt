@@ -22,6 +22,7 @@ libglx-mesa0
 libgl1-mesa-dri       # software (llvmpipe) GL/EGL drivers: GUI AppImages in the VM have no GPU
 libxkbcommon0
 libwayland-client0
+linux-libc-dev        # unistd_64.h: the reference the seccomp syscall table is checked against
 xdg-dbus-proxy        # D-Bus filtering for permissions.dbus_filter (run by bjail outside the app's jail)
 dbus-bin              # dbus-send, to talk to a bus from inside the jail in tests
 fontconfig
