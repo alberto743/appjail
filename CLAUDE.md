@@ -16,7 +16,7 @@ Progress (update with every milestone): steps 1-6 done (manifest; `add` with jai
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`).
 
 ## Open points (to resume)
-State: MVP steps 1-6 and D-Bus filtering are done and committed; 372 tests pass in the guest; the tree is clean; nothing is pushed. Candidates, each roughly $2-8 of work, in the order I would take them:
+State: MVP steps 1-6 and D-Bus filtering are done and committed; 372 tests pass in the guest; the tree is clean; pushed to the private GitHub repo `bjail`. Candidates, each roughly $2-8 of work, in the order I would take them:
 1. Portals (`portals = true` is still refused): needs a portal-aware caller identity (no `/.flatpak-info` in a bjail jail), the document-portal mount for file-chooser results, and `xdg-desktop-portal` plus a backend in the guest to test against. Decide the design with the user first.
 2. Xwayland isolation (`display = "xwayland"` is still refused): rootless Xwayland per app inside the jail's namespaces; never bind the host X11 socket.
 3. Attestation verification (today an attestation is only displayed and does not raise the tier) and the GPG tier.
@@ -67,7 +67,7 @@ GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, F
 - No sudo for Claude (the sudo lines in the VM recipe are for the user to run on a new machine). Install nothing outside this directory and the tool's own data directory (`~/.local/share/bjail`, `~/.config/bjail`).
 - Ask before downloading any AppImage or other binary. Tests that need the network should use small, well-known repos the user names.
 - The tool has no self-update and must never fetch code to run.
-- Work in the git repository in this directory. The user asked for progress to be traced, so commit at each completed, tested milestone with a clear message. Commit with the repository's own git identity (`.git/config`: GitHub noreply address); never override `user.name`/`user.email` with `-c`. Never push, never rewrite pushed history, never commit `vm/` or secrets.
+- Work in the git repository in this directory. The user asked for progress to be traced, so commit at each completed, tested milestone with a clear message. Commit with the repository's own git identity (`.git/config`: GitHub noreply address); never override `user.name`/`user.email` with `-c`. Push to the private `origin` after every commit (local `.git/hooks/post-commit` does it; recreate it on a fresh clone), never rewrite pushed history, never commit `vm/` or secrets.
 - No personal data in tracked files or commit messages: no home paths, usernames, session or scratchpad paths, hostnames or emails. Use `~` and placeholders. The only identity in history is the repository's configured GitHub noreply author.
 - Licensing: the project is MPL-2.0 and must stay REUSE-compliant at every commit. Every code file starts with `SPDX-FileCopyrightText: 2026 Alberto P` and `SPDX-License-Identifier: MPL-2.0` (after a shebang if there is one); other files (Markdown, config, templates) are covered by `REUSE.toml`; the license text is in `LICENSES/MPL-2.0.txt`. `tests/test_reuse.py` runs `reuse lint` in the guest. New file types need a header or a `REUSE.toml` entry in the same commit.
 - Keep the project self-consistent: when code, decisions or the environment change, update CLAUDE.md, DESIGN.md and the tests/scripts in the same commit.
