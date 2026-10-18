@@ -188,7 +188,7 @@ def dir_binds(dirs, home):
     return args
 
 
-def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None):
+def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     Pure function of its inputs: nothing is read from the process environment. Anything the
@@ -220,9 +220,12 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
 
     host_rt = host_env.get("XDG_RUNTIME_DIR", "")
     wl = host_env.get("WAYLAND_DISPLAY", "wayland-0")
-    if "/" in wl or not wl or not host_rt:
-        raise RunError("no usable Wayland session (XDG_RUNTIME_DIR / WAYLAND_DISPLAY)")
-    sock = Path(host_rt) / wl
+    if wayland_socket:
+        sock = Path(wayland_socket)
+    else:
+        if "/" in wl or not wl or not host_rt:
+            raise RunError("no usable Wayland session (XDG_RUNTIME_DIR / WAYLAND_DISPLAY)")
+        sock = Path(host_rt) / wl
     if not sock.is_socket():
         raise RunError(f"Wayland socket not found: {sock}")
     args += ["--ro-bind", str(sock), f"{rt}/wayland-0"]

@@ -9,6 +9,7 @@ reuse                 # `reuse lint`: SPDX/REUSE compliance check
 ca-certificates
 acl                   # setfacl, for device access experiments
 weston                # headless Wayland compositor and weston-simple-shm test client
+sway                  # headless wlroots compositor: offers wp_security_context_v1, which weston 14 does not
 pipewire              # audio sockets for the audio permission
 pipewire-pulse
 wireplumber

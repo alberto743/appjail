@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
+import contextlib
 import json
 import os
 import shutil
@@ -19,6 +20,12 @@ from bjail.manifest import Manifest, Permissions
 integration = pytest.mark.skipif(os.environ.get("BJAIL_INTEGRATION") != "1",
                                  reason="real bwrap: run in the test guest (BJAIL_INTEGRATION=1)")
 SHA = "a" * 64
+
+
+@contextlib.contextmanager
+def NO_RESTRICTION(env, app_id=None):
+    """Stands in for a compositor without wp_security_context_v1."""
+    yield None
 
 
 @pytest.fixture
@@ -294,8 +301,10 @@ def test_launch_merges_temporary_directories_without_touching_the_manifest(sandb
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
     said = []
     code = runner.launch("app", ["--x"], host_env=env, extract=Extractor(), say=said.append,
-                         runner=lambda argv: captured.append(argv) or 0, extra_dirs=(f"{granted}:rw",))
+                         runner=lambda argv: captured.append(argv) or 0, extra_dirs=(f"{granted}:rw",),
+                         restricted=NO_RESTRICTION)
     assert code == 0
+    assert any("wp_security_context_v1" in m for m in said)
     argv = captured[0]
     assert (str(granted), str(granted)) in pairs(argv, "--bind")
     assert argv[-2:] == ["/app/AppRun", "--x"]
@@ -480,3 +489,17 @@ def test_sensitive_dirs_refused_after_symlink_resolution(sandbox, runtime, sub, 
     (fake_home / "innocent").symlink_to(target)
     with pytest.raises(RunError, match="refused"):
         jail.dir_binds([f"~/innocent{mode}"], fake_home)
+
+
+def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):
+    restricted = sandbox / "restricted.sock"
+    s = socket.socket(socket.AF_UNIX)
+    s.bind(str(restricted))
+    try:
+        kw = build(sandbox, runtime)
+        args = jail.runtime_args(**kw, wayland_socket=str(restricted))
+        rt = f"/run/user/{os.getuid()}"
+        assert (str(restricted), f"{rt}/wayland-0") in pairs(args, "--ro-bind")
+        assert str(Path(runtime) / kw["host_env"]["WAYLAND_DISPLAY"]) not in [a for a in args if isinstance(a, str)]
+    finally:
+        s.close()

@@ -14,6 +14,7 @@ from bjail import dbusproxy, jail, manifest, runner
 from bjail.jail import RunError
 from bjail.manifest import ManifestError, Permissions
 
+from . import test_runner
 from .test_runner import build, integration, pairs, run_in_jail, runtime, sandbox  # noqa: F401
 
 NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.StatusNotifierWatcher")
@@ -138,7 +139,8 @@ def test_launch_wraps_the_run_in_the_proxy(sandbox, runtime, monkeypatch):
     kw = build(sandbox, runtime, dbus_filter=NAMES[:1])
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     env = kw["host_env"]
-    code = runner.launch("app", host_env=env, proxy=FakeProxy, runner=lambda argv: events.append(argv) or 0)
+    code = runner.launch("app", host_env=env, proxy=FakeProxy, runner=lambda argv: events.append(argv) or 0,
+                         restricted=test_runner.NO_RESTRICTION)
     assert code == 0 and events[:2] == ["init", "start"] and events[-1] == "stop"
     assert ("/fake/bus", f"/run/user/{os.getuid()}/bus") in pairs(events[2], "--ro-bind")
 

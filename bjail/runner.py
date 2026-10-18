@@ -10,7 +10,7 @@ from pathlib import Path
 
 import contextlib
 
-from . import appimage, dbusproxy, jail, manifest, store
+from . import appimage, dbusproxy, jail, manifest, store, wayland
 from .jail import RunError
 
 
@@ -65,7 +65,7 @@ def prepare(name, extract=appimage.extract, say=print):
 
 
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
-           extra_dirs=(), proxy=dbusproxy.Proxy):
+           extra_dirs=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
     """Start the app in its jail and return its exit status."""
     m, root, home, etc = prepare(name, extract, say)
     perms = m.permissions
@@ -74,8 +74,13 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         say("Temporary access for this run: " + ", ".join(extra_dirs))
     env = dict(os.environ if host_env is None else host_env)
     run = runner or (lambda a: subprocess.call(a, env={"PATH": "/usr/bin:/bin"}))
-    with (proxy(perms, env) if dbusproxy.needed(perms) else contextlib.nullcontext()) as bus:
+    with contextlib.ExitStack() as stack:
+        bus = stack.enter_context(proxy(perms, env)) if dbusproxy.needed(perms) else None
+        wl_sock = stack.enter_context(restricted(env, app_id=name))
+        if wl_sock is None:
+            say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
+                "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
         args = jail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus)
+            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus, wayland_socket=wl_sock)
         return run([jail.find_bwrap(), *args])
