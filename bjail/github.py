@@ -19,10 +19,11 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from . import manifest, textsafe
+from . import manifest, snappy, textsafe
 
 API = "https://api.github.com"
 MAX_BODY = 8 * 1024 * 1024
+MAX_BUNDLE = 1024 * 1024
 MAX_REDIRECTS = 3
 TIMEOUT = 20
 
@@ -191,6 +192,43 @@ class Client:
         except NotFound:
             return False
         return bool(data.get("attestations"))
+
+
+    def attestation_bundles(self, source, sha256, limit=5):
+        """Sigstore bundles (parsed JSON objects) GitHub holds for this digest, to be verified elsewhere.
+
+        The listing comes from api.github.com; each bundle is a short-lived signed blob URL on
+        blob.core.windows.net (fetched without credentials, size-capped) and is Snappy-compressed.
+        Nothing here is trusted: the bundles only become evidence after `bjail.attest` verifies them.
+        """
+        _check_source(source)
+        if not manifest.SHA256_RE.fullmatch(sha256):
+            raise GitHubError("invalid sha256")
+        try:
+            data = self._get(f"/repos/{source}/attestations/sha256:{sha256}")
+        except NotFound:
+            return []
+        out = []
+        for item in (data.get("attestations") or [])[:limit]:
+            bundle = item.get("bundle") if isinstance(item, dict) else None
+            url = item.get("bundle_url") if isinstance(item, dict) else None
+            if bundle is None and isinstance(url, str):
+                host = urllib.parse.urlsplit(url)
+                if host.scheme != "https" or not (host.hostname or "").endswith(".blob.core.windows.net"):
+                    raise GitHubError("attestation bundle URL is not on the expected storage host")
+                status, _, body = self._fetch(url, {"User-Agent": "bjail"}, TIMEOUT, MAX_BUNDLE)
+                if status != 200:
+                    raise GitHubError(f"attestation bundle download failed (HTTP {status})")
+                try:
+                    bundle = json.loads(body)
+                except ValueError:
+                    try:
+                        bundle = json.loads(snappy.decompress(body, MAX_BUNDLE * 4))
+                    except (snappy.SnappyError, ValueError) as e:
+                        raise GitHubError("attestation bundle is not valid JSON") from e
+            if isinstance(bundle, dict):
+                out.append(bundle)
+        return out
 
 
 # -- parsing helpers -----------------------------------------------------------------

@@ -13,7 +13,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import appimage, github, history, index, indexsync, jail, manifest, runner, store, textsafe, tools, updater
+from . import appimage, attest, github, history, index, indexsync, jail, manifest, runner, store, textsafe, tools, updater
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
@@ -135,8 +135,28 @@ def permissions_from_args(args):
     )
 
 
+def gather_evidence(client, info, staged, digest, base_tier, console, verify=attest.verify):
+    """Tier for the downloaded file: 1 when a build attestation verifies, else base_tier.
+
+    Returns (tier, reason); reason explains why an existing attestation did not count (None when
+    there was none or it verified).
+    """
+    try:
+        bundles = client.attestation_bundles(info.full_name, digest)
+    except github.GitHubError as e:
+        return base_tier, f"attestation lookup failed: {e}"
+    if not bundles:
+        return base_tier, None
+    try:
+        v = verify(staged, info.full_name, bundles, info.owner_id)
+    except attest.AttestError as e:
+        return base_tier, str(e)
+    console.out(f"  attestation verified: signed by {v.workflow} (run {v.run_url or 'unknown'})")
+    return 1, None
+
+
 def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-            extract_ok=appimage.have_unsquashfs):
+            extract_ok=appimage.have_unsquashfs, verify=attest.verify):
     name = args.name or default_name(args.source.partition("/")[2])
     if not manifest.NAME_RE.fullmatch(name or "!"):
         raise Abort("cannot derive a valid app name; pass --name")
@@ -171,14 +191,18 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     attestation = "not checked"
     if asset.sha256:
         try:
-            attestation = "present (not verified)" if client.has_attestation(source, asset.sha256) else "none found"
+            if client.has_attestation(source, asset.sha256):
+                attestation = ("present (verified after the download)" if tools.status("gh") == "ok"
+                               else "present, cannot be verified: run `bjail tools install gh` to enable tier 1")
+            else:
+                attestation = "none found"
         except github.GitHubError:
             attestation = "lookup failed"
     console.out(f"Asset      : {asset.name} ({human_size(asset.size)})")
     console.out(f"GitHub sha256 digest: {asset.sha256 or 'none'}   attestation: {attestation}")
     tier = 3 if asset.sha256 else 4
     if tier == 4:
-        console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4)")
+        console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
     granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
     console.out("Permissions: " + ", ".join(granted))
     warn_sensitive_dbus(console, perms.dbus_filter)
@@ -206,6 +230,9 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
             appimage.appimage_type(staged)
         except appimage.NotAnAppImage as e:
             raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
+        tier, why = gather_evidence(client, info, staged, digest, tier, console, verify)
+        if why:
+            console.warn(f"attestation not counted: {why}")
         record = manifest.Manifest(
             name=name, source=source, asset_pattern=github.suggest_pattern(asset.name, release.tag),
             version=release.tag, sha256=digest, evidence_tier=tier, published_at=release.published_at,
@@ -286,7 +313,7 @@ def swap_in(name, staged, stage, record, extract, fallback):
     return entries, size
 
 
-def update_app(name, args, client, console, download, now, extract, extract_ok):
+def update_app(name, args, client, console, download, now, extract, extract_ok, verify=attest.verify):
     """Update one app. Returns 'updated', 'current', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
     info = client.repo_info(m.source)
@@ -320,7 +347,10 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
     console.out(f"  sha256     : {m.sha256}\n            -> {asset.sha256 or 'unknown until downloaded (no GitHub digest)'}")
     console.out(f"  evidence   : tier {m.evidence_tier} -> {3 if asset.sha256 else 4}")
     console.out(f"  permissions: unchanged ({', '.join(f'{k}={v}' for k, v in vars(m.permissions).items() if v not in ((), False)) or 'none'})")
-    reasons = updater.blocks(m, info, asset)
+    attested = None
+    if m.evidence_tier == 1:  # a build-attested app must stay build-attested
+        attested = bool(asset.sha256 and client.has_attestation(info.full_name, asset.sha256))
+    reasons = updater.blocks(m, info, asset, attested)
     for reason in reasons:
         console.warn(reason)
     if reasons:
@@ -356,12 +386,17 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
             appimage.appimage_type(staged)
         except appimage.NotAnAppImage as e:
             raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
-        if not asset.sha256:
+        tier, why = gather_evidence(client, info, staged, digest, 3 if asset.sha256 else 4, console, verify)
+        if m.evidence_tier == 1 and tier != 1:
+            raise Abort(f"EVIDENCE DOWNGRADE: the previous release was build-attested but this one could not be verified ({why or 'no attestation'}); nothing was installed")
+        if why:
+            console.warn(f"attestation not counted: {why}")
+        if tier == 4:
             console.out(f"  downloaded sha256: {digest}  (trust on first use, tier 4)")
             if not console.confirm("Install this version?"):
                 return "declined"
         record = replace(m, version=release.tag, sha256=digest, published_at=release.published_at,
-                         evidence_tier=3 if asset.sha256 else 4, source=info.full_name, owner_id=info.owner_id)
+                         evidence_tier=tier, source=info.full_name, owner_id=info.owner_id)
         manifest.validate(record)
         entries, size = swap_in(name, staged, stage, record, extract, False)
     finally:
@@ -373,7 +408,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
 
 
 def cmd_update(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-               extract_ok=appimage.have_unsquashfs):
+               extract_ok=appimage.have_unsquashfs, verify=attest.verify):
     now = now or datetime.now(timezone.utc)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
@@ -386,7 +421,7 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
     results = {}
     for i, name in enumerate(names):
         try:
-            results[name] = update_app(name, args, client, console, download, now, extract, extract_ok)
+            results[name] = update_app(name, args, client, console, download, now, extract, extract_ok, verify)
         except github.RateLimited as e:
             console.out(f"  {name}: {e}")
             results[name] = "failed"

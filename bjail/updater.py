@@ -31,14 +31,20 @@ def candidate_key(release, asset):
     return asset.sha256 or f"{release.tag}|{release.published_at}|{asset.size}"
 
 
-def blocks(m, info, asset):
-    """Reasons the update must not proceed, whatever the user says."""
+def blocks(m, info, asset, attested=None):
+    """Reasons the update must not proceed, whatever the user says.
+
+    attested: for a tier 1 app, whether GitHub holds an attestation for the candidate (None otherwise).
+    """
     out = []
     if m.owner_id is not None and info.owner_id != m.owner_id:
         out.append(f"OWNER CHANGE: the repository is now owned by {info.owner} (account id {info.owner_id}), "
                    f"not the account pinned when it was added (id {m.owner_id})")
+    if m.evidence_tier == 1 and not attested:
+        out.append("EVIDENCE DOWNGRADE: tier 1 -> 3 or 4 (this release has no build attestation on GitHub)")
+        return out
     new_tier = 3 if asset.sha256 else 4
-    if new_tier > m.evidence_tier:
+    if m.evidence_tier > 1 and new_tier > m.evidence_tier:
         out.append(f"EVIDENCE DOWNGRADE: tier {m.evidence_tier} -> {new_tier} "
                    "(GitHub no longer provides a digest for this asset)")
     return out

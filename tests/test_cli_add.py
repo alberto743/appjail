@@ -33,9 +33,14 @@ def release(*assets, tag="v1.0"):
 
 
 class FakeClient:
-    def __init__(self, info_=None, release_=None, attestation=True):
+    def __init__(self, info_=None, release_=None, attestation=True, bundles=()):
         self._info, self._release, self._att = info_ or info(), release_ or release(asset()), attestation
+        self._bundles = list(bundles)
         self.calls = []
+
+    def attestation_bundles(self, source, sha):
+        self.calls.append(("attestation_bundles", source, sha))
+        return self._bundles
 
     def repo_info(self, source):
         self.calls.append(("repo_info", source))
@@ -127,7 +132,7 @@ def test_success_with_digest(h):
     assert store.appimage_path("app").stat().st_mode & 0o777 == 0o600
     assert h.downloads[0][0] == asset().url
     assert list(store.staging_root().iterdir()) == []
-    assert "attestation: present (not verified)" in console.text
+    assert "attestation: present, cannot be verified" in console.text
 
 
 def test_extraction_runs_on_stored_file_and_marks_source_hash(h):

@@ -13,13 +13,13 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 
 Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 372 passed); D-Bus filtering added afterwards (guest needs `xdg-dbus-proxy` and `dbus-bin`, both in `tests/vm/packages.txt`; run `tests/vm/provision.sh` on an existing guest).
 
-Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`); hardening round (2026-10-18): sensitive-path refusal for `dirs`, extracted-tree digest checked at every launch, restricted Wayland socket via `wp_security_context_v1` (`bjail/wayland.py`), seccomp filter plus `userns` permission (`bjail/seccomp.py`), manifest `channel`, rate-limit-aware `update`, manifest history in a local git repo (`bjail/history.py`).
+Deferred: the GPG tier, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`); hardening round (2026-10-18): sensitive-path refusal for `dirs`, extracted-tree digest checked at every launch, restricted Wayland socket via `wp_security_context_v1` (`bjail/wayland.py`), seccomp filter plus `userns` permission (`bjail/seccomp.py`), manifest `channel`, rate-limit-aware `update`, manifest history in a local git repo (`bjail/history.py`).
 
 ## Open points (to resume)
-State: MVP steps 1-6, D-Bus filtering and the hardening round are done and committed; 426 tests pass in the guest (the opt-in e2e suites also pass); the tree is clean; pushed to the private GitHub repo `bjail`. Candidates, each roughly $2-8 of work, in the order I would take them:
+State: MVP steps 1-6, D-Bus filtering and the hardening round are done and committed; 465 tests pass in the guest (the opt-in e2e suites also pass); the tree is clean; pushed to the private GitHub repo `bjail`. Candidates, each roughly $2-8 of work, in the order I would take them:
 1. Portals (`portals = true` is still refused): needs a portal-aware caller identity (no `/.flatpak-info` in a bjail jail), the document-portal mount for file-chooser results, and `xdg-desktop-portal` plus a backend in the guest to test against. Decide the design with the user first.
 2. Xwayland isolation (`display = "xwayland"` is still refused): rootless Xwayland per app inside the jail's namespaces; never bind the host X11 socket.
-3. Attestation verification (today an attestation is only displayed and does not raise the tier) and the GPG tier.
+3. (attestation verification done: tier 1 via the pinned `gh`, see DESIGN.md) The GPG tier is still open.
 4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
 5. Hardening still open: a private network namespace for the download and git jails (they share the host's today); seccomp for non-x86_64; a `mic`-style audio split is not possible without a portal (see DESIGN.md).
 6. (done) DwarFS AppImages through the pinned helper `bjail tools install dwarfs`; still untested against a real uruntime-built app (needs a user-approved download).
@@ -56,6 +56,7 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - End to end with a real download (skyjake/lagrange, 11 MB; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_e2e.py -v'`. It adds the app, runs the GUI under headless weston inside the jail, checks the real home stays untouched, and checks the tamper refusal.
 - Real `update` (appimagetool, two small downloads; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_update_e2e.py -v'`.
 - DwarFS helper (pinned `mhx/dwarfs` universal-small, 2 MB, user-approved 2026-10-18, guest only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 BJAIL_INTEGRATION=1 python3 -m pytest tests/test_tools.py -v'`.
+- Real Sigstore verification (pinned gh tarball, 15 MB, cli/cli asset; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 BJAIL_INTEGRATION=1 python3 -m pytest tests/test_attest.py -v'`.
 - Real AM index update/rollback (network, text only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_index_e2e.py -v'`.
 - Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
 - Do not install test tools on the host.

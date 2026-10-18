@@ -113,13 +113,23 @@ Implemented in `bjail/manifest.py` (schema 1), one file per app at `~/.config/bj
 - Strict: unknown keys, wrong types, control characters and bad formats are errors. The writer is deterministic and atomic, and refuses invalid manifests.
 
 ## Trust tiers (never silently downgraded)
-1. Build attestation (Sigstore / GitHub artifact attestations).
+1. Build attestation (Sigstore / GitHub artifact attestations): implemented, see "Attestation verification".
 2. Pinned-key GPG signature.
 3. Publisher-pinned hash / GitHub digest.
 4. Trust on first use.
 5. Cross-check against another source (weak).
 
 Most AppImages will only reach tiers 3-4. That proves "unchanged, same account", not "safe".
+
+## Attestation verification (implemented in `bjail/attest.py`, `bjail/snappy.py`, `bjail/tools.py`)
+Tier 1 means: a Sigstore build attestation covers the exact downloaded bytes and its certificate names this repository and GitHub Actions.
+- Opt-in helper: `bjail tools install gh` fetches the pinned GitHub CLI v2.102.0 tarball (size and sha256 in source; the executable inside is pinned too and re-hashed before every use). Without it an existing attestation is shown as "present, cannot be verified" and the tier stays 3 or 4.
+- Bundles are fetched by bjail (`github.Client.attestation_bundles`): the listing from api.github.com, then each bundle from the short-lived `*.blob.core.windows.net` URL (https only, 1 MiB cap, no credentials), Snappy-decoded by a bounded stdlib decoder. Nothing from them is trusted until verified.
+- `gh attestation verify --bundle` runs in a jail with network (it fetches the Sigstore trusted root over TUF) that sees only the subject, the bundles and a scratch directory. No GitHub token is passed (`gh` insists on one being set; a dummy is given and never used with `--bundle`). gh checks signatures, the transparency-log entry, the subject digest and that the signing identity belongs to `owner/repo`.
+- bjail then re-reads the certificate: issuer must be GitHub Actions, `sourceRepositoryURI` must equal the repository, and `sourceRepositoryOwnerIdentifier` must equal the pinned owner account id.
+- `add`/`update` verify after the download, on the real bytes, so tier 1 is possible even without GitHub's digest. A failed verification never aborts an `add` (tier 3/4 with the reason shown); for an app already at tier 1 it blocks the update: no attestation on GitHub blocks before downloading, a bundle that does not verify aborts after it, and nothing is installed.
+- Verified live in the guest on a cli/cli release: the signing workflow `deployment.yml` was reported; another repository's name, a wrong owner id and a one-byte change to the file are all refused (`tests/test_attest.py`, opt-in with `BJAIL_E2E=1`).
+- Limits: identity is the repository and owner account, not a specific workflow or branch, so any workflow of that repository can attest. A compromised repository or workflow still gets tier 1; that is what the quarantine is for. Verification needs network access to the Sigstore TUF repository.
 
 ## Update flow
 1. Resolve the new release.
@@ -193,7 +203,7 @@ Python 3 stdlib only (`tomllib`, `urllib`, `hashlib`, `subprocess`); not shell, 
   - Verified in the guest: the real tool builds and extracts an image in the jail, symlinks are preserved (the validator rejects the escaping ones), and the opt-in `tests/test_tools.py` end-to-end test passes with the real download.
   - `squashfs-tools` 4.6.1 is in trixie/main; bjail needs it (`apt install squashfs-tools`) and reports its absence clearly.
 
-Deferred: attestation and GPG tiers, Xwayland isolation, portals (D-Bus filtering is done), other forges. Done since: DwarFS through a pinned helper.
+Deferred: the GPG tier, Xwayland isolation, portals (D-Bus filtering is done), other forges. Done since: DwarFS through a pinned helper.
 
 ## Findings: GitHub API (docs, plus live check on cli/cli v2.102.0, 2026-10-17)
 - Release assets have a `digest` field ("string or null"). Live: all 22 assets of cli/cli v2.102.0 carry `sha256:<64 hex>`. Treat null as "no digest" and fall back to TOFU (older releases may lack it).
