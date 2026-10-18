@@ -3,14 +3,16 @@
 
 """Run an installed app: verify the pin, make sure the tree matches it, start the jail."""
 
+import json
 import os
+import select
 import subprocess
 from dataclasses import replace
 from pathlib import Path
 
 import contextlib
 
-from . import appimage, dbusproxy, history, jail, manifest, seccomp, store, wayland
+from . import appimage, dbusproxy, history, jail, manifest, portal, seccomp, store, wayland
 from .jail import RunError
 
 
@@ -64,6 +66,56 @@ def prepare(name, extract=appimage.extract, say=print):
     return m, root, home, etc
 
 
+STATUS_TIMEOUT = 10.0
+
+
+class Pipes:
+    """The two pipes of a portal launch (bwrap status out, start gate in); each end is closed exactly once."""
+
+    def __init__(self):
+        self.fds = {}
+        self.fds["status_r"], self.fds["status_w"] = os.pipe()
+        self.fds["block_r"], self.fds["block_w"] = os.pipe()
+
+    def __getitem__(self, name):
+        return self.fds[name]
+
+    def close(self, name):
+        fd = self.fds.pop(name, None)
+        if fd is not None:
+            os.close(fd)
+
+    def close_all(self):
+        for name in list(self.fds):
+            self.close(name)
+
+
+def _run_app(argv, filter_fd, pipes=None, instance=None):
+    """Start the jail, publish its init pid for the portal, then let the app run; return its exit status."""
+    env = {"PATH": "/usr/bin:/bin"}
+    if instance is None:
+        return subprocess.call(argv, env=env, pass_fds=(filter_fd,))
+    proc = subprocess.Popen(argv, env=env, pass_fds=(filter_fd, pipes["status_w"], pipes["block_r"]))
+    try:
+        pipes.close("status_w")
+        pipes.close("block_r")
+        ready, _, _ = select.select([pipes["status_r"]], [], [], STATUS_TIMEOUT)
+        line = b""
+        if ready:
+            line = os.fdopen(os.dup(pipes["status_r"]), "rb").readline()
+        try:
+            pid = json.loads(line)["child-pid"]
+        except (ValueError, KeyError, TypeError):
+            raise RunError("the jail did not report its process id") from None
+        instance.child_started(pid)
+        pipes.close("block_w")  # the app starts now
+        return proc.wait()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
            extra_dirs=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
     """Start the app in its jail and return its exit status."""
@@ -79,13 +131,29 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     with contextlib.ExitStack() as stack:
         filter_fd = seccomp.open_fd(perms.userns)
         stack.callback(os.close, filter_fd)
-        run = runner or (lambda a: subprocess.call(a, env={"PATH": "/usr/bin:/bin"}, pass_fds=(filter_fd,)))
-        bus = stack.enter_context(proxy(perms, env)) if dbusproxy.needed(perms) else None
+        instance = docs = None
+        if perms.portals:
+            rt = env.get("XDG_RUNTIME_DIR", "")
+            if not rt:
+                raise RunError("portals need XDG_RUNTIME_DIR")
+            app = portal.app_id(name)
+            docs = portal.doc_dir(rt, app, env)
+            instance = stack.enter_context(portal.Instance(rt, app, perms.network))
+        bus = None
+        if dbusproxy.needed(perms):
+            bus = stack.enter_context(proxy(perms, env, identity=instance.info) if instance else proxy(perms, env))
         wl_sock = stack.enter_context(restricted(env, app_id=name))
         if wl_sock is None:
             say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
+        pipes = Pipes() if instance else None
+        if pipes:
+            stack.callback(pipes.close_all)
         args = jail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus, wayland_socket=wl_sock, seccomp_fd=filter_fd)
-        return run([jail.find_bwrap(), *args])
+            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
+            wayland_socket=wl_sock, seccomp_fd=filter_fd, portal_docs=docs, status_fd=pipes and pipes["status_w"], block_fd=pipes and pipes["block_r"])
+        argv = [jail.find_bwrap(), *args]
+        if runner:
+            return runner(argv)
+        return _run_app(argv, filter_fd, pipes, instance)

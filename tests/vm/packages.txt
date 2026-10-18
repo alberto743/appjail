@@ -27,3 +27,7 @@ xdg-dbus-proxy        # D-Bus filtering for permissions.dbus_filter (run by bjai
 dbus-bin              # dbus-send, to talk to a bus from inside the jail in tests
 fontconfig
 fonts-dejavu-core
+xdg-desktop-portal    # frontend and document portal: the real portal that tests/test_portal.py talks to
+fuse3                 # the document portal's FUSE mount (fusermount3)
+python3-dbus          # fake portal backend and in-jail test client
+python3-gi            # GLib main loop for python3-dbus

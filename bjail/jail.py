@@ -193,7 +193,8 @@ def dir_binds(dirs, home):
     return args
 
 
-def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None):
+def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
+                 portal_docs=None, status_fd=None, block_fd=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     Pure function of its inputs: nothing is read from the process environment. Anything the
@@ -201,10 +202,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     """
     if perms.display != "wayland":
         raise RunError(f"display = {perms.display} is not implemented yet (only wayland)")
-    if perms.portals:
-        raise RunError("portals are not implemented yet (they need a portal-aware identity for the app); remove them from the manifest")
-    if perms.dbus_filter and not dbus_socket:
-        raise RunError("dbus_filter needs the filtered bus socket from bjail.dbusproxy")
+    if (perms.dbus_filter or perms.portals) and not dbus_socket:
+        raise RunError("dbus_filter and portals need the filtered bus socket from bjail.dbusproxy")
+    if perms.portals and not portal_docs:
+        raise RunError("portals need the document portal's directory for this app (bjail.portal.doc_dir)")
 
     rt = f"/run/user/{uid}"
     args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
@@ -250,9 +251,14 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     if host_env.get("TZ"):
         env["TZ"] = host_env["TZ"]
 
-    if perms.dbus_filter:
+    if dbus_socket:
         args += ["--ro-bind", str(dbus_socket), f"{rt}/bus"]
         env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={rt}/bus"
+    if perms.portals:
+        args += ["--bind", str(portal_docs), f"{rt}/doc"]
+        if host_rt and Path(host_rt) != Path(rt):  # the portal hands out paths under the host's runtime dir
+            args += ["--bind", str(portal_docs), f"{host_rt}/doc"]
+        env["GTK_USE_PORTAL"] = "1"
 
     if perms.audio:
         pw, pulse = Path(host_rt) / "pipewire-0", Path(host_rt) / "pulse" / "native"
@@ -274,6 +280,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     args += dir_binds(perms.dirs, host_home)
     for k, v in env.items():
         args += ["--setenv", k, v]
+    if status_fd is not None:
+        args += ["--json-status-fd", str(status_fd)]
+    if block_fd is not None:
+        args += ["--block-fd", str(block_fd)]
     return args + ["--remount-ro", "/", "--chdir", APP_HOME, "--"] + command
 
 

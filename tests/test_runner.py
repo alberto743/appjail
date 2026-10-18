@@ -172,7 +172,7 @@ def test_dirs_cannot_expose_bjail_itself(sandbox, runtime, where):
 
 @pytest.mark.parametrize("perms,match", [
     ({"display": "xwayland"}, "xwayland"),
-    ({"portals": True}, "not implemented"),
+    ({"portals": True}, "filtered bus socket"),
     ({"dbus_filter": ("org.freedesktop.Notifications",)}, "filtered bus socket"),
 ])
 def test_unimplemented_permissions_are_refused_not_ignored(sandbox, runtime, perms, match):

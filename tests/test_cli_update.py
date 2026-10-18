@@ -387,3 +387,44 @@ def test_rate_limit_stops_the_run_instead_of_hammering_the_api(h):  # noqa: F811
                           extract_ok=lambda: True)
     assert code == 1 and len(client.calls) == 1
     assert "other: not checked (rate limited)" in console.text and "third: not checked (rate limited)" in console.text
+
+
+def test_add_records_portals_and_opt_ins(h):  # noqa: F811
+    c = h.add(extra=("--allow", "portals", "--portal", "OpenURI", "--portal", "OpenURI"))
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert p.portals and p.portal_interfaces == ("OpenURI",)
+    assert "OpenURI portal is privileged" in c.text
+
+
+def test_add_portal_needs_portals_and_refuses_flatpak(h):  # noqa: F811
+    with pytest.raises(Abort, match="needs --allow portals"):
+        h.add(extra=("--portal", "OpenURI"))
+    with pytest.raises(Abort, match="refused"):
+        h.add(extra=("--allow", "portals", "--portal", "Flatpak"))
+    assert not store.manifest_path("app").exists()
+
+
+def test_perms_add_and_remove_portal_interfaces(h):  # noqa: F811
+    path = installed(h, extra=("--allow", "portals"))
+
+    def perms(*argv):
+        c = Script()
+        cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", "--yes", *argv]), c)
+        return c
+
+    c = perms("--add-portal", "Screenshot")
+    assert manifest.load(path).permissions.portal_interfaces == ("Screenshot",) and "privileged" in c.text
+    perms("--rm-portal", "Screenshot")
+    assert manifest.load(path).permissions.portal_interfaces == ()
+    with pytest.raises(Abort, match="not allowed"):
+        perms("--rm-portal", "Screenshot")
+    perms("--add-portal", "Camera")
+    perms("--deny", "portals")  # turning portals off drops the opt-ins with it
+    p = manifest.load(path).permissions
+    assert not p.portals and p.portal_interfaces == ()
+
+
+def test_perms_add_portal_without_portals_is_refused(h):  # noqa: F811
+    installed(h)
+    with pytest.raises(Abort, match="needs portals"):
+        cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", "--yes", "--add-portal", "Camera"]), Script())

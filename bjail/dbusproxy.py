@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import jail, manifest
+from . import jail, manifest, portal
 from .jail import RunError
 
 PROXY = "/usr/bin/xdg-dbus-proxy"
@@ -22,7 +22,7 @@ READY_TIMEOUT = 5.0
 
 
 def needed(perms):
-    return bool(perms.dbus_filter)
+    return bool(perms.dbus_filter or perms.portals)
 
 
 def host_bus(host_env):
@@ -40,31 +40,36 @@ def host_bus(host_env):
 
 def rules(perms):
     """xdg-dbus-proxy options for the manifest: see nothing, talk to the listed names."""
-    return ["--filter"] + [f"--talk={manifest.check_dbus_name(n)}" for n in perms.dbus_filter]
+    return (["--filter"] + [f"--talk={manifest.check_dbus_name(n)}" for n in perms.dbus_filter]
+            + portal.proxy_rules(perms))
 
 
-def proxy_args(bus, sockdir, perms, sync_fd):
-    """bwrap argv (after the binary) that runs the proxy: no network, nothing but the two sockets."""
+def proxy_args(bus, sockdir, perms, sync_fd, identity=None):
+    """bwrap argv (after the binary) that runs the proxy: no network, nothing but the two sockets.
+
+    identity: file bound as /.flatpak-info, the portal sandbox identity of the app this proxy serves.
+    """
+    ident = ["--ro-bind", str(identity), "/.flatpak-info"] if identity else []
     return (jail.common_args()
-            + ["--ro-bind", bus, bus, "--bind", str(sockdir), str(sockdir), "--remount-ro", "/", "--"]
+            + ["--ro-bind", bus, bus, "--bind", str(sockdir), str(sockdir), *ident, "--remount-ro", "/", "--"]
             + [PROXY, f"unix:path={bus}", f"{sockdir}/bus", f"--fd={sync_fd}"] + rules(perms))
 
 
 class Proxy:
     """Context manager: starts the proxy, yields the host path of the filtered socket, stops it."""
 
-    def __init__(self, perms, host_env, popen=subprocess.Popen):
-        self.perms, self.host_env, self._popen = perms, host_env, popen
+    def __init__(self, perms, host_env, popen=subprocess.Popen, identity=None):
+        self.perms, self.host_env, self._popen, self.identity = perms, host_env, popen, identity
         self.proc = self.dir = None
 
     def __enter__(self):
         if not os.access(PROXY, os.X_OK):
-            raise RunError("dbus_filter needs xdg-dbus-proxy (apt install xdg-dbus-proxy)")
+            raise RunError("dbus_filter and portals need xdg-dbus-proxy (apt install xdg-dbus-proxy)")
         bus = host_bus(self.host_env)
         self.dir = Path(tempfile.mkdtemp(prefix="bjail-", dir=self.host_env["XDG_RUNTIME_DIR"]))
         read_fd, write_fd = os.pipe()
         try:
-            argv = [jail.find_bwrap(), *proxy_args(bus, self.dir, self.perms, write_fd)]
+            argv = [jail.find_bwrap(), *proxy_args(bus, self.dir, self.perms, write_fd, self.identity)]
             self.proc = self._popen(argv, pass_fds=(write_fd,), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                     stderr=subprocess.PIPE, env={"PATH": "/usr/bin:/bin"}, start_new_session=True)
             os.close(write_fd)

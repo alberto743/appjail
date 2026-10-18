@@ -119,6 +119,25 @@ def dbus_from_args(names, current=()):
     return tuple(out)
 
 
+def portals_from_args(names, current=()):
+    """Validated opt-in portal interfaces merged into the current list (order kept, no duplicates)."""
+    out = list(current)
+    for name in names:
+        try:
+            manifest.check_portal_interface(name)
+        except manifest.ManifestError as e:
+            raise Abort(f"--portal {name}: {e}") from e
+        if name not in out:
+            out.append(name)
+    return tuple(out)
+
+
+def warn_privileged_portals(console, names):
+    for n in names:
+        console.warn(f"the {n} portal is privileged: it can act outside the jail (the desktop asks you each time, "
+                     "but the app can trigger the request)")
+
+
 def warn_sensitive_dbus(console, names):
     for n in names:
         if n.startswith(manifest.DBUS_SENSITIVE):
@@ -127,7 +146,10 @@ def warn_sensitive_dbus(console, names):
 
 def permissions_from_args(args):
     allowed = set(args.allow)
+    if args.portal and "portals" not in allowed:
+        raise Abort("--portal needs --allow portals")
     return manifest.Permissions(
+        portal_interfaces=portals_from_args(args.portal),
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
         network="network" in allowed, portals="portals" in allowed, userns="userns" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
@@ -206,6 +228,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
     console.out("Permissions: " + ", ".join(granted))
     warn_sensitive_dbus(console, perms.dbus_filter)
+    warn_privileged_portals(console, perms.portal_interfaces)
 
     fallback = False
     if not extract_ok():
@@ -480,6 +503,7 @@ def cmd_list(console):
         console.out(f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
                     + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
                     + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
+                    + (f"  portals: {', '.join(p.portal_interfaces)}" if p.portal_interfaces else "")
                     + (f"  channel: {m.channel}" if m.channel != "stable" else "")
                     + (f"  (update seen: {pending['tag']})" if pending else ""))
 
@@ -502,7 +526,7 @@ def cmd_remove(args, console):
 
 def describe_permissions(p):
     return ", ".join([f"{k}={getattr(p, k)}" for k in PERMISSION_FLAGS] + [f"display={p.display}"]
-                     + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter]) or "none"
+                     + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter] + [f"portal={n}" for n in p.portal_interfaces]) or "none"
 
 
 def cmd_perms(args, console):
@@ -545,6 +569,17 @@ def cmd_perms(args, console):
     bus = tuple(n for n in bus if n not in args.rm_dbus)
     if bus != p.dbus_filter:
         changes["dbus_filter"] = bus
+    portal_names = portals_from_args(args.add_portal, p.portal_interfaces)
+    missing = [n for n in args.rm_portal if n not in portal_names]
+    if missing:
+        raise Abort("not allowed: " + ", ".join(missing))
+    portal_names = tuple(n for n in portal_names if n not in args.rm_portal)
+    if changes.get("portals") is False:
+        portal_names = ()
+    if portal_names != p.portal_interfaces:
+        changes["portal_interfaces"] = portal_names
+    if portal_names and not changes.get("portals", p.portals):
+        raise Abort("--add-portal needs portals to be allowed (--allow portals)")
     if not changes:
         console.out(f"{name}: {describe_permissions(p)}")
         return
@@ -557,6 +592,7 @@ def cmd_perms(args, console):
         if getattr(new.permissions, risky) and not getattr(p, risky):
             console.warn(f"this grants {text}")
     warn_sensitive_dbus(console, set(new.permissions.dbus_filter) - set(p.dbus_filter))
+    warn_privileged_portals(console, set(new.permissions.portal_interfaces) - set(p.portal_interfaces))
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")
     manifest.dump(store.manifest_path(name), new)
@@ -640,6 +676,8 @@ def build_parser():
                      help="let the app see this directory (read-only unless :rw); repeatable")
     add.add_argument("--dbus", action="append", default=[], metavar="NAME",
                      help="let the app talk to this session-bus name through a filtering proxy; repeatable")
+    add.add_argument("--portal", action="append", default=[], metavar="NAME",
+                     help="also allow this privileged portal interface (needs --allow portals); repeatable")
     add.add_argument("--allow", action="append", default=[], choices=["network", "portals", "userns"],
                      help="grant a permission (repeatable); audio and gpu are on by default")
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
@@ -682,6 +720,8 @@ def build_parser():
     perms.add_argument("--rm-dir", action="append", default=[], metavar="PATH")
     perms.add_argument("--add-dbus", action="append", default=[], metavar="NAME", help="allow talking to this session-bus name")
     perms.add_argument("--rm-dbus", action="append", default=[], metavar="NAME")
+    perms.add_argument("--add-portal", action="append", default=[], metavar="NAME", help="also allow this privileged portal interface")
+    perms.add_argument("--rm-portal", action="append", default=[], metavar="NAME")
     perms.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     run = sub.add_parser("run", help="run an installed app in its jail")
     run.add_argument("name")

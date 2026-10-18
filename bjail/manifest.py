@@ -32,6 +32,14 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
 
+# Portal interfaces (the part after org.freedesktop.portal.). `portals = true` allows the safe set; the
+# opt-in ones must be named in `portal_interfaces`; the last group is never available to an app.
+PORTAL_SAFE = ("FileChooser", "Notification", "Settings", "Trash", "Print", "Inhibit", "NetworkMonitor",
+               "ProxyResolver", "Secret", "Realtime", "MemoryMonitor", "PowerProfileMonitor")
+PORTAL_OPT_IN = ("OpenURI", "Email", "Screenshot", "ScreenCast", "RemoteDesktop", "GlobalShortcuts", "InputCapture",
+                 "Camera", "Location", "Account", "Wallpaper", "Background", "Usb")
+PORTAL_NEVER = ("Flatpak", "DynamicLauncher")
+
 TIERS = (1, 2, 3, 4, 5)
 DISPLAYS = ("wayland", "xwayland")
 
@@ -40,7 +48,7 @@ TOP_KEYS = {
     "evidence_tier", "published_at", "owner_id", "channel", "permissions",
 }
 CHANNELS = ("stable", "prerelease", "pinned")
-PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "userns", "dirs"}
+PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "portal_interfaces", "userns", "dirs"}
 
 
 class ManifestError(ValueError):
@@ -56,6 +64,7 @@ class Permissions:
     display: str = "wayland"
     dbus_filter: tuple = ()
     portals: bool = False
+    portal_interfaces: tuple = ()  # opt-in portal interfaces beyond the safe set (see PORTAL_OPT_IN)
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
@@ -99,6 +108,17 @@ def _str_list(value, what):
     if not isinstance(value, list):
         raise ManifestError(f"{what} must be a list of strings")
     return [_text(v, f"{what} entry") for v in value]
+
+
+def check_portal_interface(name):
+    """An opt-in portal interface name; the never-allowed ones and unknown names are refused."""
+    if name in PORTAL_NEVER:
+        raise ManifestError(f"portal_interfaces entry {name!r} is refused: it would let the app run commands or "
+                            "install launchers on the host")
+    if name not in PORTAL_OPT_IN:
+        raise ManifestError(f"portal_interfaces entry {name!r} is not an opt-in portal interface "
+                            f"(one of {', '.join(PORTAL_OPT_IN)}; the safe set needs no entry)")
+    return name
 
 
 def check_dbus_name(name):
@@ -209,6 +229,11 @@ def _unknown(table, allowed, where):
         raise ManifestError(f"unknown key(s) in {where}: {', '.join(map(str, extra))}")
 
 
+def _portal_consistency(p):
+    if p.portal_interfaces and not p.portals:
+        raise ManifestError("permissions.portal_interfaces needs portals = true")
+
+
 def _permissions(table):
     if not isinstance(table, dict):
         raise ManifestError("permissions must be a table")
@@ -226,8 +251,12 @@ def _permissions(table):
         for n in names:
             check_dbus_name(n)
         perms["dbus_filter"] = tuple(names)
+    if "portal_interfaces" in table:
+        names = _str_list(table["portal_interfaces"], "permissions.portal_interfaces")
+        perms["portal_interfaces"] = tuple(check_portal_interface(n) for n in names)
     if "dirs" in table:
         perms["dirs"] = tuple(_check_dir(d) for d in _str_list(table["dirs"], "permissions.dirs"))
+    _portal_consistency(Permissions(**perms))
     return Permissions(**perms)
 
 
@@ -263,6 +292,9 @@ def validate(m):
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
     for n in p.dbus_filter:
         check_dbus_name(n)
+    for n in p.portal_interfaces:
+        check_portal_interface(n)
+    _portal_consistency(p)
     for d in p.dirs:
         _check_dir(_text(d, "permissions.dirs entry"))
     return m
@@ -330,6 +362,7 @@ def dumps(m):
         f"display = {_quote(p.display)}",
         f"dbus_filter = {_array(p.dbus_filter)}",
         f"portals = {str(p.portals).lower()}",
+        f"portal_interfaces = {_array(p.portal_interfaces)}",
         f"userns = {str(p.userns).lower()}",
         f"dirs = {_array(p.dirs)}",
         "",
