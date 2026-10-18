@@ -71,7 +71,7 @@ An app can be given specific directories, never the whole home:
 - In the manifest: `permissions.dirs = ["~/Documents/notes", "~/Pictures:rw"]`. `~/x` appears as `/home/app/x`; absolute paths outside the home appear at the same path. Read-only unless `:rw`.
 - `bjail add owner/repo --dir PATH[:ro|:rw]` (repeatable) writes the grant into the manifest. The path must exist, is normalised (relative paths against the current directory, home becomes `~/`), and is checked before any network access.
 - `bjail run NAME --dir PATH[:ro|:rw]` grants a directory for that run only; the manifest is unchanged and the run prints "Temporary access for this run: ...".
-- Planned with the `perms` command: `bjail perms NAME --add-dir PATH[:rw]` and `--rm-dir PATH`.
+- `bjail perms NAME --add-dir PATH[:rw]` and `--rm-dir PATH` edit the grants later.
 - Refused at parse time or launch: `/`, the home directory itself or any parent of it, `..` components, bjail's own data and config trees (and parents/children of them), and missing paths. Symlinks are resolved when the jail starts, so a link cannot point a granted path elsewhere afterwards.
 - Not yet designed in detail: passing a single file (`bjail run NAME --file PATH`, binding just that file), and the portal file chooser, which depends on the D-Bus work below.
 
@@ -172,7 +172,7 @@ A tier downgrade or an owner change blocks the update.
 - `--unshare-all`, private home per app, read-only system.
 - Wayland socket by default. X11 only through a rootless Xwayland (a raw X11 socket allows keylogging).
 - PipeWire/Pulse socket; `/dev/dri` for GPU.
-- D-Bus through `xdg-dbus-proxy`; file dialogs through `xdg-desktop-portal`.
+- D-Bus through `xdg-dbus-proxy` (done); file dialogs through `xdg-desktop-portal` (not implemented: `portals = true` is refused).
 - The AppImage is extracted and `AppRun` executed (FUSE mounts do not work well in user namespaces).
 - Extraction prefers `unsquashfs` on the SquashFS offset, so the untrusted AppImage runtime never runs. Fallback: `--appimage-extract` inside the throwaway network-only jail.
 

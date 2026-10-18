@@ -11,7 +11,7 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 5. `index update` / `index rollback`.
 6. `update [app]` (added to the MVP by the user): re-resolve, download in the jail, verify evidence, show the diff (hashes, tier, permissions, release link), quarantine delay (default 7 days, overridable), user approval. A tier downgrade or an owner change blocks the update. `list`, `remove` and `perms` come with it.
 
-Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 341 passed); D-Bus filtering added afterwards (guest needs `xdg-dbus-proxy` and `dbus-bin`, both in `tests/vm/packages.txt`; run `tests/vm/provision.sh` on an existing guest).
+Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 372 passed); D-Bus filtering added afterwards (guest needs `xdg-dbus-proxy` and `dbus-bin`, both in `tests/vm/packages.txt`; run `tests/vm/provision.sh` on an existing guest).
 
 Deferred: attestation and GPG tiers, Xwayland isolation, portals, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`).
 
@@ -73,11 +73,8 @@ GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, F
 - Keep the project self-consistent: when code, decisions or the environment change, update CLAUDE.md, DESIGN.md and the tests/scripts in the same commit.
 
 ## Reference material
-- AM clone used for the analysis: `<scratch>/AM` (commit `d739e48e75382228b7fbe12502a812f0ff97f560`). `/tmp` may have been cleaned; if so, re-clone `https://github.com/ivan-hc/AM` and check out that commit before relying on line numbers.
+- AM index analysis was done at commit `d739e48e75382228b7fbe12502a812f0ff97f560` of `https://github.com/ivan-hc/AM`; findings are in DESIGN.md. If AM files are needed, make a blobless no-checkout clone in the scratchpad (`git clone --no-checkout --filter=blob:none`) and read with `git show <commit>:<path>` (text only).
   - Existing sandbox flags: `modules/install.am:723-1011`.
   - Index sources: `programs/x86_64-appimages` (names, descriptions) and `programs/x86_64/<app>` (`SITE=` line).
   - 8,735 scripts; 8,247 have `SITE="owner/repo"`; about 224 point elsewhere; a few use `SITE2=` for a repackager.
-- `<scratch>` was cleaned, and the session scratchpad clones (AM, sas) were lost in a reboot. Findings are in DESIGN.md. If AM files are needed, make a blobless no-checkout clone in the scratchpad (`git clone --no-checkout --filter=blob:none`) and read with `git show <commit>:<path>` (text only).
-- Companion repos cloned in `<scratch>`: `AppMan` (stub only), `AppImageUpdate`, `am-utils`, `amcheck`. Not needed for the MVP.
 - Host: bubblewrap 0.12.0, unprivileged user namespaces work, fusermount3 present.
-- Original planning notes: kept outside this repository (the user's Claude plans directory).
