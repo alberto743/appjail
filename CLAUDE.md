@@ -22,7 +22,7 @@ State: MVP steps 1-6, D-Bus filtering and the hardening round are done and commi
 3. Attestation verification (today an attestation is only displayed and does not raise the tier) and the GPG tier.
 4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
 5. Hardening still open: a private network namespace for the download and git jails (they share the host's today); seccomp for non-x86_64; a `mic`-style audio split is not possible without a portal (see DESIGN.md).
-6. DwarFS AppImages (evaluation requested by the user; see DESIGN.md "MVP scope" once written).
+6. (done) DwarFS AppImages through the pinned helper `bjail tools install dwarfs`; still untested against a real uruntime-built app (needs a user-approved download).
 Known limits are listed in DESIGN.md ("Permissions the manifest accepts but bjail does not enforce yet", update flow limitation for tier 4 assets swapped in place).
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
 
@@ -55,6 +55,7 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - Live GitHub metadata check (cli/cli, no downloads; 4 of the 60 requests/hour): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_LIVE=1 python3 -m pytest tests/test_github.py -k live'`.
 - End to end with a real download (skyjake/lagrange, 11 MB; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_e2e.py -v'`. It adds the app, runs the GUI under headless weston inside the jail, checks the real home stays untouched, and checks the tamper refusal.
 - Real `update` (appimagetool, two small downloads; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_update_e2e.py -v'`.
+- DwarFS helper (pinned `mhx/dwarfs` universal-small, 2 MB, user-approved 2026-10-18, guest only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 BJAIL_INTEGRATION=1 python3 -m pytest tests/test_tools.py -v'`.
 - Real AM index update/rollback (network, text only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_index_e2e.py -v'`.
 - Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
 - Do not install test tools on the host.

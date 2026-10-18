@@ -24,6 +24,11 @@ def app_dir(name):
     return data_dir() / "apps" / name
 
 
+def tools_dir():
+    """Pinned helper binaries (see bjail.tools)."""
+    return data_dir() / "tools"
+
+
 def appimage_path(name):
     return app_dir(name) / "app.AppImage"
 

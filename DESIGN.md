@@ -21,7 +21,7 @@ Goal: a small tool with declarative manifests, no remote code execution, no self
 ## Commands
 - `search <kw>`: text-only lookup in the local AM index (candidates only, never installs).
 - `add owner/repo`: resolve, review, download, pin, write manifest.
-- `run <app>`, `update [app]`, `list`, `remove <app>`, `perms <app>` (edit permissions), `history [app]` (recorded manifest changes).
+- `run <app>`, `update [app]`, `list`, `remove <app>`, `perms <app>` (edit permissions), `history [app]` (recorded manifest changes), `tools status|install NAME` (pinned helper binaries).
 - `index update`, `index rollback`: refresh or roll back the AM search snapshot.
 
 ## Resolver (GitHub first)
@@ -188,11 +188,12 @@ Verified in the test guest: bubblewrap 0.12.0, unprivileged user namespaces, fus
 
 ## MVP scope
 Python 3 stdlib only (`tomllib`, `urllib`, `hashlib`, `subprocess`); not shell, no third-party dependencies. Components: manifest parser, `add` for GitHub with TOFU + digest, bwrap runner with Wayland/audio/GPU, `search`, `index update`/`rollback`, `update` (quarantine, diff, tier-downgrade and owner-change block), plus `list`, `remove`, `perms`.
-- DwarFS-based AppImages (rather than SquashFS) are rejected in the MVP with a clear message; `unsquashfs` cannot read them.
-  - Checked 2026-10-17: Debian 13 (trixie) has no `dwarfs` or `dwarfs-tools` package (`apt-cache search dwarfs` is empty). The only source of `dwarfsextract` would be a static binary from GitHub, i.e. an extra download whose hash bjail itself would have to pin. Support is therefore deferred, not planned for the MVP. Revisit if a distro package appears.
+- DwarFS-based AppImages: supported through a pinned helper (`bjail/tools.py`). Evaluation (2026-10-18): Debian 13, trixie-backports and sid have no `dwarfs` package (`apt-cache` in the guest and packages.debian.org), so there is no distribution-trusted source. Upstream `mhx/dwarfs` v0.15.8 publishes a static multi-call binary, `dwarfs-universal-small-0.15.8-Linux-x86_64` (2,195,148 bytes), whose `--tool=dwarfsextract` takes `--image-offset`; GitHub's digest for the asset equals the downloaded file's sha256 (`d29734ed...e69`). The AppImage-side runtime for DwarFS images is `VHSgunzo/uruntime`; the embedded filesystem starts right after the ELF runtime, as for SquashFS, and begins with the magic `DWARFS` (checked with a hand-built image in the guest; a real uruntime image was not tested: no real DwarFS AppImage was approved for download).
+  - Trust model: the tool's URL, size and sha256 are constants in bjail's reviewed source. `bjail tools install dwarfs` (explicit, asks first) downloads it in the network-only jail and keeps it only if size and hash match; it lives in `~/.local/share/bjail/tools/`, is re-hashed before every use, and runs only inside the extraction jail (no network, read-only root, `--skip-devices --skip-specials`), followed by the same host-side tree validation as SquashFS. Moving to a newer dwarfs means editing the pin in a commit. bjail never fetches a helper on its own.
+  - Verified in the guest: the real tool builds and extracts an image in the jail, symlinks are preserved (the validator rejects the escaping ones), and the opt-in `tests/test_tools.py` end-to-end test passes with the real download.
   - `squashfs-tools` 4.6.1 is in trixie/main; bjail needs it (`apt install squashfs-tools`) and reports its absence clearly.
 
-Deferred: attestation and GPG tiers, Xwayland isolation, portals (D-Bus filtering is done), other forges.
+Deferred: attestation and GPG tiers, Xwayland isolation, portals (D-Bus filtering is done), other forges. Done since: DwarFS through a pinned helper.
 
 ## Findings: GitHub API (docs, plus live check on cli/cli v2.102.0, 2026-10-17)
 - Release assets have a `digest` field ("string or null"). Live: all 22 assets of cli/cli v2.102.0 carry `sha256:<64 hex>`. Treat null as "no digest" and fall back to TOFU (older releases may lack it).

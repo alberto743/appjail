@@ -127,9 +127,13 @@ def run(args, timeout=1800, watch=None):
     return supervise([find_bwrap(), *args], timeout=timeout, watch=watch)
 
 
-def extract_args(appimage, outdir, command):
-    """No network, root read-only; the AppImage is read-only and only outdir is writable."""
-    return (common_args() + ["--ro-bind", str(appimage), "/app.AppImage", "--bind", str(outdir), "/out",
+def extract_args(appimage, outdir, command, tools=()):
+    """No network, root read-only; the AppImage is read-only and only outdir is writable.
+
+    tools: (host path, path in the jail) pairs bound read-only, for pinned helper binaries.
+    """
+    extra = [a for host, dest in tools for a in ("--ro-bind", str(host), dest)]
+    return (common_args() + ["--ro-bind", str(appimage), "/app.AppImage", *extra, "--bind", str(outdir), "/out",
                              "--remount-ro", "/", "--chdir", "/out", "--"] + command)
 
 

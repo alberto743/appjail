@@ -88,8 +88,8 @@ def appimage_type(path):
     raise NotAnAppImage(f"AppImage type {head[10]} is not supported (only type 2)")
 
 
-def fs_offset(path):
-    """Offset of the SquashFS image: the end of the ELF runtime (section header table)."""
+def locate_fs(path):
+    """(kind, offset) of the embedded filesystem: "squashfs" or "dwarfs", right after the ELF runtime."""
     size = os.path.getsize(path)
     with open(path, "rb") as f:
         head = f.read(64)
@@ -103,10 +103,18 @@ def fs_offset(path):
         f.seek(offset)
         magic = f.read(8)
     if magic[:4] == b"hsqs":
-        return offset
+        return "squashfs", offset
     if magic[:6] == b"DWARFS":
-        raise UnsupportedImage("DwarFS AppImages are not supported (only SquashFS)")
+        return "dwarfs", offset
     raise UnsupportedImage("unknown embedded filesystem")
+
+
+def fs_offset(path):
+    """Offset of a SquashFS image (see locate_fs); DwarFS images are refused here."""
+    kind, offset = locate_fs(path)
+    if kind != "squashfs":
+        raise UnsupportedImage("this is a DwarFS AppImage, not SquashFS")
+    return offset
 
 
 def check_tree(root):
@@ -189,6 +197,36 @@ def remove_tree(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
+def extract_dwarfs(appimage, dest, offset):
+    """DwarFS image: extract with the pinned, hash-checked dwarfs-universal tool, inside the jail."""
+    from . import tools
+    try:
+        tool = tools.require("dwarfs")
+    except tools.ToolError as e:
+        raise ExtractError(str(e)) from e
+    dest = Path(dest)
+    if dest.exists():
+        raise ExtractError(f"{dest} already exists")
+    work = dest.with_name(dest.name + ".tmp")
+    remove_tree(work)
+    work.mkdir(mode=0o700)
+    try:
+        (work / "root").mkdir()
+        cmd = ["/dwarfs-tool", "--tool=dwarfsextract", "-i", "/app.AppImage", "-O", str(offset),
+               "-o", "/out/root", "--skip-devices", "--skip-specials"]
+        proc = jail.run(jail.extract_args(appimage, work, cmd, tools=((tool, "/dwarfs-tool"),)), timeout=900,
+                        watch=(work, MAX_EXTRACTED_BYTES, MAX_EXTRACTED_ENTRIES))
+        if proc.returncode != 0:
+            raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
+        tree = work / "root"
+        stats = check_tree(tree)
+        resolve_entry(tree, "AppRun")
+        os.replace(tree, dest)
+        return stats
+    finally:
+        remove_tree(work)
+
+
 def have_unsquashfs():
     return os.access(UNSQUASHFS, os.X_OK)
 
@@ -201,7 +239,9 @@ def extract(appimage, dest, runtime_fallback=False):
     Returns (entries, bytes). On any failure dest is not left behind.
     """
     appimage, dest = Path(appimage), Path(dest)
-    offset = fs_offset(appimage)  # also rejects DwarFS
+    kind, offset = locate_fs(appimage)
+    if kind == "dwarfs":
+        return extract_dwarfs(appimage, dest, offset)
     if not have_unsquashfs() and not runtime_fallback:
         raise ExtractError("unsquashfs is not installed (apt install squashfs-tools)")
     if dest.exists():

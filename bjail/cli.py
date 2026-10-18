@@ -13,7 +13,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import appimage, github, history, index, indexsync, jail, manifest, runner, store, textsafe, updater
+from . import appimage, github, history, index, indexsync, jail, manifest, runner, store, textsafe, tools, updater
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
@@ -401,6 +401,24 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
     return 1 if any(r in ("blocked", "failed") or r.startswith("not checked") for r in results.values()) else 0
 
 
+def cmd_tools(args, console, download=jail.download):
+    names = sorted(tools.TOOLS)
+    if args.tools_command == "status":
+        for n in names:
+            console.out(f"{n}: {tools.status(n)}  ({tools.TOOLS[n].purpose})")
+        return
+    tool = tools.TOOLS[args.tool]
+    console.out(f"{tool.name}: {tool.url}")
+    console.out(f"  size {tool.size} bytes, sha256 {tool.sha256} (pinned in bjail's source)")
+    if not console.confirm("Download it in a network-only jail and keep it only if it matches?"):
+        raise Abort("cancelled")
+    try:
+        tools.install(args.tool, download)
+    except tools.ToolError as e:
+        raise Abort(str(e)) from e
+    console.out(f"Installed {tool.name}.")
+
+
 def cmd_history(args, console):
     if args.app and not manifest.NAME_RE.fullmatch(args.app):
         raise Abort("invalid app name")
@@ -609,6 +627,11 @@ def build_parser():
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
     sub.add_parser("list", help="list installed apps")
+    tl = sub.add_parser("tools", help="pinned helper binaries (e.g. for DwarFS AppImages)")
+    tsub = tl.add_subparsers(dest="tools_command", required=True)
+    tsub.add_parser("status", help="show which helpers are installed and intact")
+    tinst = tsub.add_parser("install", help="download a helper whose size and sha256 are pinned in bjail's source")
+    tinst.add_argument("tool", choices=sorted(tools.TOOLS))
     hist = sub.add_parser("history", help="show the recorded changes to the manifests")
     hist.add_argument("app", nargs="?")
     hist.add_argument("--limit", type=int, default=20)
@@ -660,6 +683,8 @@ def main(argv=None, client=None, console=None):
             return cmd_update(args, client or github.Client(), console)
         elif args.command == "list":
             cmd_list(console)
+        elif args.command == "tools":
+            cmd_tools(args, console)
         elif args.command == "history":
             cmd_history(args, console)
         elif args.command == "remove":
