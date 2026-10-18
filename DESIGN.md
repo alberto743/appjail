@@ -234,6 +234,14 @@ Deferred: the GPG tier, Xwayland isolation, other forges. Done since: DwarFS thr
 - Flatpak already offers a mature sandbox, portals, signed OSTree remotes and permission overrides. It covers the need where the app exists on Flathub.
 - It does not cover: AppImages released only on GitHub, user-pinned per-release hashes with a quarantine delay, and declarative manifests in the user's own git repo. bjail targets that gap and does not replace Flatpak. Prefer Flatpak when the same app is available there.
 
+## Findings: Firejail comparison (netblue30/firejail, read 2026-10-18: README and `etc/inc/disable-common.inc`)
+- Firejail is a setuid-root C program (namespaces, seccomp-bpf, capabilities, optional Landlock) under GPL-2.0, with 900+ maintainer-written per-application profiles. Its README does not mention AppImage.
+- Decision: not a base and not a dependency. It needs setuid root (bjail runs unprivileged bubblewrap), its profiles are implicitly trusted text rather than pinned declarative manifests, and the GPL-2.0 licence rules out copying code or profile text into this MPL-2.0 project. Only ideas were taken, written from scratch.
+- Useful as a checklist for the `dirs` policy: its denylist covers credentials and keys, keyrings and certificates, cloud configs, shell and editor startup files, autostart and session scripts, shell and application history, mail, encrypted-volume tools, other sandboxes' data (Flatpak, Snap) and sockets of container runtimes. bjail's `SECRET_HOME_DIRS`, `BROAD_HOME_DIRS` and `PERSIST_HOME_DIRS` cover the credential, keyring, cloud, startup and autostart groups; not yet covered: shell history files (`.*_history`, `.viminfo`), `.git-credentials`, `*.kdbx` password databases, `.pki`, browser profiles, mail directories, `.var`, and `$XDG_RUNTIME_DIR` sockets of other tools. Open point, see CLAUDE.md.
+- It also strips token variables (`GH_TOKEN`, `GITHUB_TOKEN`, `CARGO_REGISTRY_TOKEN`) from the sandbox environment; bjail clears the whole environment and passes a fixed whitelist, so nothing leaks by construction.
+- X11: Firejail's `--x11` defaults to Xephyr and it removed Xpra, which supports bjail's plan for `display = "xwayland"` (a separate X server inside the jail, never the host X11 socket). It adds no new technique.
+- Landlock (unprivileged kernel filesystem filter, kernel 5.13 or newer): Firejail offers it as an experimental extra. A possible later hardening layer for bjail on top of bubblewrap; Python's stdlib has no wrapper, so it would be raw `syscall` use like the seccomp filter. Not evaluated beyond this note.
+
 ## Open items (all verified)
 - ~~GitHub asset `digest` algorithm and attestations behaviour.~~ Verified live on cli/cli (see Findings: GitHub API).
 - ~~Build on `sas` or write bwrap flags directly.~~ Decided: direct bwrap (see Findings: sas).

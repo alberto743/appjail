@@ -21,7 +21,7 @@ State: MVP steps 1-6, D-Bus filtering and the hardening round are done and commi
 2. Xwayland isolation (`display = "xwayland"` is still refused): rootless Xwayland per app inside the jail's namespaces; never bind the host X11 socket.
 3. (attestation verification done: tier 1 via the pinned `gh`, see DESIGN.md) The GPG tier is still open.
 4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
-5. Hardening still open: a private network namespace for the download and git jails (they share the host's today); seccomp for non-x86_64; a `mic`-style audio split is not possible without a portal (see DESIGN.md).
+5. Hardening still open: extend the `dirs` sensitive-path policy with the categories the Firejail comparison found missing (shell history, `.git-credentials`, `*.kdbx`, `.pki`, browser profiles, mail, `.var`; see DESIGN.md "Findings: Firejail comparison"); evaluate Landlock as an extra layer; a private network namespace for the download and git jails (they share the host's today); seccomp for non-x86_64; a `mic`-style audio split is not possible without a portal (see DESIGN.md).
 6. (done) DwarFS AppImages through the pinned helper `bjail tools install dwarfs`; verified on two real DwarFS apps (htop and Galculator from `pkgforge-dev`, user-approved, guest only).
 Known limits are listed in DESIGN.md ("Permissions the manifest accepts but bjail does not enforce yet", update flow limitation for tier 4 assets swapped in place).
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
@@ -30,7 +30,7 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - Language: Python 3, stdlib only (confirmed by the user's go-ahead on the plan).
 - Extraction: prefer `unsquashfs` on the SquashFS offset; fall back to `--appimage-extract` inside the network-only jail. Never run the AppImage runtime outside a jail.
 - AM commit signatures: checked, recorded in DESIGN.md. Do not redo.
-- `sas`: read and rejected as a base; write bwrap flags directly. Flatpak comparison done. Both recorded in DESIGN.md.
+- `sas`: read and rejected as a base; write bwrap flags directly. Flatpak and Firejail comparisons done (Firejail: setuid root and GPL-2.0, so ideas only, no code or profile text). All recorded in DESIGN.md.
 - GitHub `digest` (sha256:hex) and the repo-scoped attestations endpoint verified live on cli/cli; recorded in DESIGN.md. cli/cli is the user-approved repo for API metadata checks.
 
 ## Testing environment
@@ -62,7 +62,7 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - Do not install test tools on the host.
 
 ## Verification status (done; results in DESIGN.md "Findings")
-GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, Flatpak comparison. Re-verify only if DESIGN.md is contradicted by new evidence.
+GitHub `digest` and attestations, AM commit signatures, `sas` vs direct bwrap, Flatpak comparison, Firejail comparison (not a base: setuid, GPL-2.0, trusted profiles). Re-verify only if DESIGN.md is contradicted by new evidence.
 
 ## Hard rules
 - Never source, execute or `eval` any AM script or any text from the network. Parse as text only and strip terminal escape sequences.
