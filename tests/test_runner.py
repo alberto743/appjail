@@ -443,3 +443,14 @@ def test_real_wayland_client_runs_against_headless_weston(sandbox):
         weston.terminate()
         weston.wait(timeout=10)
         log.close()
+
+
+@pytest.mark.parametrize("sub,mode", [(".ssh", ""), (".local/bin", ":rw"), (".config", "")])
+def test_sensitive_dirs_refused_after_symlink_resolution(sandbox, runtime, sub, mode):
+    """A link in a harmless location pointing at a sensitive one must not get past the policy."""
+    fake_home = sandbox / "fakehome"
+    target = fake_home / sub
+    target.mkdir(parents=True)
+    (fake_home / "innocent").symlink_to(target)
+    with pytest.raises(RunError, match="refused"):
+        jail.dir_binds([f"~/innocent{mode}"], fake_home)

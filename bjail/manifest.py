@@ -111,6 +111,49 @@ def check_dbus_name(name):
     return name
 
 
+# Paths below the home directory (no leading "~/") that hold credentials or secrets: never granted.
+SECRET_HOME_DIRS = (".ssh", ".gnupg", ".aws", ".kube", ".docker", ".password-store", ".netrc", ".config/gcloud",
+                    ".config/gh", ".config/Bitwarden", ".local/share/keyrings", ".local/share/gnome-keyring")
+# Too broad: they contain the secrets of other applications and the persistence locations below.
+BROAD_HOME_DIRS = (".config", ".local", ".local/share", ".local/state", ".cache")
+# Writable access would let the app run code outside the jail later (login, shell, desktop, systemd).
+PERSIST_HOME_DIRS = (".local/bin", ".config/autostart", ".config/systemd", ".config/environment.d", ".config/fish",
+                     ".local/share/applications", ".local/share/systemd", ".local/share/dbus-1", ".bashrc.d",
+                     ".profile.d", ".config/plasma-workspace", ".config/Code", ".config/nvim", ".config/zsh")
+# System trees that are never user data; the jail provides its own /dev, /proc, /run and /etc.
+SYSTEM_PATHS = ("/etc", "/dev", "/proc", "/sys", "/run", "/boot", "/root", "/usr", "/bin", "/sbin", "/lib", "/lib32",
+                "/lib64")
+
+
+def _within(path, base):
+    return path == base or path.startswith(base + "/")
+
+
+def sensitive_reason(path, mode):
+    """Why a normalized dirs path (``~/x`` or absolute) must not be granted in this mode, else None.
+
+    Home-relative rules apply to ``~/x`` paths; callers that resolved symlinks pass the real path
+    relative to the real home as ``~/x`` so a link cannot dodge them.
+    """
+    if path.startswith("~/"):
+        rel = path[2:].strip("/")
+        for d in SECRET_HOME_DIRS:
+            if _within(rel, d):
+                return f"~/{d} holds credentials or secrets"
+        for d in BROAD_HOME_DIRS:
+            if rel == d:
+                return f"~/{d} is too broad: it contains the data of every other application"
+        if mode == "rw":
+            for d in PERSIST_HOME_DIRS:
+                if _within(rel, d) or (rel and _within(d, rel)):
+                    return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or desktop startup)"
+        return None
+    for d in SYSTEM_PATHS:
+        if _within(path, d):
+            return f"{d} is a system tree and is not available to jailed apps"
+    return None
+
+
 def _check_dir(entry):
     path, _, mode = entry.partition(":")
     if mode not in ("", "ro", "rw"):
@@ -119,6 +162,9 @@ def _check_dir(entry):
         raise ManifestError(f"dirs entry {entry!r}: path must be absolute or start with ~/")
     if path in ("/", "~/") or ".." in path.split("/"):
         raise ManifestError(f"dirs entry {entry!r}: path is too broad or contains '..'")
+    reason = sensitive_reason(path.rstrip("/") or path, mode)
+    if reason:
+        raise ManifestError(f"dirs entry {entry!r} is refused: {reason}")
     return entry
 
 

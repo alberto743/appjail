@@ -28,7 +28,7 @@ gpu = true
 display = "wayland"
 dbus_filter = ["org.freedesktop.Notifications"]
 portals = false
-dirs = ["~/Downloads:rw", "/usr/share/fonts"]
+dirs = ["~/Downloads:rw", "/mnt/data"]
 """
 
 
@@ -48,7 +48,7 @@ def test_good_manifest():
     assert m.evidence_tier == 3
     assert m.owner_id == 59704711
     assert m.permissions.network is True
-    assert m.permissions.dirs == ("~/Downloads:rw", "/usr/share/fonts")
+    assert m.permissions.dirs == ("~/Downloads:rw", "/mnt/data")
 
 
 def test_permissions_default_to_deny():
@@ -113,6 +113,15 @@ def test_valid_sources(src):
     Permissions(dirs=("~/a/../../etc",)),
     Permissions(dirs=("~/a:wx",)),
     Permissions(dirs=("~/a\nb",)),
+    Permissions(dirs=("/etc",)),
+    Permissions(dirs=("/run/user/1000",)),
+    Permissions(dirs=("/usr/share/fonts",)),
+    Permissions(dirs=("~/.ssh",)),
+    Permissions(dirs=("~/.gnupg/private-keys-v1.d",)),
+    Permissions(dirs=("~/.config",)),
+    Permissions(dirs=("~/.local/bin:rw",)),
+    Permissions(dirs=("~/.config/autostart:rw",)),
+    Permissions(dirs=("~/.local/share/applications:rw",)),
 ])
 def test_bad_permissions_rejected(perms):
     with pytest.raises(ManifestError):
@@ -123,7 +132,7 @@ def test_permission_types_from_toml():
     with pytest.raises(ManifestError):
         manifest.loads(GOOD.replace("network = true", 'network = "true"'))
     with pytest.raises(ManifestError):
-        manifest.loads(GOOD.replace('dirs = ["~/Downloads:rw", "/usr/share/fonts"]', "dirs = 5"))
+        manifest.loads(GOOD.replace('dirs = ["~/Downloads:rw", "/mnt/data"]', "dirs = 5"))
 
 
 # -- writing -------------------------------------------------------------------------
@@ -189,3 +198,23 @@ def test_normalize_dir_rejects_broad_or_odd_paths(spec):
 def test_merge_dirs_read_write_wins_and_order_is_kept():
     assert manifest.merge_dirs(("~/A", "~/B:rw"), ("~/A:rw", "~/B", "~/C")) == ("~/A:rw", "~/B:rw", "~/C")
     assert manifest.merge_dirs((), ()) == ()
+
+
+@pytest.mark.parametrize("path,mode,refused", [
+    ("~/.local/bin", "", False),  # reading binaries is not an escape
+    ("~/.local/bin", "rw", True),
+    ("~/.config/myapp", "rw", False),
+    ("~/.config/autostart/x", "rw", True),
+    ("~/.ssh", "", True),
+    ("~/Documents", "rw", False),
+    ("/mnt/data", "rw", False),
+    ("/dev/dri", "", True),
+])
+def test_sensitive_reason(path, mode, refused):
+    assert bool(manifest.sensitive_reason(path, mode)) is refused
+
+
+@pytest.mark.parametrize("spec", ["~/.ssh", "~/.config", "~/.local/bin:rw", "/etc/ssl", "/proc"])
+def test_normalize_dir_refuses_sensitive(spec):
+    with pytest.raises(manifest.ManifestError, match="refused"):
+        manifest.normalize_dir(spec, "/home/u", "/home/u/work")

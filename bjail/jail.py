@@ -13,6 +13,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from . import manifest
+
 FETCHER = Path(__file__).with_name("fetcher.py")
 SYSTEM_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64")
 ETC_FILES = ("/etc/hosts", "/etc/nsswitch.conf", "/etc/host.conf", "/etc/gai.conf", "/etc/localtime")
@@ -175,6 +177,13 @@ def dir_binds(dirs, home):
         for guard in _guard_dirs():
             if real == guard or guard in real.parents or real in guard.parents:
                 raise RunError(f"granted directory {host} would expose bjail's own data")
+        try:
+            rel = real.relative_to(home_real)
+        except ValueError:
+            rel = None
+        why = manifest.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
+        if why:
+            raise RunError(f"granted directory {host} is refused: {why}")
         args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]
     return args
 
