@@ -95,7 +95,7 @@ An app can be given specific directories, never the whole home:
 - Verified in the guest with a real `dbus-daemon`, the real proxy and `dbus-send` inside the real jail: a call to the bus control interface is denied; a call to a granted name reaches the bus (which answers that it has no such service); a call to any other name is answered by the proxy and never reaches the bus; the proxy and its socket directory are gone afterwards. Not verified: real desktop services (notification daemon, MPRIS players), which the headless guest does not run.
 
 ## Extraction (implemented in `bjail/appimage.py`, `bjail/jail.py`)
-- Offset: end of the ELF runtime = `e_shoff + e_shentsize * e_shnum` (64-bit little-endian ELF only). `hsqs` there means SquashFS; `DWARFS` is rejected with a clear message; anything else is unsupported.
+- Offset: end of the ELF runtime = `e_shoff + e_shentsize * e_shnum` (64-bit little-endian ELF only). `hsqs` there means SquashFS; `DWARFS` means a DwarFS image (extracted with the pinned helper, see MVP scope); anything else is unsupported.
 - Preferred path: `/usr/bin/unsquashfs -no-progress -no-xattrs -p 2 -o <offset> -d /out/root /app.AppImage` in a jail with `--unshare-all` (no network), read-only root, the AppImage bound read-only and only the work directory writable. The AppImage runtime never runs.
 - Fallback (only with the user's consent, asked before the download when `unsquashfs` is missing): a private copy runs `--appimage-extract` in the same jail. Verified in the guest on appimagetool.
 - Limits: the work directory is polled every 0.25 s; the jail is killed beyond 4 GiB of disk use or 500,000 entries, or after 15 minutes. After extraction the apparent size is checked as well, so sparse files cannot hide a huge tree.
