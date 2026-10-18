@@ -37,8 +37,9 @@ DISPLAYS = ("wayland", "xwayland")
 
 TOP_KEYS = {
     "schema", "name", "source", "asset_pattern", "version", "sha256",
-    "evidence_tier", "published_at", "owner_id", "permissions",
+    "evidence_tier", "published_at", "owner_id", "channel", "permissions",
 }
+CHANNELS = ("stable", "prerelease", "pinned")
 PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "portals", "userns", "dirs"}
 
 
@@ -69,6 +70,7 @@ class Manifest:
     evidence_tier: int
     published_at: str  # UTC, YYYY-MM-DDTHH:MM:SSZ
     owner_id: int = None  # GitHub account id of the owner; pins the account, not just the name
+    channel: str = "stable"  # which releases `update` follows: stable, prerelease, or pinned (never)
     permissions: Permissions = field(default_factory=Permissions)
 
 
@@ -252,6 +254,8 @@ def validate(m):
     _published_at(m.published_at)
     if m.owner_id is not None and (type(m.owner_id) is not int or m.owner_id < 1):
         raise ManifestError("owner_id must be a positive integer")
+    if m.channel not in CHANNELS:
+        raise ManifestError(f"channel must be one of {', '.join(CHANNELS)}")
     p = m.permissions
     for key in ("network", "audio", "gpu", "portals", "userns"):
         _bool(getattr(p, key), f"permissions.{key}")
@@ -272,13 +276,13 @@ def loads(text):
     _unknown(data, TOP_KEYS, "manifest")
     if data.get("schema") != SCHEMA_VERSION:
         raise ManifestError(f"schema must be {SCHEMA_VERSION}")
-    missing = sorted(TOP_KEYS - {"permissions", "owner_id", "schema"} - set(data))
+    missing = sorted(TOP_KEYS - {"permissions", "owner_id", "channel", "schema"} - set(data))
     if missing:
         raise ManifestError(f"missing key(s): {', '.join(missing)}")
     return validate(Manifest(
         name=data["name"], source=data["source"], asset_pattern=data["asset_pattern"],
         version=data["version"], sha256=data["sha256"], evidence_tier=data["evidence_tier"],
-        published_at=data["published_at"], owner_id=data.get("owner_id"), permissions=_permissions(data.get("permissions", {})),
+        published_at=data["published_at"], owner_id=data.get("owner_id"), channel=data.get("channel", "stable"), permissions=_permissions(data.get("permissions", {})),
     ))
 
 
@@ -317,6 +321,7 @@ def dumps(m):
         f"evidence_tier = {m.evidence_tier}",
         f"published_at = {_quote(m.published_at)}",
         *([f"owner_id = {m.owner_id}"] if m.owner_id is not None else []),
+        *([f"channel = {_quote(m.channel)}"] if m.channel != "stable" else []),
         "",
         "[permissions]",
         f"network = {str(p.network).lower()}",

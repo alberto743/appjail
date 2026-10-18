@@ -22,7 +22,7 @@ State: MVP steps 1-6 and D-Bus filtering are done and committed; 372 tests pass 
 3. Attestation verification (today an attestation is only displayed and does not raise the tier) and the GPG tier.
 4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
 5. Hardening: seccomp filter, blocking nested user namespaces (Electron/Chromium need them, so make it a permission), a private network namespace for the download and git jails (they share the host's today).
-6. Decide whether `--tag` / `--prerelease` choices should be recorded in the manifest (today `update` follows the latest stable release unless `--prerelease` is given).
+6. (done) `channel` is recorded in the manifest.
 Known limits are listed in DESIGN.md ("Permissions the manifest accepts but bjail does not enforce yet", update flow limitation for tier 4 assets swapped in place).
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
 

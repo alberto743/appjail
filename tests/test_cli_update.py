@@ -330,3 +330,60 @@ def test_list_shows_dbus(h):  # noqa: F811
     c = Script()
     cli.cmd_list(c)
     assert "dbus: org.freedesktop.Notifications" in c.text
+
+
+def test_add_records_the_update_channel(h):  # noqa: F811
+    h.add()
+    assert manifest.load(store.manifest_path("app")).channel == "stable"
+    h.add(extra=("--name", "pre", "--prerelease"))
+    h.add(extra=("--name", "pin", "--tag", "v1.0"))
+    assert manifest.load(store.manifest_path("pre")).channel == "prerelease"
+    assert manifest.load(store.manifest_path("pin")).channel == "pinned"
+
+
+def test_pinned_app_is_not_checked_or_downloaded(h):  # noqa: F811
+    h.add(extra=("--tag", "v1.0"))
+    client = FakeClient(release_=release2())
+    code, c = update(h, client)
+    assert code == 0 and "pinned to" in c.text and len(h.downloads) == 1
+    assert not [call for call in client.calls if call[0] == "latest_release"]
+
+
+def test_channel_option_changes_the_policy_and_is_saved(h):  # noqa: F811
+    path = installed(h)
+    update(h, FakeClient(release_=release2()), extra=("--channel", "pinned"))
+    assert manifest.load(path).channel == "pinned"
+    code, c = update(h, FakeClient(release_=release2()), extra=("--channel", "stable"))
+    assert manifest.load(path).channel == "stable" and "quarantine" in c.text
+
+
+def test_prerelease_channel_asks_for_prereleases(h):  # noqa: F811
+    installed(h, extra=("--prerelease",))
+    seen = []
+
+    class Spy(FakeClient):
+        def latest_release(self, source, prereleases=False):
+            seen.append(prereleases)
+            return super().latest_release(source, prereleases)
+
+    update(h, Spy(release_=release2()))
+    assert seen == [True]
+
+
+def test_rate_limit_stops_the_run_instead_of_hammering_the_api(h):  # noqa: F811
+    installed(h)
+    h.add(source="o/Other", extra=("--name", "other"))
+    h.add(source="o/Third", extra=("--name", "third"))
+
+    class Limited(FakeClient):
+        def repo_info(self, source):
+            self.calls.append(("repo_info", source))
+            raise github.RateLimited("12:00:00Z")
+
+    client = Limited(release_=release2())
+    console = Script(["y"])
+    args = cli.build_parser().parse_args(["update", "--quarantine", "0"])
+    code = cli.cmd_update(args, client, console, download=h.download(NEW_IMAGE), now=T0, extract=h.extract,
+                          extract_ok=lambda: True)
+    assert code == 1 and len(client.calls) == 1
+    assert "other: not checked (rate limited)" in console.text and "third: not checked (rate limited)" in console.text

@@ -209,7 +209,8 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         record = manifest.Manifest(
             name=name, source=source, asset_pattern=github.suggest_pattern(asset.name, release.tag),
             version=release.tag, sha256=digest, evidence_tier=tier, published_at=release.published_at,
-            owner_id=info.owner_id, permissions=perms)
+            owner_id=info.owner_id, permissions=perms,
+            channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")
         manifest.validate(record)
         dest = store.appimage_path(name)
         dest.parent.mkdir(parents=True, mode=0o700)
@@ -289,7 +290,15 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
     m = manifest.load(store.manifest_path(name))
     info = client.repo_info(m.source)
     console.out(f"{name}: {info.full_name}, installed {m.version} (published {m.published_at}, tier {m.evidence_tier})")
-    release = client.latest_release(info.full_name, args.prerelease)
+    if args.channel and args.channel != m.channel:
+        m = replace(m, channel=args.channel)
+        manifest.dump(store.manifest_path(name), m)
+        console.out(f"  update channel is now {m.channel}")
+    if m.channel == "pinned":
+        console.out(f"  pinned to {m.version}: not checked (use --channel stable or prerelease to follow releases)")
+        return "pinned"
+    prerelease = args.prerelease or m.channel == "prerelease"
+    release = client.latest_release(info.full_name, prerelease)
     asset = pick_asset(console, release, m.asset_pattern)
     key = updater.candidate_key(release, asset)
     same = asset.sha256 == m.sha256 if asset.sha256 else (
@@ -299,7 +308,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok):
         console.out("  up to date")
         return "current"
     if not updater.is_newer(m, release):
-        console.out(f"  the latest {'release' if args.prerelease else 'stable release'} ({release.tag}, "
+        console.out(f"  the latest {'release' if prerelease else 'stable release'} ({release.tag}, "
                     f"{release.published_at}) is older than the installed one; use --prerelease to follow pre-releases")
         return "current"
     console.out(f"  candidate  : {release.tag}, published {release.published_at}"
@@ -372,15 +381,21 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
         console.out("No apps installed.")
         return 0
     results = {}
-    for name in names:
+    for i, name in enumerate(names):
         try:
             results[name] = update_app(name, args, client, console, download, now, extract, extract_ok)
+        except github.RateLimited as e:
+            console.out(f"  {name}: {e}")
+            results[name] = "failed"
+            for rest in names[i + 1:]:
+                results[rest] = "not checked (rate limited)"
+            break
         except (Abort, github.GitHubError, jail.JailError, manifest.ManifestError, OSError) as e:
             console.out(f"  {name}: {e}")
             results[name] = "failed"
     if len(names) > 1:
         console.out("Summary: " + ", ".join(f"{n}: {r}" for n, r in results.items()))
-    return 1 if any(r in ("blocked", "failed") for r in results.values()) else 0
+    return 1 if any(r in ("blocked", "failed") or r.startswith("not checked") for r in results.values()) else 0
 
 
 def cmd_list(console):
@@ -399,6 +414,7 @@ def cmd_list(console):
         console.out(f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
                     + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
                     + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
+                    + (f"  channel: {m.channel}" if m.channel != "stable" else "")
                     + (f"  (update seen: {pending['tag']})" if pending else ""))
 
 
@@ -573,7 +589,8 @@ def build_parser():
     isub.add_parser("status", help="show the pinned index")
     upd_app = sub.add_parser("update", help="check for a newer release and install it after review and quarantine")
     upd_app.add_argument("app", nargs="?", help="app name (default: every installed app)")
-    upd_app.add_argument("--prerelease", action="store_true", help="follow pre-releases")
+    upd_app.add_argument("--prerelease", action="store_true", help="follow pre-releases for this run (see --channel to make it permanent)")
+    upd_app.add_argument("--channel", choices=manifest.CHANNELS, help="set which releases this app follows from now on: stable, prerelease, or pinned (never updated)")
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
     sub.add_parser("list", help="list installed apps")

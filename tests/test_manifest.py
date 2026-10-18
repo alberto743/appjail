@@ -225,3 +225,11 @@ def test_userns_defaults_to_denied_and_round_trips():
     m = make(permissions=Permissions(userns=True))
     assert manifest.loads(manifest.dumps(m)).permissions.userns is True
     assert "userns = false" in manifest.dumps(make())
+
+
+def test_channel_defaults_to_stable_and_round_trips():
+    assert make().channel == "stable" and "channel" not in manifest.dumps(make())
+    m = make(channel="pinned")
+    assert manifest.loads(manifest.dumps(m)).channel == "pinned"
+    with pytest.raises(ManifestError):
+        manifest.validate(make(channel="nightly"))
