@@ -22,7 +22,7 @@ State: MVP steps 1-6, D-Bus filtering and the hardening round are done and commi
 3. (attestation verification done: tier 1 via the pinned `gh`, see DESIGN.md) The GPG tier is still open.
 4. D-Bus "own" access (apps that export MPRIS or status-notifier items): needs a schema change (second list or prefix syntax).
 5. Hardening still open: a private network namespace for the download and git jails (they share the host's today); seccomp for non-x86_64; a `mic`-style audio split is not possible without a portal (see DESIGN.md).
-6. (done) DwarFS AppImages through the pinned helper `bjail tools install dwarfs`; still untested against a real uruntime-built app (needs a user-approved download).
+6. (done) DwarFS AppImages through the pinned helper `bjail tools install dwarfs`; verified on two real DwarFS apps (htop and Galculator from `pkgforge-dev`, user-approved, guest only).
 Known limits are listed in DESIGN.md ("Permissions the manifest accepts but bjail does not enforce yet", update flow limitation for tier 4 assets swapped in place).
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
 
@@ -37,7 +37,7 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - Never use the host system for this work, except to edit files and run git in this directory and to run qemu itself. All execution happens in the qemu-kvm guest: unit tests, integration tests, `bin/bjail`, network access (GitHub API probes included), downloads, extraction and bwrap. Do not run project code, tests or network clients on the host.
 - Host status (checked 2026-10-17): qemu 10.0.13 with KVM, `qemu-img`, `cloud-localds`, `genisoimage` and OVMF are installed; the user has rw access to `/dev/kvm` via ACL. Do not install anything else.
 - The guest needs a headless Wayland compositor for GUI tests, user namespaces, bubblewrap, `unsquashfs`, and a kernel with DRM drivers. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
-- Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ` (needs glibc 2.43; Debian 13 has 2.41, so it cannot run in the guest, and the older v16 release is too new as well), and `skyjake/lagrange` (the GUI test app, chosen by Claude on the user's delegation: 11 MB, SDL, runs in the guest). cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
+- Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ` (needs glibc 2.43; Debian 13 has 2.41, so it cannot run in the guest, and the older v16 release is too new as well), and `pkgforge-dev/htop-AppImage` and `pkgforge-dev/Galculator-AppImage` (DwarFS; approved 2026-10-18), `mhx/dwarfs` universal-small and `cli/cli` gh tarball (pinned tools), and `skyjake/lagrange` (the GUI test app, chosen by Claude on the user's delegation: 11 MB, SDL, runs in the guest). cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
 - Ask before creating or downloading a guest image (it is a binary download).
 - The VM is reproducible from tracked files only; `vm/` (base image, disk, ssh key, console log) is gitignored and can be deleted and rebuilt at any time.
 - Recreate on a new machine:
