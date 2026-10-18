@@ -193,6 +193,25 @@ def dir_binds(dirs, home):
     return args
 
 
+XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
+# Runs inside the jail: a rootless Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket
+# lives in the jail's private /tmp and abstract namespace, so no other app and no host X server is involved.
+XWAYLAND_SCRIPT = (
+    'f=/tmp/.bjail-display; x="$1"; shift\n'
+    'WAYLAND_DISPLAY=wayland-0 "$x" -rootless -nolisten tcp -displayfd 3 3>"$f" >/dev/null 2>&1 &\n'
+    'i=0; while [ ! -s "$f" ] && [ "$i" -lt 100 ]; do sleep 0.05; i=$((i+1)); done\n'
+    'n=$(cat "$f"); [ -n "$n" ] || { echo "bjail: Xwayland did not start" >&2; exit 1; }\n'
+    'DISPLAY=":$n" exec "$@"')
+
+
+def xwayland_command(command):
+    """Wrap the app command so a private Xwayland is running before it starts."""
+    for path in XWAYLAND_PATHS:
+        if os.access(path, os.X_OK):
+            return ["/bin/sh", "-c", XWAYLAND_SCRIPT, "sh", path, *command]
+    raise RunError("display = xwayland needs the Xwayland binary in /usr/bin (package xwayland)")
+
+
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
                  portal_docs=None, status_fd=None, block_fd=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
@@ -200,8 +219,9 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     Pure function of its inputs: nothing is read from the process environment. Anything the
     manifest asks for but bjail cannot enforce yet is refused instead of ignored.
     """
-    if perms.display != "wayland":
-        raise RunError(f"display = {perms.display} is not implemented yet (only wayland)")
+    xwayland = perms.display == "xwayland"
+    if xwayland:
+        command = xwayland_command(command)
     if (perms.dbus_filter or perms.portals) and not dbus_socket:
         raise RunError("dbus_filter and portals need the filtered bus socket from bjail.dbusproxy")
     if perms.portals and not portal_docs:
@@ -243,11 +263,15 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     env = {
         "PATH": f"{APP_DIR}/usr/bin:/usr/local/bin:/usr/bin:/bin", "HOME": APP_HOME, "USER": "app",
         "LOGNAME": "app", "SHELL": "/bin/sh", "LANG": host_env.get("LANG") or "C.UTF-8",
-        "XDG_RUNTIME_DIR": rt, "WAYLAND_DISPLAY": "wayland-0", "XDG_SESSION_TYPE": "wayland",
-        "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
-        "GDK_BACKEND": "wayland", "QT_QPA_PLATFORM": "wayland", "MOZ_ENABLE_WAYLAND": "1",
-        "ELECTRON_OZONE_PLATFORM_HINT": "wayland", "SDL_VIDEODRIVER": "wayland",
+        "XDG_RUNTIME_DIR": rt, "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
     }
+    if xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
+        env.update({"XDG_SESSION_TYPE": "x11", "GDK_BACKEND": "x11", "QT_QPA_PLATFORM": "xcb",
+                    "ELECTRON_OZONE_PLATFORM_HINT": "x11", "SDL_VIDEODRIVER": "x11"})
+    else:
+        env.update({"WAYLAND_DISPLAY": "wayland-0", "XDG_SESSION_TYPE": "wayland", "GDK_BACKEND": "wayland",
+                    "QT_QPA_PLATFORM": "wayland", "MOZ_ENABLE_WAYLAND": "1",
+                    "ELECTRON_OZONE_PLATFORM_HINT": "wayland", "SDL_VIDEODRIVER": "wayland"})
     if host_env.get("TZ"):
         env["TZ"] = host_env["TZ"]
 

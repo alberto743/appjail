@@ -171,13 +171,28 @@ def test_dirs_cannot_expose_bjail_itself(sandbox, runtime, where):
 
 
 @pytest.mark.parametrize("perms,match", [
-    ({"display": "xwayland"}, "xwayland"),
     ({"portals": True}, "filtered bus socket"),
     ({"dbus_filter": ("org.freedesktop.Notifications",)}, "filtered bus socket"),
 ])
 def test_unimplemented_permissions_are_refused_not_ignored(sandbox, runtime, perms, match):
     with pytest.raises(RunError, match=match):
         jail.runtime_args(**build(sandbox, runtime, **perms))
+
+
+def test_xwayland_wraps_the_command_and_switches_the_toolkits(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(jail, "XWAYLAND_PATHS", ("/bin/sh",))  # any executable stands in for the binary
+    args = jail.runtime_args(**build(sandbox, runtime, display="xwayland"))
+    env = {v[0]: v[1] for v in (args[i + 1:i + 3] for i, a in enumerate(args) if a == "--setenv")}
+    assert "WAYLAND_DISPLAY" not in env and env["GDK_BACKEND"] == "x11" and env["QT_QPA_PLATFORM"] == "xcb"
+    cmd = args[args.index("--") + 1:]
+    assert cmd[:2] == ["/bin/sh", "-c"] and cmd[4] == "/bin/sh" and cmd[5].endswith("/AppRun")
+    assert not any("X11" in a for a in args if a != cmd[2])  # the host X11 socket is never bound
+
+
+def test_xwayland_without_the_binary_is_an_error(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(jail, "XWAYLAND_PATHS", ("/nonexistent/Xwayland",))
+    with pytest.raises(RunError, match="Xwayland"):
+        jail.runtime_args(**build(sandbox, runtime, display="xwayland"))
 
 
 def test_missing_or_hostile_wayland_socket(sandbox, runtime):
@@ -507,3 +522,37 @@ def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):
         assert str(Path(runtime) / kw["host_env"]["WAYLAND_DISPLAY"]) not in [a for a in args if isinstance(a, str)]
     finally:
         s.close()
+
+
+@integration
+@pytest.mark.skipif(not all(shutil.which(c) for c in ("weston", "Xwayland", "xdpyinfo")),
+                    reason="weston, xwayland and x11-utils are installed in the test guest")
+def test_x11_client_runs_through_a_private_xwayland(sandbox):
+    rt = Path(f"/run/user/{os.getuid()}")
+    if not rt.is_dir():
+        pytest.skip("no /run/user/<uid> in this session")
+    log = open(sandbox / "weston.log", "w")
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=bjail-xtest"],
+                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
+    try:
+        for _ in range(50):
+            if (rt / "bjail-xtest").exists():
+                break
+            time.sleep(0.1)
+        else:
+            pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
+        kw = build(sandbox, rt, audio=False, display="xwayland")
+        kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "bjail-xtest"}
+        out = sandbox / "xdpyinfo.txt"
+        (kw["root"] / "AppRun").write_text(
+            f"#!/bin/sh\n/usr/bin/xdpyinfo > /app/out.txt 2>&1; echo \"display=$DISPLAY wl=$WAYLAND_DISPLAY\" >> /app/out.txt\n"
+            .replace("/app/out.txt", "/home/app/out.txt"))
+        (kw["root"] / "AppRun").chmod(0o755)
+        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
+        text = (kw["home"] / "out.txt").read_text()
+        assert proc.returncode == 0 and "name of display" in text, text + proc.stderr
+        assert "wl=\n" in text + "\n" and "display=:" in text
+    finally:
+        weston.terminate()
+        weston.wait(timeout=10)
+        log.close()
