@@ -556,3 +556,80 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
         weston.terminate()
         weston.wait(timeout=10)
         log.close()
+
+
+# -- single files (run --file) -------------------------------------------------------------
+
+def test_file_binds_read_only_by_default_and_rw_on_request(sandbox):
+    home = sandbox / "fakehome"
+    (home / "docs").mkdir(parents=True)
+    ro, rw, outside = home / "docs" / "a.txt", home / "docs" / "b.txt", sandbox / "c.txt"
+    for f in (ro, rw, outside):
+        f.write_text("x")
+    args, dests = jail.file_binds([str(ro), f"{rw}:rw", str(outside)], home)
+    assert pairs(args, "--ro-bind") == [(str(ro), f"{jail.APP_HOME}/docs/a.txt"), (str(outside), str(outside))]
+    assert pairs(args, "--bind") == [(str(rw), f"{jail.APP_HOME}/docs/b.txt")]
+    assert dests == [f"{jail.APP_HOME}/docs/a.txt", f"{jail.APP_HOME}/docs/b.txt", str(outside)]
+
+
+def test_file_binds_refuse_directories_missing_and_special_files(sandbox):
+    (sandbox / "d").mkdir()
+    for bad, msg in [(sandbox / "d", "not a regular file"), (sandbox / "nope", "does not exist"), (Path("/dev/null"), "not a regular file")]:
+        with pytest.raises(RunError, match=msg):
+            jail.file_binds([str(bad)], sandbox)
+
+
+@pytest.mark.parametrize("rel,mode", [(".ssh/id_ed25519", ""), (".gnupg/pubring.kbx", ""), ("vault.kdbx", ""), (".bashrc", ":rw")])
+def test_file_binds_apply_the_sensitive_path_policy(sandbox, rel, mode):
+    home = sandbox / "fakehome"
+    f = home / rel
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("x")
+    link = sandbox / "innocent.txt"
+    link.symlink_to(f)
+    for path in (f, link):  # a link must not dodge the policy
+        with pytest.raises(RunError, match="refused"):
+            jail.file_binds([f"{path}{mode}"], home)
+
+
+def test_file_binds_refuse_bjails_own_data(sandbox):
+    f = store.data_dir() / "x"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("x")
+    with pytest.raises(RunError, match="own data"):
+        jail.file_binds([str(f)], sandbox)
+
+
+def test_launch_binds_files_and_passes_their_jail_paths_to_the_app(sandbox, runtime):
+    install(sandbox)
+    f = sandbox / "doc.txt"
+    f.write_text("x")
+    captured, said = [], []
+    runner.launch("app", ["--x"], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                  extract=Extractor(), say=said.append, runner=lambda argv: captured.append(argv) or 0,
+                  extra_files=(str(f),), restricted=NO_RESTRICTION)
+    argv = captured[0]
+    assert (str(f), str(f)) in pairs(argv, "--ro-bind")
+    assert argv[-3:] == ["/app/AppRun", "--x", str(f)]
+    assert any("Temporary file access" in line for line in said)
+
+
+@integration
+def test_only_the_granted_file_is_visible_in_the_jail(sandbox, runtime):
+    d = sandbox / "shared"
+    d.mkdir()
+    (d / "in.txt").write_text("hello")
+    (d / "sibling.txt").write_text("other")
+    kw = build(sandbox, runtime)
+    script = ('#!/usr/bin/python3\nimport os, sys\np = sys.argv[1]\nprint(open(p).read(), os.path.exists(os.path.dirname(p) + "/sibling.txt"))\n'
+              'try:\n    open(p, "w")\nexcept OSError:\n    print("ro")\n')
+    (kw["root"] / "AppRun").write_text(script)
+    (kw["root"] / "AppRun").chmod(0o755)
+    kw["command"] = ["/app/AppRun", str(d / "in.txt")]
+    fd = seccomp.open_fd(kw["perms"].userns)
+    try:
+        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw, seccomp_fd=fd, files=[str(d / "in.txt")])], timeout=60, pass_fds=(fd,))
+    finally:
+        os.close(fd)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.split() == ["hello", "False", "ro"]

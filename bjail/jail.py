@@ -9,6 +9,7 @@ Argument builders are pure functions so they can be unit-tested without bwrap.
 import os
 import shutil
 import signal
+import stat
 import subprocess
 import time
 from pathlib import Path
@@ -193,6 +194,39 @@ def dir_binds(dirs, home):
     return args
 
 
+def file_binds(files, home):
+    """(bwrap arguments, in-jail paths) for single files granted for one run: PATH or PATH:rw, absolute.
+
+    Only the file itself is bound, read-only unless :rw. The same policy as for directories applies to the
+    resolved path, and only regular files are accepted. Files below the real home appear under the app's home.
+    """
+    args, dests = [], []
+    home_real = Path(home).resolve()
+    for entry in files:
+        path, mode = (entry[:-3], "rw") if entry.endswith(":rw") else (entry[:-3] if entry.endswith(":ro") else entry, "")
+        try:
+            real = Path(path).resolve(strict=True)
+            regular = stat.S_ISREG(real.stat().st_mode)
+        except OSError:
+            raise RunError(f"granted file does not exist: {path}") from None
+        if not regular:
+            raise RunError(f"granted path is not a regular file: {path}")
+        for guard in _guard_dirs():
+            if real == guard or guard in real.parents:
+                raise RunError(f"granted file {path} would expose bjail's own data")
+        try:
+            rel = real.relative_to(home_real)
+        except ValueError:
+            rel = None
+        why = manifest.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
+        if why:
+            raise RunError(f"granted file {path} is refused: {why}")
+        dest = f"{APP_HOME}/{rel}" if rel else str(real)
+        args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]
+        dests.append(dest)
+    return args, dests
+
+
 XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
 # Runs inside the jail: a rootless Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket
 # lives in the jail's private /tmp and abstract namespace, so no other app and no host X server is involved.
@@ -213,7 +247,7 @@ def xwayland_command(command):
 
 
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
-                 portal_docs=None, status_fd=None, block_fd=None):
+                 portal_docs=None, status_fd=None, block_fd=None, files=()):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     Pure function of its inputs: nothing is read from the process environment. Anything the
@@ -302,6 +336,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
                 args += ["--ro-bind", p, p]
 
     args += dir_binds(perms.dirs, host_home)
+    args += file_binds(files, host_home)[0]
     for k, v in env.items():
         args += ["--setenv", k, v]
     if status_fd is not None:

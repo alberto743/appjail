@@ -168,6 +168,10 @@ BROAD_HOME_DIRS = (".config", ".local", ".local/share", ".local/state", ".cache"
 PERSIST_HOME_DIRS = (".local/bin", ".config/autostart", ".config/systemd", ".config/environment.d", ".config/fish",
                      ".local/share/applications", ".local/share/systemd", ".local/share/dbus-1", ".bashrc.d",
                      ".profile.d", ".config/plasma-workspace", ".config/Code", ".config/nvim", ".config/zsh")
+# Single files that run code outside the jail at login or shell start; never granted read-write.
+PERSIST_HOME_FILES = (".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".profile", ".zshrc", ".zshenv", ".zprofile",
+                      ".zlogin", ".xprofile", ".xinitrc", ".xsession", ".xsessionrc", ".pam_environment", ".gitconfig", ".npmrc",
+                      ".pypirc", ".netrc", ".vimrc", ".config/git/config")
 # System trees that are never user data; the jail provides its own /dev, /proc, /run and /etc.
 SYSTEM_PATHS = ("/etc", "/dev", "/proc", "/sys", "/run", "/boot", "/root", "/usr", "/bin", "/sbin", "/lib", "/lib32",
                 "/lib64")
@@ -194,6 +198,8 @@ def sensitive_reason(path, mode):
             if rel == d:
                 return f"~/{d} is too broad: it contains the data of every other application"
         if mode == "rw":
+            if rel in PERSIST_HOME_FILES:
+                return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or tool startup)"
             for d in PERSIST_HOME_DIRS:
                 if _within(rel, d) or (rel and _within(d, rel)):
                     return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or desktop startup)"

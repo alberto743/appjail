@@ -117,7 +117,7 @@ def _run_app(argv, filter_fd, pipes=None, instance=None):
 
 
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
-           extra_dirs=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
+           extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
     """Start the app in its jail and return its exit status."""
     m, root, home, etc = prepare(name, extract, say)
     if history.modified(name):
@@ -127,6 +127,10 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     if extra_dirs:
         perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
+    file_dests = jail.file_binds(extra_files, Path.home())[1] if extra_files else []
+    if file_dests:
+        say("Temporary file access for this run: " + ", ".join(file_dests))
+        extra_args = [*extra_args, *file_dests]
     env = dict(os.environ if host_env is None else host_env)
     with contextlib.ExitStack() as stack:
         filter_fd = seccomp.open_fd(perms.userns)
@@ -152,7 +156,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         args = jail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
             command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
-            wayland_socket=wl_sock, seccomp_fd=filter_fd, portal_docs=docs, status_fd=pipes and pipes["status_w"], block_fd=pipes and pipes["block_r"])
+            wayland_socket=wl_sock, seccomp_fd=filter_fd, portal_docs=docs, status_fd=pipes and pipes["status_w"], block_fd=pipes and pipes["block_r"], files=extra_files)
         argv = [jail.find_bwrap(), *args]
         if runner:
             return runner(argv)

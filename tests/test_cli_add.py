@@ -307,3 +307,15 @@ def test_main_rejects_bad_source(h):
     console = Script()
     assert cli.main(["add", "https://github.com/o/r"], client=FakeClient(), console=console) == 1
     assert "owner/repo" in console.text
+
+
+def test_files_from_args_makes_absolute_paths_and_keeps_the_mode(tmp_path):
+    (tmp_path / "a.txt").write_text("x")
+    assert cli.files_from_args(["a.txt", "a.txt:rw", "a.txt:ro"], cwd=tmp_path) == (
+        str(tmp_path / "a.txt"), f"{tmp_path / 'a.txt'}:rw", str(tmp_path / "a.txt"))
+
+
+@pytest.mark.parametrize("spec", ["missing.txt", "."])
+def test_files_from_args_rejects_non_files(tmp_path, spec):
+    with pytest.raises(cli.Abort, match="not a regular file"):
+        cli.files_from_args([spec], cwd=tmp_path)

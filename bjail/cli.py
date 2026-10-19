@@ -106,6 +106,19 @@ def dirs_from_args(specs, home=None, cwd=None):
     return tuple(out)
 
 
+def files_from_args(specs, cwd=None):
+    """Absolute, existing regular files for --file options (PATH or PATH:rw); symlinks are resolved at launch."""
+    cwd = Path(cwd or Path.cwd())
+    out = []
+    for spec in specs:
+        path, mode = (spec[:-3], ":rw") if spec.endswith(":rw") else (spec[:-3] if spec.endswith(":ro") else spec, "")
+        full = Path(os.path.normpath(cwd / path))
+        if not full.is_file():
+            raise Abort(f"--file {spec}: not a regular file")
+        out.append(f"{full}{mode}")
+    return tuple(out)
+
+
 def dbus_from_args(names, current=(), check=manifest.check_dbus_name, flag="--dbus"):
     """Validated dbus_filter (or dbus_own) names merged into the current list (order kept, no duplicates)."""
     out = list(current)
@@ -747,6 +760,8 @@ def build_parser():
     run.add_argument("name")
     run.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
                      help="grant this directory for this run only (manifest unchanged); repeatable")
+    run.add_argument("--file", action="append", default=[], metavar="PATH[:rw]",
+                     help="bind just this file for this run (read-only unless :rw) and pass its in-jail path to the app; repeatable")
     return p
 
 
@@ -788,7 +803,8 @@ def main(argv=None, client=None, console=None):
             cmd_perms(args, console)
         elif args.command == "run":
             extra_dirs = dirs_from_args(args.dir)
-            return runner.launch(args.name, app_args, say=console.out, extra_dirs=extra_dirs)
+            extra_files = files_from_args(args.file)
+            return runner.launch(args.name, app_args, say=console.out, extra_dirs=extra_dirs, extra_files=extra_files)
     except Abort as e:
         console.out(str(e))
         return 1
