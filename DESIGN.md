@@ -37,7 +37,7 @@ Implemented in `bjail/github.py` (client with injectable transport) and `bjail/t
 - Assets whose download URL is not under `https://github.com/{owner}/{repo}/releases/download/`, or whose name has odd characters, are dropped. Digest `sha256:<hex>` is parsed; null or other algorithms mean "no digest".
 - AppImage selection: `.AppImage` suffix (case-insensitive), other architectures excluded by name token; explicitly x86_64/amd64 names win over untagged ones; several candidates means the caller asks the user. `.zsync` files never match.
 - `asset_pattern` is suggested by replacing the release version in the chosen name with `*`, and matched with `fnmatch`.
-- Open design point for `add`/`update`: a repo that is deleted and re-registered under the same owner name keeps the same `owner/repo` string. `RepoInfo.owner_id` allows pinning the account; adding an optional `owner_id` to the manifest is proposed so that "owner change blocks the update" holds in that case too.
+- Owner pinning: `add` records the owner's GitHub account id (`owner_id`, optional in the schema) and `update` blocks when the id changes, so a repository deleted and re-registered under the same `owner/repo` string is caught. A manifest from before pinning has no id: `update` warns that the account cannot be checked and pins the current id once the user approves.
 
 Other forges (GitLab, Codeberg, SourceForge, vendor sites) are later resolvers.
 
