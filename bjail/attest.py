@@ -39,7 +39,7 @@ class Verified:
 
 
 def _args(gh, subject, bundles, scratch):
-    return (jail.common_args() + ["--share-net"] + jail.etc_args()
+    return (jail.common_args() + ["--share-net"] + jail.etc_args(private_net=True)
             + ["--ro-bind", str(gh), "/gh", "--ro-bind", str(subject), "/subject",
                "--ro-bind", str(bundles), "/bundle.jsonl", "--bind", str(scratch), "/scratch",
                "--remount-ro", "/", "--chdir", "/scratch",

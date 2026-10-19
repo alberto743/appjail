@@ -56,7 +56,7 @@ def test_no_home_or_runtime_dir_exposed(args, stage):
     home = str(Path.home())
     runtime = os.environ.get("XDG_RUNTIME_DIR", "/run/user")
     for a in args:
-        assert not (a.startswith(home) and a not in (stage, str(jail.FETCHER))), a
+        assert not (a.startswith(home) and a not in (stage, str(jail.FETCHER)) and not a.endswith("resolv.conf.pasta")), a
         assert not a.startswith(runtime), a
 
 
@@ -138,3 +138,73 @@ def test_download_jail_properties(stage):
     assert not (r["home_exists"] or r["host_marker"] or r["run_user"])
     assert r["write_stage"] and r["write_tmp"]
     assert not (r["write_root"] or r["write_usr"])
+
+
+# -- private network namespace via pasta -----------------------------------------------------
+
+def test_net_wrap_prefixes_pasta_without_forwarding(monkeypatch):
+    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
+    argv = ["/usr/bin/bwrap", "--share-net", "--", "true"]
+    out = jail.net_wrap(argv)
+    assert out[0] == "/usr/bin/pasta" and out[-len(argv):] == argv and out[-len(argv) - 1] == "--"
+    for flag in ("--no-map-gw", "--config-net"):
+        assert flag in out
+    for opt in ("-t", "-u", "-T", "-U"):  # no port forwarding in either direction
+        assert out[out.index(opt) + 1] == "none"
+
+
+def test_net_wrap_without_pasta_keeps_the_command_and_warns_once(monkeypatch, capsys):
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setattr(jail, "_warned_no_pasta", False)
+    argv = ["bwrap", "--share-net"]
+    assert jail.net_wrap(argv) == argv and jail.net_wrap(argv) == argv
+    assert capsys.readouterr().err.count("pasta") == 1
+
+
+def test_run_wraps_only_jails_with_a_network(monkeypatch):
+    seen = []
+    monkeypatch.setattr(jail, "supervise", lambda argv, **kw: seen.append(argv))
+    monkeypatch.setattr(jail, "find_bwrap", lambda: "bwrap")
+    monkeypatch.setattr(jail, "find_pasta", lambda: "pasta")
+    jail.run(["--share-net", "--", "x"])
+    jail.run(["--unshare-all", "--", "x"])
+    assert seen[0][0] == "pasta" and seen[1][0] == "bwrap"
+
+
+PROBE = r'''
+import socket, sys, urllib.request
+def reach(host, port):
+    try:
+        socket.create_connection((host, port), timeout=3).close(); return True
+    except OSError:
+        return False
+if len(sys.argv) > 3:
+    urllib.request.urlopen("https://api.github.com/", timeout=15).close()  # DNS and TLS still work through pasta
+print(reach("127.0.0.1", int(sys.argv[1])), reach(sys.argv[2], int(sys.argv[1])))
+'''
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+def test_network_jail_cannot_reach_host_loopback_or_host_addresses(stage):
+    import socket
+    srv = socket.socket()
+    srv.bind(("0.0.0.0", 0))
+    srv.listen(5)
+    port = srv.getsockname()[1]
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 9))  # no packet is sent: this only picks the host's outbound address
+        own = s.getsockname()[0]
+        s.close()
+        Path(stage, "probe.py").write_text(PROBE)
+        args = jail.download_args(stage, ["/usr/bin/python3", "-I", "/stage/probe.py", str(port), own, "dns"])
+        assert jail.net_wrap([jail.find_bwrap(), *args])[0] == jail.find_pasta()
+        proc = jail.run(args, timeout=60)
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.split() == ["False", "False"]
+        # control: the same probe in a jail that shares the host network does reach the listener
+        shared = jail.supervise([jail.find_bwrap(), *args[:-1]], timeout=60)
+        assert shared.stdout.split() == ["True", "True"], shared.stderr
+    finally:
+        srv.close()

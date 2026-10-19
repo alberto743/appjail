@@ -10,6 +10,7 @@ import os
 import shutil
 import signal
 import stat
+import sys
 import subprocess
 import time
 from pathlib import Path
@@ -25,6 +26,37 @@ SAFE_ENV = {"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C.UTF-8", "PYTHOND
 
 class JailError(Exception):
     pass
+
+
+# pasta answers DNS sent to PASTA_DNS inside the namespace by asking the host's resolver, so the jail never needs the
+# host's loopback stub resolver (127.0.0.53) and its resolv.conf names only this address.
+PASTA_DNS = "169.254.1.53"
+PASTA_ARGS = ("--config-net", "--quiet", "--no-map-gw", "--dns-forward", PASTA_DNS,
+              "-t", "none", "-u", "none", "-T", "none", "-U", "none")
+_warned_no_pasta = False
+
+
+def find_pasta():
+    return shutil.which("pasta")
+
+
+def net_wrap(argv):
+    """Run a network jail's bwrap inside a private network namespace made by pasta.
+
+    pasta gives the namespace outbound access through ordinary host sockets, but no path to the host's loopback
+    (no port forwarding, no gateway mapping), so the jail cannot reach services bound to localhost. Without
+    pasta the jail keeps sharing the host network (warned once). argv is a complete bwrap command line that
+    uses --share-net, which then shares pasta's namespace and not the host's.
+    """
+    global _warned_no_pasta
+    pasta = find_pasta()
+    if pasta is None:
+        if not _warned_no_pasta:
+            _warned_no_pasta = True
+            print("Warning: pasta (package passt) is not installed: network jails share the host network, "
+                  "including services on localhost.", file=sys.stderr)
+        return argv
+    return [pasta, *PASTA_ARGS, "--", *argv]
 
 
 def find_bwrap():
@@ -45,7 +77,18 @@ def system_args():
     return args
 
 
-def etc_args():
+def _pasta_resolv_conf():
+    from . import store
+    path = store.data_dir() / "resolv.conf.pasta"
+    text = f"nameserver {PASTA_DNS}\n"
+    if not path.is_file() or path.read_text() != text:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    return path
+
+
+def etc_args(private_net=False):
+    """Read-only /etc entries; private_net: the jail runs in a pasta namespace (see net_wrap), so DNS goes through it."""
     args = []
     for f in ETC_FILES:
         if os.path.exists(f):
@@ -53,8 +96,10 @@ def etc_args():
     for d in ETC_DIRS:
         if os.path.isdir(d):
             args += ["--ro-bind", d, d]
+    if private_net and find_pasta():
+        args += ["--ro-bind", str(_pasta_resolv_conf()), "/etc/resolv.conf"]
     # resolv.conf is usually a symlink into /run; bind its content, not the link.
-    if os.path.exists("/etc/resolv.conf"):
+    elif os.path.exists("/etc/resolv.conf"):
         args += ["--ro-bind", os.path.realpath("/etc/resolv.conf"), "/etc/resolv.conf"]
     return args
 
@@ -68,7 +113,7 @@ def common_args():
 
 def download_args(stage_dir, command, fetcher=FETCHER):
     """Network-only jail: no host files except the read-only fetcher and the staging dir."""
-    return (common_args() + ["--share-net"] + etc_args()
+    return (common_args() + ["--share-net"] + etc_args(private_net=True)
             + ["--ro-bind", str(fetcher), "/fetcher.py", "--bind", str(stage_dir), "/stage"]
             + ["--remount-ro", "/", "--chdir", "/stage", "--"] + command)
 
@@ -125,7 +170,8 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
 
 def run(args, timeout=1800, watch=None):
     """Run bwrap with a minimal host environment."""
-    return supervise([find_bwrap(), *args], timeout=timeout, watch=watch)
+    argv = [find_bwrap(), *args]
+    return supervise(net_wrap(argv) if "--share-net" in args else argv, timeout=timeout, watch=watch)
 
 
 def extract_args(appimage, outdir, command, tools=()):
@@ -366,5 +412,5 @@ def git_args(workdir, command):
     env = []
     for k, v in GIT_ENV.items():
         env += ["--setenv", k, v]
-    return (common_args() + ["--share-net"] + etc_args() + env
+    return (common_args() + ["--share-net"] + etc_args(private_net=True) + env
             + ["--bind", str(workdir), "/work", "--remount-ro", "/", "--chdir", "/work", "--"] + command)
