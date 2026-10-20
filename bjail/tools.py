@@ -15,7 +15,6 @@ import secrets
 import shutil
 import tarfile
 from dataclasses import dataclass
-from pathlib import Path
 
 from . import jail, store
 

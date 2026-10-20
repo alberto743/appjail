@@ -7,6 +7,7 @@ python3
 python3-pytest        # test runner (development dependency only)
 reuse                 # `reuse lint`: SPDX/REUSE compliance check
 python3-venv          # venv with pip: the packaging test installs bjail the way a user would (pip downloads setuptools)
+python3-pyflakes      # static check for unused names, undefined names and shadowing (tests/test_lint.py)
 ca-certificates
 acl                   # setfacl, for device access experiments
 weston                # headless Wayland compositor and weston-simple-shm test client

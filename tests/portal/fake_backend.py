@@ -31,10 +31,13 @@ class FileChooser(dbus.service.Object):
         return dbus.UInt32(0), {"uris": dbus.Array([f"file://{self.chosen}"], signature="s")}
 
 
+HELD = []
+
+
 def main(log, chosen):
     DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
-    name = dbus.service.BusName(NAME, bus)
+    HELD.append(dbus.service.BusName(NAME, bus))  # the name is owned while this object is alive
     FileChooser(bus, log, chosen)
     print("ready", flush=True)
     GLib.MainLoop().run()

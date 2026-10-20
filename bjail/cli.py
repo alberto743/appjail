@@ -10,7 +10,7 @@ import argparse
 import sys
 
 from . import github, index, indexsync, jail, manifest, runner, tools, updater
-from .cmd_add import cmd_add, default_name
+from .cmd_add import cmd_add
 from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
 from .cmd_index import cmd_index_update, cmd_search
 from .cmd_update import cmd_update

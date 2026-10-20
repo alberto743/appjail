@@ -1,13 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-import contextlib
 import json
 import os
 import shutil
 import socket
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 
@@ -15,69 +13,19 @@ import pytest
 
 from bjail import appimage, jail, manifest, runner, seccomp, store
 from bjail.jail import RunError
-from bjail.manifest import Manifest, Permissions
+from .helpers import FACTS, NO_RESTRICTION, build, install, integration, pairs, run_in_jail
 
-integration = pytest.mark.skipif(os.environ.get("BJAIL_INTEGRATION") != "1",
-                                 reason="real bwrap: run in the test guest (BJAIL_INTEGRATION=1)")
 SHA = "a" * 64
 
 
-@contextlib.contextmanager
-def NO_RESTRICTION(env, app_id=None):
-    """Stands in for a compositor without wp_security_context_v1."""
-    yield None
 
 
-@pytest.fixture
-def sandbox(monkeypatch):
-    base = Path(tempfile.mkdtemp(prefix="bj"))
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(base / "data"))
-    monkeypatch.setenv("BJAIL_CONFIG_DIR", str(base / "config"))
-    yield base
-    appimage.remove_tree(base)
 
 
-@pytest.fixture
-def runtime():
-    """A fake XDG_RUNTIME_DIR holding real unix sockets (short path: sun_path is limited)."""
-    base = Path(tempfile.mkdtemp(prefix="rt"))
-    (base / "pulse").mkdir()
-    socks = []
-
-    def sock(rel):
-        s = socket.socket(socket.AF_UNIX)
-        s.bind(str(base / rel))
-        s.listen(1)
-        socks.append(s)
-
-    sock("wayland-test")
-    sock("pipewire-0")
-    sock("pulse/native")
-    yield base
-    for s in socks:
-        s.close()
-    shutil.rmtree(base)
 
 
-def build(sandbox, runtime, **perms):
-    root = sandbox / "root"
-    root.mkdir(exist_ok=True)
-    etc = sandbox / "etc"
-    etc.mkdir(exist_ok=True)
-    # the real ids, like runner.prepare: a fixed 1000 hid a bug on CI runners (uid 1001), where Xwayland could not
-    # look up its user and refused the app's own clients
-    (etc / "passwd").write_text(f"app:x:{os.getuid()}:{os.getgid()}::/home/app:/bin/sh\n")
-    (etc / "group").write_text(f"app:x:{os.getgid()}:\n")
-    home = sandbox / "home"
-    home.mkdir(exist_ok=True)
-    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test", "LANG": "it_IT.UTF-8", "SECRET": "x"}
-    kw = dict(root=root, home=home, etc_dir=etc, perms=Permissions(**perms), uid=os.getuid(), host_env=env,
-              command=["/app/AppRun"], host_home=Path.home())
-    return kw
 
 
-def pairs(args, flag):
-    return [tuple(args[i + 1:i + 3]) for i, a in enumerate(args) if a == flag]
 
 
 # -- argument builder (pure) ------------------------------------------------------------
@@ -249,14 +197,6 @@ def test_missing_or_hostile_wayland_socket(sandbox, runtime):
 # -- prepare: pin verification and re-extraction -----------------------------------------
 
 
-def install(sandbox, name="app", content=b"image-bytes", sha=None, **perms):
-    store.appimage_path(name).parent.mkdir(parents=True, exist_ok=True)
-    store.appimage_path(name).write_bytes(content)
-    digest = appimage.sha256_file(store.appimage_path(name))
-    m = Manifest(name=name, source="o/r", asset_pattern="*", version="v1", sha256=sha or digest,
-                 evidence_tier=3, published_at="2026-01-01T00:00:00Z", permissions=Permissions(**perms))
-    manifest.dump(store.manifest_path(name), m)
-    return digest
 
 
 class Extractor:
@@ -367,56 +307,8 @@ def test_launch_merges_temporary_directories_without_touching_the_manifest(sandb
 
 # -- real bwrap (guest only) ---------------------------------------------------------------
 
-FACTS = r'''#!/usr/bin/python3
-import json, os, socket
-
-def ls(p):
-    try:
-        return sorted(os.listdir(p))
-    except OSError:
-        return None
-
-def writable(p):
-    try:
-        open(p, "w").close(); os.unlink(p); return True
-    except OSError:
-        return False
-
-def connects(p):
-    s = socket.socket(socket.AF_UNIX)
-    try:
-        s.connect(p); return True
-    except OSError:
-        return False
-    finally:
-        s.close()
-
-rt = os.environ["XDG_RUNTIME_DIR"]
-caps = [l for l in open("/proc/self/status") if l.startswith("CapEff")][0].split()[1]
-print(json.dumps({
-    "home": os.environ["HOME"], "slash_home": ls("/home"), "app_home": ls("/home/app"),
-    "rt": ls(rt), "wayland": connects(rt + "/wayland-0"),
-    "pipewire": os.path.exists(rt + "/pipewire-0"), "pulse": os.path.exists(rt + "/pulse/native"),
-    "x11": os.path.exists("/tmp/.X11-unix"), "tmp": ls("/tmp"), "caps": caps, "pid": os.getpid(),
-    "ifaces": [n for _, n in socket.if_nameindex()], "env": sorted(os.environ),
-    "w_root": writable("/x"), "w_app": writable("/app/x"), "w_home": writable("/home/app/x"),
-    "w_usr": writable("/usr/x"), "host": socket.gethostname(), "uid": os.getuid(),
-    "docs": os.path.exists("/home/app/Documents"), "args": os.sys.argv[1:],
-}))
-'''
 
 
-def run_in_jail(sandbox, runtime, script=FACTS, extra=(), **perms):
-    kw = build(sandbox, runtime, **perms)
-    (kw["root"] / "AppRun").write_text(script)
-    (kw["root"] / "AppRun").chmod(0o755)
-    kw["command"] = ["/app/AppRun", *extra]
-    fd = seccomp.open_fd(kw["perms"].userns)
-    try:
-        args = jail.runtime_args(**kw, seccomp_fd=fd)
-        return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd,))
-    finally:
-        os.close(fd)
 
 
 def facts(sandbox, runtime, **perms):
@@ -582,9 +474,8 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
             pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
         kw = build(sandbox, rt, audio=False, display="xwayland")
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "bjail-xtest"}
-        out = sandbox / "xdpyinfo.txt"
         (kw["root"] / "AppRun").write_text(
-            f"#!/bin/sh\n/usr/bin/xdpyinfo > /app/out.txt 2>&1; echo \"display=$DISPLAY wl=$WAYLAND_DISPLAY\" >> /app/out.txt\n"
+            "#!/bin/sh\n/usr/bin/xdpyinfo > /app/out.txt 2>&1; echo \"display=$DISPLAY wl=$WAYLAND_DISPLAY\" >> /app/out.txt\n"
             .replace("/app/out.txt", "/home/app/out.txt"))
         (kw["root"] / "AppRun").chmod(0o755)
         proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)

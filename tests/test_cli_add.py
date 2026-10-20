@@ -1,123 +1,29 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-import hashlib
-from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
-from bjail import appimage, cli, github, manifest, store
+from bjail import appimage, cli, cmd_add, github, manifest, store
 from bjail.cli import Abort
-
-NOW = datetime(2026, 10, 17, tzinfo=timezone.utc)
-FAKE_APPIMAGE = b"\x7fELF\x02\x01\x01\x00AI\x02" + b"payload" * 10
-SHA = hashlib.sha256(FAKE_APPIMAGE).hexdigest()
+from .helpers import FAKE_APPIMAGE, FakeClient, SHA, Script, asset, info, release
 
 
-def info(**kw):
-    base = dict(full_name="o/App", owner="o", owner_id=42, owner_type="User", owner_created_at="2015-01-02T03:04:05Z",
-                stars=500, fork=False, parent="", archived=False, description="An app",
-                html_url="https://github.com/o/App", renamed=False)
-    base.update(kw)
-    return github.RepoInfo(**base)
 
 
-def asset(name="App-1.0-x86_64.AppImage", sha=SHA, size=len(FAKE_APPIMAGE)):
-    return github.Asset(name, size, sha, f"https://github.com/o/App/releases/download/v1.0/{name}")
 
 
-def release(*assets, tag="v1.0"):
-    return github.Release(tag, "2026-09-30T02:40:02Z", False, f"https://github.com/o/App/releases/tag/{tag}", tuple(assets))
 
 
-class FakeClient:
-    def __init__(self, info_=None, release_=None, attestation=True, bundles=()):
-        self._info, self._release, self._att = info_ or info(), release_ or release(asset()), attestation
-        self._bundles = list(bundles)
-        self.calls = []
-
-    def attestation_bundles(self, source, sha):
-        self.calls.append(("attestation_bundles", source, sha))
-        return self._bundles
-
-    def repo_info(self, source):
-        self.calls.append(("repo_info", source))
-        return self._info
-
-    def latest_release(self, source, prereleases=False):
-        self.calls.append(("latest_release", source))
-        return self._release
-
-    def release_by_tag(self, source, tag):
-        self.calls.append(("release_by_tag", source, tag))
-        return self._release
-
-    def has_attestation(self, source, sha):
-        return self._att
 
 
-class Script(cli.Console):
-    """Console with scripted answers; records output instead of printing."""
-
-    def __init__(self, answers=()):
-        self.answers, self.lines = list(answers), []
-
-    def out(self, line=""):
-        self.lines.append(line)
-
-    def warn(self, line):
-        self.lines.append("WARNING: " + line)
-
-    def ask(self, prompt):
-        self.lines.append("? " + prompt)
-        if not self.answers:
-            raise Abort("no input available")
-        return str(self.answers.pop(0))
-
-    @property
-    def text(self):
-        return "\n".join(self.lines)
 
 
-class Harness:
-    def __init__(self):
-        self.downloads, self.extractions = [], []
-
-    def download(self, content=FAKE_APPIMAGE):
-        def download(url, stage, filename, expected_size):
-            self.downloads.append((url, expected_size))
-            path = Path(stage) / filename
-            path.write_bytes(content)
-            return path
-        return download
-
-    def extract(self, appimage_, dest, fallback=False):
-        self.extractions.append((Path(appimage_), Path(dest), fallback))
-        (Path(dest) / "usr").mkdir(parents=True)
-        (Path(dest) / "AppRun").write_text("#!/bin/sh\n")
-        return 2, 20
-
-    def add(self, client=None, answers=("y",), extra=(), download=None, extract=None, extract_ok=lambda: True,
-            source="o/App"):
-        console = Script(answers)
-        parsed = cli.build_parser().parse_args(["add", source, *extra])
-        cli.cmd_add(parsed, client or FakeClient(), console, download=download or self.download(), now=NOW,
-                    extract=extract or self.extract, extract_ok=extract_ok)
-        return console
-
-    def assert_nothing_installed(self, name="app"):
-        assert not store.manifest_path(name).exists()
-        assert not store.app_dir(name).exists()
-        assert list(store.staging_root().iterdir()) == []
 
 
-@pytest.fixture
-def h(tmp_path, monkeypatch):
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("BJAIL_CONFIG_DIR", str(tmp_path / "config"))
-    return Harness()
+
 
 
 # -- success paths -----------------------------------------------------------------------
@@ -300,7 +206,7 @@ def test_terminal_escapes_in_api_text_are_neutralised():
 
 @pytest.mark.parametrize("repo,name", [("My_App.v2", "my_app.v2"), ("App Name!", "app-name-"), ("___", "")])
 def test_default_names(repo, name):
-    assert cli.default_name(repo) == name
+    assert cmd_add.default_name(repo) == name
 
 
 def test_main_rejects_bad_source(h):

@@ -5,7 +5,6 @@ import json
 import os
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,13 +12,10 @@ import pytest
 from bjail import dbusproxy, jail, manifest, runner
 from bjail.jail import RunError
 from bjail.manifest import ManifestError, Permissions
+from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
-from . import test_runner
-from .test_runner import build, integration, pairs, run_in_jail, runtime, sandbox  # noqa: F401
 
 NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.StatusNotifierWatcher")
-needs_proxy = pytest.mark.skipif(not os.access(dbusproxy.PROXY, os.X_OK) or not shutil.which("dbus-daemon"),
-                                 reason="needs xdg-dbus-proxy and dbus-daemon (run provision.sh)")
 
 
 # -- name validation ----------------------------------------------------------------------
@@ -184,7 +180,7 @@ def test_launch_wraps_the_run_in_the_proxy(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     env = kw["host_env"]
     code = runner.launch("app", host_env=env, proxy=FakeProxy, runner=lambda argv: events.append(argv) or 0,
-                         restricted=test_runner.NO_RESTRICTION)
+                         restricted=NO_RESTRICTION)
     assert code == 0 and events[:2] == ["init", "start"] and events[-1] == "stop"
     assert ("/fake/bus", f"/run/user/{os.getuid()}/bus") in pairs(events[2], "--ro-bind")
 

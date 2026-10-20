@@ -7,7 +7,6 @@ import shutil
 import socket
 import struct
 import subprocess
-import tempfile
 import threading
 import time
 from pathlib import Path
@@ -16,8 +15,8 @@ import pytest
 
 from bjail import jail, wayland
 from bjail.jail import RunError
+from .helpers import build, integration
 
-from .test_runner import build, integration, sandbox  # noqa: F401
 
 
 def event(obj, opcode, payload=b""):
@@ -67,7 +66,7 @@ class FakeCompositor(threading.Thread):
                 size = word >> 16
                 if len(buf) < size:
                     break
-                payload, buf = buf[8:size], buf[size:]
+                buf = buf[size:]
                 op = word & 0xFFFF
                 self.requests.append((obj, op))
                 if obj == wayland.DISPLAY_ID and op == 1:

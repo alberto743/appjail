@@ -9,7 +9,6 @@ file through the document-portal mount, and reports what it could and could not 
 
 import json
 import os
-import sys
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop

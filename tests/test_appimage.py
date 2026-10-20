@@ -5,31 +5,20 @@ import os
 import shutil
 import struct
 import subprocess
-from pathlib import Path
 from unittest import mock
 
 import pytest
 
 from bjail import appimage, jail
 from bjail.appimage import ExtractError, UnsafeTree, UnsupportedImage
+from .helpers import stub, write_image
 
 HAVE_TOOLS = bool(shutil.which("bwrap") and shutil.which("mksquashfs") and appimage.have_unsquashfs())
 needs_tools = pytest.mark.skipif(not HAVE_TOOLS, reason="needs bwrap, mksquashfs and unsquashfs (run in the test guest)")
 
 
-def stub(extra=b""):
-    """Minimal type-2 runtime: ELF64 header whose section table ends at byte 64."""
-    h = bytearray(64)
-    h[:4] = b"\x7fELF"
-    h[4], h[5] = 2, 1
-    h[8:11] = b"AI\x02"
-    struct.pack_into("<Q", h, 0x28, 64)
-    struct.pack_into("<HH", h, 0x3A, 64, 0)
-    return bytes(h) + extra
 
 
-def write_image(path, fs):
-    Path(path).write_bytes(stub(fs))
 
 
 # -- offset detection -----------------------------------------------------------------------

@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from bjail import jail, seccomp
+from .helpers import integration, run_in_jail
 
-from .test_runner import integration, run_in_jail, runtime, sandbox  # noqa: F401
 
 HEADER = Path("/usr/include/x86_64-linux-gnu/asm/unistd_64.h")
 

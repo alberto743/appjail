@@ -10,10 +10,8 @@ import pytest
 
 from bjail import attest, cli, github, jail, manifest, snappy, store, tools
 from bjail.github import Client, GitHubError
+from .helpers import FakeClient, NEW_IMAGE, NOW, Script, T0, installed, integration, release2
 
-from .test_cli_add import NOW, FakeClient, Harness, Script, asset, h, release  # noqa: F401
-from .test_cli_update import NEW_IMAGE, NEW_SHA, T0, installed, release2, update  # noqa: F401
-from .test_runner import integration, sandbox  # noqa: F401
 
 SHA = "a" * 64
 
@@ -211,20 +209,20 @@ def add_with(h, client, verify, **kw):
     return console
 
 
-def test_add_with_a_verified_attestation_is_tier_1(h):  # noqa: F811
+def test_add_with_a_verified_attestation_is_tier_1(h):
     verify = fake_verify()
     c = add_with(h, FakeClient(bundles=[BUNDLE]), verify)
     assert manifest.load(store.manifest_path("app")).evidence_tier == 1
     assert "attestation verified" in c.text and verify.calls == [("o/App", 42)]
 
 
-def test_add_with_a_failing_attestation_keeps_tier_3_and_says_why(h):  # noqa: F811
+def test_add_with_a_failing_attestation_keeps_tier_3_and_says_why(h):
     c = add_with(h, FakeClient(bundles=[BUNDLE]), fake_verify(ok=False))
     assert manifest.load(store.manifest_path("app")).evidence_tier == 3
     assert "attestation not counted: signature invalid" in c.text
 
 
-def test_add_without_bundles_never_calls_the_verifier(h):  # noqa: F811
+def test_add_without_bundles_never_calls_the_verifier(h):
     verify = fake_verify()
     add_with(h, FakeClient(), verify)
     assert verify.calls == [] and manifest.load(store.manifest_path("app")).evidence_tier == 3
@@ -238,25 +236,25 @@ def run_update(h, client, verify, answers=("y",), days=0):
     return code, console
 
 
-def test_update_can_upgrade_to_tier_1(h):  # noqa: F811
+def test_update_can_upgrade_to_tier_1(h):
     path = installed(h)
     run_update(h, FakeClient(release_=release2(), bundles=[BUNDLE]), fake_verify())
     assert manifest.load(path).evidence_tier == 1
 
 
-def tier1_app(h):  # noqa: F811
+def tier1_app(h):
     add_with(h, FakeClient(bundles=[BUNDLE]), fake_verify())
     return store.manifest_path("app")
 
 
-def test_tier_1_app_blocks_a_release_without_attestation(h):  # noqa: F811
+def test_tier_1_app_blocks_a_release_without_attestation(h):
     path = tier1_app(h)
     before = path.read_text()
     code, c = run_update(h, FakeClient(release_=release2(), attestation=False), fake_verify())
     assert code == 1 and "EVIDENCE DOWNGRADE" in c.text and path.read_text() == before
 
 
-def test_tier_1_app_refuses_an_attestation_that_does_not_verify(h):  # noqa: F811
+def test_tier_1_app_refuses_an_attestation_that_does_not_verify(h):
     path = tier1_app(h)
     before = path.read_text()
     code, c = run_update(h, FakeClient(release_=release2(), bundles=[BUNDLE]), fake_verify(ok=False))
@@ -264,7 +262,7 @@ def test_tier_1_app_refuses_an_attestation_that_does_not_verify(h):  # noqa: F81
     assert path.read_text() == before
 
 
-def test_tier_1_app_updates_when_the_new_release_verifies(h):  # noqa: F811
+def test_tier_1_app_updates_when_the_new_release_verifies(h):
     path = tier1_app(h)
     code, c = run_update(h, FakeClient(release_=release2(), bundles=[BUNDLE]), fake_verify())
     assert code == 0 and manifest.load(path).version == "v2.0" and manifest.load(path).evidence_tier == 1
