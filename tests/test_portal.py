@@ -131,10 +131,24 @@ def test_missing_document_portal_is_a_clear_error(tmp_path):
 
 # -- the real portal (guest) -------------------------------------------------------------------
 
+MIN_PORTAL = (1, 20)  # the frontend these tests were written and verified against (Debian 13: 1.20.3)
+
+
+def portal_version():
+    try:
+        out = subprocess.run(["/usr/libexec/xdg-desktop-portal", "--version"], capture_output=True, text=True, timeout=10).stdout
+        return tuple(int(x) for x in out.split()[-1].split(".")[:2])
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return (0, 0)
+
+
 needs_portal = pytest.mark.skipif(
     not (Path("/usr/libexec/xdg-desktop-portal").exists() and Path("/usr/libexec/xdg-document-portal").exists()
          and shutil.which("fusermount3") and Path("/dev/fuse").exists()),
     reason="needs xdg-desktop-portal, its document portal and FUSE (run provision.sh)")
+needs_new_portal = pytest.mark.skipif(
+    portal_version() < MIN_PORTAL,
+    reason="xdg-desktop-portal older than 1.20: with the fake-backend setup used here its 1.18 (Ubuntu 24.04) does not export FileChooser")
 
 
 @pytest.fixture
@@ -179,6 +193,7 @@ def app_root(sandbox, runtime, perms):
 @integration
 @needs_proxy
 @needs_portal
+@needs_new_portal
 def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, monkeypatch, capfd):
     env, log = portal_stack
     perms = {"portals": True}
@@ -203,6 +218,7 @@ def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, mo
 @integration
 @needs_proxy
 @needs_portal
+@needs_new_portal
 def test_opt_in_interface_reaches_the_portal(sandbox, runtime, portal_stack, monkeypatch, capfd):
     env, _ = portal_stack
     perms = {"portals": True, "portal_interfaces": ("OpenURI",)}
@@ -217,6 +233,7 @@ def test_opt_in_interface_reaches_the_portal(sandbox, runtime, portal_stack, mon
 @integration
 @needs_proxy
 @needs_portal
+@needs_new_portal
 @pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
 @pytest.mark.parametrize("host_net", [False, True])
 def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal_stack, monkeypatch, capfd, host_net):
