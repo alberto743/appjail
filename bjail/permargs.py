@@ -6,7 +6,7 @@
 import os
 from pathlib import Path
 
-from . import manifest
+from . import jail, manifest
 from .console import Abort
 
 PERMISSION_FLAGS = ("network", "network_host", "audio", "gpu", "portals", "userns")
@@ -82,6 +82,15 @@ def warn_sensitive_dbus(console, names):
 def warn_owned_dbus(console, names):
     for n in names:
         console.warn(f"{n}: the app may own this session-bus name (be the service behind it) and talk to it")
+
+
+def require_pasta(perms):
+    """An app with network (and not network_host) runs behind pasta and is refused without it: say so when the
+    permission is granted, not at the first launch."""
+    if perms.network and not perms.network_host and not jail.find_pasta():
+        raise Abort("network access runs the app in a private network namespace made by pasta, which is not installed "
+                    "(package passt, e.g. `apt install passt`). Install it, or use --allow network_host to give the "
+                    "app the host's own network, localhost services included.")
 
 
 def permissions_from_args(args):

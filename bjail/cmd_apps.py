@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import appimage, history, jail, manifest, store, tools, updater
 from .console import Abort
-from .permargs import PERMISSION_FLAGS, dbus_from_args, describe_permissions, dirs_from_args, portals_from_args, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
+from .permargs import PERMISSION_FLAGS, dbus_from_args, describe_permissions, dirs_from_args, portals_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
 
 def cmd_tools(args, console, download=jail.download):
     names = sorted(tools.TOOLS)
@@ -143,6 +143,8 @@ def cmd_perms(args, console):
         return
     new = replace(m, permissions=replace(p, **changes))
     manifest.validate(new)
+    if new.permissions.network != p.network or new.permissions.network_host != p.network_host:
+        require_pasta(new.permissions)
     console.out(f"{name} before: {describe_permissions(p)}")
     console.out(f"{name} after : {describe_permissions(new.permissions)}")
     for risky, text in (("network", "network access (outbound only, off the host's loopback)"),

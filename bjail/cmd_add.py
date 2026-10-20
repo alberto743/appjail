@@ -10,7 +10,7 @@ import shutil
 
 from . import appimage, attest, github, history, jail, manifest, store, tools
 from .console import Abort, human_size
-from .permargs import permissions_from_args, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
+from .permargs import permissions_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
 
 MAX_ASSET = 2 * 1024 ** 3
 
@@ -76,6 +76,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         raise Abort(f"'{name}' is already added")
 
     perms = permissions_from_args(args)  # validates --dir before any network access
+    require_pasta(perms)
 
     info = client.repo_info(args.source)
     show_review(console, info, now)

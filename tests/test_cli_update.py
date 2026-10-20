@@ -497,3 +497,36 @@ def test_malformed_pending_is_ignored(h, bad):  # noqa: F811
     installed(h)
     updater.pending_path("app").write_text(bad)
     assert updater.load_pending("app") is None
+
+
+# -- pasta is needed for network without network_host ------------------------------------------
+
+
+@pytest.fixture
+def no_pasta(monkeypatch):
+    from bjail import jail
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+
+
+def test_add_refuses_network_without_pasta_before_any_request(h, no_pasta):  # noqa: F811
+    with pytest.raises(Abort, match="passt"):
+        h.add(extra=("--allow", "network"))
+    assert h.downloads == [] and not store.manifest_path("app").exists() and not store.app_dir("app").exists()
+
+
+def test_add_with_network_host_or_without_network_needs_no_pasta(h, no_pasta):  # noqa: F811
+    h.add(extra=("--allow", "network_host"))
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert p.network and p.network_host
+    h.add(extra=("--name", "offline"))
+
+
+def test_perms_refuses_to_grant_network_without_pasta_but_not_other_changes(h, no_pasta):  # noqa: F811
+    installed(h)
+    with pytest.raises(Abort, match="passt"):
+        perms(h, "--allow", "network")
+    assert not manifest.load(store.manifest_path("app")).permissions.network
+    perms(h, "--deny", "gpu")
+    perms(h, "--allow", "network_host")
+    assert manifest.load(store.manifest_path("app")).permissions.network_host
+    perms(h, "--deny", "audio")  # an app already granted network_host is not blocked by other edits
