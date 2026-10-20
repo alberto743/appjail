@@ -31,7 +31,7 @@ def image(tmp_path):
 
 def test_squashfs_offset(image):
     write_image(image, b"hsqs" + b"\0" * 100)
-    assert appimage.fs_offset(image) == 64
+    assert appimage.locate_fs(image) == ("squashfs", 64)
 
 
 def test_offset_uses_section_table(image):
@@ -40,13 +40,7 @@ def test_offset_uses_section_table(image):
     struct.pack_into("<HH", data, 0x3A, 64, 1)
     data[264:268] = b"hsqs"
     image.write_bytes(bytes(data))
-    assert appimage.fs_offset(image) == 264
-
-
-def test_dwarfs_rejected_with_clear_message(image):
-    write_image(image, b"DWARFS" + b"\0" * 100)
-    with pytest.raises(UnsupportedImage, match="DwarFS"):
-        appimage.fs_offset(image)
+    assert appimage.locate_fs(image) == ("squashfs", 264)
 
 
 @pytest.mark.parametrize("content", [stub(b"\0" * 100), b"\x7fELF\x01\x01" + b"\0" * 100, stub()[:70]],
@@ -54,7 +48,7 @@ def test_dwarfs_rejected_with_clear_message(image):
 def test_unknown_filesystem_and_bad_headers(image, content):
     image.write_bytes(content)
     with pytest.raises(UnsupportedImage):
-        appimage.fs_offset(image)
+        appimage.locate_fs(image)
 
 
 # -- tree validation ------------------------------------------------------------------------

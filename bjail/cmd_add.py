@@ -161,7 +161,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
             os.replace(staged, dest)
             try:
                 entries, size = extract(dest, store.root_path(name), fallback)
-            except (appimage.UnsupportedImage, appimage.ExtractError, appimage.UnsafeTree) as e:
+            except appimage.EXTRACT_ERRORS as e:
                 raise Abort(f"cannot extract the AppImage: {e}") from e
             store.root_marker(name).write_text(digest + "\n")
             store.tree_marker(name).write_text(appimage.tree_digest(store.root_path(name)) + "\n")
@@ -193,7 +193,7 @@ def swap_in(name, staged, stage, record, extract, fallback):
     """Extract the new AppImage, then replace image, tree, marker and manifest; undo on failure."""
     try:
         entries, size = extract(staged, stage / "root", fallback)
-    except (appimage.UnsupportedImage, appimage.ExtractError, appimage.UnsafeTree) as e:
+    except appimage.EXTRACT_ERRORS as e:
         raise Abort(f"cannot extract the new AppImage: {e}") from e
     dest, root, marker = store.appimage_path(name), store.root_path(name), store.root_marker(name)
     old_image, old_root = stage / "old.AppImage", stage / "old-root"

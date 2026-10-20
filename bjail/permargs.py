@@ -9,7 +9,7 @@ from pathlib import Path
 from . import jail, manifest
 from .console import Abort
 
-PERMISSION_FLAGS = ("network", "network_host", "audio", "gpu", "portals", "userns")
+PERMISSION_FLAGS = manifest.BOOL_PERMS
 
 
 def dirs_from_args(specs, home=None, cwd=None):

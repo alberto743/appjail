@@ -53,6 +53,7 @@ TOP_KEYS = {
     "evidence_tier", "published_at", "owner_id", "channel", "permissions",
 }
 CHANNELS = ("stable", "prerelease", "pinned")
+BOOL_PERMS = ("network", "network_host", "audio", "gpu", "portals", "userns")
 PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "dirs"}
 
 
@@ -278,7 +279,7 @@ def _permissions(table):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
     perms = {}
-    for key in ("network", "network_host", "audio", "gpu", "portals", "userns"):
+    for key in BOOL_PERMS:
         if key in table:
             perms[key] = _bool(table[key], f"permissions.{key}")
     if "display" in table:
@@ -328,7 +329,7 @@ def validate(m):
     if m.channel not in CHANNELS:
         raise ManifestError(f"channel must be one of {', '.join(CHANNELS)}")
     p = m.permissions
-    for key in ("network", "network_host", "audio", "gpu", "portals", "userns"):
+    for key in BOOL_PERMS:
         _bool(getattr(p, key), f"permissions.{key}")
     if p.display not in DISPLAYS:
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")

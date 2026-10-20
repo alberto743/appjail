@@ -58,7 +58,7 @@ def prepare(name, extract=appimage.extract, say=print):
         appimage.remove_tree(root)
         try:
             extract(image, root, False)
-        except (appimage.UnsupportedImage, appimage.ExtractError, appimage.UnsafeTree) as e:
+        except appimage.EXTRACT_ERRORS as e:
             raise RunError(f"cannot extract {name}: {e}") from e
         marker.write_text(digest + "\n")
         tree_mark.write_text(appimage.tree_digest(root) + "\n")

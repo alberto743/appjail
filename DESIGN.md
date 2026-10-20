@@ -108,7 +108,8 @@ An app can be given specific directories, never the whole home:
 - **Not verified:** real desktop backends (GNOME, KDE, GTK, wlr): only the portal frontend and document portal are real. Desktops differ in which interfaces they implement and how dialogs look; behaviour of each privileged interface depends on its backend asking the user.
 
 ## Extraction (implemented in `bjail/appimage.py`, `bjail/jail.py`)
-- Offset: end of the ELF runtime = `e_shoff + e_shentsize * e_shnum` (64-bit little-endian ELF only). `hsqs` there means SquashFS; `DWARFS` means a DwarFS image (extracted with the pinned helper, see MVP scope); anything else is unsupported.
+- The AppImage is extracted and `AppRun` executed; it is never mounted (FUSE mounts do not work well in user namespaces). The AppImage runtime itself never runs outside a jail.
+- Offset: end of the ELF runtime = `e_shoff + e_shentsize * e_shnum` (64-bit little-endian ELF only). `hsqs` there means SquashFS; `DWARFS` means a DwarFS image (extracted with the pinned helper, see "DwarFS AppImages"); anything else is unsupported.
 - Preferred path: `/usr/bin/unsquashfs -no-progress -no-xattrs -p 2 -o <offset> -d /out/root /app.AppImage` in a jail with `--unshare-all` (no network), read-only root, the AppImage bound read-only and only the work directory writable. The AppImage runtime never runs.
 - Fallback (only with the user's consent, asked before the download when `unsquashfs` is missing): a private copy runs `--appimage-extract` in the same jail. Verified in the guest on appimagetool.
 - Limits: the work directory is polled every 0.25 s; the jail is killed beyond 4 GiB of disk use or 500,000 entries, or after 15 minutes. After extraction the apparent size is checked as well, so sparse files cannot hide a huge tree.
@@ -199,25 +200,16 @@ Every change `add`, `update` (install and `--channel`), `perms` and `remove` mak
 - List lines must look like `<bullet> name : description` with a plain name, so `../x` style entries are dropped before any file name is built. All text is cleaned of escape sequences and control characters.
 - Measured on AM at d739e48 in the guest: 8,140 list entries, 7,855 with a GitHub source, 284 flagged "resolve manually", 1 without any source, 63 flagged as repackager; parsing takes 0.05 s, resolving every entry 1 s, a search 0.05 s.
 
-## Runtime jail (bwrap)
-- `--unshare-all`, private home per app, read-only system.
-- Wayland socket by default. X11 only through a rootless Xwayland (a raw X11 socket allows keylogging).
-- PipeWire/Pulse socket; `/dev/dri` for GPU.
-- D-Bus through `xdg-dbus-proxy` (done); file dialogs through `xdg-desktop-portal` (done, see "Portals").
-- The AppImage is extracted and `AppRun` executed (FUSE mounts do not work well in user namespaces).
-- Extraction prefers `unsquashfs` on the SquashFS offset, so the untrusted AppImage runtime never runs. Fallback: `--appimage-extract` inside the throwaway network-only jail.
-
-Verified in the test guest: bubblewrap 0.12.0, unprivileged user namespaces, fusermount3 not needed.
-
-## MVP scope
+## Scope
 Python 3 stdlib only (`tomllib`, `urllib`, `hashlib`, `subprocess`); not shell, no third-party dependencies. Components: manifest parser, `add` for GitHub with TOFU + digest, bwrap runner with Wayland/audio/GPU, `search`, `index update`/`rollback`, `update` (quarantine, diff, tier-downgrade and owner-change block), plus `list`, `remove`, `perms`.
+Deferred (user decisions, 2026-10-20): the GPG tier and other forges (see "Trust tiers" and "Resolver"). Done since the MVP: D-Bus filtering, portals, Xwayland, DwarFS, attestations, network namespaces for apps, the quarantine hash.
+
+## DwarFS AppImages (implemented in `bjail/tools.py`, `bjail/appimage.py`)
 - DwarFS-based AppImages: supported through a pinned helper (`bjail/tools.py`). Evaluation (2026-10-18): Debian 13, trixie-backports and sid have no `dwarfs` package (`apt-cache` in the guest and packages.debian.org), so there is no distribution-trusted source. Upstream `mhx/dwarfs` v0.15.8 publishes a static multi-call binary, `dwarfs-universal-small-0.15.8-Linux-x86_64` (2,195,148 bytes), whose `--tool=dwarfsextract` takes `--image-offset`; GitHub's digest for the asset equals the downloaded file's sha256 (`d29734ed...e69`). The AppImage-side runtime for DwarFS images is `VHSgunzo/uruntime`; the embedded filesystem starts right after the ELF runtime, as for SquashFS, and begins with the magic `DWARFS` (checked with a hand-built image in the guest; real images are covered below).
   - Trust model: the tool's URL, size and sha256 are constants in bjail's reviewed source. `bjail tools install dwarfs` (explicit, asks first) downloads it in the network-only jail and keeps it only if size and hash match; it lives in `~/.local/share/bjail/tools/`, is re-hashed before every use, and runs only inside the extraction jail (no network, read-only root, `--skip-devices --skip-specials`), followed by the same host-side tree validation as SquashFS. Moving to a newer dwarfs means editing the pin in a commit. bjail never fetches a helper on its own.
   - Real DwarFS apps (user-approved 2026-10-18, guest only): `pkgforge-dev/htop-AppImage` 3.5.3 (2.3 MiB, 26 entries) and `pkgforge-dev/Galculator-AppImage` v2.1.4 (15.8 MiB, 1,322 entries), both x86_64 `anylinux` builds with GitHub digests (tier 3, no attestation) and a `DWARFS` filesystem after the ELF runtime. `add` extracted and validated both with the pinned helper; `bjail run htop -- --version` printed its version; Galculator opened a window (`app_id` galculator) in headless sway through the restricted Wayland socket with the seccomp filter active. The only noise was htop's harmless "Cannot find CA Certificates" warning (no host `/etc/ssl` in a no-network jail). Both repositories are small (0 and 5 stars), which bjail flags.
   - Verified in the guest: the real tool builds and extracts an image in the jail, symlinks are preserved (the validator rejects the escaping ones), and the opt-in `tests/test_tools.py` end-to-end test passes with the real download.
   - `squashfs-tools` 4.6.1 is in trixie/main; bjail needs it (`apt install squashfs-tools`) and reports its absence clearly.
-
-Deferred: the GPG tier, other forges. Done since: DwarFS through a pinned helper, portals, Xwayland.
 
 ## Findings: GitHub API (docs, plus live check on cli/cli v2.102.0, 2026-10-17)
 - Release assets have a `digest` field ("string or null"). Live: all 22 assets of cli/cli v2.102.0 carry `sha256:<64 hex>`. Treat null as "no digest" and fall back to TOFU (older releases may lack it).
@@ -250,16 +242,10 @@ Deferred: the GPG tier, other forges. Done since: DwarFS through a pinned helper
 
 ## Findings: Landlock and a private network namespace for the network jails (evaluated 2026-10-19, not implemented)
 - Which jails have the host network: only the download jail (runs `fetcher.py`), the attestation jail (the pinned `gh`) and the index git jail. The jail that extracts an AppImage, the only one that touches untrusted bytes with a program from the image, has no network (`jail.extract_args`), and neither has the app jail unless `network` is granted. So the shared network namespace is reachable only by code bjail ships or pins (stdlib `urllib`, `gh`, `git`) talking to GitHub.
-- (Superseded 2026-10-20: the user approved pasta as an optional dependency and the network jails now use it, see "Download jail".) A private netns would have needed a way out; without `pasta`/`slirp4netns` it would be a host-side CONNECT proxy with a host allowlist on a unix socket, plus an in-jail TCP relay for `git` and `gh` (neither speaks HTTP proxies over unix sockets). That is new code on the path of every download, for a defence against a bug in `urllib`/`git`/`gh` while they talk to GitHub. Judged not worth it now.
+- (Superseded 2026-10-20: the user approved pasta as an optional dependency and the network jails now use it, see the network bullets under "`add`".) A private netns would have needed a way out; without `pasta`/`slirp4netns` it would be a host-side CONNECT proxy with a host allowlist on a unix socket, plus an in-jail TCP relay for `git` and `gh` (neither speaks HTTP proxies over unix sockets). That is new code on the path of every download, for a defence against a bug in `urllib`/`git`/`gh` while they talk to GitHub. Judged not worth it now.
 - Landlock (kernel ABI 6 is present in the guest, `landlock` is in the active LSM list): bwrap cannot apply it, so each jail's program would have to be wrapped by a launcher that calls `landlock_restrict_self` first. The filesystem rules duplicate what the mount namespace already enforces. The network rules (ABI 4+) only cover TCP bind/connect by port; they do not cover UDP or DNS and cannot name hosts, so "connect only to 443" adds nothing for the download jails and would break apps that need other ports. Abstract-socket and signal scoping (ABI 6) is already given by the unshared network and PID namespaces. Judged not worth it now.
 - Revisit if: a network jail starts running third-party code, or a bwrap release gains Landlock support, or an allowlisting proxy is wanted for the app jail's own `network` permission (the one place where host filtering would be a real feature).
 - seccomp for non-x86_64 is out of scope (see Platform: x86-64 only).
-
-## Open items (all verified)
-- ~~GitHub asset `digest` algorithm and attestations behaviour.~~ Verified live on cli/cli (see Findings: GitHub API).
-- ~~Build on `sas` or write bwrap flags directly.~~ Decided: direct bwrap (see Findings: sas).
-- ~~Whether AM commits are signed.~~ Verified: mostly GitHub web-flow signed, the maintainer's commits unsigned (see AM as lookup-only index).
-- ~~Flatpak as a baseline comparison.~~ Done (see Findings: Flatpak comparison).
 
 ## Verification
 Integration tests run inside a dedicated qemu-kvm guest (rebuilt from `tests/vm/create.sh`; see CLAUDE.md "Testing environment") (snapshot or throwaway disk) so downloads, extraction and jailed apps cannot affect the host. All tests, unit and integration, run in the guest. It needs bubblewrap, `unsquashfs`, user namespaces and a compositor (Wayland, or headless for non-GUI checks).

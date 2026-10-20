@@ -34,7 +34,7 @@ def build_parser():
                      help="let the app own this session-bus name (MPRIS player, single-instance name); repeatable")
     add.add_argument("--portal", action="append", default=[], metavar="NAME",
                      help="also allow this privileged portal interface (needs --allow portals); repeatable")
-    add.add_argument("--allow", action="append", default=[], choices=["network", "network_host", "portals", "userns"],
+    add.add_argument("--allow", action="append", default=[], choices=[f for f in PERMISSION_FLAGS if f not in ("audio", "gpu")],
                      help="grant a permission (repeatable); audio and gpu are on by default")
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")

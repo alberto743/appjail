@@ -36,6 +36,10 @@ class ExtractError(Exception):
     pass
 
 
+# What a caller of extract() or locate_fs() has to handle (jail failures are JailError and are separate).
+EXTRACT_ERRORS = (UnsupportedImage, ExtractError, UnsafeTree)
+
+
 def sha256_file(path):
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -107,14 +111,6 @@ def locate_fs(path):
     if magic[:6] == b"DWARFS":
         return "dwarfs", offset
     raise UnsupportedImage("unknown embedded filesystem")
-
-
-def fs_offset(path):
-    """Offset of a SquashFS image (see locate_fs); DwarFS images are refused here."""
-    kind, offset = locate_fs(path)
-    if kind != "squashfs":
-        raise UnsupportedImage("this is a DwarFS AppImage, not SquashFS")
-    return offset
 
 
 def check_tree(root):

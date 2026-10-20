@@ -23,7 +23,6 @@ COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 MAX_WORK_BYTES = 1536 * 1024 ** 2
 MAX_WORK_ENTRIES = 300_000
 MAX_FILES = 30_000
-KEEP_SNAPSHOTS = 2
 
 GIT_SCRIPT = r"""set -eu
 G="git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c core.attributesFile=/dev/null \
