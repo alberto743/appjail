@@ -19,7 +19,7 @@ Goal: a small tool with declarative manifests, no remote code execution, no self
 4. Containment is the backstop: downloads in a network-only jail; apps in a minimal-permission jail.
 
 ## Platform
-Linux on x86-64 only (decided 2026-10-20). The seccomp filter is built for x86-64 and `run` refuses to start on any other architecture rather than run unfiltered; the AM index is read from its `x86_64` entries only. Other architectures are not planned.
+Linux on x86-64 only (decided 2026-10-20). Minimum supported systems (user decision, 2026-10-20): Debian 13 (the test guest) and Ubuntu 26.04 (the `ubuntu-26.04` CI runner: bubblewrap 0.11, Xwayland 24.1, xdg-desktop-portal 1.21, kernel 7.0, all 560 tests that can run there pass). Older systems are not supported or tested: on Ubuntu 24.04 the real-portal tests fail because xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend (cause not investigated), and its `reuse` cannot read `REUSE.toml`. The seccomp filter is built for x86-64 and `run` refuses to start on any other architecture rather than run unfiltered; the AM index is read from its `x86_64` entries only. Other architectures are not planned.
 
 ## Commands
 - `search <kw>`: text-only lookup in the local AM index (candidates only, never installs).

@@ -14,19 +14,8 @@ concurrency:
 
 jobs:
   test:
-    name: test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.informational }}
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-26.04
-            informational: false
-          # Not supported (Xwayland 23.2, xdg-desktop-portal 1.18); kept only to compare while 26.04 is verified.
-          - os: ubuntu-24.04
-            informational: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
