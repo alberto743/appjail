@@ -130,6 +130,42 @@ def test_network_is_opt_in(sandbox, runtime):
     assert "--share-net" in jail.runtime_args(**build(sandbox, runtime, network=True))
 
 
+def test_network_host_keeps_the_host_resolver(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
+    private = jail.runtime_args(**build(sandbox, runtime, network=True))
+    host = jail.runtime_args(**build(sandbox, runtime, network=True, network_host=True))
+    assert "/etc/resolv.conf" in private and "resolv.conf.pasta" in " ".join(private)
+    assert "resolv.conf.pasta" not in " ".join(host)
+
+
+def test_networked_app_runs_in_pasta_and_is_refused_without_it(sandbox, runtime, monkeypatch):
+    install(sandbox, network=True)
+    captured = []
+    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
+
+    def go():
+        return runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
+                             runner=lambda argv: captured.append(argv) or 0, restricted=NO_RESTRICTION)
+    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
+    go()
+    assert captured[0][0] == "/usr/bin/pasta" and "--share-net" in captured[0]
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    with pytest.raises(RunError, match="passt"):
+        go()
+    assert len(captured) == 1
+
+
+def test_network_host_and_offline_apps_are_not_wrapped(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)  # would refuse a wrapped app
+    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
+    for perms in ({}, {"network": True, "network_host": True}):
+        install(sandbox, **perms)
+        captured = []
+        runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
+                      runner=lambda argv: captured.append(argv) or 0, restricted=NO_RESTRICTION)
+        assert captured[0][0] != "/usr/bin/pasta"
+
+
 def test_dirs_map_into_private_home(sandbox, runtime, monkeypatch):
     fake_home = sandbox / "fakehome"
     (fake_home / "Docs").mkdir(parents=True)
@@ -211,12 +247,12 @@ def test_missing_or_hostile_wayland_socket(sandbox, runtime):
 # -- prepare: pin verification and re-extraction -----------------------------------------
 
 
-def install(sandbox, name="app", content=b"image-bytes", sha=None):
-    store.appimage_path(name).parent.mkdir(parents=True)
+def install(sandbox, name="app", content=b"image-bytes", sha=None, **perms):
+    store.appimage_path(name).parent.mkdir(parents=True, exist_ok=True)
     store.appimage_path(name).write_bytes(content)
     digest = appimage.sha256_file(store.appimage_path(name))
     m = Manifest(name=name, source="o/r", asset_pattern="*", version="v1", sha256=sha or digest,
-                 evidence_tier=3, published_at="2026-01-01T00:00:00Z")
+                 evidence_tier=3, published_at="2026-01-01T00:00:00Z", permissions=Permissions(**perms))
     manifest.dump(store.manifest_path(name), m)
     return digest
 
@@ -633,3 +669,69 @@ def test_only_the_granted_file_is_visible_in_the_jail(sandbox, runtime):
         os.close(fd)
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.split() == ["hello", "False", "ro"]
+
+
+APP_PROBE = '''#!/usr/bin/python3
+import socket, sys, urllib.request
+def reach(host, port):
+    try:
+        socket.create_connection((host, port), timeout=3).close(); return True
+    except OSError:
+        return False
+port, own = int(sys.argv[1]), sys.argv[2]
+urllib.request.urlopen("https://api.github.com/", timeout=15).close()  # DNS and TLS work through the namespace
+print(reach("127.0.0.1", port), reach(own, port))
+'''
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@pytest.mark.parametrize("host_net, expected", [(False, ["False", "False"]), (True, ["True", "True"])])
+def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, runtime, host_net, expected):
+    srv = socket.socket()
+    srv.bind(("0.0.0.0", 0))
+    srv.listen(5)
+    port = srv.getsockname()[1]
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 9))  # picks the host's outbound address; nothing is sent
+        own = s.getsockname()[0]
+        s.close()
+        kw = build(sandbox, runtime, network=True, network_host=host_net)
+        (kw["root"] / "AppRun").write_text(APP_PROBE)
+        (kw["root"] / "AppRun").chmod(0o755)
+        kw["command"] = ["/app/AppRun", str(port), own]
+        if host_net:
+            fd = seccomp.open_fd(False)
+            try:
+                argv = [jail.find_bwrap(), *jail.runtime_args(**kw, seccomp_fd=fd)]
+                proc = jail.supervise(argv, timeout=60, pass_fds=(fd,))
+            finally:
+                os.close(fd)
+        else:
+            filt = sandbox / "filter.bpf"
+            filt.write_bytes(seccomp.program(False))
+            argv = [jail.find_bwrap(), *jail.runtime_args(**kw, seccomp_fd=runner.PASTA_SECCOMP_FD)]
+            argv = jail.net_wrap(argv, required=True, fd_files={runner.PASTA_SECCOMP_FD: str(filt)})
+            assert argv[0] == jail.find_pasta()
+            proc = jail.supervise(argv, timeout=60)
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.split() == expected
+    finally:
+        srv.close()
+
+
+def test_networked_app_with_portals_is_refused_in_pasta_until_network_host(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
+    install(sandbox, network=True, portals=True)
+    with pytest.raises(RunError, match="network_host"):
+        runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                      extract=Extractor(), say=lambda *_: None, runner=lambda argv: 0, restricted=NO_RESTRICTION)
+
+
+def test_net_wrap_reopens_files_inside_the_namespace(monkeypatch):
+    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
+    out = jail.net_wrap(["bwrap", "--seccomp", "9"], fd_files={9: "/run/f"})
+    i = out.index("--") + 1
+    assert out[i:i + 2] == ["/bin/sh", "-c"] and '9<"$p0"' in out[i + 2]
+    assert out[i + 4:] == ["/run/f", "bwrap", "--seccomp", "9"]

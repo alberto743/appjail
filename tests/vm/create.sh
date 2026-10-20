@@ -13,7 +13,7 @@
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 vm=${VM_DIR:-$here/../../vm}
-packages=${PACKAGES:-$(sed 's/#.*//' "$here/packages.txt" | tr -s ' \n' ' ')}
+packages=${PACKAGES:-$(sed 's/#.*//' "$here/packages.txt" | tr -s ' \n' ' ' | sed 's/^ *//; s/ *$//')}
 base_url=https://cloud.debian.org/images/cloud/trixie/latest
 img=debian-13-genericcloud-amd64.qcow2
 force=0; [ "${1:-}" = --force ] && force=1

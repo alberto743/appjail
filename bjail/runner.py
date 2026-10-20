@@ -7,6 +7,7 @@ import json
 import os
 import select
 import subprocess
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -14,6 +15,8 @@ import contextlib
 
 from . import appimage, dbusproxy, history, jail, manifest, portal, seccomp, store, wayland
 from .jail import RunError
+
+PASTA_SECCOMP_FD = 9  # a single digit, which dash redirects accept; where the filter file is reopened inside the pasta namespace (see jail.net_wrap)
 
 
 def _passwd(uid, gid):
@@ -132,9 +135,19 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         say("Temporary file access for this run: " + ", ".join(file_dests))
         extra_args = [*extra_args, *file_dests]
     env = dict(os.environ if host_env is None else host_env)
+    in_pasta = perms.network and not perms.network_host
+    if in_pasta and perms.portals:
+        # pasta closes inherited descriptors, and the portal handshake needs two pipes into bwrap
+        raise RunError("portals together with network need network_host for now (`bjail perms APP --allow network_host`)")
     with contextlib.ExitStack() as stack:
         filter_fd = seccomp.open_fd(perms.userns)
         stack.callback(os.close, filter_fd)
+        filter_file = None
+        if in_pasta:
+            fd, filter_file = tempfile.mkstemp(prefix="bjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
+            stack.callback(os.unlink, filter_file)
+            with os.fdopen(fd, "wb") as f:
+                f.write(seccomp.program(perms.userns))
         instance = docs = None
         if perms.portals:
             rt = env.get("XDG_RUNTIME_DIR", "")
@@ -156,8 +169,10 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         args = jail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
             command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
-            wayland_socket=wl_sock, seccomp_fd=filter_fd, portal_docs=docs, status_fd=pipes and pipes["status_w"], block_fd=pipes and pipes["block_r"], files=extra_files)
+            wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and pipes["status_w"], block_fd=pipes and pipes["block_r"], files=extra_files)
         argv = [jail.find_bwrap(), *args]
+        if perms.network and not perms.network_host:
+            argv = jail.net_wrap(argv, required=True, fd_files={PASTA_SECCOMP_FD: filter_file})
         if runner:
             return runner(argv)
         return _run_app(argv, filter_fd, pipes, instance)

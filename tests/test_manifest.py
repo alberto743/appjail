@@ -105,6 +105,7 @@ def test_valid_sources(src):
 
 @pytest.mark.parametrize("perms", [
     Permissions(network="yes"),
+    Permissions(network_host=True),
     Permissions(display="x11"),
     Permissions(dbus_filter=("notaname",)),
     Permissions(dirs=("relative/path",)),

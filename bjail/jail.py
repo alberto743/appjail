@@ -40,23 +40,34 @@ def find_pasta():
     return shutil.which("pasta")
 
 
-def net_wrap(argv):
+def net_wrap(argv, required=False, fd_files=None):
     """Run a network jail's bwrap inside a private network namespace made by pasta.
 
     pasta gives the namespace outbound access through ordinary host sockets, but no path to the host's loopback
     (no port forwarding, no gateway mapping), so the jail cannot reach services bound to localhost. Without
     pasta the jail keeps sharing the host network (warned once). argv is a complete bwrap command line that
-    uses --share-net, which then shares pasta's namespace and not the host's.
+    uses --share-net, which then shares pasta's namespace and not the host's. required (an app's jail, which runs
+    untrusted code): raise RunError instead of falling back to the host network. pasta closes every inherited
+    descriptor, so fd_files ({fd number: host path}) are reopened read-only inside the namespace for bwrap
+    (its --seccomp N): the caller keeps those files private and removes them after the run.
     """
     global _warned_no_pasta
     pasta = find_pasta()
+    if pasta is None and required:
+        raise RunError("network access needs pasta (package passt) to keep the app off the host's loopback; "
+                       "install it, or grant network_host (`bjail perms APP --allow network_host`)")
     if pasta is None:
         if not _warned_no_pasta:
             _warned_no_pasta = True
             print("Warning: pasta (package passt) is not installed: network jails share the host network, "
                   "including services on localhost.", file=sys.stderr)
         return argv
-    return [pasta, *PASTA_ARGS, "--", *argv]
+    if not fd_files:
+        return [pasta, *PASTA_ARGS, "--", *argv]
+    items = list(fd_files.items())
+    script = "".join(f"p{i}=$1; shift; " for i in range(len(items)))
+    script += 'exec "$@" ' + " ".join(f'{fd}<"$p{i}"' for i, (fd, _) in enumerate(items))
+    return [pasta, *PASTA_ARGS, "--", "/bin/sh", "-c", script, "sh", *(path for _, path in items), *argv]
 
 
 def find_bwrap():
@@ -325,7 +336,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
         if os.path.exists(f):
             args += ["--ro-bind", os.path.realpath(f), f]
     if perms.network:
-        args += etc_args()
+        args += etc_args(private_net=not perms.network_host)
     args += ["--ro-bind", str(root), APP_DIR, "--bind", str(home), APP_HOME]
 
     host_rt = host_env.get("XDG_RUNTIME_DIR", "")

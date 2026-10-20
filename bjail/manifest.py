@@ -53,7 +53,7 @@ TOP_KEYS = {
     "evidence_tier", "published_at", "owner_id", "channel", "permissions",
 }
 CHANNELS = ("stable", "prerelease", "pinned")
-PERM_KEYS = {"network", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "dirs"}
+PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "dirs"}
 
 
 class ManifestError(ValueError):
@@ -63,7 +63,8 @@ class ManifestError(ValueError):
 @dataclass(frozen=True)
 class Permissions:
     """Everything is denied unless granted."""
-    network: bool = False
+    network: bool = False  # outbound only, in a private pasta namespace (no host loopback)
+    network_host: bool = False  # with network: the host's own network namespace, loopback services included
     audio: bool = False
     gpu: bool = False
     display: str = "wayland"
@@ -267,12 +268,17 @@ def _portal_consistency(p):
         raise ManifestError("permissions.portal_interfaces needs portals = true")
 
 
+def _network_consistency(p):
+    if p.network_host and not p.network:
+        raise ManifestError("permissions.network_host needs network = true")
+
+
 def _permissions(table):
     if not isinstance(table, dict):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
     perms = {}
-    for key in ("network", "audio", "gpu", "portals", "userns"):
+    for key in ("network", "network_host", "audio", "gpu", "portals", "userns"):
         if key in table:
             perms[key] = _bool(table[key], f"permissions.{key}")
     if "display" in table:
@@ -292,6 +298,7 @@ def _permissions(table):
     if "dirs" in table:
         perms["dirs"] = tuple(_check_dir(d) for d in _str_list(table["dirs"], "permissions.dirs"))
     _portal_consistency(Permissions(**perms))
+    _network_consistency(Permissions(**perms))
     return Permissions(**perms)
 
 
@@ -321,7 +328,7 @@ def validate(m):
     if m.channel not in CHANNELS:
         raise ManifestError(f"channel must be one of {', '.join(CHANNELS)}")
     p = m.permissions
-    for key in ("network", "audio", "gpu", "portals", "userns"):
+    for key in ("network", "network_host", "audio", "gpu", "portals", "userns"):
         _bool(getattr(p, key), f"permissions.{key}")
     if p.display not in DISPLAYS:
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
@@ -332,6 +339,7 @@ def validate(m):
     for n in p.portal_interfaces:
         check_portal_interface(n)
     _portal_consistency(p)
+    _network_consistency(p)
     for d in p.dirs:
         _check_dir(_text(d, "permissions.dirs entry"))
     return m
@@ -394,6 +402,7 @@ def dumps(m):
         "",
         "[permissions]",
         f"network = {str(p.network).lower()}",
+        *(["network_host = true"] if p.network_host else []),
         f"audio = {str(p.audio).lower()}",
         f"gpu = {str(p.gpu).lower()}",
         f"display = {_quote(p.display)}",

@@ -20,7 +20,7 @@ YOUNG_ACCOUNT_DAYS = 90
 FEW_STARS = 10
 
 
-PERMISSION_FLAGS = ("network", "audio", "gpu", "portals", "userns")
+PERMISSION_FLAGS = ("network", "network_host", "audio", "gpu", "portals", "userns")
 
 
 class Abort(Exception):
@@ -170,7 +170,8 @@ def permissions_from_args(args):
         portal_interfaces=portals_from_args(args.portal),
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
         dbus_own=dbus_from_args(args.dbus_own, check=manifest.check_dbus_own, flag="--dbus-own"),
-        network="network" in allowed, portals="portals" in allowed, userns="userns" in allowed,
+        network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
+        portals="portals" in allowed, userns="userns" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
     )
@@ -562,8 +563,12 @@ def cmd_perms(args, console):
             raise Abort(f"{flag} cannot be both allowed and denied")
     for flag in args.allow:
         changes[flag] = True
+    if changes.get("network_host"):
+        changes["network"] = True
     for flag in args.deny:
         changes[flag] = False
+    if changes.get("network") is False:
+        changes["network_host"] = False
     if args.display:
         changes["display"] = args.display
     dirs = p.dirs
@@ -615,7 +620,8 @@ def cmd_perms(args, console):
     manifest.validate(new)
     console.out(f"{name} before: {describe_permissions(p)}")
     console.out(f"{name} after : {describe_permissions(new.permissions)}")
-    for risky, text in (("network", "network access"), ("portals", "portals"),
+    for risky, text in (("network", "network access (outbound only, off the host's loopback)"),
+                        ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
                         ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)")):
         if getattr(new.permissions, risky) and not getattr(p, risky):
             console.warn(f"this grants {text}")
@@ -709,7 +715,7 @@ def build_parser():
                      help="let the app own this session-bus name (MPRIS player, single-instance name); repeatable")
     add.add_argument("--portal", action="append", default=[], metavar="NAME",
                      help="also allow this privileged portal interface (needs --allow portals); repeatable")
-    add.add_argument("--allow", action="append", default=[], choices=["network", "portals", "userns"],
+    add.add_argument("--allow", action="append", default=[], choices=["network", "network_host", "portals", "userns"],
                      help="grant a permission (repeatable); audio and gpu are on by default")
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")
