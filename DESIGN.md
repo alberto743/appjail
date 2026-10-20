@@ -44,7 +44,7 @@ Implemented in `bjail/github.py` (client with injectable transport) and `bjail/t
 
 Other forges (GitLab, Codeberg, SourceForge, vendor sites) are later resolvers. **Known gap (decided 2026-10-20, not planned for now):** only GitHub is supported. The AM index lists about 224 apps whose `SITE=` points elsewhere (and a few repackagers via `SITE2=`); `search` shows them but `add` cannot install them. A second resolver would sit behind the same interface as `bjail/github.py` (`repo_info`, `latest_release`, assets with size and optional digest); GitLab and Codeberg expose release assets with sizes, but not GitHub's `digest` or attestations, so apps from them would be tier 4 at best until the forge offers equivalent evidence.
 
-## `add` (implemented in `bjail/cli.py`, `bjail/jail.py`, `bjail/fetcher.py`)
+## `add` (implemented in `bjail/cmd_add.py`, `bjail/jail.py`, `bjail/fetcher.py`)
 `bin/bjail add owner/repo [--name N] [--prerelease] [--tag TAG] [--dir PATH[:ro|:rw]] [--dbus NAME] [--dbus-own NAME] [--allow network|network_host|portals|userns] [--portal NAME] [--no-audio] [--no-gpu] [--display wayland|xwayland]`. `--tag` pins a specific release (looked up with `/releases/tags/<tag>`) instead of the latest; the manifest records the version and the channel `pinned`, so `update` leaves the app alone until `update APP --channel` changes that (see "Update flow").
 1. Refuse early if the name exists. Fetch repo data and show the review (owner, id, account age, stars, fork/archived/renamed warnings).
 2. Resolve the release, select the AppImage (ask on several, abort on none), show GitHub's digest and whether an attestation exists.

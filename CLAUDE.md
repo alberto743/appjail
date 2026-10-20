@@ -28,6 +28,9 @@ State: MVP steps 1-6, D-Bus filtering and the hardening round are done and commi
 Known limits are listed in DESIGN.md (tier 4 assets swapped in place are caught by the hash recorded during the quarantine, if the user allowed that download). Decided 2026-10-20: GitHub is the only forge for now (gap documented in DESIGN.md Resolver); x86-64 only; the LAN is outside the threat model for apps with `network`.
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
 
+## Code layout
+`bjail/cli.py` is only the parser and dispatcher (and re-exports what tests import); the commands are in `cmd_add.py` (also the install steps `update` shares), `cmd_update.py`, `cmd_apps.py` (tools, history, list, remove, perms), `cmd_index.py` (search, index update); `console.py` (Abort, Console), `permargs.py` (permission options). Add new commands as `cmd_<name>.py`, not to `cli.py`.
+
 ## Decisions made
 - Language: Python 3, stdlib only (confirmed by the user's go-ahead on the plan).
 - Extraction: prefer `unsquashfs` on the SquashFS offset; fall back to `--appimage-extract` inside the network-only jail. Never run the AppImage runtime outside a jail.
