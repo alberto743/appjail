@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=77"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
 
 [project]
 name = "bjail"
@@ -21,8 +21,12 @@ classifiers = [
 [project.scripts]
 bjail = "bjail.cli:main"
 
-[tool.setuptools]
+[tool.hatch.build.targets.wheel]
 packages = ["bjail"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/bjail", "/bin", "/tests", "/LICENSES", "/README.md", "/DESIGN.md", "/REUSE.toml"]
+exclude = ["__pycache__", "*.pyc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

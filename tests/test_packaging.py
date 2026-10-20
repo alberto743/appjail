@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc", ".git", ".claude", "vm", "build", "*.egg-info")
 
 pytestmark = pytest.mark.skipif(os.environ.get("BJAIL_E2E") != "1",
-                                reason="set BJAIL_E2E=1 (pip downloads the build backend from PyPI)")
+                                reason="set BJAIL_E2E=1 (pip downloads the build backend, hatchling, from PyPI)")
 
 
 def run(*argv, **kw):
