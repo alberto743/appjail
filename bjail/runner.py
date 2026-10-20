@@ -6,6 +6,7 @@
 import json
 import os
 import select
+import shutil
 import subprocess
 import tempfile
 from dataclasses import replace
@@ -16,7 +17,8 @@ import contextlib
 from . import appimage, dbusproxy, history, jail, manifest, portal, seccomp, store, wayland
 from .jail import RunError
 
-PASTA_SECCOMP_FD = 9  # a single digit, which dash redirects accept; where the filter file is reopened inside the pasta namespace (see jail.net_wrap)
+# Descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).
+PASTA_SECCOMP_FD, PASTA_STATUS_FD, PASTA_BLOCK_FD = 9, 8, 7
 
 
 def _passwd(uid, gid):
@@ -75,10 +77,19 @@ STATUS_TIMEOUT = 10.0
 class Pipes:
     """The two pipes of a portal launch (bwrap status out, start gate in); each end is closed exactly once."""
 
-    def __init__(self):
+    def __init__(self, fifo_dir=None):
+        """With fifo_dir the ends are named FIFOs for a bwrap behind pasta (which closes inherited descriptors):
+        only the parent's ends exist here, opened read-write so the opens inside the namespace never block."""
         self.fds = {}
-        self.fds["status_r"], self.fds["status_w"] = os.pipe()
-        self.fds["block_r"], self.fds["block_w"] = os.pipe()
+        self.paths = {}
+        if fifo_dir is None:
+            self.fds["status_r"], self.fds["status_w"] = os.pipe()
+            self.fds["block_r"], self.fds["block_w"] = os.pipe()
+            return
+        for name, key in (("status", "status_r"), ("block", "block_w")):
+            self.paths[name] = os.path.join(fifo_dir, name)
+            os.mkfifo(self.paths[name], 0o600)
+            self.fds[key] = os.open(self.paths[name], os.O_RDWR)
 
     def __getitem__(self, name):
         return self.fds[name]
@@ -98,7 +109,7 @@ def _run_app(argv, filter_fd, pipes=None, instance=None):
     env = {"PATH": "/usr/bin:/bin"}
     if instance is None:
         return subprocess.call(argv, env=env, pass_fds=(filter_fd,))
-    proc = subprocess.Popen(argv, env=env, pass_fds=(filter_fd, pipes["status_w"], pipes["block_r"]))
+    proc = subprocess.Popen(argv, env=env, pass_fds=(filter_fd, *(pipes.fds[n] for n in ("status_w", "block_r") if n in pipes.fds)))
     try:
         pipes.close("status_w")
         pipes.close("block_r")
@@ -136,9 +147,6 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         extra_args = [*extra_args, *file_dests]
     env = dict(os.environ if host_env is None else host_env)
     in_pasta = perms.network and not perms.network_host
-    if in_pasta and perms.portals:
-        # pasta closes inherited descriptors, and the portal handshake needs two pipes into bwrap
-        raise RunError("portals together with network need network_host for now (`bjail perms APP --allow network_host`)")
     with contextlib.ExitStack() as stack:
         filter_fd = seccomp.open_fd(perms.userns)
         stack.callback(os.close, filter_fd)
@@ -163,16 +171,22 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         if wl_sock is None:
             say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
-        pipes = Pipes() if instance else None
+        fifo_dir = tempfile.mkdtemp(prefix="bjail-pipes-", dir=env.get("XDG_RUNTIME_DIR") or None) if instance and in_pasta else None
+        if fifo_dir:
+            stack.callback(shutil.rmtree, fifo_dir, ignore_errors=True)
+        pipes = Pipes(fifo_dir) if instance else None
         if pipes:
             stack.callback(pipes.close_all)
         args = jail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
             command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
-            wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and pipes["status_w"], block_fd=pipes and pipes["block_r"], files=extra_files)
+            wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
+            block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), files=extra_files)
         argv = [jail.find_bwrap(), *args]
         if perms.network and not perms.network_host:
-            argv = jail.net_wrap(argv, required=True, fd_files={PASTA_SECCOMP_FD: filter_file})
+            argv = jail.net_wrap(argv, required=True, fd_files={
+                PASTA_SECCOMP_FD: filter_file,
+                **({PASTA_STATUS_FD: (">", pipes.paths["status"]), PASTA_BLOCK_FD: ("<", pipes.paths["block"])} if pipes else {})})
         if runner:
             return runner(argv)
         return _run_app(argv, filter_fd, pipes, instance)

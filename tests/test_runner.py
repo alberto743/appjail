@@ -678,15 +678,16 @@ def reach(host, port):
         socket.create_connection((host, port), timeout=3).close(); return True
     except OSError:
         return False
+import os
 port, own = int(sys.argv[1]), sys.argv[2]
 urllib.request.urlopen("https://api.github.com/", timeout=15).close()  # DNS and TLS work through the namespace
-print(reach("127.0.0.1", port), reach(own, port))
+print(reach("127.0.0.1", port), reach(own, port), os.getuid() == int(sys.argv[3]) and os.getgid() == int(sys.argv[4]))
 '''
 
 
 @integration
 @pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
-@pytest.mark.parametrize("host_net, expected", [(False, ["False", "False"]), (True, ["True", "True"])])
+@pytest.mark.parametrize("host_net, expected", [(False, ["False", "False", "True"]), (True, ["True", "True", "True"])])
 def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, runtime, host_net, expected):
     srv = socket.socket()
     srv.bind(("0.0.0.0", 0))
@@ -700,7 +701,7 @@ def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, r
         kw = build(sandbox, runtime, network=True, network_host=host_net)
         (kw["root"] / "AppRun").write_text(APP_PROBE)
         (kw["root"] / "AppRun").chmod(0o755)
-        kw["command"] = ["/app/AppRun", str(port), own]
+        kw["command"] = ["/app/AppRun", str(port), own, str(os.getuid()), str(os.getgid())]
         if host_net:
             fd = seccomp.open_fd(False)
             try:
@@ -721,17 +722,27 @@ def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, r
         srv.close()
 
 
-def test_networked_app_with_portals_is_refused_in_pasta_until_network_host(sandbox, runtime, monkeypatch):
-    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
-    install(sandbox, network=True, portals=True)
-    with pytest.raises(RunError, match="network_host"):
-        runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                      extract=Extractor(), say=lambda *_: None, runner=lambda argv: 0, restricted=NO_RESTRICTION)
-
-
 def test_net_wrap_reopens_files_inside_the_namespace(monkeypatch):
     monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
     out = jail.net_wrap(["bwrap", "--seccomp", "9"], fd_files={9: "/run/f"})
     i = out.index("--") + 1
     assert out[i:i + 2] == ["/bin/sh", "-c"] and '9<"$p0"' in out[i + 2]
     assert out[i + 4:] == ["/run/f", "bwrap", "--seccomp", "9"]
+
+
+def test_net_wrap_opens_fifos_for_the_portal_pipes(monkeypatch):
+    monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
+    out = jail.net_wrap(["bwrap"], fd_files={9: "/f", 8: (">", "/s"), 7: ("<", "/b")})
+    i = out.index("--") + 1
+    assert out[i + 2].endswith('exec "$@" 9<"$p0" 8>"$p1" 7<"$p2"') and out[i + 4:i + 7] == ["/f", "/s", "/b"]
+    with pytest.raises(RunError, match="single digit"):
+        jail.net_wrap(["bwrap"], fd_files={10: "/f"})
+
+
+def test_pipes_over_fifos_have_only_the_parents_ends(tmp_path):
+    p = runner.Pipes(str(tmp_path))
+    try:
+        assert set(p.fds) == {"status_r", "block_w"} and set(p.paths) == {"status", "block"}
+        os.write(p.fds["block_w"], b"x")  # read-write opens never block
+    finally:
+        p.close_all()

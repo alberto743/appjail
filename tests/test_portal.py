@@ -211,3 +211,22 @@ def test_opt_in_interface_reaches_the_portal(sandbox, runtime, portal_stack, mon
     assert runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=test_runner.NO_RESTRICTION) == 0
     r = json.loads(capfd.readouterr().out.strip().splitlines()[-1])
     assert "AccessDenied" not in r["OpenURI"]  # allowed through; the fake desktop has no OpenURI backend
+
+
+@integration
+@needs_proxy
+@needs_portal
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@pytest.mark.parametrize("host_net", [False, True])
+def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal_stack, monkeypatch, capfd, host_net):
+    env, log = portal_stack
+    perms = {"portals": True, "network": True, "network_host": host_net}  # without network_host the app runs behind pasta
+    kw = app_root(sandbox, runtime, perms)
+    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    code = runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=test_runner.NO_RESTRICTION)
+    out = capfd.readouterr()
+    assert code == 0, out.err
+    r = json.loads(out.out.strip().splitlines()[-1])
+    assert log.read_text().split() == ["app.bjail.app"] and r["response"] == 0
+    assert [p for p in runtime.iterdir() if p.name.startswith("bjail-")] == []

@@ -48,8 +48,9 @@ def net_wrap(argv, required=False, fd_files=None):
     pasta the jail keeps sharing the host network (warned once). argv is a complete bwrap command line that
     uses --share-net, which then shares pasta's namespace and not the host's. required (an app's jail, which runs
     untrusted code): raise RunError instead of falling back to the host network. pasta closes every inherited
-    descriptor, so fd_files ({fd number: host path}) are reopened read-only inside the namespace for bwrap
-    (its --seccomp N): the caller keeps those files private and removes them after the run.
+    descriptor, so fd_files ({fd number: host path, or (shell redirect operator, host path)}) are opened inside
+    the namespace for bwrap (--seccomp N, and the portal's --json-status-fd / --block-fd through FIFOs): the
+    caller keeps those files private and removes them after the run. Descriptor numbers must be one digit (dash).
     """
     global _warned_no_pasta
     pasta = find_pasta()
@@ -64,10 +65,12 @@ def net_wrap(argv, required=False, fd_files=None):
         return argv
     if not fd_files:
         return [pasta, *PASTA_ARGS, "--", *argv]
-    items = list(fd_files.items())
+    items = [(fd, *(spec if isinstance(spec, tuple) else ("<", spec))) for fd, spec in fd_files.items()]
+    if any(not 0 <= fd <= 9 for fd, _, _ in items):
+        raise RunError("net_wrap: descriptor numbers must be a single digit")
     script = "".join(f"p{i}=$1; shift; " for i in range(len(items)))
-    script += 'exec "$@" ' + " ".join(f'{fd}<"$p{i}"' for i, (fd, _) in enumerate(items))
-    return [pasta, *PASTA_ARGS, "--", "/bin/sh", "-c", script, "sh", *(path for _, path in items), *argv]
+    script += 'exec "$@" ' + " ".join(f'{fd}{op}"$p{i}"' for i, (fd, op, _) in enumerate(items))
+    return [pasta, *PASTA_ARGS, "--", "/bin/sh", "-c", script, "sh", *(path for _, _, path in items), *argv]
 
 
 def find_bwrap():
@@ -323,6 +326,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
             "--hostname", "bjail"]
     if not perms.userns:
         args += ["--unshare-user", "--disable-userns"]
+    if perms.network and not perms.network_host:
+        # pasta runs the command as uid 0 of a user namespace that maps to the host user; give the app its own
+        # ids back (passwd, D-Bus authentication and file ownership all expect them)
+        args += ["--uid", str(uid), "--gid", str(os.getgid())]
     if seccomp_fd is not None:
         args += ["--seccomp", str(seccomp_fd)]
     if perms.network:
