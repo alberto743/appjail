@@ -4,7 +4,7 @@ A small command-line manager for [AppImages](https://appimage.org/) that runs ev
 [bubblewrap](https://github.com/containers/bubblewrap) sandbox. It works in user mode (no sudo), supports GUI apps
 under Wayland, and treats the software you install as untrusted.
 
-*appjail is a working name. It is young software: read the [limits](#limits) before relying on it.*
+*appjail is young software: read the [limits](#limits) before relying on it.*
 
 ## Why
 

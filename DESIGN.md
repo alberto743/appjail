@@ -1,4 +1,4 @@
-# appjail: a thin bwrap AppImage manager (working name)
+# appjail: a thin bwrap AppImage manager
 
 ## Context
 AppMan-like convenience for AppImages in user mode: no sudo, each app sandboxed with bubblewrap, full GUI support.
