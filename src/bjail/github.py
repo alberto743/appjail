@@ -28,10 +28,7 @@ MAX_REDIRECTS = 3
 TIMEOUT = 20
 
 TAG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
-ARCH_TOKENS = {
-    "x86_64": ("x86_64", "x86-64", "amd64", "x64"),
-    "aarch64": ("aarch64", "arm64"),
-}
+X86_64_TOKENS = ("x86_64", "x86-64", "amd64", "x64")
 OTHER_ARCH_RE = re.compile(r"aarch64|arm64|armhf|armv7|armv6|(?<![a-z0-9])arm(?![a-z0-9])|i[3-6]86|ppc64|riscv|s390x", re.I)
 
 
@@ -271,12 +268,11 @@ def _release(source, data):
     )
 
 
-def appimage_candidates(release, arch="x86_64"):
-    """AppImage assets for arch. Explicitly tagged ones win; untagged are the fallback."""
-    tokens = ARCH_TOKENS[arch]
+def appimage_candidates(release):
+    """x86-64 AppImage assets (the only supported architecture). Explicitly tagged ones win; untagged are the fallback."""
     images = [a for a in release.assets
               if a.name.lower().endswith(".appimage") and not OTHER_ARCH_RE.search(a.name)]
-    tagged = [a for a in images if any(t in a.name.lower() for t in tokens)]
+    tagged = [a for a in images if any(t in a.name.lower() for t in X86_64_TOKENS)]
     return tagged or images
 
 
