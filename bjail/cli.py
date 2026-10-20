@@ -357,6 +357,23 @@ def swap_in(name, staged, stage, record, extract, fallback):
     return entries, size
 
 
+def hash_candidate(asset, download):
+    """Download the candidate in the jail only to learn its sha256 (nothing is installed); the stage is removed."""
+    stage = store.staging_root() / secrets.token_hex(8)
+    stage.mkdir(parents=True, mode=0o700)
+    try:
+        staged = download(asset.url, stage, "download.AppImage", asset.size)
+        if staged.stat().st_size != asset.size:
+            raise Abort("downloaded size differs from the size GitHub announced")
+        try:
+            appimage.appimage_type(staged)
+        except appimage.NotAnAppImage as e:
+            raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
+        return appimage.sha256_file(staged)
+    finally:
+        appimage.remove_tree(stage)
+
+
 def update_app(name, args, client, console, download, now, extract, extract_ok, verify=attest.verify):
     """Update one app. Returns 'updated', 'current', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
@@ -409,6 +426,16 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
     if now < due:
         console.out(f"  quarantine : first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
                     f"({args.quarantine} days; --quarantine DAYS to change)")
+        pending = updater.load_pending(name)
+        if not asset.sha256 and not (pending and pending.get("sha256")):
+            # no GitHub digest to catch a swapped asset: fix its hash now, compare it when installing
+            if console.confirm(f"Download {asset.name} in the network-only jail now, only to record its sha256 "
+                               "so a change during the quarantine is detected?"):
+                digest = hash_candidate(asset, download)
+                updater.record_hash(name, key, digest)
+                console.out(f"  sha256 recorded for the quarantine: {digest}")
+            else:
+                console.warn("no hash recorded: a change of this asset during the quarantine will not be detected")
         return "waiting"
     if args.quarantine < updater.DEFAULT_QUARANTINE_DAYS:
         console.warn(f"quarantine shortened to {args.quarantine} days")
@@ -426,6 +453,14 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
         digest = appimage.sha256_file(staged)
         if asset.sha256 and digest != asset.sha256:
             raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
+        pending = updater.load_pending(name)
+        if not asset.sha256 and pending and pending["key"] == key and pending.get("sha256") not in (None, digest):
+            console.warn(f"CHANGED DURING QUARANTINE: the asset hashed {pending['sha256']} when first seen but downloads "
+                         f"as {digest} now. Nothing was installed; the quarantine starts again for the new content.")
+            updater.clear_pending(name)
+            updater.note_seen(name, key, release.tag, now)
+            updater.record_hash(name, key, digest)
+            return "blocked"
         try:
             appimage.appimage_type(staged)
         except appimage.NotAnAppImage as e:

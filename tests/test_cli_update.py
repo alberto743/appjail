@@ -449,3 +449,51 @@ def test_perms_add_portal_without_portals_is_refused(h):  # noqa: F811
     installed(h)
     with pytest.raises(Abort, match="needs portals"):
         cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", "--yes", "--add-portal", "Camera"]), Script())
+
+
+def tier4_client(**kw):
+    return FakeClient(release_=release2(sha="", **kw))
+
+
+def test_tier4_candidate_is_hashed_when_first_seen(h):  # noqa: F811
+    installed(h, client=FakeClient(release_=release(asset(sha=""))))
+    code, c = update(h, tier4_client())
+    assert code == 0 and NEW_SHA in c.text
+    assert updater.load_pending("app")["sha256"] == NEW_SHA
+    assert len(h.downloads) == 2 and list(store.staging_root().iterdir()) == []  # the add, and the hash-only download
+    update(h, tier4_client(), now=T0 + timedelta(days=3))
+    assert len(h.downloads) == 2  # recorded once
+
+
+def test_tier4_hash_is_optional_and_a_refusal_is_warned_about(h):  # noqa: F811
+    installed(h, client=FakeClient(release_=release(asset(sha=""))))
+    code, c = update(h, tier4_client(), answers=("n",))
+    assert "will not be detected" in c.text and "sha256" not in (updater.load_pending("app") or {})
+    assert len(h.downloads) == 1
+
+
+def test_tier4_asset_swapped_during_quarantine_is_blocked_and_restarts_the_clock(h):  # noqa: F811
+    path = installed(h, client=FakeClient(release_=release(asset(sha=""))))
+    update(h, tier4_client())
+    swapped = NEW_IMAGE[:-1] + b"X"  # same size: only the content differs
+    code, c = update(h, tier4_client(), now=T0 + timedelta(days=8), download=h.download(swapped))
+    assert code == 1 and "CHANGED DURING QUARANTINE" in c.text and "updated" not in c.text
+    assert manifest.load(path).version == "v1.0" and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
+    p = updater.load_pending("app")
+    assert p["first_seen"] == "2026-10-25T00:00:00Z" and p["sha256"] == hashlib.sha256(swapped).hexdigest()
+    assert list(store.staging_root().iterdir()) == []
+
+
+def test_tier4_unchanged_asset_installs_after_the_quarantine(h):  # noqa: F811
+    path = installed(h, client=FakeClient(release_=release(asset(sha=""))))
+    update(h, tier4_client())
+    code, c = update(h, tier4_client(), answers=("y", "y"), now=T0 + timedelta(days=7))
+    assert "updated app" in c.text and manifest.load(path).sha256 == NEW_SHA
+
+
+@pytest.mark.parametrize("bad", ['{"key": "k", "tag": "t", "first_seen": "2026-10-17T00:00:00Z", "sha256": "zz"}',
+                                 '{"key": "k", "tag": "t", "first_seen": "2026-10-17T00:00:00Z", "extra": "x"}'])
+def test_malformed_pending_is_ignored(h, bad):  # noqa: F811
+    installed(h)
+    updater.pending_path("app").write_text(bad)
+    assert updater.load_pending("app") is None

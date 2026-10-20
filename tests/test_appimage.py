@@ -280,7 +280,7 @@ def test_decompression_bomb_stopped(lab):
         for _ in range(400):
             f.write(b"A" * 1024 * 1024)  # 400 MiB that compresses to almost nothing
     with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
-        with pytest.raises(jail.JailError, match="too large"):
+        with pytest.raises(UnsafeTree, match="too large"):
             appimage.extract(lab.build(), lab.base / "root")
     assert lab.leftovers() == []
 

@@ -81,9 +81,11 @@ def load_pending(name):
     """The recorded candidate, or None if absent or unreadable (treated as never seen)."""
     try:
         data = json.loads(pending_path(name).read_text(encoding="utf-8"))
-        if (isinstance(data, dict) and set(data) == {"key", "tag", "first_seen"}
+        if (isinstance(data, dict) and {"key", "tag", "first_seen"} <= set(data) <= {"key", "tag", "first_seen", "sha256"}
                 and all(isinstance(data[k], str) for k in data)):
             parse_stamp(data["first_seen"])
+            if "sha256" in data and not manifest.SHA256_RE.fullmatch(data["sha256"]):
+                return None
             return data
     except (OSError, ValueError):
         pass
@@ -101,6 +103,22 @@ def note_seen(name, key, tag, now):
     os.chmod(tmp, 0o600)
     os.replace(tmp, path)
     return now.replace(microsecond=0)
+
+
+def record_hash(name, key, digest):
+    """Remember the sha256 of the pending candidate (tier 4: no GitHub digest to compare with later).
+
+    The hash is compared with the download that is finally installed, so an asset swapped in place
+    during the quarantine is noticed. Ignored when the pending candidate is not this one.
+    """
+    prev = load_pending(name)
+    if not prev or prev["key"] != key:
+        return
+    path = pending_path(name)
+    tmp = path.with_name(".pending.json.tmp")
+    tmp.write_text(json.dumps({**prev, "sha256": digest}), encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
 
 
 def clear_pending(name):

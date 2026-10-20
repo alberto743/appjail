@@ -214,8 +214,7 @@ def extract_dwarfs(appimage, dest, offset):
         (work / "root").mkdir()
         cmd = ["/dwarfs-tool", "--tool=dwarfsextract", "-i", "/app.AppImage", "-O", str(offset),
                "-o", "/out/root", "--skip-devices", "--skip-specials"]
-        proc = jail.run(jail.extract_args(appimage, work, cmd, tools=((tool, "/dwarfs-tool"),)), timeout=900,
-                        watch=(work, MAX_EXTRACTED_BYTES, MAX_EXTRACTED_ENTRIES))
+        proc = _run_extraction(jail.extract_args(appimage, work, cmd, tools=((tool, "/dwarfs-tool"),)), work)
         if proc.returncode != 0:
             raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
         tree = work / "root"
@@ -225,6 +224,15 @@ def extract_dwarfs(appimage, dest, offset):
         return stats
     finally:
         remove_tree(work)
+
+
+def _run_extraction(args, work):
+    """Run an extraction jail, watching its output. Killing it for size and finding the finished tree too large
+    are the same verdict, so both raise UnsafeTree whichever the watcher's poll happens to catch."""
+    try:
+        return jail.run(args, timeout=900, watch=(work, MAX_EXTRACTED_BYTES, MAX_EXTRACTED_ENTRIES))
+    except jail.OutputTooLarge:
+        raise UnsafeTree("extracted tree is too large") from None
 
 
 def have_unsquashfs():
@@ -263,8 +271,7 @@ def extract(appimage, dest, runtime_fallback=False):
             cmd = ["/out/app.AppImage", "--appimage-extract"]
             source, bind = appimage, work
             tree = work / "squashfs-root"
-        proc = jail.run(jail.extract_args(source, bind, cmd), timeout=900,
-                        watch=(work, MAX_EXTRACTED_BYTES, MAX_EXTRACTED_ENTRIES))
+        proc = _run_extraction(jail.extract_args(source, bind, cmd), work)
         if proc.returncode != 0:
             raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
         if not tree.is_dir():

@@ -28,6 +28,10 @@ class JailError(Exception):
     pass
 
 
+class OutputTooLarge(JailError):
+    """The watched output directory outgrew its limits and the jailed command was killed."""
+
+
 # pasta answers DNS sent to PASTA_DNS inside the namespace by asking the host's resolver, so the jail never needs the
 # host's loopback stub resolver (127.0.0.53) and its resolv.conf names only this address.
 PASTA_DNS = "169.254.1.53"
@@ -178,7 +182,7 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
         except ProcessLookupError:
             pass
         proc.communicate()
-        raise JailError(f"jailed command aborted: {reason}")
+        raise (OutputTooLarge if reason == "output too large" else JailError)(f"jailed command aborted: {reason}")
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
