@@ -14,22 +14,42 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.informational }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-26.04
+            informational: false
+          # Not supported (Xwayland 23.2, xdg-desktop-portal 1.18); kept only to compare while 26.04 is verified.
+          - os: ubuntu-24.04
+            informational: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Ubuntu 24.04 blocks unprivileged user namespaces with AppArmor; bubblewrap needs them
-      # (the test guest does not have this restriction).
+      # Ubuntu blocks unprivileged user namespaces with AppArmor where the key exists; bubblewrap needs them
+      # (the test guest does not have this restriction). Fail loudly if they are unusable afterwards.
       - name: Allow unprivileged user namespaces
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        run: |
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          unshare --user --map-root-user true
 
-      # Same package list as the test guest, minus the kernel the guest swaps in for DRM drivers and `reuse`:
-      # Ubuntu's reuse is too old to read REUSE.toml, and the REUSE workflow already lints with the current one.
+      # Same package list as the test guest, minus the kernel the guest swaps in for DRM drivers.
       - name: Install the guest packages
         run: |
           sudo apt-get update
-          sed 's/#.*//' tests/vm/packages.txt | grep -Ev '^ *(linux-image|reuse)' | xargs sudo apt-get install -y --no-install-recommends
+          sed 's/#.*//' tests/vm/packages.txt | grep -Ev '^ *linux-image' | xargs sudo apt-get install -y --no-install-recommends
+
+      - name: Show the versions under test
+        run: |
+          . /etc/os-release && echo "$PRETTY_NAME, kernel $(uname -r)"
+          bwrap --version; pasta --version | head -1; Xwayland -version 2>&1 | head -1
+          /usr/libexec/xdg-desktop-portal --version; weston --version; reuse --version; python3 --version
 
       - name: Run the tests
         env:
