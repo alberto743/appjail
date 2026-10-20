@@ -64,8 +64,10 @@ def build(sandbox, runtime, **perms):
     root.mkdir(exist_ok=True)
     etc = sandbox / "etc"
     etc.mkdir(exist_ok=True)
-    (etc / "passwd").write_text("app:x:1000:1000::/home/app:/bin/sh\n")
-    (etc / "group").write_text("app:x:1000:\n")
+    # the real ids, like runner.prepare: a fixed 1000 hid a bug on CI runners (uid 1001), where Xwayland could not
+    # look up its user and refused the app's own clients
+    (etc / "passwd").write_text(f"app:x:{os.getuid()}:{os.getgid()}::/home/app:/bin/sh\n")
+    (etc / "group").write_text(f"app:x:{os.getgid()}:\n")
     home = sandbox / "home"
     home.mkdir(exist_ok=True)
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test", "LANG": "it_IT.UTF-8", "SECRET": "x"}
@@ -586,8 +588,7 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
         (kw["root"] / "AppRun").chmod(0o755)
         proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
         text = (kw["home"] / "out.txt").read_text()
-        xlog = (kw["home"] / "xwayland.log").read_text() if (kw["home"] / "xwayland.log").exists() else "no xwayland.log"
-        assert proc.returncode == 0 and "name of display" in text, text + proc.stderr + "\nXWAYLAND LOG:\n" + xlog + f"\nuid={os.getuid()} gid={os.getgid()}"
+        assert proc.returncode == 0 and "name of display" in text, text + proc.stderr
         assert "wl=\n" in text + "\n" and "display=:" in text
     finally:
         weston.terminate()
