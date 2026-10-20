@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -40,3 +41,25 @@ def test_pip_install_provides_the_bjail_command(tmp_path):
     meta = run(str(pip), "show", "bjail")
     assert "Version: 0.1.0" in meta and "Requires: \n" in meta  # no dependencies
     run(str(pip), "uninstall", "--yes", "bjail")
+
+
+def test_sdist_is_small_and_installs_on_its_own(tmp_path):
+    src = tmp_path / "src"
+    shutil.copytree(ROOT, src, ignore=IGNORE)
+    venv = tmp_path / "venv"
+    run(sys.executable, "-m", "venv", str(venv))
+    pip, python = venv / "bin" / "pip", venv / "bin" / "python"
+    run(str(pip), "install", "--quiet", "hatchling")
+    run(str(python), "-m", "hatchling", "build", "-t", "sdist", "-d", str(tmp_path / "dist"), cwd=src)
+    sdist = next((tmp_path / "dist").glob("bjail-*.tar.gz"))
+    with tarfile.open(sdist) as tar:
+        names = [n.split("/", 1)[1] for n in tar.getnames() if "/" in n]
+    top = {n.split("/")[0] for n in names}
+    assert {"src", "LICENSES", "README.md", "pyproject.toml"} <= top
+    assert not top & {"tests", "DESIGN.md", "CLAUDE.md", "vm", "bin", ".github"}, top
+    assert sdist.stat().st_size < 100_000
+    # the tarball alone is enough to build and install the command
+    fresh = tmp_path / "fresh"
+    run(sys.executable, "-m", "venv", str(fresh))
+    run(str(fresh / "bin" / "pip"), "install", "--quiet", str(sdist))
+    assert "Sandboxed AppImage manager" in run(str(fresh / "bin" / "bjail"), "--help", cwd=tmp_path)

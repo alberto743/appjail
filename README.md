@@ -41,21 +41,18 @@ sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland git
 
 ## Install
 
-There is nothing to build. Clone the repository and run it from there:
+bjail is a Python package with no dependencies. Install it as a command with [pipx](https://pipx.pypa.io/)
+or pip (pip downloads only the build backend, Hatchling):
 
 ```sh
 git clone <repository-url> bjail
 cd bjail
-bin/bjail --help
-```
-
-Put `bin/bjail` on your `PATH` if you like. Or install it as a command with pip (there are no dependencies; pip downloads only the build backend):
-
-```sh
 pipx install .          # or: pip install --user .
+bjail --help
 ```
 
-Update bjail with `git pull` after reading what changed (and reinstall if you used pip).
+To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m bjail --help`.
+Update bjail with `git pull` after reading what changed, then reinstall.
 
 Data lives in `~/.local/share/bjail` (images, extracted trees, private homes, staging) and `~/.config/bjail`
 (manifests, tracked in a small local git repository). `BJAIL_DATA_DIR` and `BJAIL_CONFIG_DIR` override them.
@@ -151,7 +148,7 @@ The full design, the reasoning behind each choice and the verification notes are
 
 ## Development
 
-The code is stdlib-only Python under `bjail/`; tests are plain `pytest`. Many tests start real sandboxes and need a Linux
+The code is stdlib-only Python under `src/bjail/`; tests are plain `pytest`. Many tests start real sandboxes and need a Linux
 machine with bubblewrap, `unsquashfs`, `pasta`, a headless Wayland compositor (`weston`) and the other packages in
 `tests/vm/packages.txt`.
 

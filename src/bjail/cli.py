@@ -3,7 +3,7 @@
 
 """Command line interface: the parser and the dispatcher. The commands live in cmd_*.py.
 
-The names re-exported here are the ones tests and `bin/bjail` import from `bjail.cli`.
+The names re-exported here are the ones tests and the `bjail` console script (pyproject.toml) import from `bjail.cli`.
 """
 
 import argparse

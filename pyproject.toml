@@ -22,13 +22,16 @@ classifiers = [
 bjail = "bjail.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["bjail"]
+packages = ["src/bjail"]
 
+# The sdist carries what is needed to build, install and license the package; the tests, the design
+# document and the guest scripts live in the repository only.
 [tool.hatch.build.targets.sdist]
-include = ["/bjail", "/bin", "/tests", "/LICENSES", "/README.md", "/DESIGN.md", "/REUSE.toml"]
+include = ["/src", "/LICENSES", "/README.md", "/REUSE.toml"]
 exclude = ["__pycache__", "*.pyc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 python_files = ["test_*.py"]
 addopts = "-ra"

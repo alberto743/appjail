@@ -14,6 +14,6 @@ ROOT = Path(__file__).resolve().parent.parent
                     reason="pyflakes is installed in the test guest (packages.txt)")
 def test_pyflakes_is_clean():
     """No unused or undefined names, no shadowed imports: shared test fixtures live in conftest.py and helpers.py."""
-    proc = subprocess.run([sys.executable, "-m", "pyflakes", "bjail", "tests", "bin/bjail"], cwd=ROOT,
+    proc = subprocess.run([sys.executable, "-m", "pyflakes", "src", "tests"], cwd=ROOT,
                           capture_output=True, text=True)
     assert proc.returncode == 0, proc.stdout + proc.stderr

@@ -13,7 +13,7 @@ Implement the MVP in Python (not shell), in this directory. MVP order:
 
 Progress (update with every milestone): steps 1-6 done (manifest; `add` with jailed download, digest, extraction, `--tag`, `--dir`; `run` with the bwrap runtime jail and `--dir`; `search`; `index update/rollback/status` with a jailed sparse git fetch; `update` with quarantine, owner/tier blocks and rollback on failure, `list`, `remove`, `perms`), all tests in native pytest, REUSE-compliant. MVP complete (final doc review and full run with all opt-in tests: 372 passed); D-Bus filtering added afterwards (guest needs `xdg-dbus-proxy` and `dbus-bin`, both in `tests/vm/packages.txt`; run `tests/vm/provision.sh` on an existing guest).
 
-Deferred: the GPG tier, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `bjail/dbusproxy.py`); hardening round (2026-10-18): sensitive-path refusal for `dirs`, extracted-tree digest checked at every launch, restricted Wayland socket via `wp_security_context_v1` (`bjail/wayland.py`), seccomp filter plus `userns` permission (`bjail/seccomp.py`), manifest `channel`, rate-limit-aware `update`, manifest history in a local git repo (`bjail/history.py`); portals (`bjail/portal.py`); pasta namespace for an app's `network` plus the `network_host` permission.
+Deferred: the GPG tier, other forges. Done after the MVP: D-Bus filtering (`dbus_filter`, `src/bjail/dbusproxy.py`); hardening round (2026-10-18): sensitive-path refusal for `dirs`, extracted-tree digest checked at every launch, restricted Wayland socket via `wp_security_context_v1` (`src/bjail/wayland.py`), seccomp filter plus `userns` permission (`src/bjail/seccomp.py`), manifest `channel`, rate-limit-aware `update`, manifest history in a local git repo (`src/bjail/history.py`); portals (`src/bjail/portal.py`); pasta namespace for an app's `network` plus the `network_host` permission.
 
 ## Open points (to resume)
 State (2026-10-20, end of session): everything planned is done, committed and pushed; 560 tests pass in the guest (11 opt-in/hardware tests skip) (the opt-in e2e suites also pass); CI (Ubuntu 26.04) and REUSE workflows are green on `main`, and three consecutive CI runs passed; the tree is clean. Done this session: pasta for an app's `network` plus `network_host`, portals through pasta (FIFOs, `--uid/--gid`), refusal to grant `network` without pasta, tier-4 hash during the quarantine, deterministic decompression-bomb verdict, `cli.py` split, CI/REUSE/Dependabot, history re-authored to `Alberto P` (force-pushed).
@@ -43,8 +43,8 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 ## Docs
 `README.md` is the user-facing entry point (what it is, requirements, usage, trust model, limits). Keep it in step with the CLI, the permission table and the limits whenever they change (same commit), and keep it short; the details belong in DESIGN.md.
 
-## Code layout
-`bjail/cli.py` is only the parser and dispatcher (and re-exports what tests import); the commands are in `cmd_add.py` (also the install steps `update` shares), `cmd_update.py`, `cmd_apps.py` (tools, history, list, remove, perms), `cmd_index.py` (search, index update); `console.py` (Abort, Console), `permargs.py` (permission options). Add new commands as `cmd_<name>.py`, not to `cli.py`.
+## Code layout (src layout)
+`src/bjail/cli.py` is only the parser and dispatcher (and re-exports what tests import); the commands are in `cmd_add.py` (also the install steps `update` shares), `cmd_update.py`, `cmd_apps.py` (tools, history, list, remove, perms), `cmd_index.py` (search, index update); `console.py` (Abort, Console), `permargs.py` (permission options). Add new commands as `cmd_<name>.py`, not to `cli.py`.
 
 ## Decisions made
 - Language: Python 3, stdlib only (confirmed by the user's go-ahead on the plan).
@@ -54,7 +54,7 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - GitHub `digest` (sha256:hex) and the repo-scoped attestations endpoint verified live on cli/cli; recorded in DESIGN.md. cli/cli is the user-approved repo for API metadata checks.
 
 ## Testing environment
-- Never use the host system for this work, except to edit files and run git in this directory and to run qemu itself. All execution happens in the qemu-kvm guest: unit tests, integration tests, `bin/bjail`, network access (GitHub API probes included), downloads, extraction and bwrap. Do not run project code, tests or network clients on the host.
+- Never use the host system for this work, except to edit files and run git in this directory and to run qemu itself. All execution happens in the qemu-kvm guest: unit tests, integration tests, the `bjail` command, network access (GitHub API probes included), downloads, extraction and bwrap. Do not run project code, tests or network clients on the host.
 - Host status (checked 2026-10-17): qemu 10.0.13 with KVM, `qemu-img`, `cloud-localds`, `genisoimage` and OVMF are installed; the user has rw access to `/dev/kvm` (ACL or `kvm` group membership). Do not install anything else.
 - The guest needs a headless Wayland compositor for GUI tests, user namespaces, bubblewrap, `unsquashfs`, and a kernel with DRM drivers. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
 - Approved test AppImages (user, 2026-10-17, guest only): `AppImage/appimagetool`, `AppImage/AppImageKit` (obsolete-appimagetool), `hluk/CopyQ` (needs glibc 2.43; Debian 13 has 2.41, so it cannot run in the guest, and the older v16 release is too new as well), and `pkgforge-dev/htop-AppImage` and `pkgforge-dev/Galculator-AppImage` (DwarFS; approved 2026-10-18), `mhx/dwarfs` universal-small and `cli/cli` gh tarball (pinned tools), and `skyjake/lagrange` (the GUI test app, chosen by Claude on the user's delegation: 11 MB, SDL, runs in the guest). cli/cli assets may be used for jailed-download checks. Anything else still needs a new approval.
@@ -77,9 +77,9 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - Real `update` (appimagetool, two small downloads; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_update_e2e.py -v'`.
 - DwarFS helper (pinned `mhx/dwarfs` universal-small, 2 MB, user-approved 2026-10-18, guest only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 BJAIL_INTEGRATION=1 python3 -m pytest tests/test_tools.py -v'`.
 - Real Sigstore verification (pinned gh tarball, 15 MB, cli/cli asset; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 BJAIL_INTEGRATION=1 python3 -m pytest tests/test_attest.py -v'`.
-- Packaging (pip installs bjail into a fresh venv and runs the `bjail` command; pip downloads hatchling; opt-in; also a CI job): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_packaging.py -v'`.
+- Packaging (pip installs bjail into a fresh venv and runs the `bjail` command, and the sdist is built, checked for size and content, and installed on its own; pip downloads hatchling; opt-in; also a CI job): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_packaging.py -v'`.
 - Real AM index update/rollback (network, text only; opt-in): `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_index_e2e.py -v'`.
-- Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && python3 -m bjail ...'`. It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
+- Try the CLI: `tests/vm/ssh.sh 'cd ~/bjail && PYTHONPATH=src python3 -m bjail ...'` (src layout: the package is in `src/bjail/`; pytest finds it through `pythonpath = ["src"]` in `pyproject.toml`; there is no `bin/` launcher, the `bjail` console script comes from `[project.scripts]`). It writes to the guest's `~/.local/share/bjail` and `~/.config/bjail`, never to the host's.
 - Do not install test tools on the host.
 
 ## Verification status (done; results in DESIGN.md "Findings")
