@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Manifest history: every change bjail makes to ~/.config/bjail is committed to a local git repository.
+"""Manifest history: every change appjail makes to ~/.config/appjail is committed to a local git repository.
 
 The manifests hold the pins (hash, tier, owner, permissions) and sit in a directory any process of
 the user can write, so the history is the tamper evidence: `run` warns when a manifest differs from
-the last commit, and `bjail history` shows who changed what and when.
+the last commit, and `appjail history` shows who changed what and when.
 
 git runs inside a jail with no network and only the config directory visible, with the user's and
 the system's git configuration ignored, so a hostile `.git/config` (filters, fsmonitor, hooks)
@@ -20,7 +20,7 @@ from .jail import JailError
 
 enabled = True
 GIT = "/usr/bin/git"
-AUTHOR = ("bjail", "bjail@localhost")
+AUTHOR = ("appjail", "appjail@localhost")
 SAFE = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "commit.gpgsign=false",
         "-c", "core.pager=cat", "-c", "protocol.allow=never", "-c", "safe.directory=*"]
 

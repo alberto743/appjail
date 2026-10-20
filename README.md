@@ -1,18 +1,18 @@
-# bjail
+# appjail
 
 A small command-line manager for [AppImages](https://appimage.org/) that runs every app inside a
 [bubblewrap](https://github.com/containers/bubblewrap) sandbox. It works in user mode (no sudo), supports GUI apps
 under Wayland, and treats the software you install as untrusted.
 
-*bjail is a working name. It is young software: read the [limits](#limits) before relying on it.*
+*appjail is a working name. It is young software: read the [limits](#limits) before relying on it.*
 
 ## Why
 
-Package managers for AppImages typically download a release and run it with your full privileges. bjail
+Package managers for AppImages typically download a release and run it with your full privileges. appjail
 is built around the opposite assumptions:
 
 - **Declarative manifests, no remote code.** An app is a small TOML file: source, pinned hash, permissions. Nothing
-  fetched from the network is ever executed or sourced, and bjail has no self-update.
+  fetched from the network is ever executed or sourced, and appjail has no self-update.
 - **You name the source.** You give a GitHub `owner/repo`. That repository is the only place the app is fetched from,
   whatever an AppImage's embedded update information says.
 - **Downloads are jailed.** The download, the extraction and the verification tools run in throwaway sandboxes
@@ -26,7 +26,7 @@ is built around the opposite assumptions:
 
 - Linux on x86-64 with unprivileged user namespaces. Tested on Debian 13 and Ubuntu 26.04; older systems are
   not supported.
-- Python 3.12 or newer (tested with 3.12, 3.13 and 3.14). bjail uses only the standard library.
+- Python 3.12 or newer (tested with 3.12, 3.13 and 3.14). appjail uses only the standard library.
 - `bubblewrap` and `squashfs-tools` (`unsquashfs`) are required.
 - Recommended: `passt` (the `pasta` command) for apps with network access, `xdg-dbus-proxy` for D-Bus filtering,
   `xwayland` for X11-only apps, `git` for the manifest history and the search index.
@@ -41,30 +41,30 @@ sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland git
 
 ## Install
 
-bjail is a Python package with no dependencies. Install it as a command with [pipx](https://pipx.pypa.io/)
+appjail is a Python package with no dependencies. Install it as a command with [pipx](https://pipx.pypa.io/)
 or pip (pip downloads only the build backend, Hatchling):
 
 ```sh
-git clone <repository-url> bjail
-cd bjail
+git clone <repository-url> appjail
+cd appjail
 pipx install .          # or: pip install --user .
-bjail --help
+appjail --help
 ```
 
-To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m bjail --help`.
-Update bjail with `git pull` after reading what changed, then reinstall.
+To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m appjail --help`.
+Update appjail with `git pull` after reading what changed, then reinstall.
 
-Data lives in `~/.local/share/bjail` (images, extracted trees, private homes, staging) and `~/.config/bjail`
-(manifests, tracked in a small local git repository). `BJAIL_DATA_DIR` and `BJAIL_CONFIG_DIR` override them.
+Data lives in `~/.local/share/appjail` (images, extracted trees, private homes, staging) and `~/.config/appjail`
+(manifests, tracked in a small local git repository). `APPJAIL_DATA_DIR` and `APPJAIL_CONFIG_DIR` override them.
 
 ## Quick start
 
 ```sh
-bjail add skyjake/lagrange     # review the repository, pick the asset, download, pin, extract
-bjail run lagrange             # run it in its sandbox
-bjail list                     # installed apps, tiers and permissions
-bjail update                   # check every app for a newer release
-bjail remove lagrange          # delete the app and its private home
+appjail add skyjake/lagrange     # review the repository, pick the asset, download, pin, extract
+appjail run lagrange             # run it in its sandbox
+appjail list                     # installed apps, tiers and permissions
+appjail update                   # check every app for a newer release
+appjail remove lagrange          # delete the app and its private home
 ```
 
 `add` shows the repository owner, account age, stars and fork or archive status before it downloads anything, and
@@ -73,12 +73,12 @@ asks if several release assets match. By default an app gets audio and GPU acces
 ### Permissions
 
 ```sh
-bjail perms lagrange                              # show
-bjail perms lagrange --allow network              # outbound network only (see below)
-bjail perms lagrange --add-dir ~/Documents:rw     # a directory, read-only unless :rw
-bjail perms lagrange --add-dbus org.example.Name  # talk to one session-bus name through a filtering proxy
-bjail perms lagrange --allow portals              # desktop portals (file chooser, notifications, ...)
-bjail run lagrange --file ~/report.pdf            # one file, for this run only
+appjail perms lagrange                              # show
+appjail perms lagrange --allow network              # outbound network only (see below)
+appjail perms lagrange --add-dir ~/Documents:rw     # a directory, read-only unless :rw
+appjail perms lagrange --add-dbus org.example.Name  # talk to one session-bus name through a filtering proxy
+appjail perms lagrange --allow portals              # desktop portals (file chooser, notifications, ...)
+appjail run lagrange --file ~/report.pdf            # one file, for this run only
 ```
 
 | Permission | Effect |
@@ -101,41 +101,41 @@ Each app is pinned by hash and carries an *evidence tier* that `update` will nev
 
 | Tier | Evidence |
 |---|---|
-| 1 | A verified GitHub build attestation (Sigstore), checked with a pinned `gh` that you install on request (`bjail tools install gh`). |
+| 1 | A verified GitHub build attestation (Sigstore), checked with a pinned `gh` that you install on request (`appjail tools install gh`). |
 | 3 | The SHA-256 digest GitHub publishes for the release asset. |
-| 4 | Trust on first use: bjail shows you the hash it computed. |
+| 4 | Trust on first use: appjail shows you the hash it computed. |
 
 Tier 2 (GPG signatures) is not implemented. Most AppImages will land on tier 3 or 4, which proves "unchanged and from the
 same account", not "safe".
 
-`bjail update` re-resolves the pinned repository, downloads the candidate in the jail, verifies it, and shows you the
+`appjail update` re-resolves the pinned repository, downloads the candidate in the jail, verifies it, and shows you the
 version, the hashes, the tier and the release link. A release must be seen for the quarantine period before it can
-be installed (`--quarantine DAYS`). For tier 4 apps bjail records the candidate's hash when it is first seen and refuses
+be installed (`--quarantine DAYS`). For tier 4 apps appjail records the candidate's hash when it is first seen and refuses
 the install if the content changed in the meantime. A change of repository owner or a drop in tier blocks the update.
 `--channel stable|prerelease|pinned` chooses which releases an app follows.
 
 ## Searching
 
-bjail can search the [AM](https://github.com/ivan-hc/AM) application list as a source of suggestions. It reads that data
+appjail can search the [AM](https://github.com/ivan-hc/AM) application list as a source of suggestions. It reads that data
 as plain text only and never runs anything from it.
 
 ```sh
-bjail index update      # fetch the list in a jail, review the changes, pin it
-bjail index rollback    # go back to the previous snapshot
-bjail search editor     # candidates only; installing is always `bjail add owner/repo`
+appjail index update      # fetch the list in a jail, review the changes, pin it
+appjail index rollback    # go back to the previous snapshot
+appjail search editor     # candidates only; installing is always `appjail add owner/repo`
 ```
 
 ## Other commands
 
-- `bjail history [app]`: every change to the manifests, from the local git repository. `bjail run` warns if a
-  manifest was edited outside bjail.
-- `bjail tools status|install NAME`: helper binaries whose URL, size and hash are pinned in bjail's source (`gh` for
+- `appjail history [app]`: every change to the manifests, from the local git repository. `appjail run` warns if a
+  manifest was edited outside appjail.
+- `appjail tools status|install NAME`: helper binaries whose URL, size and hash are pinned in appjail's source (`gh` for
   attestations, `dwarfs` for DwarFS-based AppImages).
 - Set `GITHUB_TOKEN` to raise the GitHub API rate limit. It is only ever sent to `api.github.com`.
 
 ## Limits
 
-- **Not audited, not a security boundary you should bet on yet.** bwrap and the Linux kernel do the isolation; bjail
+- **Not audited, not a security boundary you should bet on yet.** bwrap and the Linux kernel do the isolation; appjail
   configures them conservatively but has had no external review.
 - Only GitHub repositories are supported. Apps hosted elsewhere appear in `search` but cannot be added.
 - A sandboxed app can still do whatever its grants allow. An app with `network` can reach other machines on your LAN.
@@ -148,16 +148,16 @@ The full design, the reasoning behind each choice and the verification notes are
 
 ## Development
 
-The code is stdlib-only Python under `src/bjail/`; tests are plain `pytest`. Many tests start real sandboxes and need a Linux
+The code is stdlib-only Python under `src/appjail/`; tests are plain `pytest`. Many tests start real sandboxes and need a Linux
 machine with bubblewrap, `unsquashfs`, `pasta`, a headless Wayland compositor (`weston`) and the other packages in
 `tests/vm/packages.txt`.
 
 ```sh
-BJAIL_INTEGRATION=1 python3 -m pytest
+APPJAIL_INTEGRATION=1 python3 -m pytest
 ```
 
-Without `BJAIL_INTEGRATION=1` the tests that need real sandboxes are skipped. Tests that download from the network are
-opt-in (`BJAIL_E2E=1`, `BJAIL_LIVE=1`). The project's own workflow runs the suite inside a disposable QEMU guest built
+Without `APPJAIL_INTEGRATION=1` the tests that need real sandboxes are skipped. Tests that download from the network are
+opt-in (`APPJAIL_E2E=1`, `APPJAIL_LIVE=1`). The project's own workflow runs the suite inside a disposable QEMU guest built
 from `tests/vm/` so that downloads and sandboxed apps never run on the developer's machine; see
 [CLAUDE.md](CLAUDE.md) for the details. GitHub Actions runs the full suite and a REUSE compliance check on every push.
 

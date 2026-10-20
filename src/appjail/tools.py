@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Pinned helper binaries that bjail cannot get from the distribution.
+"""Pinned helper binaries that appjail cannot get from the distribution.
 
-Each tool is identified here, in reviewed source, by URL, size and sha256: bjail never decides at
+Each tool is identified here, in reviewed source, by URL, size and sha256: appjail never decides at
 run time what to fetch or trust. `install` downloads it in the network-only jail and refuses any
 mismatch; `require` re-hashes the file before every use and only ever runs it inside the extraction
 jail. Updating a tool means changing these constants in a reviewed commit.
@@ -44,7 +44,7 @@ TOOLS = {
         2195148, "d29734ed51547f5a5e1c92ede3ea0f2e003902f5c58df10d5e060c87b4e07e69",
         "extracting DwarFS AppImages"),
     # GitHub CLI v2.102.0: used only for `gh attestation verify --bundle` (Sigstore verification), inside a
-    # jail, on bundles bjail fetched itself. Not packaged in Debian 13 in a usable version.
+    # jail, on bundles appjail fetched itself. Not packaged in Debian 13 in a usable version.
     "gh": Tool(
         "gh",
         "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz",
@@ -73,10 +73,10 @@ def require(name):
     state = status(name)
     if state == "missing":
         raise ToolError(f"the {name} helper is not installed (needed for {TOOLS[name].purpose}); "
-                        f"run `bjail tools install {name}`")
+                        f"run `appjail tools install {name}`")
     if state == "corrupt":
         raise ToolError(f"the installed {name} helper does not match its pinned sha256; "
-                        f"run `bjail tools install {name}` again")
+                        f"run `appjail tools install {name}` again")
     return path(name)
 
 

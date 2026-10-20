@@ -25,7 +25,7 @@ class NotAnAppImage(Exception):
 
 
 class UnsupportedImage(Exception):
-    """A valid image bjail does not handle (DwarFS, unknown filesystem)."""
+    """A valid image appjail does not handle (DwarFS, unknown filesystem)."""
 
 
 class UnsafeTree(Exception):

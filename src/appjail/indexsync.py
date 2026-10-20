@@ -4,7 +4,7 @@
 """Fetch, review, pin and roll back the AM index snapshot.
 
 git runs only inside a network-only jail, without hooks, filters, submodules or LFS, and fetches
-only the two paths bjail reads. The host never runs git on the result: it copies plain regular
+only the two paths appjail reads. The host never runs git on the result: it copies plain regular
 files out of the jail's work tree into a snapshot directory after strict checks. The index only
 feeds `search`; installed apps never depend on it.
 """

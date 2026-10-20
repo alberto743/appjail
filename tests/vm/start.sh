@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Boot the bjail test guest (KVM, user-mode networking, ssh on 127.0.0.1:2222).
+# Boot the appjail test guest (KVM, user-mode networking, ssh on 127.0.0.1:2222).
 # Images live in ../../vm; nothing here touches the host outside this directory.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)

@@ -9,8 +9,8 @@ from unittest import mock
 
 import pytest
 
-from bjail import appimage, jail
-from bjail.appimage import ExtractError, UnsafeTree, UnsupportedImage
+from appjail import appimage, jail
+from appjail.appimage import ExtractError, UnsafeTree, UnsupportedImage
 from .helpers import stub, write_image
 
 HAVE_TOOLS = bool(shutil.which("bwrap") and shutil.which("mksquashfs") and appimage.have_unsquashfs())

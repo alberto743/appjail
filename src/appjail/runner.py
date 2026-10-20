@@ -139,8 +139,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     """Start the app in its jail and return its exit status."""
     m, root, home, etc = prepare(name, extract, say)
     if history.modified(name):
-        say(f"Warning: the manifest of {name} was changed outside bjail since its last recorded change "
-            f"(see `bjail history {name}` and the config directory's git log).")
+        say(f"Warning: the manifest of {name} was changed outside appjail since its last recorded change "
+            f"(see `appjail history {name}` and the config directory's git log).")
     perms = m.permissions
     if extra_dirs:
         perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
@@ -154,7 +154,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     with contextlib.ExitStack() as stack:
         filter_fd = filter_file = None
         if in_pasta:
-            fd, filter_file = tempfile.mkstemp(prefix="bjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
+            fd, filter_file = tempfile.mkstemp(prefix="appjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
             stack.callback(os.unlink, filter_file)
             with os.fdopen(fd, "wb") as f:
                 f.write(seccomp.program(perms.userns))
@@ -176,7 +176,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         if wl_sock is None:
             say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
-        fifo_dir = tempfile.mkdtemp(prefix="bjail-pipes-", dir=env.get("XDG_RUNTIME_DIR") or None) if instance and in_pasta else None
+        fifo_dir = tempfile.mkdtemp(prefix="appjail-pipes-", dir=env.get("XDG_RUNTIME_DIR") or None) if instance and in_pasta else None
         if fifo_dir:
             stack.callback(shutil.rmtree, fifo_dir, ignore_errors=True)
         pipes = Pipes(fifo_dir) if instance else None

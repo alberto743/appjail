@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`bjail search` and `bjail index update`."""
+"""`appjail search` and `appjail index update`."""
 
 import secrets
 import shutil
@@ -18,11 +18,11 @@ def cmd_search(args, console):
     for h in hits:
         console.out(f"{h.name}: {h.description}")
         if h.source:
-            console.out(f"    source {h.source}   ->  bjail add {h.source}")
+            console.out(f"    source {h.source}   ->  appjail add {h.source}")
         if h.note:
             console.out(f"    ({h.note})")
     if hits:
-        console.out("A hit is only a suggestion: check the owner and repository yourself before `bjail add`.")
+        console.out("A hit is only a suggestion: check the owner and repository yourself before `appjail add`.")
 
 
 def cmd_index_update(args, console, fetch=indexsync.fetch):

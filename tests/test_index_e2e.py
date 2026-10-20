@@ -3,16 +3,16 @@
 
 """Real `index update` / `rollback` against github.com/ivan-hc/AM from the test guest (opt-in).
 
-    tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_index_e2e.py -v'
+    tests/vm/ssh.sh 'cd ~/appjail && APPJAIL_E2E=1 python3 -m pytest tests/test_index_e2e.py -v'
 """
 
 import os
 
 import pytest
 
-from bjail import cli, index, indexsync
+from appjail import cli, index, indexsync
 
-pytestmark = pytest.mark.skipif(os.environ.get("BJAIL_E2E") != "1", reason="set BJAIL_E2E=1 in the test guest (network)")
+pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1", reason="set APPJAIL_E2E=1 in the test guest (network)")
 
 PINNED = "d739e48e75382228b7fbe12502a812f0ff97f560"  # the commit the design analysis used
 
@@ -34,9 +34,9 @@ class Yes(cli.Console):
 @pytest.fixture(scope="module")
 def data(tmp_path_factory):
     base = tmp_path_factory.mktemp("idx")
-    os.environ["BJAIL_DATA_DIR"] = str(base)
+    os.environ["APPJAIL_DATA_DIR"] = str(base)
     yield base
-    del os.environ["BJAIL_DATA_DIR"]
+    del os.environ["APPJAIL_DATA_DIR"]
 
 
 def test_update_to_the_analysed_commit_then_search(data):

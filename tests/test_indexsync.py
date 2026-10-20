@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from bjail import cli, index, indexsync, jail
-from bjail.indexsync import IndexRefused
+from appjail import cli, index, indexsync, jail
+from appjail.indexsync import IndexRefused
 
 C1, C2, C3 = "1" * 40, "2" * 40, "3" * 40
 BULLET = "◆"
@@ -35,7 +35,7 @@ BASE = {"cura": ("slicer", site("Ultimaker/Cura")), "gh": ("GitHub CLI", site("c
 
 @pytest.fixture(autouse=True)
 def data(tmp_path, monkeypatch):
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
     return tmp_path
 
 

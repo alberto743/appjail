@@ -140,7 +140,7 @@ def search(keywords, root=None, limit=20):
     root = str(root or tree_path())
     text = read_text(os.path.join(root, LIST_FILE), MAX_LIST_BYTES)
     if text is None:
-        raise IndexProblem("no local index; run `bjail index update` first")
+        raise IndexProblem("no local index; run `appjail index update` first")
     words = [w.lower() for w in keywords if w.strip()]
     if not words:
         raise IndexProblem("give at least one keyword")

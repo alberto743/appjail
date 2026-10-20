@@ -5,7 +5,7 @@
 
 xdg-desktop-portal decides who is calling from the D-Bus peer's process: it reads
 `/proc/<pid>/root/.flatpak-info` and `$XDG_RUNTIME_DIR/.flatpak/<instance>/bwrapinfo.json`. Those
-two files are the only "sandbox identity" the portal understands besides Snap and Linyaps, so bjail
+two files are the only "sandbox identity" the portal understands besides Snap and Linyaps, so appjail
 writes them in that format. This is a compatibility shim: nothing here depends on or installs
 Flatpak. Side effect to know about: the portal's permission store and Background portal treat the app
 as a Flatpak app (an autostart entry would say `flatpak run`, which is inert without Flatpak).
@@ -26,7 +26,7 @@ from pathlib import Path
 from . import manifest
 from .jail import RunError
 
-ID_PREFIX = "app.bjail."
+ID_PREFIX = "app.appjail."
 APP_ID_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){2,}")
 PORTAL_NAME = "org.freedesktop.portal.Desktop"
 DOCUMENTS_NAME = "org.freedesktop.portal.Documents"

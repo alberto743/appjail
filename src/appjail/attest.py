@@ -3,12 +3,12 @@
 
 """Build-attestation verification (evidence tier 1) with the pinned GitHub CLI, inside a jail.
 
-bjail fetches the Sigstore bundles itself (`github.Client.attestation_bundles`) and hands them to
+appjail fetches the Sigstore bundles itself (`github.Client.attestation_bundles`) and hands them to
 `gh attestation verify --bundle`, which checks the signature chain against the Sigstore trusted root
 (fetched over TUF, hence the network), that the bundle covers the exact downloaded bytes, and that the
-signing identity belongs to the repository. `gh` runs from `bjail.tools` (size and sha256 pinned),
+signing identity belongs to the repository. `gh` runs from `appjail.tools` (size and sha256 pinned),
 sees only the subject, the bundles and a scratch directory, and receives no token (it requires one to
-be set but never uses it with `--bundle`). On top of gh's verdict bjail re-reads the certificate
+be set but never uses it with `--bundle`). On top of gh's verdict appjail re-reads the certificate
 fields and requires GitHub Actions as issuer, the exact repository, and, when known, the pinned
 owner account id: a name is not enough, an account id is.
 """

@@ -65,7 +65,7 @@ def net_wrap(argv, required=False, fd_files=None):
     pasta = find_pasta()
     if pasta is None and required:
         raise RunError("network access needs pasta (package passt) to keep the app off the host's loopback; "
-                       "install it, or grant network_host (`bjail perms APP --allow network_host`)")
+                       "install it, or grant network_host (`appjail perms APP --allow network_host`)")
     if pasta is None:
         if not _warned_no_pasta:
             _warned_no_pasta = True
@@ -229,7 +229,7 @@ def _guard_dirs():
 
 
 def dir_binds(dirs, home):
-    """Bind arguments for permissions.dirs. Refuses anything that would expose bjail's own files."""
+    """Bind arguments for permissions.dirs. Refuses anything that would expose appjail's own files."""
     args = []
     for entry in dirs:
         path, _, mode = entry.partition(":")
@@ -244,7 +244,7 @@ def dir_binds(dirs, home):
             raise RunError(f"granted directory {host} would expose the whole home directory")
         for guard in _guard_dirs():
             if real == guard or guard in real.parents or real in guard.parents:
-                raise RunError(f"granted directory {host} would expose bjail's own data")
+                raise RunError(f"granted directory {host} would expose appjail's own data")
         try:
             rel = real.relative_to(home_real)
         except ValueError:
@@ -275,7 +275,7 @@ def file_binds(files, home):
             raise RunError(f"granted path is not a regular file: {path}")
         for guard in _guard_dirs():
             if real == guard or guard in real.parents:
-                raise RunError(f"granted file {path} would expose bjail's own data")
+                raise RunError(f"granted file {path} would expose appjail's own data")
         try:
             rel = real.relative_to(home_real)
         except ValueError:
@@ -293,10 +293,10 @@ XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
 # Runs inside the jail: a rootless Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket
 # lives in the jail's private /tmp and abstract namespace, so no other app and no host X server is involved.
 XWAYLAND_SCRIPT = (
-    'f=/tmp/.bjail-display; x="$1"; shift\n'
+    'f=/tmp/.appjail-display; x="$1"; shift\n'
     'WAYLAND_DISPLAY=wayland-0 "$x" -rootless -nolisten tcp -displayfd 3 3>"$f" >/dev/null 2>&1 &\n'
     'p=$!; i=0; while [ ! -s "$f" ] && kill -0 "$p" 2>/dev/null && [ "$i" -lt 400 ]; do sleep 0.05; i=$((i+1)); done\n'
-    'n=$(cat "$f"); [ -n "$n" ] || { echo "bjail: Xwayland did not start (it exited, or took more than 20 s)" >&2; exit 1; }\n'
+    'n=$(cat "$f"); [ -n "$n" ] || { echo "appjail: Xwayland did not start (it exited, or took more than 20 s)" >&2; exit 1; }\n'
     'DISPLAY=":$n" exec "$@"')
 
 
@@ -313,19 +313,19 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     Pure function of its inputs: nothing is read from the process environment. Anything the
-    manifest asks for but bjail cannot enforce yet is refused instead of ignored.
+    manifest asks for but appjail cannot enforce yet is refused instead of ignored.
     """
     xwayland = perms.display == "xwayland"
     if xwayland:
         command = xwayland_command(command)
     if (perms.dbus_filter or perms.dbus_own or perms.portals) and not dbus_socket:
-        raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from bjail.dbusproxy")
+        raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from appjail.dbusproxy")
     if perms.portals and not portal_docs:
-        raise RunError("portals need the document portal's directory for this app (bjail.portal.doc_dir)")
+        raise RunError("portals need the document portal's directory for this app (appjail.portal.doc_dir)")
 
     rt = f"/run/user/{uid}"
     args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
-            "--hostname", "bjail"]
+            "--hostname", "appjail"]
     if not perms.userns:
         args += ["--unshare-user", "--disable-userns"]
     if perms.network and not perms.network_host:

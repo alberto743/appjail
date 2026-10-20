@@ -6,7 +6,7 @@
 Usage: fetcher.py URL OUTFILE EXPECTED_SIZE
 Only https URLs on github.com / *.githubusercontent.com are followed, at most 5 hops.
 The file is written with exclusive create and aborted if it would exceed EXPECTED_SIZE.
-Stdlib only; it must not import anything from the bjail package.
+Stdlib only; it must not import anything from the appjail package.
 """
 
 import sys
@@ -44,7 +44,7 @@ def main(argv):
         print("refusing URL", file=sys.stderr)
         return 2
     opener = urllib.request.build_opener(_Guard)
-    req = urllib.request.Request(url, headers={"User-Agent": "bjail", "Accept": "application/octet-stream"})
+    req = urllib.request.Request(url, headers={"User-Agent": "appjail", "Accept": "application/octet-stream"})
     total = 0
     with opener.open(req, timeout=30) as resp, open(out, "xb") as f:
         while True:

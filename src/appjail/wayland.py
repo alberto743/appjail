@@ -5,7 +5,7 @@
 
 The host compositor's own socket gives a client every protocol the compositor offers, including
 screen capture and input injection where it has them. When the compositor implements the security
-context protocol, bjail creates a listening socket, hands it to the compositor and tells it that
+context protocol, appjail creates a listening socket, hands it to the compositor and tells it that
 every client on that socket belongs to a sandbox; the compositor then hides its privileged
 interfaces from those clients. Only the minimal part of the wire protocol needed here is spoken
 (stdlib sockets, fd passing with SCM_RIGHTS); nothing from the compositor is interpreted beyond
@@ -23,7 +23,7 @@ from pathlib import Path
 from .jail import RunError
 
 MANAGER = "wp_security_context_manager_v1"
-SANDBOX_ENGINE = "bjail"
+SANDBOX_ENGINE = "appjail"
 TIMEOUT = 5.0
 
 DISPLAY_ID, REGISTRY_ID, CALLBACK_ID, MANAGER_ID, CONTEXT_ID = 1, 2, 3, 4, 5
@@ -136,7 +136,7 @@ class RestrictedSocket:
     until this object exits (the close pipe hangs up) and the directory is then removed.
     """
 
-    def __init__(self, host_env, app_id="bjail", instance=None):
+    def __init__(self, host_env, app_id="appjail", instance=None):
         self.host_env, self.app_id, self.instance = host_env, app_id, instance or str(os.getpid())
         self.dir = self.conn = self._close_w = None
 
@@ -147,7 +147,7 @@ class RestrictedSocket:
             return None
         name, version = offered[MANAGER]
         rt = self.host_env["XDG_RUNTIME_DIR"]
-        self.dir = Path(tempfile.mkdtemp(prefix="bjail-wl-", dir=rt))
+        self.dir = Path(tempfile.mkdtemp(prefix="appjail-wl-", dir=rt))
         try:
             path = self.dir / "wayland-0"
             listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from bjail import jail, wayland
-from bjail.jail import RunError
+from appjail import jail, wayland
+from appjail.jail import RunError
 from .helpers import build, integration
 
 
@@ -117,7 +117,7 @@ def test_protocol_error_is_reported_and_leaves_nothing(compositor):
     with pytest.raises(RunError, match="boom"):
         with wayland.RestrictedSocket(env):
             pass
-    assert not list(Path(env["XDG_RUNTIME_DIR"]).glob("bjail-wl-*"))
+    assert not list(Path(env["XDG_RUNTIME_DIR"]).glob("appjail-wl-*"))
 
 
 def test_missing_host_socket_is_an_error(sandbox):

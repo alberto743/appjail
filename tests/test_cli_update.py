@@ -6,8 +6,8 @@ from datetime import timedelta
 
 import pytest
 
-from bjail import appimage, cli, github, manifest, store, updater
-from bjail.cli import Abort
+from appjail import appimage, cli, github, manifest, store, updater
+from appjail.cli import Abort
 from .helpers import FAKE_APPIMAGE, FakeClient, NEW_IMAGE, NEW_SHA, SHA, Script, T0, asset, info, installed, release, release2, update
 
 
@@ -487,7 +487,7 @@ def test_malformed_pending_is_ignored(h, bad):
 
 @pytest.fixture
 def no_pasta(monkeypatch):
-    from bjail import jail
+    from appjail import jail
     monkeypatch.setattr(jail, "find_pasta", lambda: None)
 
 

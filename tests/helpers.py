@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-from bjail import appimage, cli, dbusproxy, github, jail, manifest, seccomp, store
-from bjail.cli import Abort
-from bjail.manifest import Manifest, Permissions
+from appjail import appimage, cli, dbusproxy, github, jail, manifest, seccomp, store
+from appjail.cli import Abort
+from appjail.manifest import Manifest, Permissions
 
 
 def stub(extra=b""):
@@ -171,8 +171,8 @@ needs_proxy = pytest.mark.skipif(not os.access(dbusproxy.PROXY, os.X_OK) or not 
                                  reason="needs xdg-dbus-proxy and dbus-daemon (run provision.sh)")
 
 
-integration = pytest.mark.skipif(os.environ.get("BJAIL_INTEGRATION") != "1",
-                                 reason="real bwrap: run in the test guest (BJAIL_INTEGRATION=1)")
+integration = pytest.mark.skipif(os.environ.get("APPJAIL_INTEGRATION") != "1",
+                                 reason="real bwrap: run in the test guest (APPJAIL_INTEGRATION=1)")
 
 
 @contextlib.contextmanager

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from bjail import appimage, history
+from appjail import appimage, history
 
 from .helpers import Harness
 
@@ -21,16 +21,16 @@ def no_history(monkeypatch):
 
 @pytest.fixture
 def h(tmp_path, monkeypatch):
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("BJAIL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("APPJAIL_CONFIG_DIR", str(tmp_path / "config"))
     return Harness()
 
 
 @pytest.fixture
 def sandbox(monkeypatch):
     base = Path(tempfile.mkdtemp(prefix="bj"))
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(base / "data"))
-    monkeypatch.setenv("BJAIL_CONFIG_DIR", str(base / "config"))
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(base / "data"))
+    monkeypatch.setenv("APPJAIL_CONFIG_DIR", str(base / "config"))
     yield base
     appimage.remove_tree(base)
 

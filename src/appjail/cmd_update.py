@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`bjail update`."""
+"""`appjail update`."""
 
 import secrets
 from dataclasses import replace

@@ -3,10 +3,10 @@
 bubblewrap            # the sandbox under test
 squashfs-tools        # unsquashfs (extraction) and mksquashfs (synthetic test images)
 git                   # manifest history and the index fetch (run in jails), and the repository tooling
-python3               # the interpreter bjail and the tests run on
+python3               # the interpreter appjail and the tests run on
 python3-pytest        # test runner (development dependency only)
 reuse                 # `reuse lint`: SPDX/REUSE compliance check
-python3-venv          # venv with pip: the packaging test installs bjail the way a user would (pip downloads hatchling)
+python3-venv          # venv with pip: the packaging test installs appjail the way a user would (pip downloads hatchling)
 python3-pyflakes      # static check for unused names, undefined names and shadowing (tests/test_lint.py)
 ca-certificates       # TLS roots for the HTTPS tests (GitHub API, downloads)
 weston                # headless Wayland compositor and weston-simple-shm test client
@@ -20,7 +20,7 @@ libgl1-mesa-dri       # software (llvmpipe) GL/EGL drivers: GUI AppImages in the
 libxkbcommon0
 libwayland-client0
 linux-libc-dev        # unistd_64.h: the reference the seccomp syscall table is checked against
-xdg-dbus-proxy        # D-Bus filtering for permissions.dbus_filter (run by bjail outside the app's jail)
+xdg-dbus-proxy        # D-Bus filtering for permissions.dbus_filter (run by appjail outside the app's jail)
 dbus-bin              # dbus-send, to talk to a bus from inside the jail in tests
 fontconfig            # font lookup for GUI AppImages (the lagrange end-to-end test)
 fonts-dejavu-core     # at least one font, or GUI AppImages abort

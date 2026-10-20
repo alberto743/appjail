@@ -109,7 +109,7 @@ class Client:
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "bjail",
+            "User-Agent": "appjail",
         }
         if self._token:
             headers["Authorization"] = "Bearer " + self._token
@@ -199,7 +199,7 @@ class Client:
 
         The listing comes from api.github.com; each bundle is a short-lived signed blob URL on
         blob.core.windows.net (fetched without credentials, size-capped) and is Snappy-compressed.
-        Nothing here is trusted: the bundles only become evidence after `bjail.attest` verifies them.
+        Nothing here is trusted: the bundles only become evidence after `appjail.attest` verifies them.
         """
         out = []
         for item in self._attestations(source, sha256)[:limit]:
@@ -209,7 +209,7 @@ class Client:
                 host = urllib.parse.urlsplit(url)
                 if host.scheme != "https" or not (host.hostname or "").endswith(".blob.core.windows.net"):
                     raise GitHubError("attestation bundle URL is not on the expected storage host")
-                status, _, body = self._fetch(url, {"User-Agent": "bjail"}, TIMEOUT, MAX_BUNDLE)
+                status, _, body = self._fetch(url, {"User-Agent": "appjail"}, TIMEOUT, MAX_BUNDLE)
                 if status != 200:
                     raise GitHubError(f"attestation bundle download failed (HTTP {status})")
                 try:

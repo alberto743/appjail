@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from bjail import cli, index
+from appjail import cli, index
 
 BULLET = "◆"
 
@@ -171,17 +171,17 @@ def test_cli_search_prints_suggestions(root, monkeypatch, tmp_path):
     (store_dir / "index").mkdir(parents=True)
     (store_dir / "index" / "tree").symlink_to(root)
     (store_dir / "index" / "PINNED").write_text("d739e48e75382228b7fbe12502a812f0ff97f560\n")
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(store_dir))
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(store_dir))
     console = Out()
     assert cli.main(["search", "cura"], console=console) == 0
     text = "\n".join(console.lines)
     assert "3 match(es) in the AM index at d739e48e7538" in text
-    assert "source Ultimaker/Cura   ->  bjail add Ultimaker/Cura" in text
+    assert "source Ultimaker/Cura   ->  appjail add Ultimaker/Cura" in text
     assert "only a suggestion" in text
 
 
 def test_cli_search_without_index_is_an_error(tmp_path, monkeypatch):
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(tmp_path / "empty"))
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "empty"))
     console = Out()
     assert cli.main(["search", "x"], console=console) == 1
-    assert "bjail index update" in "\n".join(console.lines)
+    assert "appjail index update" in "\n".join(console.lines)

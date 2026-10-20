@@ -42,10 +42,10 @@ jobs:
 
       - name: Run the tests
         env:
-          BJAIL_INTEGRATION: "1"
+          APPJAIL_INTEGRATION: "1"
         run: python3 -m pytest -q
 
-  # Installs bjail with pip into a fresh virtual environment and runs the `bjail` command, as a user would.
+  # Installs appjail with pip into a fresh virtual environment and runs the `appjail` command, as a user would.
   package:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
@@ -59,5 +59,5 @@ jobs:
 
       - name: Build, install and run
         env:
-          BJAIL_E2E: "1"
+          APPJAIL_E2E: "1"
         run: python3 -m pytest -q tests/test_packaging.py

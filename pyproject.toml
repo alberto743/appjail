@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "bjail"
+name = "appjail"
 version = "0.1.0"
 description = "Sandboxed AppImage manager built on bubblewrap"
 readme = "README.md"
@@ -19,10 +19,10 @@ classifiers = [
 ]
 
 [project.scripts]
-bjail = "bjail.cli:main"
+appjail = "appjail.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bjail"]
+packages = ["src/appjail"]
 
 # The sdist carries what is needed to build, install and license the package; the tests, the design
 # document and the guest scripts live in the repository only.

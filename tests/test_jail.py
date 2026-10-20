@@ -10,10 +10,10 @@ from pathlib import Path
 
 import pytest
 
-from bjail import fetcher, jail
+from appjail import fetcher, jail
 
-integration = pytest.mark.skipif(os.environ.get("BJAIL_INTEGRATION") != "1",
-                                 reason="real bwrap: run in the test guest (BJAIL_INTEGRATION=1)")
+integration = pytest.mark.skipif(os.environ.get("APPJAIL_INTEGRATION") != "1",
+                                 reason="real bwrap: run in the test guest (APPJAIL_INTEGRATION=1)")
 
 
 @pytest.fixture

@@ -29,7 +29,7 @@ def on_response(code, results):
 
 bus.add_signal_receiver(on_response, "Response", "org.freedesktop.portal.Request")
 try:
-    portal.OpenFile("", "Pick", {"handle_token": "bjailtest"}, dbus_interface="org.freedesktop.portal.FileChooser")
+    portal.OpenFile("", "Pick", {"handle_token": "appjailtest"}, dbus_interface="org.freedesktop.portal.FileChooser")
 except dbus.DBusException as e:
     out["open_error"] = str(e)
 else:

@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from bjail import github
-from bjail.github import Client, GitHubError, NotFound, RateLimited
+from appjail import github
+from appjail.github import Client, GitHubError, NotFound, RateLimited
 
 SHA = "a" * 64
 SHA2 = "b" * 64
@@ -260,7 +260,7 @@ def test_age_days():
     assert github.age_days("2026-09-30T02:40:02Z", now) == 16
 
 
-@pytest.mark.skipif(os.environ.get("BJAIL_LIVE") != "1", reason="set BJAIL_LIVE=1 for the live metadata check")
+@pytest.mark.skipif(os.environ.get("APPJAIL_LIVE") != "1", reason="set APPJAIL_LIVE=1 for the live metadata check")
 def test_live_cli_cli():
     """Metadata-only queries against cli/cli (user-approved). Downloads nothing."""
     c = Client()

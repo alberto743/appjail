@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from bjail import jail, seccomp
+from appjail import jail, seccomp
 from .helpers import integration, run_in_jail
 
 

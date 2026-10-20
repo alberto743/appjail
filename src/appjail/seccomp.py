@@ -116,7 +116,7 @@ def program(userns=False):
 
 def open_fd(userns=False):
     """A memfd holding the program, positioned at 0 and inheritable, for bwrap's --seccomp."""
-    fd = os.memfd_create("bjail-seccomp", 0)
+    fd = os.memfd_create("appjail-seccomp", 0)
     os.write(fd, program(userns))
     os.lseek(fd, 0, os.SEEK_SET)
     os.set_inheritable(fd, True)

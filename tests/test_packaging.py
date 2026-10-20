@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Install bjail into a fresh virtual environment the way a user would (pip), and run the entry point."""
+"""Install appjail into a fresh virtual environment the way a user would (pip), and run the entry point."""
 
 import os
 import shutil
@@ -15,8 +15,8 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc", ".git", ".claude", "vm", "build", "*.egg-info")
 
-pytestmark = pytest.mark.skipif(os.environ.get("BJAIL_E2E") != "1",
-                                reason="set BJAIL_E2E=1 (pip downloads the build backend, hatchling, from PyPI)")
+pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1",
+                                reason="set APPJAIL_E2E=1 (pip downloads the build backend, hatchling, from PyPI)")
 
 
 def run(*argv, **kw):
@@ -25,22 +25,22 @@ def run(*argv, **kw):
     return proc.stdout
 
 
-def test_pip_install_provides_the_bjail_command(tmp_path):
+def test_pip_install_provides_the_appjail_command(tmp_path):
     src = tmp_path / "src"
     shutil.copytree(ROOT, src, ignore=IGNORE)  # pip builds in the tree: keep the checkout clean
     venv = tmp_path / "venv"
     run(sys.executable, "-m", "venv", str(venv))
-    pip, python, bjail = venv / "bin" / "pip", venv / "bin" / "python", venv / "bin" / "bjail"
+    pip, python, appjail = venv / "bin" / "pip", venv / "bin" / "python", venv / "bin" / "appjail"
     run(str(pip), "install", "--quiet", str(src))
-    env = {"PATH": "/usr/bin:/bin", "BJAIL_DATA_DIR": str(tmp_path / "data"), "BJAIL_CONFIG_DIR": str(tmp_path / "config")}
-    assert "Sandboxed AppImage manager" in run(str(bjail), "--help", env=env, cwd=tmp_path)
-    assert "No apps installed." in run(str(bjail), "list", env=env, cwd=tmp_path)
+    env = {"PATH": "/usr/bin:/bin", "APPJAIL_DATA_DIR": str(tmp_path / "data"), "APPJAIL_CONFIG_DIR": str(tmp_path / "config")}
+    assert "Sandboxed AppImage manager" in run(str(appjail), "--help", env=env, cwd=tmp_path)
+    assert "No apps installed." in run(str(appjail), "list", env=env, cwd=tmp_path)
     # the download jail binds this file by its path in the package: it must be installed next to the code
-    out = run(str(python), "-I", "-c", "import bjail.jail as j; print(j.FETCHER, j.FETCHER.is_file())", cwd=tmp_path)
+    out = run(str(python), "-I", "-c", "import appjail.jail as j; print(j.FETCHER, j.FETCHER.is_file())", cwd=tmp_path)
     assert out.split()[-1] == "True" and str(venv) in out
-    meta = run(str(pip), "show", "bjail")
+    meta = run(str(pip), "show", "appjail")
     assert "Version: 0.1.0" in meta and "Requires: \n" in meta  # no dependencies
-    run(str(pip), "uninstall", "--yes", "bjail")
+    run(str(pip), "uninstall", "--yes", "appjail")
 
 
 def test_sdist_is_small_and_installs_on_its_own(tmp_path):
@@ -51,7 +51,7 @@ def test_sdist_is_small_and_installs_on_its_own(tmp_path):
     pip, python = venv / "bin" / "pip", venv / "bin" / "python"
     run(str(pip), "install", "--quiet", "hatchling")
     run(str(python), "-m", "hatchling", "build", "-t", "sdist", "-d", str(tmp_path / "dist"), cwd=src)
-    sdist = next((tmp_path / "dist").glob("bjail-*.tar.gz"))
+    sdist = next((tmp_path / "dist").glob("appjail-*.tar.gz"))
     with tarfile.open(sdist) as tar:
         names = [n.split("/", 1)[1] for n in tar.getnames() if "/" in n]
     top = {n.split("/")[0] for n in names}
@@ -62,4 +62,4 @@ def test_sdist_is_small_and_installs_on_its_own(tmp_path):
     fresh = tmp_path / "fresh"
     run(sys.executable, "-m", "venv", str(fresh))
     run(str(fresh / "bin" / "pip"), "install", "--quiet", str(sdist))
-    assert "Sandboxed AppImage manager" in run(str(fresh / "bin" / "bjail"), "--help", cwd=tmp_path)
+    assert "Sandboxed AppImage manager" in run(str(fresh / "bin" / "appjail"), "--help", cwd=tmp_path)

@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from bjail import appimage, jail, manifest, runner, seccomp, store
-from bjail.jail import RunError
+from appjail import appimage, jail, manifest, runner, seccomp, store
+from appjail.jail import RunError
 from .helpers import FACTS, NO_RESTRICTION, build, install, integration, pairs, run_in_jail
 
 SHA = "a" * 64
@@ -146,13 +146,13 @@ def test_dirs_cannot_expose_the_whole_home(sandbox, runtime, what):
 
 
 @pytest.mark.parametrize("where", ["data", "config", "inside_data", "parent_of_data"])
-def test_dirs_cannot_expose_bjail_itself(sandbox, runtime, where):
+def test_dirs_cannot_expose_appjail_itself(sandbox, runtime, where):
     store.data_dir().mkdir(parents=True)
     store.config_dir().mkdir(parents=True)
     (store.data_dir() / "apps").mkdir()
     path = {"data": store.data_dir(), "config": store.config_dir(), "inside_data": store.data_dir() / "apps",
             "parent_of_data": store.data_dir().parent}[where]
-    with pytest.raises(RunError, match="bjail's own data"):
+    with pytest.raises(RunError, match="appjail's own data"):
         jail.runtime_args(**build(sandbox, runtime, dirs=(str(path),)))
 
 
@@ -319,7 +319,7 @@ def facts(sandbox, runtime, **perms):
 
 @integration
 def test_private_home_and_filesystem(sandbox, runtime):
-    secret = Path.home() / "bjail-secret-test"
+    secret = Path.home() / "appjail-secret-test"
     secret.write_text("x")
     docs = Path.home() / "Documents"
     docs_existed = docs.exists()
@@ -333,7 +333,7 @@ def test_private_home_and_filesystem(sandbox, runtime):
     assert r["slash_home"] == ["app"] and r["app_home"] == [] and not r["docs"]
     assert r["tmp"] == [] and not r["x11"]
     assert (r["w_home"], r["w_root"], r["w_app"], r["w_usr"]) == (True, False, False, False)
-    assert r["host"] == "bjail"
+    assert r["host"] == "appjail"
 
 
 @integration
@@ -396,7 +396,7 @@ def test_arguments_are_passed_through(sandbox, runtime):
 
 
 @integration
-def test_app_cannot_see_bjail_data_through_home(sandbox, runtime):
+def test_app_cannot_see_appjail_data_through_home(sandbox, runtime):
     install(sandbox)
     r = facts(sandbox, runtime)
     assert r["app_home"] == []
@@ -409,17 +409,17 @@ def test_real_wayland_client_runs_against_headless_weston(sandbox):
     if not rt.is_dir():
         pytest.skip("no /run/user/<uid> in this session")
     log = open(sandbox / "weston.log", "w")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=bjail-test"],
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-test"],
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
     try:
         for _ in range(50):
-            if (rt / "bjail-test").exists():
+            if (rt / "appjail-test").exists():
                 break
             time.sleep(0.1)
         else:
             pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
         kw = build(sandbox, rt, audio=False)
-        kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "bjail-test"}
+        kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-test"}
         (kw["root"] / "AppRun").write_text("#!/bin/sh\nexec /usr/bin/timeout 3 /usr/bin/weston-simple-shm\n")
         (kw["root"] / "AppRun").chmod(0o755)
         proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
@@ -463,17 +463,17 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
     if not rt.is_dir():
         pytest.skip("no /run/user/<uid> in this session")
     log = open(sandbox / "weston.log", "w")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=bjail-xtest"],
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-xtest"],
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
     try:
         for _ in range(50):
-            if (rt / "bjail-xtest").exists():
+            if (rt / "appjail-xtest").exists():
                 break
             time.sleep(0.1)
         else:
             pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
         kw = build(sandbox, rt, audio=False, display="xwayland")
-        kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "bjail-xtest"}
+        kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-xtest"}
         (kw["root"] / "AppRun").write_text(
             "#!/bin/sh\n/usr/bin/xdpyinfo > /app/out.txt 2>&1; echo \"display=$DISPLAY wl=$WAYLAND_DISPLAY\" >> /app/out.txt\n"
             .replace("/app/out.txt", "/home/app/out.txt"))
@@ -523,7 +523,7 @@ def test_file_binds_apply_the_sensitive_path_policy(sandbox, rel, mode):
             jail.file_binds([f"{path}{mode}"], home)
 
 
-def test_file_binds_refuse_bjails_own_data(sandbox):
+def test_file_binds_refuse_appjails_own_data(sandbox):
     f = store.data_dir() / "x"
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text("x")

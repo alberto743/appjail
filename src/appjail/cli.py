@@ -3,7 +3,7 @@
 
 """Command line interface: the parser and the dispatcher. The commands live in cmd_*.py.
 
-The names re-exported here are the ones tests and the `bjail` console script (pyproject.toml) import from `bjail.cli`.
+The names re-exported here are the ones tests and the `appjail` console script (pyproject.toml) import from `appjail.cli`.
 """
 
 import argparse
@@ -19,7 +19,7 @@ from .permargs import PERMISSION_FLAGS, dirs_from_args, files_from_args
 
 
 def build_parser():
-    p = argparse.ArgumentParser(prog="bjail", description="Sandboxed AppImage manager")
+    p = argparse.ArgumentParser(prog="appjail", description="Sandboxed AppImage manager")
     sub = p.add_subparsers(dest="command", required=True)
     add = sub.add_parser("add", help="add an app from a GitHub owner/repo")
     add.add_argument("source", help="GitHub owner/repo")
@@ -59,7 +59,7 @@ def build_parser():
     tl = sub.add_parser("tools", help="pinned helper binaries (e.g. for DwarFS AppImages)")
     tsub = tl.add_subparsers(dest="tools_command", required=True)
     tsub.add_parser("status", help="show which helpers are installed and intact")
-    tinst = tsub.add_parser("install", help="download a helper whose size and sha256 are pinned in bjail's source")
+    tinst = tsub.add_parser("install", help="download a helper whose size and sha256 are pinned in appjail's source")
     tinst.add_argument("tool", choices=sorted(tools.TOOLS))
     hist = sub.add_parser("history", help="show the recorded changes to the manifests")
     hist.add_argument("app", nargs="?")

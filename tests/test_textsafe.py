@@ -3,7 +3,7 @@
 
 import pytest
 
-from bjail import textsafe
+from appjail import textsafe
 
 
 def test_plain_text_untouched():

@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Create the bjail test guest from scratch (works on any machine with qemu, KVM,
+# Create the appjail test guest from scratch (works on any machine with qemu, KVM,
 # cloud-localds and curl). Safe to re-run: existing files are kept unless --force.
 #
 # Host packages (Debian 13): qemu-system-x86 qemu-utils cloud-image-utils
@@ -29,10 +29,10 @@ fi
 if [ "$force" = 1 ] || [ ! -f "$vm/run/disk.qcow2" ]; then
 	rm -f "$vm/run/disk.qcow2" "$vm/run/seed.iso" "$vm/run/known_hosts" "$vm/run/console.log"
 	qemu-img create -q -f qcow2 -F qcow2 -b "../dl/$img" "$vm/run/disk.qcow2" 20G
-	[ -f "$vm/run/id_bjail" ] || ssh-keygen -q -t ed25519 -N '' -C bjail-vm -f "$vm/run/id_bjail"
-	sed -e "s|@SSH_PUBKEY@|$(cat "$vm/run/id_bjail.pub")|" -e "s|@PACKAGES@|$(echo "$packages" | sed 's/ /, /g')|" \
+	[ -f "$vm/run/id_appjail" ] || ssh-keygen -q -t ed25519 -N '' -C appjail-vm -f "$vm/run/id_appjail"
+	sed -e "s|@SSH_PUBKEY@|$(cat "$vm/run/id_appjail.pub")|" -e "s|@PACKAGES@|$(echo "$packages" | sed 's/ /, /g')|" \
 		"$here/user-data.tmpl" > "$vm/run/user-data"
-	printf 'instance-id: bjail-vm-%s\nlocal-hostname: bjail-vm\n' "$(date +%s)" > "$vm/run/meta-data"
+	printf 'instance-id: appjail-vm-%s\nlocal-hostname: appjail-vm\n' "$(date +%s)" > "$vm/run/meta-data"
 	cloud-localds "$vm/run/seed.iso" "$vm/run/user-data" "$vm/run/meta-data"
 fi
 echo "guest ready: run tests/vm/start.sh, wait for cloud-init (tests/vm/ssh.sh 'cloud-init status --wait'), then tests/vm/provision.sh"

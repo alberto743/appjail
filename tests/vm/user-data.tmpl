@@ -1,5 +1,5 @@
 #cloud-config
-hostname: bjail-vm
+hostname: appjail-vm
 users:
   - name: tester
     shell: /bin/bash
@@ -10,4 +10,4 @@ ssh_pwauth: false
 package_update: true
 packages: [@PACKAGES@]
 runcmd:
-  - [ touch, /var/lib/bjail-ready ]
+  - [ touch, /var/lib/appjail-ready ]

@@ -4,7 +4,7 @@
 """End to end `update` against real GitHub in the test guest (AppImage/appimagetool, approved test app).
 
 Opt-in because it downloads the AppImage twice:
-    tests/vm/ssh.sh 'cd ~/bjail && BJAIL_E2E=1 python3 -m pytest tests/test_update_e2e.py -v'
+    tests/vm/ssh.sh 'cd ~/appjail && APPJAIL_E2E=1 python3 -m pytest tests/test_update_e2e.py -v'
 """
 
 import os
@@ -12,10 +12,10 @@ from dataclasses import replace
 
 import pytest
 
-from bjail import appimage, cli, manifest, runner, store
+from appjail import appimage, cli, manifest, runner, store
 
-pytestmark = pytest.mark.skipif(os.environ.get("BJAIL_E2E") != "1",
-                                reason="set BJAIL_E2E=1 in the test guest (downloads an AppImage)")
+pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1",
+                                reason="set APPJAIL_E2E=1 in the test guest (downloads an AppImage)")
 
 
 class Answers(cli.Console):
@@ -33,8 +33,8 @@ class Answers(cli.Console):
 
 
 def test_real_update_from_an_older_pin(tmp_path, monkeypatch):
-    monkeypatch.setenv("BJAIL_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("BJAIL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("APPJAIL_CONFIG_DIR", str(tmp_path / "config"))
     c = Answers(["y"])
     assert cli.main(["add", "AppImage/appimagetool", "--name", "tool"], console=c) == 0, c.lines
     path = store.manifest_path("tool")

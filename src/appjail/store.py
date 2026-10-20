@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Where bjail keeps its files. Nothing is written outside these two trees."""
+"""Where appjail keeps its files. Nothing is written outside these two trees."""
 
 import os
 from pathlib import Path
@@ -13,11 +13,11 @@ def _dir(env, fallback):
 
 
 def data_dir():
-    return _dir("BJAIL_DATA_DIR", ".local/share/bjail")
+    return _dir("APPJAIL_DATA_DIR", ".local/share/appjail")
 
 
 def config_dir():
-    return _dir("BJAIL_CONFIG_DIR", ".config/bjail")
+    return _dir("APPJAIL_CONFIG_DIR", ".config/appjail")
 
 
 def app_dir(name):
@@ -25,7 +25,7 @@ def app_dir(name):
 
 
 def tools_dir():
-    """Pinned helper binaries (see bjail.tools)."""
+    """Pinned helper binaries (see appjail.tools)."""
     return data_dir() / "tools"
 
 

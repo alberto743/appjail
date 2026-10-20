@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from bjail import appimage, cli, jail, store, tools
+from appjail import appimage, cli, jail, store, tools
 from .helpers import Script, integration, write_image
 
 
@@ -38,7 +38,7 @@ def test_pin_is_well_formed():
 
 def test_missing_then_installed_then_corrupt(sandbox, fake_tool):
     assert tools.status("dwarfs") == "missing"
-    with pytest.raises(tools.ToolError, match="bjail tools install dwarfs"):
+    with pytest.raises(tools.ToolError, match="appjail tools install dwarfs"):
         tools.require("dwarfs")
     tools.install("dwarfs", downloader(BODY))
     assert tools.status("dwarfs") == "ok" and tools.require("dwarfs") == tools.path("dwarfs")
@@ -64,7 +64,7 @@ def test_locate_fs_recognises_dwarfs(tmp_path):
 def test_dwarfs_image_without_the_tool_says_what_to_do(sandbox, tmp_path):
     p = tmp_path / "a.AppImage"
     write_image(p, b"DWARFS" + b"\0" * 50)
-    with pytest.raises(appimage.ExtractError, match="bjail tools install dwarfs"):
+    with pytest.raises(appimage.ExtractError, match="appjail tools install dwarfs"):
         appimage.extract(p, tmp_path / "root")
     assert not (tmp_path / "root").exists()
 
@@ -81,7 +81,7 @@ def test_tools_command(sandbox, fake_tool):
 
 
 @integration
-@pytest.mark.skipif(os.environ.get("BJAIL_E2E") != "1", reason="set BJAIL_E2E=1 in the test guest (downloads the pinned dwarfs tool, 2 MB)")
+@pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1", reason="set APPJAIL_E2E=1 in the test guest (downloads the pinned dwarfs tool, 2 MB)")
 def test_real_dwarfs_appimage_is_extracted_and_validated(sandbox, tmp_path):
     tools.install("dwarfs")
     tool = tools.require("dwarfs")

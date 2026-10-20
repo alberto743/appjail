@@ -7,4 +7,4 @@
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 "$here/sync.sh"
-"$here/ssh.sh" "cd ~/bjail && BJAIL_INTEGRATION=1 python3 -m pytest $*"
+"$here/ssh.sh" "cd ~/appjail && APPJAIL_INTEGRATION=1 python3 -m pytest $*"

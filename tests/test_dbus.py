@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from bjail import dbusproxy, jail, manifest, runner
-from bjail.jail import RunError
-from bjail.manifest import ManifestError, Permissions
+from appjail import dbusproxy, jail, manifest, runner
+from appjail.jail import RunError
+from appjail.manifest import ManifestError, Permissions
 from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
 
@@ -157,7 +157,7 @@ def test_proxy_failure_is_reported_and_cleaned_up(runtime, monkeypatch):
     with pytest.raises(RunError, match="did not start"):
         with dbusproxy.Proxy(Permissions(dbus_filter=NAMES[:1]), {"XDG_RUNTIME_DIR": str(runtime)}):
             pass
-    assert [p.name for p in runtime.iterdir() if p.name.startswith("bjail-")] == []
+    assert [p.name for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
 
 
 def test_launch_wraps_the_run_in_the_proxy(sandbox, runtime, monkeypatch):
@@ -243,7 +243,7 @@ def test_proxy_dies_with_the_context(runtime, session_bus):
     with dbusproxy.Proxy(Permissions(dbus_filter=("org.example.Granted",)), env) as sock:
         assert Path(sock).is_socket()
     assert not Path(sock).exists()
-    assert [p for p in runtime.iterdir() if p.name.startswith("bjail-")] == []
+    assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
 
 
 OWN_PROBE = """#!/usr/bin/python3

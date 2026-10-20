@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from bjail import dbusproxy, jail, manifest, portal, runner
-from bjail.jail import RunError
-from bjail.manifest import Manifest, ManifestError, Permissions
+from appjail import dbusproxy, jail, manifest, portal, runner
+from appjail.jail import RunError
+from appjail.manifest import Manifest, ManifestError, Permissions
 from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
 
@@ -22,26 +22,26 @@ HERE = Path(__file__).parent / "portal"
 
 
 @pytest.mark.parametrize("name,expected", [
-    ("lagrange", "app.bjail.lagrange"),
-    ("my-app", "app.bjail.my_app"),
-    ("a.b-c", "app.bjail.a.b_c"),
-    ("7zip", "app.bjail.x7zip"),
-    ("a..b", "app.bjail.a.b"),
+    ("lagrange", "app.appjail.lagrange"),
+    ("my-app", "app.appjail.my_app"),
+    ("a.b-c", "app.appjail.a.b_c"),
+    ("7zip", "app.appjail.x7zip"),
+    ("a..b", "app.appjail.a.b"),
 ])
 def test_app_id(name, expected):
     assert portal.app_id(name) == expected and portal.APP_ID_RE.fullmatch(expected)
 
 
 def test_identity_file_is_minimal():
-    text = portal.identity_file("app.bjail.x", "123")
-    assert text.splitlines()[:2] == ["[Application]", "name=app.bjail.x"]
+    text = portal.identity_file("app.appjail.x", "123")
+    assert text.splitlines()[:2] == ["[Application]", "name=app.appjail.x"]
     assert "instance-id=123" in text and "network" not in text
-    assert "shared=network;" in portal.identity_file("app.bjail.x", "123", network=True)
+    assert "shared=network;" in portal.identity_file("app.appjail.x", "123", network=True)
     assert "/home" not in text and "runtime" not in text.lower()
 
 
 def test_instance_lifecycle(tmp_path):
-    with portal.Instance(tmp_path, "app.bjail.x") as inst:
+    with portal.Instance(tmp_path, "app.appjail.x") as inst:
         assert inst.dir.parent == tmp_path / ".flatpak" and (inst.dir.stat().st_mode & 0o777) == 0o700
         assert f"instance-id={inst.id}" in inst.info.read_text()
         assert not (inst.dir / "bwrapinfo.json").exists()
@@ -51,7 +51,7 @@ def test_instance_lifecycle(tmp_path):
 
 
 def test_instances_do_not_collide(tmp_path):
-    with portal.Instance(tmp_path, "app.bjail.x") as a, portal.Instance(tmp_path, "app.bjail.x") as b:
+    with portal.Instance(tmp_path, "app.appjail.x") as a, portal.Instance(tmp_path, "app.appjail.x") as b:
         assert a.id != b.id and a.dir != b.dir
 
 
@@ -124,7 +124,7 @@ def test_status_and_block_fds_are_passed_to_bwrap(sandbox, runtime):
 
 def test_missing_document_portal_is_a_clear_error(tmp_path):
     with pytest.raises(RunError, match="document portal is not running"):
-        portal.doc_dir(tmp_path, "app.bjail.x")
+        portal.doc_dir(tmp_path, "app.appjail.x")
 
 
 # -- the real portal (guest) -------------------------------------------------------------------
@@ -187,14 +187,14 @@ def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, mo
     out = capfd.readouterr()
     assert code == 0, out.err
     r = json.loads(out.out.strip().splitlines()[-1])
-    assert log.read_text().split() == ["app.bjail.app"]  # the portal knew who called, from our identity only
+    assert log.read_text().split() == ["app.appjail.app"]  # the portal knew who called, from our identity only
     assert r["response"] == 0 and r["uris"][0].startswith(f"file://{runtime}/doc/")
     assert r["content"] == "hello from the host"  # read through the document-portal mount in the jail
     assert r["flatpak_info"] is False
     assert "AccessDenied" in r["OpenURI"]  # not in the safe set: the proxy refuses it
     assert "AccessDenied" in r["host_control"] and "ServiceUnknown" in r["Flatpak"]
     assert not (runtime / ".flatpak").exists()
-    assert [p for p in runtime.iterdir() if p.name.startswith("bjail-")] == []
+    assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
 
 
 @integration
@@ -226,5 +226,5 @@ def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal
     out = capfd.readouterr()
     assert code == 0, out.err
     r = json.loads(out.out.strip().splitlines()[-1])
-    assert log.read_text().split() == ["app.bjail.app"] and r["response"] == 0
-    assert [p for p in runtime.iterdir() if p.name.startswith("bjail-")] == []
+    assert log.read_text().split() == ["app.appjail.app"] and r["response"] == 0
+    assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []

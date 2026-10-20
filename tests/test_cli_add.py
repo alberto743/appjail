@@ -6,8 +6,8 @@ from unittest import mock
 
 import pytest
 
-from bjail import appimage, cli, cmd_add, github, manifest, store
-from bjail.cli import Abort
+from appjail import appimage, cli, cmd_add, github, manifest, store
+from appjail.cli import Abort
 from .helpers import FAKE_APPIMAGE, FakeClient, SHA, Script, asset, info, release
 
 

@@ -67,7 +67,7 @@ class Proxy:
         if not os.access(PROXY, os.X_OK):
             raise RunError("dbus_filter, dbus_own and portals need xdg-dbus-proxy (apt install xdg-dbus-proxy)")
         bus = host_bus(self.host_env)
-        self.dir = Path(tempfile.mkdtemp(prefix="bjail-", dir=self.host_env["XDG_RUNTIME_DIR"]))
+        self.dir = Path(tempfile.mkdtemp(prefix="appjail-", dir=self.host_env["XDG_RUNTIME_DIR"]))
         read_fd, write_fd = os.pipe()
         try:
             argv = [jail.find_bwrap(), *proxy_args(bus, self.dir, self.perms, write_fd, self.identity)]

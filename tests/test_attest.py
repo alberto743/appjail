@@ -8,8 +8,8 @@ import subprocess
 
 import pytest
 
-from bjail import attest, cli, github, jail, manifest, snappy, store, tools
-from bjail.github import Client, GitHubError
+from appjail import attest, cli, github, jail, manifest, snappy, store, tools
+from appjail.github import Client, GitHubError
 from .helpers import FakeClient, NEW_IMAGE, NOW, Script, T0, installed, integration, release2
 
 
@@ -183,7 +183,7 @@ def test_verify_failures(fake_gh, tmp_path, rc, out, err, match):
 def test_verify_without_bundles_or_tool(sandbox, tmp_path):
     with pytest.raises(attest.AttestError, match="no attestation"):
         attest.verify(tmp_path, "o/App", [])
-    with pytest.raises(attest.AttestError, match="bjail tools install gh"):
+    with pytest.raises(attest.AttestError, match="appjail tools install gh"):
         attest.verify(tmp_path, "o/App", [BUNDLE])
 
 
@@ -274,7 +274,7 @@ GH_SUBJECT_SHA = tools.TOOLS["gh"].sha256
 
 
 @integration
-@pytest.mark.skipif(os.environ.get("BJAIL_E2E") != "1", reason="set BJAIL_E2E=1 in the test guest (downloads gh, 15 MB)")
+@pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1", reason="set APPJAIL_E2E=1 in the test guest (downloads gh, 15 MB)")
 def test_real_sigstore_verification_of_a_cli_release(sandbox, tmp_path):
     tools.install("gh")
     # the subject is the very archive the tool was installed from: download it again in the jail

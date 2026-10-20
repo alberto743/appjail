@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`bjail tools`, `history`, `list`, `remove` and `perms`."""
+"""`appjail tools`, `history`, `list`, `remove` and `perms`."""
 
 from dataclasses import replace
 from pathlib import Path
@@ -19,7 +19,7 @@ def cmd_tools(args, console, download=jail.download):
         return
     tool = tools.TOOLS[args.tool]
     console.out(f"{tool.name}: {tool.url}")
-    console.out(f"  size {tool.size} bytes, sha256 {tool.sha256} (pinned in bjail's source)")
+    console.out(f"  size {tool.size} bytes, sha256 {tool.sha256} (pinned in appjail's source)")
     if not console.confirm("Download it in a network-only jail and keep it only if it matches?"):
         raise Abort("cancelled")
     try:

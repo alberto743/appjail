@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`bjail add`, and the install steps `update` shares with it."""
+"""`appjail add`, and the install steps `update` shares with it."""
 
 import os
 import re
@@ -118,7 +118,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         try:
             if client.has_attestation(source, asset.sha256):
                 attestation = ("present (verified after the download)" if tools.status("gh") == "ok"
-                               else "present, cannot be verified: run `bjail tools install gh` to enable tier 1")
+                               else "present, cannot be verified: run `appjail tools install gh` to enable tier 1")
             else:
                 attestation = "none found"
         except github.GitHubError:

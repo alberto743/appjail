@@ -4,8 +4,8 @@
 
 import pytest
 
-from bjail import manifest
-from bjail.manifest import Manifest, ManifestError, Permissions
+from appjail import manifest
+from appjail.manifest import Manifest, ManifestError, Permissions
 
 SHA = "a" * 64
 
