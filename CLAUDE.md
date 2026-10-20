@@ -28,6 +28,11 @@ State: MVP steps 1-6, D-Bus filtering and the hardening round are done and commi
 Known limits are listed in DESIGN.md (tier 4 assets swapped in place are caught by the hash recorded during the quarantine, if the user allowed that download). Decided 2026-10-20: GitHub is the only forge for now (gap documented in DESIGN.md Resolver); x86-64 only; the LAN is outside the threat model for apps with `network`.
 Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-init status --wait'`), `tests/vm/provision.sh` if `packages.txt` changed, then `tests/vm/test.sh`.
 
+## CI (GitHub Actions, `.github/`)
+- `workflows/ci.yml`: full suite with `BJAIL_INTEGRATION=1` on `ubuntu-24.04` (sets `kernel.apparmor_restrict_unprivileged_userns=0` with sudo, installs `tests/vm/packages.txt` minus the kernel and `reuse`). Tests that need things the runner lacks skip themselves (GPU, real portal frontend older than 1.20, `reuse` too old for `REUSE.toml`). `workflows/reuse.yml`: the official `fsfe/reuse-action`. `dependabot.yml`: weekly updates of the actions, which are pinned to commit SHAs (the tool has no Python dependencies to update).
+- CI is the only place besides the guest where tests run; it runs on GitHub's runners, not on the host. After pushing, read results with `gh run list/view/watch` (read-only). A red CI on `main` is a bug to fix, not to ignore. Runner differences already found: Ubuntu's Xwayland refused the app's own clients (fixed with `-ac`, DESIGN.md "Xwayland") and xdg-desktop-portal 1.18 (DESIGN.md "Portals").
+- New workflows or actions: pin by SHA with a version comment, keep `permissions: contents: read`.
+
 ## Code layout
 `bjail/cli.py` is only the parser and dispatcher (and re-exports what tests import); the commands are in `cmd_add.py` (also the install steps `update` shares), `cmd_update.py`, `cmd_apps.py` (tools, history, list, remove, perms), `cmd_index.py` (search, index update); `console.py` (Abort, Console), `permargs.py` (permission options). Add new commands as `cmd_<name>.py`, not to `cli.py`.
 
