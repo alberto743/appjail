@@ -586,7 +586,8 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
         (kw["root"] / "AppRun").chmod(0o755)
         proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
         text = (kw["home"] / "out.txt").read_text()
-        assert proc.returncode == 0 and "name of display" in text, text + proc.stderr
+        xlog = (kw["home"] / "xwayland.log").read_text() if (kw["home"] / "xwayland.log").exists() else "no xwayland.log"
+        assert proc.returncode == 0 and "name of display" in text, text + proc.stderr + "\nXWAYLAND LOG:\n" + xlog + f"\nuid={os.getuid()} gid={os.getgid()}"
         assert "wl=\n" in text + "\n" and "display=:" in text
     finally:
         weston.terminate()
