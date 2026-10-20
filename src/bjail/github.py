@@ -182,17 +182,20 @@ class Client:
             raise GitHubError(f"not a valid release tag: {textsafe.clean(tag, 60)!r}")
         return _release(source, self._get(f"/repos/{source}/releases/tags/{urllib.parse.quote(tag)}"))
 
-    def has_attestation(self, source, sha256):
-        """True if GitHub holds at least one attestation for this digest (existence only)."""
+    def _attestations(self, source, sha256):
+        """The attestation records GitHub lists for this digest (a list; empty when there are none)."""
         _check_source(source)
         if not manifest.SHA256_RE.fullmatch(sha256):
             raise GitHubError("invalid sha256")
         try:
             data = self._get(f"/repos/{source}/attestations/sha256:{sha256}")
         except NotFound:
-            return False
-        return bool(data.get("attestations"))
+            return []
+        return data.get("attestations") or []
 
+    def has_attestation(self, source, sha256):
+        """True if GitHub holds at least one attestation for this digest (existence only)."""
+        return bool(self._attestations(source, sha256))
 
     def attestation_bundles(self, source, sha256, limit=5):
         """Sigstore bundles (parsed JSON objects) GitHub holds for this digest, to be verified elsewhere.
@@ -201,15 +204,8 @@ class Client:
         blob.core.windows.net (fetched without credentials, size-capped) and is Snappy-compressed.
         Nothing here is trusted: the bundles only become evidence after `bjail.attest` verifies them.
         """
-        _check_source(source)
-        if not manifest.SHA256_RE.fullmatch(sha256):
-            raise GitHubError("invalid sha256")
-        try:
-            data = self._get(f"/repos/{source}/attestations/sha256:{sha256}")
-        except NotFound:
-            return []
         out = []
-        for item in (data.get("attestations") or [])[:limit]:
+        for item in self._attestations(source, sha256)[:limit]:
             bundle = item.get("bundle") if isinstance(item, dict) else None
             url = item.get("bundle_url") if isinstance(item, dict) else None
             if bundle is None and isinstance(url, str):

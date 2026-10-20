@@ -160,7 +160,7 @@ def _read(name):
 
 
 def current():
-    return _read("PINNED")
+    return index.pinned_commit()
 
 
 def previous():

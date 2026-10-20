@@ -10,12 +10,13 @@ import os
 import shutil
 import signal
 import stat
-import sys
 import subprocess
+import sys
 import time
 from pathlib import Path
 
-from . import manifest
+from . import manifest, store
+from .textsafe import clean
 
 FETCHER = Path(__file__).with_name("fetcher.py")
 SYSTEM_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64")
@@ -25,6 +26,10 @@ SAFE_ENV = {"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C.UTF-8", "PYTHOND
 
 
 class JailError(Exception):
+    pass
+
+
+class RunError(Exception):
     pass
 
 
@@ -96,7 +101,6 @@ def system_args():
 
 
 def _pasta_resolv_conf():
-    from . import store
     path = store.data_dir() / "resolv.conf.pasta"
     text = f"nameserver {PASTA_DNS}\n"
     if not path.is_file() or path.read_text() != text:
@@ -207,7 +211,6 @@ def download(url, stage_dir, filename, expected_size):
     cmd = ["/usr/bin/python3", "-I", "/fetcher.py", url, f"/stage/{filename}", str(int(expected_size))]
     proc = run(download_args(stage_dir, cmd))
     if proc.returncode != 0:
-        from .textsafe import clean
         raise JailError("download failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
     return Path(stage_dir) / filename
 
@@ -221,12 +224,7 @@ RUNTIME_ETC = ("/etc/fonts", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.
 GPU_RO = ("/sys/dev/char", "/sys/devices", "/usr/share/glvnd", "/usr/share/vulkan", "/etc/vulkan", "/etc/glvnd")
 
 
-class RunError(Exception):
-    pass
-
-
 def _guard_dirs():
-    from . import store
     return [store.data_dir().resolve(), store.config_dir().resolve()]
 
 
@@ -267,7 +265,7 @@ def file_binds(files, home):
     args, dests = [], []
     home_real = Path(home).resolve()
     for entry in files:
-        path, mode = (entry[:-3], "rw") if entry.endswith(":rw") else (entry[:-3] if entry.endswith(":ro") else entry, "")
+        path, mode = manifest.split_file_mode(entry)
         try:
             real = Path(path).resolve(strict=True)
             regular = stat.S_ISREG(real.stat().st_mode)
@@ -420,19 +418,20 @@ GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_TE
            "GIT_ALLOW_PROTOCOL": "https", "GIT_LFS_SKIP_SMUDGE": "1"}
 
 
-def local_git_args(workdir, command):
-    """No network: git on a local repository. Only workdir (at /work) is visible and writable."""
+def _git_jail(workdir, command, network):
     env = []
     for k, v in GIT_ENV.items():
         env += ["--setenv", k, v]
-    return (common_args() + env
+    net = ["--share-net", *etc_args(private_net=True)] if network else []
+    return (common_args() + net + env
             + ["--bind", str(workdir), "/work", "--remount-ro", "/", "--chdir", "/work", "--"] + command)
+
+
+def local_git_args(workdir, command):
+    """No network: git on a local repository. Only workdir (at /work) is visible and writable."""
+    return _git_jail(workdir, command, network=False)
 
 
 def git_args(workdir, command):
     """Network jail for git: only workdir (at /work) is writable; git's own config is neutralised."""
-    env = []
-    for k, v in GIT_ENV.items():
-        env += ["--setenv", k, v]
-    return (common_args() + ["--share-net"] + etc_args(private_net=True) + env
-            + ["--bind", str(workdir), "/work", "--remount-ro", "/", "--chdir", "/work", "--"] + command)
+    return _git_jail(workdir, command, network=True)

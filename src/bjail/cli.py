@@ -12,7 +12,7 @@ import sys
 from . import github, index, indexsync, jail, manifest, runner, tools, updater
 from .cmd_add import cmd_add
 from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
-from .cmd_index import cmd_index_update, cmd_search
+from .cmd_index import cmd_index_rollback, cmd_index_status, cmd_index_update, cmd_search
 from .cmd_update import cmd_update
 from .console import Abort, Console
 from .permargs import PERMISSION_FLAGS, dirs_from_args, files_from_args
@@ -107,11 +107,9 @@ def main(argv=None, client=None, console=None):
             if args.index_command == "update":
                 cmd_index_update(args, console)
             elif args.index_command == "rollback":
-                a, b = indexsync.rollback()
-                console.out(f"Index rolled back from {a[:12]} to {b[:12]}.")
+                cmd_index_rollback(console)
             else:
-                cur = indexsync.current()
-                console.out(f"Pinned: {cur or 'no index yet'}" + (f"; previous: {indexsync.previous()}" if indexsync.previous() else ""))
+                cmd_index_status(console)
         elif args.command == "search":
             cmd_search(args, console)
         elif args.command == "update":

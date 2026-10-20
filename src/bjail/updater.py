@@ -3,7 +3,7 @@
 
 """Update policy: what blocks an update, the quarantine clock, and the pending-candidate state.
 
-No network and no downloads here; `cli.cmd_update` drives the I/O. The pending file records when
+No network and no downloads here; `cmd_update` drives the I/O. The pending file records when
 a given candidate was first seen, so the delay cannot be shortened by republishing or waiting
 on an old `published_at`: a different candidate starts a new clock.
 """
@@ -92,16 +92,20 @@ def load_pending(name):
     return None
 
 
+def _write_pending(name, data):
+    path = pending_path(name)
+    tmp = path.with_name(".pending.json.tmp")
+    tmp.write_text(json.dumps(data), encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
+
+
 def note_seen(name, key, tag, now):
     """First-seen time of this candidate, recorded on first sight and kept afterwards."""
     prev = load_pending(name)
     if prev and prev["key"] == key:
         return parse_stamp(prev["first_seen"])
-    path = pending_path(name)
-    tmp = path.with_name(".pending.json.tmp")
-    tmp.write_text(json.dumps({"key": key, "tag": tag, "first_seen": stamp(now)}), encoding="utf-8")
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    _write_pending(name, {"key": key, "tag": tag, "first_seen": stamp(now)})
     return now.replace(microsecond=0)
 
 
@@ -114,11 +118,7 @@ def record_hash(name, key, digest):
     prev = load_pending(name)
     if not prev or prev["key"] != key:
         return
-    path = pending_path(name)
-    tmp = path.with_name(".pending.json.tmp")
-    tmp.write_text(json.dumps({**prev, "sha256": digest}), encoding="utf-8")
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    _write_pending(name, {**prev, "sha256": digest})
 
 
 def clear_pending(name):

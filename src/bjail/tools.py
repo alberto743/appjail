@@ -9,7 +9,6 @@ mismatch; `require` re-hashes the file before every use and only ever runs it in
 jail. Updating a tool means changing these constants in a reviewed commit.
 """
 
-import hashlib
 import os
 import secrets
 import shutil
@@ -17,6 +16,7 @@ import tarfile
 from dataclasses import dataclass
 
 from . import jail, store
+from .appimage import sha256_file
 
 
 class ToolError(Exception):
@@ -59,21 +59,13 @@ def path(name):
     return store.tools_dir() / name
 
 
-def _hash(p):
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def status(name):
     """'missing', 'ok' or 'corrupt' for an installed tool."""
     p = path(name)
     if not p.is_file():
         return "missing"
     t = TOOLS[name]
-    return "ok" if _hash(p) == (t.exe_sha256 or t.sha256) else "corrupt"
+    return "ok" if sha256_file(p) == (t.exe_sha256 or t.sha256) else "corrupt"
 
 
 def require(name):
@@ -101,7 +93,7 @@ def _unpack(tool, archive, stage):
                 shutil.copyfileobj(src, f)
     except (tarfile.TarError, KeyError, OSError) as e:
         raise ToolError(f"cannot unpack the {tool.name} archive: {e}") from e
-    if _hash(out) != tool.exe_sha256:
+    if sha256_file(out) != tool.exe_sha256:
         raise ToolError(f"the unpacked {tool.name} does not match its pinned sha256; nothing was kept")
     return out
 
@@ -113,7 +105,7 @@ def install(name, download=jail.download):
     stage.mkdir(parents=True, mode=0o700)
     try:
         staged = download(tool.url, stage, name, tool.size)
-        if staged.stat().st_size != tool.size or _hash(staged) != tool.sha256:
+        if staged.stat().st_size != tool.size or sha256_file(staged) != tool.sha256:
             raise ToolError(f"the downloaded {name} does not match its pinned size and sha256; nothing was kept")
         if tool.member:
             staged = _unpack(tool, staged, stage)

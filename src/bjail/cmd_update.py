@@ -8,28 +8,24 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 from . import appimage, attest, github, history, jail, manifest, store, updater
-from .cmd_add import MAX_ASSET, gather_evidence, pick_asset, swap_in
+from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
 from .console import Abort, human_size
+from .permargs import granted_summary
+
+
 
 def hash_candidate(asset, download):
     """Download the candidate in the jail only to learn its sha256 (nothing is installed); the stage is removed."""
     stage = store.staging_root() / secrets.token_hex(8)
     stage.mkdir(parents=True, mode=0o700)
     try:
-        staged = download(asset.url, stage, "download.AppImage", asset.size)
-        if staged.stat().st_size != asset.size:
-            raise Abort("downloaded size differs from the size GitHub announced")
-        try:
-            appimage.appimage_type(staged)
-        except appimage.NotAnAppImage as e:
-            raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
-        return appimage.sha256_file(staged)
+        return download_verified(download, asset, stage)[1]
     finally:
         appimage.remove_tree(stage)
 
 
 def update_app(name, args, client, console, download, now, extract, extract_ok, verify=attest.verify):
-    """Update one app. Returns 'updated', 'current', 'waiting', 'blocked' or 'declined'."""
+    """Update one app. Returns 'updated', 'current', 'pinned', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
     info = client.repo_info(m.source)
     console.out(f"{name}: {info.full_name}, installed {m.version} (published {m.published_at}, tier {m.evidence_tier})")
@@ -61,7 +57,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
     console.out(f"  asset      : {asset.name} ({human_size(asset.size)})")
     console.out(f"  sha256     : {m.sha256}\n            -> {asset.sha256 or 'unknown until downloaded (no GitHub digest)'}")
     console.out(f"  evidence   : tier {m.evidence_tier} -> {3 if asset.sha256 else 4}")
-    console.out(f"  permissions: unchanged ({', '.join(f'{k}={v}' for k, v in vars(m.permissions).items() if v not in ((), False)) or 'none'})")
+    console.out(f"  permissions: unchanged ({granted_summary(m.permissions) or 'none'})")
     attested = None
     if m.evidence_tier == 1:  # a build-attested app must stay build-attested
         attested = bool(asset.sha256 and client.has_attestation(info.full_name, asset.sha256))
@@ -101,12 +97,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
     stage = store.staging_root() / secrets.token_hex(8)
     stage.mkdir(parents=True, mode=0o700)
     try:
-        staged = download(asset.url, stage, "download.AppImage", asset.size)
-        if staged.stat().st_size != asset.size:
-            raise Abort("downloaded size differs from the size GitHub announced")
-        digest = appimage.sha256_file(staged)
-        if asset.sha256 and digest != asset.sha256:
-            raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
+        staged, digest = download_verified(download, asset, stage)
         pending = updater.load_pending(name)
         if not asset.sha256 and pending and pending["key"] == key and pending.get("sha256") not in (None, digest):
             console.warn(f"CHANGED DURING QUARANTINE: the asset hashed {pending['sha256']} when first seen but downloads "
@@ -115,10 +106,6 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
             updater.note_seen(name, key, release.tag, now)
             updater.record_hash(name, key, digest)
             return "blocked"
-        try:
-            appimage.appimage_type(staged)
-        except appimage.NotAnAppImage as e:
-            raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
         tier, why = gather_evidence(client, info, staged, digest, 3 if asset.sha256 else 4, console, verify)
         if m.evidence_tier == 1 and tier != 1:
             raise Abort(f"EVIDENCE DOWNGRADE: the previous release was build-attested but this one could not be verified ({why or 'no attestation'}); nothing was installed")

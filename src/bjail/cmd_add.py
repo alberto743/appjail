@@ -10,14 +10,10 @@ import shutil
 
 from . import appimage, attest, github, history, jail, manifest, store, tools
 from .console import Abort, human_size
-from .permargs import permissions_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
+from .permargs import granted_summary, permissions_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
 
 MAX_ASSET = 2 * 1024 ** 3
-
-
 YOUNG_ACCOUNT_DAYS = 90
-
-
 FEW_STARS = 10
 
 
@@ -45,6 +41,22 @@ def show_review(console, info, now=None):
         console.warn(f"the owner account is only {days} days old")
     if info.stars < FEW_STARS:
         console.warn("the repository has very few stars")
+
+
+def download_verified(download, asset, stage):
+    """Download the asset in the jail and check what can be checked: the announced size, GitHub's digest if
+    there is one, and that it is a type-2 AppImage. Returns (staged path, sha256)."""
+    staged = download(asset.url, stage, "download.AppImage", asset.size)
+    if staged.stat().st_size != asset.size:
+        raise Abort("downloaded size differs from the size GitHub announced")
+    digest = appimage.sha256_file(staged)
+    if asset.sha256 and digest != asset.sha256:
+        raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
+    try:
+        appimage.appimage_type(staged)
+    except appimage.NotAnAppImage as e:
+        raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
+    return staged, digest
 
 
 def gather_evidence(client, info, staged, digest, base_tier, console, verify=attest.verify):
@@ -116,8 +128,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     tier = 3 if asset.sha256 else 4
     if tier == 4:
         console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
-    granted = [f"{k}={v}" for k, v in vars(perms).items() if v not in ((), False)]
-    console.out("Permissions: " + ", ".join(granted))
+    console.out("Permissions: " + granted_summary(perms))
     warn_sensitive_dbus(console, perms.dbus_filter)
     warn_owned_dbus(console, perms.dbus_own)
     warn_privileged_portals(console, perms.portal_interfaces)
@@ -135,16 +146,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     stage = store.staging_root() / secrets.token_hex(8)
     stage.mkdir(parents=True, mode=0o700)
     try:
-        staged = download(asset.url, stage, "download.AppImage", asset.size)
-        if staged.stat().st_size != asset.size:
-            raise Abort("downloaded size differs from the size GitHub announced")
-        digest = appimage.sha256_file(staged)
-        if asset.sha256 and digest != asset.sha256:
-            raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
-        try:
-            appimage.appimage_type(staged)
-        except appimage.NotAnAppImage as e:
-            raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
+        staged, digest = download_verified(download, asset, stage)
         tier, why = gather_evidence(client, info, staged, digest, tier, console, verify)
         if why:
             console.warn(f"attestation not counted: {why}")

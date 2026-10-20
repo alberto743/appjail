@@ -257,7 +257,6 @@ def extract(appimage, dest, runtime_fallback=False):
         if have_unsquashfs():
             cmd = [UNSQUASHFS, "-no-progress", "-no-xattrs", "-p", "2", "-o", str(offset),
                    "-d", "/out/root", "/app.AppImage"]
-            source, bind = appimage, work
             tree = work / "root"
         else:
             # The runtime must be executable inside the jail: use a private copy.
@@ -265,9 +264,8 @@ def extract(appimage, dest, runtime_fallback=False):
             shutil.copyfile(appimage, copy)
             copy.chmod(0o700)
             cmd = ["/out/app.AppImage", "--appimage-extract"]
-            source, bind = appimage, work
             tree = work / "squashfs-root"
-        proc = _run_extraction(jail.extract_args(source, bind, cmd), work)
+        proc = _run_extraction(jail.extract_args(appimage, work, cmd), work)
         if proc.returncode != 0:
             raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
         if not tree.is_dir():

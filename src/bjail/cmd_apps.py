@@ -10,6 +10,7 @@ from . import appimage, history, jail, manifest, store, tools, updater
 from .console import Abort
 from .permargs import PERMISSION_FLAGS, dbus_from_args, describe_permissions, dirs_from_args, portals_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
 
+
 def cmd_tools(args, console, download=jail.download):
     names = sorted(tools.TOOLS)
     if args.tools_command == "status":
@@ -76,6 +77,14 @@ def cmd_remove(args, console):
     console.out(f"Removed {name}.")
 
 
+def without(names, remove, what):
+    """names minus remove; Abort(what: ...) when something to remove is not in names."""
+    missing = [n for n in remove if n not in names]
+    if missing:
+        raise Abort(f"{what}: " + ", ".join(missing))
+    return tuple(n for n in names if n not in remove)
+
+
 def cmd_perms(args, console):
     name = args.app
     if not manifest.NAME_RE.fullmatch(name) or not store.manifest_path(name).is_file():
@@ -83,9 +92,8 @@ def cmd_perms(args, console):
     m = manifest.load(store.manifest_path(name))
     p = m.permissions
     changes = {}
-    for flag in args.allow + args.deny:
-        if flag in args.allow and flag in args.deny:
-            raise Abort(f"{flag} cannot be both allowed and denied")
+    for flag in sorted(set(args.allow) & set(args.deny)):
+        raise Abort(f"{flag} cannot be both allowed and denied")
     for flag in args.allow:
         changes[flag] = True
     if changes.get("network_host"):
@@ -113,25 +121,14 @@ def cmd_perms(args, console):
         dirs = manifest.merge_dirs(dirs, dirs_from_args(args.add_dir))
     if dirs != p.dirs:
         changes["dirs"] = dirs
-    bus = dbus_from_args(args.add_dbus, p.dbus_filter)
-    missing = [n for n in args.rm_dbus if n not in bus]
-    if missing:
-        raise Abort("not allowed: " + ", ".join(missing))
-    bus = tuple(n for n in bus if n not in args.rm_dbus)
+    bus = without(dbus_from_args(args.add_dbus, p.dbus_filter), args.rm_dbus, "not allowed")
     if bus != p.dbus_filter:
         changes["dbus_filter"] = bus
     own = dbus_from_args(args.add_dbus_own, p.dbus_own, manifest.check_dbus_own, "--add-dbus-own")
-    missing = [n for n in args.rm_dbus_own if n not in own]
-    if missing:
-        raise Abort("not owned: " + ", ".join(missing))
-    own = tuple(n for n in own if n not in args.rm_dbus_own)
+    own = without(own, args.rm_dbus_own, "not owned")
     if own != p.dbus_own:
         changes["dbus_own"] = own
-    portal_names = portals_from_args(args.add_portal, p.portal_interfaces)
-    missing = [n for n in args.rm_portal if n not in portal_names]
-    if missing:
-        raise Abort("not allowed: " + ", ".join(missing))
-    portal_names = tuple(n for n in portal_names if n not in args.rm_portal)
+    portal_names = without(portals_from_args(args.add_portal, p.portal_interfaces), args.rm_portal, "not allowed")
     if changes.get("portals") is False:
         portal_names = ()
     if portal_names != p.portal_interfaces:

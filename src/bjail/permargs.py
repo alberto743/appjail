@@ -33,11 +33,11 @@ def files_from_args(specs, cwd=None):
     cwd = Path(cwd or Path.cwd())
     out = []
     for spec in specs:
-        path, mode = (spec[:-3], ":rw") if spec.endswith(":rw") else (spec[:-3] if spec.endswith(":ro") else spec, "")
+        path, mode = manifest.split_file_mode(spec)
         full = Path(os.path.normpath(cwd / path))
         if not full.is_file():
             raise Abort(f"--file {spec}: not a regular file")
-        out.append(f"{full}{mode}")
+        out.append(f"{full}:rw" if mode else str(full))
     return tuple(out)
 
 
@@ -56,15 +56,7 @@ def dbus_from_args(names, current=(), check=manifest.check_dbus_name, flag="--db
 
 def portals_from_args(names, current=()):
     """Validated opt-in portal interfaces merged into the current list (order kept, no duplicates)."""
-    out = list(current)
-    for name in names:
-        try:
-            manifest.check_portal_interface(name)
-        except manifest.ManifestError as e:
-            raise Abort(f"--portal {name}: {e}") from e
-        if name not in out:
-            out.append(name)
-    return tuple(out)
+    return dbus_from_args(names, current, manifest.check_portal_interface, "--portal")
 
 
 def warn_privileged_portals(console, names):
@@ -106,6 +98,11 @@ def permissions_from_args(args):
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
     )
+
+
+def granted_summary(p):
+    """`key=value` for every permission that is granted, comma-separated (empty when nothing is)."""
+    return ", ".join(f"{k}={v}" for k, v in vars(p).items() if v not in ((), False))
 
 
 def describe_permissions(p):

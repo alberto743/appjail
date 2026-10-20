@@ -9,6 +9,7 @@ import shutil
 from . import index, indexsync, store
 from .console import Abort
 
+
 def cmd_search(args, console):
     hits, total = index.search(args.keywords, limit=args.limit if not args.all else 10 ** 9)
     commit = index.pinned_commit()
@@ -57,6 +58,16 @@ def cmd_index_update(args, console, fetch=indexsync.fetch):
     finally:
         shutil.rmtree(work, ignore_errors=True)
     console.out(f"Index pinned at {got.commit[:12]}. Previous: {(indexsync.previous() or 'none')[:12]}.")
+
+
+def cmd_index_rollback(console):
+    a, b = indexsync.rollback()
+    console.out(f"Index rolled back from {a[:12]} to {b[:12]}.")
+
+
+def cmd_index_status(console):
+    cur, prev = indexsync.current(), indexsync.previous()
+    console.out(f"Pinned: {cur or 'no index yet'}" + (f"; previous: {prev}" if prev else ""))
 
 
 def show_index_diff(console, old, d):

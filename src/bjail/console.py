@@ -5,6 +5,7 @@
 
 from . import textsafe
 
+
 class Abort(Exception):
     """The user declined, or the operation cannot continue; message is shown as is."""
 

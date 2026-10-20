@@ -248,6 +248,13 @@ def normalize_dir(spec, home, cwd):
     return _check_dir(_text(entry, "directory"))
 
 
+def split_file_mode(spec):
+    """(path, "rw" or "") for a PATH, PATH:ro or PATH:rw file argument."""
+    if spec.endswith(":rw"):
+        return spec[:-3], "rw"
+    return (spec[:-3] if spec.endswith(":ro") else spec), ""
+
+
 def merge_dirs(base, extra):
     """Union of two dirs lists keyed by path; read-write wins over read-only."""
     merged = {}
@@ -278,28 +285,11 @@ def _permissions(table):
     if not isinstance(table, dict):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
-    perms = {}
-    for key in BOOL_PERMS:
+    # Only the shape is settled here (lists of strings); validate() checks every value.
+    perms = {key: table[key] for key in (*BOOL_PERMS, "display") if key in table}
+    for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs"):
         if key in table:
-            perms[key] = _bool(table[key], f"permissions.{key}")
-    if "display" in table:
-        if table["display"] not in DISPLAYS:
-            raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
-        perms["display"] = table["display"]
-    if "dbus_filter" in table:
-        names = _str_list(table["dbus_filter"], "permissions.dbus_filter")
-        for n in names:
-            check_dbus_name(n)
-        perms["dbus_filter"] = tuple(names)
-    if "dbus_own" in table:
-        perms["dbus_own"] = tuple(check_dbus_own(n) for n in _str_list(table["dbus_own"], "permissions.dbus_own"))
-    if "portal_interfaces" in table:
-        names = _str_list(table["portal_interfaces"], "permissions.portal_interfaces")
-        perms["portal_interfaces"] = tuple(check_portal_interface(n) for n in names)
-    if "dirs" in table:
-        perms["dirs"] = tuple(_check_dir(d) for d in _str_list(table["dirs"], "permissions.dirs"))
-    _portal_consistency(Permissions(**perms))
-    _network_consistency(Permissions(**perms))
+            perms[key] = tuple(_str_list(table[key], f"permissions.{key}"))
     return Permissions(**perms)
 
 

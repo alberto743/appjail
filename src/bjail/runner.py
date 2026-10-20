@@ -3,6 +3,7 @@
 
 """Run an installed app: verify the pin, make sure the tree matches it, start the jail."""
 
+import contextlib
 import json
 import os
 import select
@@ -11,8 +12,6 @@ import subprocess
 import tempfile
 from dataclasses import replace
 from pathlib import Path
-
-import contextlib
 
 from . import appimage, dbusproxy, history, jail, manifest, portal, seccomp, store, wayland
 from .jail import RunError

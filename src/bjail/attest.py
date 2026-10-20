@@ -19,6 +19,7 @@ import shutil
 from dataclasses import dataclass
 
 from . import jail, store, tools
+from .textsafe import clean
 
 ISSUER = "https://token.actions.githubusercontent.com"
 TIMEOUT = 180
@@ -92,7 +93,6 @@ def verify(subject, full_name, bundles, owner_id=None, run=jail.run):
         except jail.JailError as e:
             raise AttestError(str(e)) from e
         if proc.returncode != 0:
-            from .textsafe import clean
             raise AttestError("verification failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 300))
         try:
             results = json.loads(proc.stdout)
