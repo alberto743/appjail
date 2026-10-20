@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bjail"
+version = "0.1.0"
+description = "Sandboxed AppImage manager built on bubblewrap"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MPL-2.0"
+license-files = ["LICENSES/MPL-2.0.txt"]
+dependencies = []  # standard library only, by design
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+    "Topic :: Security",
+    "Topic :: System :: Software Distribution",
+]
+
+[project.scripts]
+bjail = "bjail.cli:main"
+
+[tool.setuptools]
+packages = ["bjail"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"

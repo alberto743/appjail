@@ -49,7 +49,13 @@ cd bjail
 bin/bjail --help
 ```
 
-Put `bin/bjail` on your `PATH` if you like. Update bjail with `git pull` after reading what changed.
+Put `bin/bjail` on your `PATH` if you like. Or install it as a command with pip (there are no dependencies; pip downloads only the build backend):
+
+```sh
+pipx install .          # or: pip install --user .
+```
+
+Update bjail with `git pull` after reading what changed (and reinstall if you used pip).
 
 Data lives in `~/.local/share/bjail` (images, extracted trees, private homes, staging) and `~/.config/bjail`
 (manifests, tracked in a small local git repository). `BJAIL_DATA_DIR` and `BJAIL_CONFIG_DIR` override them.

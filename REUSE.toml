@@ -1,7 +1,7 @@
 version = 1
 
 [[annotations]]
-path = ["*.md", ".gitignore", ".github/**", "pytest.ini", "REUSE.toml", "tests/vm/packages.txt", "tests/vm/user-data.tmpl"]
+path = ["*.md", ".gitignore", ".github/**", "pyproject.toml", "REUSE.toml", "tests/vm/packages.txt", "tests/vm/user-data.tmpl"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Alberto P"
 SPDX-License-Identifier = "MPL-2.0"
