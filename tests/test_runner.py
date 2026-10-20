@@ -479,6 +479,7 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
             .replace("/app/out.txt", "/home/app/out.txt"))
         (kw["root"] / "AppRun").chmod(0o755)
         proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
+        assert (kw["home"] / "out.txt").exists(), f"the app never ran: {proc.stderr}"
         text = (kw["home"] / "out.txt").read_text()
         assert proc.returncode == 0 and "name of display" in text, text + proc.stderr
         assert "wl=\n" in text + "\n" and "display=:" in text
@@ -640,3 +641,20 @@ def test_pipes_over_fifos_have_only_the_parents_ends(tmp_path):
         os.write(p.fds["block_w"], b"x")  # read-write opens never block
     finally:
         p.close_all()
+
+
+@integration
+@pytest.mark.parametrize("fake, ok", [("exit 3", False), ("sleep 1.5; echo 7 >&3; sleep 30", True)], ids=["exits-at-once", "starts-slowly"])
+def test_xwayland_script_waits_for_a_slow_start_but_not_for_a_dead_one(sandbox, fake, ok):
+    x = sandbox / "fakeX"
+    x.write_text(f"#!/bin/sh\n{fake}\n")
+    x.chmod(0o755)
+    argv = [jail.find_bwrap(), "--unshare-user", "--ro-bind", "/", "/", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX",
+            "--", "/bin/sh", "-c", jail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "/bin/sh", "-c", "echo $DISPLAY"]
+    start = time.monotonic()
+    proc = jail.supervise(argv, timeout=30)
+    if ok:
+        assert proc.returncode == 0 and proc.stdout.split() == [":7"], proc.stderr
+    else:
+        assert proc.returncode == 1 and "did not start" in proc.stderr
+        assert time.monotonic() - start < 5  # it does not sit out the whole wait

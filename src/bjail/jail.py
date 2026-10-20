@@ -297,8 +297,8 @@ XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
 XWAYLAND_SCRIPT = (
     'f=/tmp/.bjail-display; x="$1"; shift\n'
     'WAYLAND_DISPLAY=wayland-0 "$x" -rootless -nolisten tcp -displayfd 3 3>"$f" >/dev/null 2>&1 &\n'
-    'i=0; while [ ! -s "$f" ] && [ "$i" -lt 100 ]; do sleep 0.05; i=$((i+1)); done\n'
-    'n=$(cat "$f"); [ -n "$n" ] || { echo "bjail: Xwayland did not start" >&2; exit 1; }\n'
+    'p=$!; i=0; while [ ! -s "$f" ] && kill -0 "$p" 2>/dev/null && [ "$i" -lt 400 ]; do sleep 0.05; i=$((i+1)); done\n'
+    'n=$(cat "$f"); [ -n "$n" ] || { echo "bjail: Xwayland did not start (it exited, or took more than 20 s)" >&2; exit 1; }\n'
     'DISPLAY=":$n" exec "$@"')
 
 

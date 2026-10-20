@@ -84,6 +84,7 @@ An app can be given specific directories, never the whole home:
 ## Xwayland (implemented in `src/bjail/jail.py`: `xwayland_command`)
 `display = "xwayland"` is for apps that only speak X11. The host X11 socket is never bound (it would let the app read every other X client's keystrokes and screen). Instead the app command is wrapped by a short `sh` script that starts a rootless `Xwayland` inside the jail, as a client of the restricted Wayland socket, with `-nolisten tcp` and `-displayfd`; then it sets `DISPLAY` and execs the app.
 - The X socket lives in the jail's private `/tmp` and abstract namespace (the network namespace is unshared), so no other app and no host X server is reachable. The app environment has no `WAYLAND_DISPLAY` and selects X11 toolkits (`GDK_BACKEND=x11`, `QT_QPA_PLATFORM=xcb`, `SDL_VIDEODRIVER=x11`, ...). Xwayland dies with the jail.
+- The wrapper script waits up to 20 s for Xwayland to report its display, and gives up at once, with a message, if Xwayland exits (a fixed 5 s wait made the test flaky on a slow CI runner).
 - Needs `/usr/bin/Xwayland` on the host (package `xwayland`); `run` stops with a clear message when it is missing. With no window manager, windows map as plain toplevels.
 - Verified in the guest: `xdpyinfo` inside the real jail reaches the private Xwayland over headless weston. Not verified: real X11-only AppImages, GPU acceleration through Xwayland (glamor).
 
