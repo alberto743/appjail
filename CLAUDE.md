@@ -19,8 +19,8 @@ Deferred: the GPG tier, other forges. Done after the MVP: D-Bus filtering (`dbus
 State (2026-10-20, end of session): everything planned is done, committed and pushed; 560 tests pass in the guest (the opt-in e2e suites also pass); CI (Ubuntu 26.04) and REUSE workflows are green on `main`, and three consecutive CI runs passed; the tree is clean. Done this session: pasta for an app's `network` plus `network_host`, portals through pasta (FIFOs, `--uid/--gid`), refusal to grant `network` without pasta, tier-4 hash during the quarantine, deterministic decompression-bomb verdict, `cli.py` split, CI/REUSE/Dependabot, history re-authored to `Alberto P` (force-pushed).
 Still open, all needing a decision or an app/session the user approves (none is blocked on code):
 - Verify against reality: a real GUI app with `network` behind pasta (inbound-needing apps must use `network_host`); the tier-4 quarantine hash on a real download without a GitHub digest; `network` + `userns` and IPv6 under pasta; real desktop portal backends (GNOME/KDE/GTK); a real X11-only AppImage under Xwayland.
-- Deferred by the user: GPG tier, second forge (GitLab/Codeberg), non-x86_64, an allowlisting proxy for the LAN. No README or user-facing docs exist yet (DESIGN.md and this file only).
-- Suggested next steps in order: approve a networked GUI app for the pasta check, approve a no-digest repo for the tier-4 check, then write a README.
+- Deferred by the user: GPG tier, second forge (GitLab/Codeberg), non-x86_64, an allowlisting proxy for the LAN. The README exists (2026-10-20).
+- Suggested next steps in order: approve a networked GUI app for the pasta check, approve a no-digest repo for the tier-4 check, then keep the README current.
 Candidates and their history:
 1. (done) Portals: safe set plus opt-in `portal_interfaces`, Flatpak-compatible identity shim, document portal bind; tested against the real portal frontend with a fake backend (guest packages `xdg-desktop-portal`, `fuse3`, `python3-dbus`, `python3-gi`). Still untested with real desktop backends (GNOME/KDE/GTK).
 2. (done) Xwayland isolation: rootless Xwayland per app inside the jail (`jail.xwayland_command`), never the host X11 socket; guest packages `xwayland`, `x11-utils`. Untested with a real X11-only AppImage.
@@ -39,6 +39,9 @@ Resume checklist: `tests/vm/start.sh`, wait for ssh (`tests/vm/ssh.sh 'cloud-ini
 - Minimum supported systems: Debian 13 (the guest) and Ubuntu 26.04 (this CI); Ubuntu 24.04 is not supported (DESIGN.md "Platform"). Do not add workarounds for older systems.
 - CI is the only place besides the guest where tests run; it runs on GitHub's runners, not on the host. After pushing, read results with `gh run list/view/watch` (read-only). A red CI on `main` is a bug to fix, not to ignore. Lesson (2026-10-20): a failure that only shows on CI is often a test-fixture assumption (the runner's uid is 1001, the guest's is 1000: a hardcoded passwd uid made Xwayland refuse clients, wrongly blamed on Ubuntu first). Find the cause with a captured log before adding a workaround.
 - New workflows or actions: reference actions by full version tag (user decision, 2026-10-20: no SHA pins), keep `permissions: contents: read`.
+
+## Docs
+`README.md` is the user-facing entry point (what it is, requirements, usage, trust model, limits). Keep it in step with the CLI, the permission table and the limits whenever they change (same commit), and keep it short; the details belong in DESIGN.md.
 
 ## Code layout
 `bjail/cli.py` is only the parser and dispatcher (and re-exports what tests import); the commands are in `cmd_add.py` (also the install steps `update` shares), `cmd_update.py`, `cmd_apps.py` (tools, history, list, remove, perms), `cmd_index.py` (search, index update); `console.py` (Abort, Console), `permargs.py` (permission options). Add new commands as `cmd_<name>.py`, not to `cli.py`.
