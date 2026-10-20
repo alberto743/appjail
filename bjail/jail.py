@@ -293,10 +293,12 @@ def file_binds(files, home):
 
 XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
 # Runs inside the jail: a rootless Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket
-# lives in the jail's private /tmp and abstract namespace, so no other app and no host X server is involved.
+# lives in the jail's private /tmp and abstract namespace, so no other app and no host X server is involved; for
+# the same reason -ac (no X access control) lets in nobody outside the app (some Xwayland builds otherwise refuse
+# the app's own clients).
 XWAYLAND_SCRIPT = (
     'f=/tmp/.bjail-display; x="$1"; shift\n'
-    'WAYLAND_DISPLAY=wayland-0 "$x" -rootless -nolisten tcp -displayfd 3 3>"$f" >/dev/null 2>&1 &\n'
+    'WAYLAND_DISPLAY=wayland-0 "$x" -rootless -ac -nolisten tcp -displayfd 3 3>"$f" >/dev/null 2>&1 &\n'
     'i=0; while [ ! -s "$f" ] && [ "$i" -lt 100 ]; do sleep 0.05; i=$((i+1)); done\n'
     'n=$(cat "$f"); [ -n "$n" ] || { echo "bjail: Xwayland did not start" >&2; exit 1; }\n'
     'DISPLAY=":$n" exec "$@"')

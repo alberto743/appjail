@@ -189,6 +189,7 @@ def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, mo
     out = capfd.readouterr()
     assert code == 0, out.err
     r = json.loads(out.out.strip().splitlines()[-1])
+    assert r.get("response") == 0, (r, out.err)
     assert log.read_text().split() == ["app.bjail.app"]  # the portal knew who called, from our identity only
     assert r["response"] == 0 and r["uris"][0].startswith(f"file://{runtime}/doc/")
     assert r["content"] == "hello from the host"  # read through the document-portal mount in the jail
@@ -228,5 +229,6 @@ def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal
     out = capfd.readouterr()
     assert code == 0, out.err
     r = json.loads(out.out.strip().splitlines()[-1])
-    assert log.read_text().split() == ["app.bjail.app"] and r["response"] == 0
+    assert r.get("response") == 0, (r, out.err)
+    assert log.read_text().split() == ["app.bjail.app"]
     assert [p for p in runtime.iterdir() if p.name.startswith("bjail-")] == []

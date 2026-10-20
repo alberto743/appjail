@@ -24,11 +24,12 @@ jobs:
       - name: Allow unprivileged user namespaces
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-      # Same package list as the test guest, minus the kernel the guest swaps in for DRM drivers.
+      # Same package list as the test guest, minus the kernel the guest swaps in for DRM drivers and `reuse`:
+      # Ubuntu's reuse is too old to read REUSE.toml, and the REUSE workflow already lints with the current one.
       - name: Install the guest packages
         run: |
           sudo apt-get update
-          sed 's/#.*//' tests/vm/packages.txt | grep -v '^ *linux-image' | xargs sudo apt-get install -y --no-install-recommends
+          sed 's/#.*//' tests/vm/packages.txt | grep -Ev '^ *(linux-image|reuse)' | xargs sudo apt-get install -y --no-install-recommends
 
       - name: Run the tests
         env:
