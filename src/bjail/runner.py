@@ -103,12 +103,17 @@ class Pipes:
             self.close(name)
 
 
-def _run_app(argv, filter_fd, pipes=None, instance=None):
-    """Start the jail, publish its init pid for the portal, then let the app run; return its exit status."""
+def _run_app(argv, filter_fd=None, pipes=None, instance=None):
+    """Start the jail, publish its init pid for the portal, then let the app run; return its exit status.
+
+    filter_fd: the seccomp memfd bwrap inherits; None behind pasta, which closes inherited descriptors (the filter
+    then reaches bwrap through a file, see jail.net_wrap).
+    """
     env = {"PATH": "/usr/bin:/bin"}
+    keep = () if filter_fd is None else (filter_fd,)
     if instance is None:
-        return subprocess.call(argv, env=env, pass_fds=(filter_fd,))
-    proc = subprocess.Popen(argv, env=env, pass_fds=(filter_fd, *(pipes.fds[n] for n in ("status_w", "block_r") if n in pipes.fds)))
+        return subprocess.call(argv, env=env, pass_fds=keep)
+    proc = subprocess.Popen(argv, env=env, pass_fds=(*keep, *(pipes.fds[n] for n in ("status_w", "block_r") if n in pipes.fds)))
     try:
         pipes.close("status_w")
         pipes.close("block_r")
@@ -147,14 +152,15 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     env = dict(os.environ if host_env is None else host_env)
     in_pasta = perms.network and not perms.network_host
     with contextlib.ExitStack() as stack:
-        filter_fd = seccomp.open_fd(perms.userns)
-        stack.callback(os.close, filter_fd)
-        filter_file = None
+        filter_fd = filter_file = None
         if in_pasta:
             fd, filter_file = tempfile.mkstemp(prefix="bjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
             stack.callback(os.unlink, filter_file)
             with os.fdopen(fd, "wb") as f:
                 f.write(seccomp.program(perms.userns))
+        else:
+            filter_fd = seccomp.open_fd(perms.userns)
+            stack.callback(os.close, filter_fd)
         instance = docs = None
         if perms.portals:
             rt = env.get("XDG_RUNTIME_DIR", "")

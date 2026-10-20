@@ -179,7 +179,7 @@ def reach(host, port):
     except OSError:
         return False
 if len(sys.argv) > 3:
-    urllib.request.urlopen("https://api.github.com/", timeout=15).close()  # DNS and TLS still work through pasta
+    urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # DNS and TLS still work through pasta; not counted against the limit
 print(reach("127.0.0.1", int(sys.argv[1])), reach(sys.argv[2], int(sys.argv[1])))
 '''
 

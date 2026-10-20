@@ -575,7 +575,7 @@ def reach(host, port):
         return False
 import os
 port, own = int(sys.argv[1]), sys.argv[2]
-urllib.request.urlopen("https://api.github.com/", timeout=15).close()  # DNS and TLS work through the namespace
+urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # DNS and TLS work through the namespace; not counted against the limit
 print(reach("127.0.0.1", port), reach(own, port), os.getuid() == int(sys.argv[3]) and os.getgid() == int(sys.argv[4]))
 '''
 
@@ -615,6 +615,34 @@ def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, r
         assert proc.stdout.split() == expected
     finally:
         srv.close()
+
+
+FILTER_PROBE = """#!/usr/bin/python3
+import ctypes
+r = ctypes.CDLL(None, use_errno=True).syscall(435, 0, 0)  # clone3: ENOSYS under the filter, EFAULT/EINVAL without it
+print(ctypes.get_errno() if r == -1 else 0)
+"""
+
+
+@integration
+@pytest.mark.parametrize("perms", [{}, {"network": True, "network_host": True}, {"network": True}],
+                         ids=["offline", "network_host", "pasta"])
+def test_launch_applies_the_seccomp_filter_in_every_network_mode(sandbox, runtime, monkeypatch, capfd, perms):
+    """Through runner.launch itself, so the way the filter reaches bwrap (inherited memfd, or a file reopened
+    inside pasta's namespace) is what is tested, not a hand-built copy of it."""
+    if perms == {"network": True} and not jail.find_pasta():
+        pytest.skip("pasta not installed (package passt)")
+    kw = build(sandbox, runtime, **perms)
+    (kw["root"] / "AppRun").write_text(FILTER_PROBE)
+    (kw["root"] / "AppRun").chmod(0o755)
+    m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", SHA, 3, "2026-01-01T00:00:00Z",
+                          permissions=manifest.Permissions(**perms))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                         say=lambda *_: None, restricted=NO_RESTRICTION)
+    out = capfd.readouterr()
+    assert code == 0, out.err
+    assert out.out.split() == ["38"], out.err  # ENOSYS: the filter is installed
 
 
 def test_net_wrap_reopens_files_inside_the_namespace(monkeypatch):
