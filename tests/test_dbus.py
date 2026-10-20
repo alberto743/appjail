@@ -100,12 +100,18 @@ def test_dbus_own_without_proxy_socket_is_refused(sandbox, runtime):
 ])
 def test_host_bus_address(runtime, env, expected):
     import socket
-    for n in ("b", "bus"):
-        s = socket.socket(socket.AF_UNIX)
-        s.bind(str(runtime / n))
-        s.listen(1)
-    env = {k: v.format(rt=runtime) for k, v in env.items()} | {"XDG_RUNTIME_DIR": str(runtime)}
-    assert dbusproxy.host_bus(env) == expected.format(rt=runtime)
+    socks = []
+    try:
+        for n in ("b", "bus"):
+            s = socket.socket(socket.AF_UNIX)
+            socks.append(s)
+            s.bind(str(runtime / n))
+            s.listen(1)
+        env = {k: v.format(rt=runtime) for k, v in env.items()} | {"XDG_RUNTIME_DIR": str(runtime)}
+        assert dbusproxy.host_bus(env) == expected.format(rt=runtime)
+    finally:
+        for s in socks:
+            s.close()
 
 
 @pytest.mark.parametrize("addr", ["unix:abstract=/tmp/x", "tcp:host=h,port=1", "unix:path=relative", "unix:path=/nonexistent/bus"])

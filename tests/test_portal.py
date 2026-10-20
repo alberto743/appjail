@@ -133,7 +133,7 @@ def test_missing_document_portal_is_a_clear_error(tmp_path):
 
 needs_portal = pytest.mark.skipif(
     not (Path("/usr/libexec/xdg-desktop-portal").exists() and Path("/usr/libexec/xdg-document-portal").exists()
-         and shutil.which("fusermount3") and Path("/dev/fuse").exists()),
+         and shutil.which("fusermount3") and os.access("/dev/fuse", os.R_OK | os.W_OK)),
     reason="needs xdg-desktop-portal, its document portal and FUSE (run provision.sh)")
 
 

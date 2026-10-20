@@ -474,7 +474,8 @@ def test_no_network_unless_granted(sandbox, runtime):
 
 
 @integration
-@pytest.mark.skipif(not os.path.exists("/dev/dri/renderD128"), reason="no DRM render node (run provision.sh)")
+@pytest.mark.skipif(not os.access("/dev/dri/renderD128", os.R_OK | os.W_OK),
+                    reason="no usable DRM render node (run provision.sh; the user must be in the render group)")
 def test_gpu_nodes_only_when_granted(sandbox, runtime):
     script = FACTS.replace('print(json.dumps({', 'print(json.dumps({"dri": ls("/dev/dri"), "render_open": can_open("/dev/dri/renderD128"), ')
     script = script.replace('def connects', 'def can_open(p):\n    try:\n        os.close(os.open(p, os.O_RDWR)); return True\n    except OSError:\n        return False\n\ndef connects')
