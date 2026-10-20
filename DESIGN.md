@@ -127,7 +127,7 @@ Implemented in `bjail/manifest.py` (schema 1), one file per app at `~/.config/bj
 
 ## Trust tiers (never silently downgraded)
 1. Build attestation (Sigstore / GitHub artifact attestations): implemented, see "Attestation verification".
-2. Pinned-key GPG signature.
+2. Pinned-key GPG signature. **Deferred (decided 2026-10-20).** A signature proves a key, not its owner, so `add` would still be trust on first use for the key fingerprint; it needs a per-app fingerprint pin, a jailed `gpgv`, `update` rules (key change blocks, lost signature is a downgrade) and a source for the signature file. Tier 1 plus the quarantine hash already cover attested and unattested apps. Revisit when a wanted app signs with GPG and has no GitHub attestation.
 3. Publisher-pinned hash / GitHub digest.
 4. Trust on first use.
 5. Cross-check against another source (weak).
