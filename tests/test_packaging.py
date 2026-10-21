@@ -39,7 +39,7 @@ def test_pip_install_provides_the_appjail_command(tmp_path):
     out = run(str(python), "-I", "-c", "import appjail.jail as j; print(j.FETCHER, j.FETCHER.is_file())", cwd=tmp_path)
     assert out.split()[-1] == "True" and str(venv) in out
     meta = run(str(pip), "show", "appjail")
-    assert "Version: 0.1.1" in meta and "Requires: \n" in meta  # no dependencies
+    assert "Version: 0.1.2" in meta and "Requires: \n" in meta  # no dependencies
     run(str(pip), "uninstall", "--yes", "appjail")
 
 
