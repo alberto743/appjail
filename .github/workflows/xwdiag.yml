@@ -28,6 +28,6 @@ jobs:
             DISPLAY=$D timeout 4 xev -geometry 200x100 >/dev/null 2>&1 &
             sleep 2
             if kill -0 $XP 2>/dev/null; then echo "Xwayland alive after window map"; else echo "Xwayland DIED"; grep -E "Caught|Segmentation|glamor|Fatal" /tmp/xw.log; fi
-            kill $XP 2>/dev/null; wait 2>/dev/null || true
+            kill $XP 2>/dev/null; wait $XP 2>/dev/null || true
             unset XWAYLAND_NO_GLAMOR
           done
