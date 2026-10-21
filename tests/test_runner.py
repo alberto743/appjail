@@ -6,6 +6,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -738,3 +739,72 @@ def test_ipv6_under_pasta_matches_the_hosts_reachability(sandbox, runtime, monke
         pytest.skip("the host has no working IPv6 route")
     _, v6 = _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=["v6"])
     assert v6 == "ok"
+
+
+# IPv6 without a real route: the test re-runs itself in a throwaway user and network namespace that has a dummy interface
+# with a ULA address and an IPv6 default route (so pasta sees a usable IPv6 setup and copies it into the jail), plus a
+# second dummy interface that holds the listener's address. pasta copies only the addresses of the interface that
+# carries the default route, so the listener is not local to the jail: reaching it takes pasta's forwarding.
+FAKE_V6_SETUP = """set -e
+ip link set lo up
+ip link add d0 type dummy; ip link set d0 up
+ip link add d1 type dummy; ip link set d1 up
+ip addr add 10.9.0.2/24 dev d0; ip route add default via 10.9.0.1 dev d0 onlink
+ip addr add fd00::2/64 dev d0 nodad; ip -6 route add default via fd00::1 dev d0 onlink
+ip addr add fd01::7/64 dev d1 nodad
+exec "$@"
+"""
+V6_LISTENER = "fd01::7"
+V6_PROBE = """#!/usr/bin/python3
+import socket, sys, time
+err = None
+for _ in range(20):  # the router advertisement may arrive a moment after the jail starts
+    try:
+        socket.create_connection((sys.argv[1], int(sys.argv[2])), timeout=3).close()
+        print("ok"); break
+    except OSError as e:
+        err = e; time.sleep(0.25)
+else:
+    print("fail", err)
+"""
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@pytest.mark.skipif(not os.environ.get("APPJAIL_FAKE_V6"), reason="runs inside the namespace made by the test below")
+def test_ipv6_forwarding_inside_the_fake_namespace(sandbox, runtime, monkeypatch, capfd):
+    srv = socket.socket(socket.AF_INET6)
+    srv.bind((V6_LISTENER, 0))
+    srv.listen(5)
+    try:
+        kw = build(sandbox, runtime, network=True)
+        (kw["root"] / "AppRun").write_text(V6_PROBE)
+        (kw["root"] / "AppRun").chmod(0o755)
+        m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", SHA, 3, "2026-01-01T00:00:00Z",
+                              permissions=manifest.Permissions(network=True))
+        monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+        code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                             say=lambda *_: None, restricted=NO_RESTRICTION,
+                             extra_args=[V6_LISTENER, str(srv.getsockname()[1])])
+        out = capfd.readouterr()
+        assert code == 0, out.err
+        assert out.out.split() == ["ok"], out.out
+    finally:
+        srv.close()
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@pytest.mark.skipif(bool(os.environ.get("APPJAIL_FAKE_V6")), reason="already inside the fake namespace")
+@pytest.mark.skipif(not shutil.which("unshare") or not shutil.which("ip"), reason="needs unshare and ip (iproute2)")
+def test_ipv6_is_brought_up_and_forwarded_by_pasta_in_a_fake_network(tmp_path):
+    here = Path(__file__).resolve()
+    # the user maps to itself (not to root) with its capabilities kept: pasta and bwrap then behave as on a host, whereas
+    # under `unshare -r` pasta cannot write its uid map and leaves the jail without a usable user namespace
+    cmd = ["unshare", "-Un", f"--map-user={os.getuid()}", f"--map-group={os.getgid()}", "--keep-caps", "sh", "-c", FAKE_V6_SETUP, "sh", sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+           f"{here}::test_ipv6_forwarding_inside_the_fake_namespace"]
+    proc = subprocess.run(cmd, env={**os.environ, "APPJAIL_FAKE_V6": "1", "APPJAIL_INTEGRATION": "1"},
+                          capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0 and "unshare" in proc.stderr and "failed" not in proc.stdout:
+        pytest.skip("cannot create a user and network namespace: " + proc.stderr.strip())
+    assert proc.returncode == 0, proc.stdout + proc.stderr
