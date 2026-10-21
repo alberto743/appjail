@@ -140,8 +140,11 @@ appjail search editor     # candidates only; installing is always `appjail add o
 - Only GitHub repositories are supported. Apps hosted elsewhere appear in `search` but cannot be added.
 - A sandboxed app can still do whatever its grants allow. An app with `network` can reach other machines on your LAN.
 - Granting a directory, a portal or a D-Bus name widens what a compromised app can do.
-- x86-64 only. Real desktop portal backends (GNOME, KDE) and real X11-only AppImages have not been tested; the portal
-  and Xwayland paths are exercised against a test backend and test clients.
+- x86-64 only. The GNOME and KDE portal backends have not been tested (the GTK backend and a real X11-only AppImage
+  have, under headless weston; the portal dialogs themselves are not driven). Real internet IPv6 under `pasta` is
+  untested; IPv6 forwarding is tested in a fake network.
+- Stopping `appjail run` with SIGINT, SIGTERM or SIGHUP stops the whole jail, including `pasta`. If appjail itself is
+  killed with SIGKILL, an app with `network` can keep running (stop it with `pkill` on its name).
 - The audio permission includes the microphone.
 
 The full design, the reasoning behind each choice and the verification notes are in [DESIGN.md](DESIGN.md).
