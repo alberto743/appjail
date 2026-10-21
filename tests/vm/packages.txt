@@ -26,6 +26,7 @@ fontconfig            # font lookup for GUI AppImages (the lagrange end-to-end t
 fonts-dejavu-core     # at least one font, or GUI AppImages abort
 xdg-desktop-portal    # frontend and document portal: the real portal that tests/test_portal.py talks to
 fuse3                 # the document portal's FUSE mount (fusermount3)
+xdg-desktop-portal-gtk # a real portal backend (GTK): tests/test_portal.py runs the portal frontend against it under headless weston
 python3-dbus          # fake portal backend and in-jail test client
 python3-gi            # GLib main loop for python3-dbus
 xwayland              # rootless X server for display = "xwayland" (run inside the app's jail)

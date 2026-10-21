@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -228,3 +229,56 @@ def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal
     r = json.loads(out.out.strip().splitlines()[-1])
     assert log.read_text().split() == ["app.appjail.app"] and r["response"] == 0
     assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
+
+
+@pytest.fixture
+def gtk_portal_stack(sandbox, runtime):
+    """A private session bus with the real portal frontend and the real GTK backend, which needs a display: headless weston."""
+    wl = f"appjail-portal-{os.getpid()}"
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", f"--socket={wl}"],
+                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(runtime)},
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(50):
+        if (runtime / wl).exists():
+            break
+        time.sleep(0.1)
+    cfg = sandbox / "cfg"
+    (cfg / "xdg-desktop-portal").mkdir(parents=True)
+    (cfg / "xdg-desktop-portal" / "portals.conf").write_text("[preferred]\ndefault=gtk\n")
+    env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(runtime), "XDG_CONFIG_HOME": str(cfg),
+           "XDG_CURRENT_DESKTOP": "GNOME", "HOME": str(sandbox), "XDG_DATA_HOME": str(sandbox / "data"),
+           "WAYLAND_DISPLAY": wl, "GDK_BACKEND": "wayland"}
+    daemon = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address=1",
+                               f"--address=unix:path={runtime}/bus"], stdout=subprocess.PIPE, text=True, env=env)
+    daemon.stdout.readline()
+    env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={runtime}/bus"
+    yield env
+    daemon.terminate()
+    daemon.wait()
+    weston.terminate()
+    weston.wait()
+    subprocess.run(["fusermount3", "-u", "-z", str(runtime / "doc")], capture_output=True)
+    subprocess.run(["pkill", "-u", str(os.getuid()), "-f", "xdg-desktop-portal-gtk"], capture_output=True)
+
+
+@integration
+@needs_proxy
+@needs_portal
+@pytest.mark.skipif(not Path("/usr/libexec/xdg-desktop-portal-gtk").exists() or not shutil.which("weston"),
+                    reason="needs xdg-desktop-portal-gtk and weston (run provision.sh)")
+def test_real_gtk_backend_answers_through_the_filtered_bus(sandbox, runtime, gtk_portal_stack, monkeypatch, capfd):
+    env = gtk_portal_stack
+    perms = {"portals": True}
+    kw = build(sandbox, runtime, **perms)
+    (kw["root"] / "AppRun").write_text("#!/usr/bin/python3\n" + (HERE / "client_real.py").read_text())
+    (kw["root"] / "AppRun").chmod(0o755)
+    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    code = runner.launch("app", host_env=env, say=lambda *_: None, restricted=NO_RESTRICTION)
+    out = capfd.readouterr()
+    assert code == 0, out.err
+    r = json.loads(out.out.strip().splitlines()[-1])
+    assert "settings_error" not in r, r  # the GTK backend answered Settings from GSettings, through the proxy
+    assert r["read_all"] == ["org.freedesktop.appearance"] and r["color_scheme"] in (0, 1, 2)
+    assert "open_error" not in r, r
+    assert r["request"].startswith("/org/freedesktop/portal/desktop/request/") and r["request"].endswith("/appjailreal")
