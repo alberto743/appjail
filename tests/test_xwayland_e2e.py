@@ -75,7 +75,9 @@ def weston():
         proc.wait(timeout=10)
 
 
-def run_display(display, env):
+def run_display(display, env, monkeypatch):
+    # let Xwayland's own messages reach the test output, so a failure on another machine can be diagnosed
+    monkeypatch.setattr(jail, "XWAYLAND_SCRIPT", jail.XWAYLAND_SCRIPT.replace(">/dev/null 2>&1 &", ">&2 &"))
     m, root, home, etc = runner.prepare("imagemagick", say=lambda *_: None)
     perms = replace(m.permissions, display=display)
     argv = [jail.find_bwrap(), *jail.runtime_args(
@@ -89,13 +91,13 @@ def test_add_pinned_the_github_digest(installed):
     assert m.evidence_tier == 3 and m.permissions.display == "wayland"
 
 
-def test_x11_only_app_opens_a_window_on_the_private_xwayland(installed, weston):
-    proc = run_display("xwayland", weston)
+def test_x11_only_app_opens_a_window_on_the_private_xwayland(installed, weston, monkeypatch):
+    proc = run_display("xwayland", weston, monkeypatch)
     assert proc.returncode == 0, proc.stderr
     assert '"ImageMagick: "' in proc.stdout, proc.stdout + proc.stderr
 
 
-def test_x11_only_app_cannot_run_with_display_wayland(installed, weston):
-    proc = run_display("wayland", weston)
+def test_x11_only_app_cannot_run_with_display_wayland(installed, weston, monkeypatch):
+    proc = run_display("wayland", weston, monkeypatch)
     assert "unable to open X server" in proc.stderr, proc.stderr
     assert "ImageMagick" not in proc.stdout
