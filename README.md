@@ -26,7 +26,8 @@ is built around the opposite assumptions:
 
 - Linux on x86-64 with unprivileged user namespaces. Tested on Debian 13 and Ubuntu 26.04; older systems are
   not supported.
-- Python 3.12 or newer (tested with 3.12, 3.13 and 3.14). appjail uses only the standard library.
+- Python 3.12 or newer (tested with 3.13 on Debian 13 and 3.14 on Ubuntu 26.04; 3.12 is the declared minimum and is not
+  run by the tests). appjail uses only the standard library.
 - `bubblewrap` and `squashfs-tools` (`unsquashfs`) are required.
 - Recommended: `passt` (the `pasta` command) for apps with network access, `xdg-dbus-proxy` for D-Bus filtering,
   `xwayland` for X11-only apps, `git` for the manifest history and the search index.
@@ -66,6 +67,10 @@ appjail list                     # installed apps, tiers and permissions
 appjail update                   # check every app for a newer release
 appjail remove lagrange          # delete the app and its private home
 ```
+
+`add` also takes `--tag TAG` (a specific release instead of the latest), `--name`, `--prerelease`, and the permission
+options below at install time (`--allow`, `--dir`, `--dbus`, `--display xwayland`, `--no-audio`, `--no-gpu`).
+`run` takes `--dir PATH[:ro|:rw]` and `--file PATH[:rw]` for one run only.
 
 `add` shows the repository owner, account age, stars and fork or archive status before it downloads anything, and
 asks if several release assets match. By default an app gets audio and GPU access and nothing else.
@@ -122,6 +127,7 @@ as plain text only and never runs anything from it.
 ```sh
 appjail index update      # fetch the list in a jail, review the changes, pin it
 appjail index rollback    # go back to the previous snapshot
+appjail index status      # show the pinned snapshot
 appjail search editor     # candidates only; installing is always `appjail add owner/repo`
 ```
 
@@ -163,7 +169,8 @@ APPJAIL_INTEGRATION=1 python3 -m pytest
 Without `APPJAIL_INTEGRATION=1` the tests that need real sandboxes are skipped. Tests that download from the network are
 opt-in (`APPJAIL_E2E=1`, `APPJAIL_LIVE=1`). The project's own workflow runs the suite inside a disposable QEMU guest built
 from `tests/vm/` so that downloads and sandboxed apps never run on the developer's machine; see
-[CLAUDE.md](CLAUDE.md) for the details. GitHub Actions runs the full suite and a REUSE compliance check on every push.
+[CLAUDE.md](CLAUDE.md) for the details. GitHub Actions runs the full suite and a REUSE compliance check on every push, and a separate workflow runs every
+opt-in suite (real downloads) on demand and weekly.
 
 ## License
 

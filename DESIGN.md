@@ -19,7 +19,7 @@ Goal: a small tool with declarative manifests, no remote code execution, no self
 4. Containment is the backstop: downloads in a network-only jail; apps in a minimal-permission jail.
 
 ## Platform
-Linux on x86-64 only (decided 2026-10-20). Minimum supported systems (user decision, 2026-10-20): Debian 13 (the test guest) and Ubuntu 26.04 (the `ubuntu-26.04` CI runner: bubblewrap 0.11, Xwayland 24.1, xdg-desktop-portal 1.21, kernel 7.0, all 560 tests that can run there pass). Older systems are not supported or tested: on Ubuntu 24.04 the real-portal tests fail because xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend (cause not investigated), and its `reuse` cannot read `REUSE.toml`. The seccomp filter is built for x86-64 and `run` refuses to start on any other architecture rather than run unfiltered; the AM index is read from its `x86_64` entries only. Other architectures are not planned.
+Linux on x86-64 only (decided 2026-10-20). Minimum supported systems (user decision, 2026-10-20): Debian 13 (the test guest) and Ubuntu 26.04 (the `ubuntu-26.04` CI runner: bubblewrap 0.11, Xwayland 24.1, xdg-desktop-portal 1.21, kernel 7.0; the whole suite passes there except tests that need hardware the runner lacks, which skip, and the real-X11-app window test, which skips on that Xwayland's crash). Older systems are not supported or tested: on Ubuntu 24.04 the real-portal tests fail because xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend (cause not investigated), and its `reuse` cannot read `REUSE.toml`. The seccomp filter is built for x86-64 and `run` refuses to start on any other architecture rather than run unfiltered; the AM index is read from its `x86_64` entries only. Other architectures are not planned.
 
 ## Commands
 - `search <kw>`: text-only lookup in the local AM index (candidates only, never installs).
@@ -129,7 +129,7 @@ An app can be given specific directories, never the whole home:
 
 Implemented in `src/appjail/manifest.py` (schema 1), one file per app at `~/.config/appjail/apps/<name>.toml`:
 - Top level: `schema = 1`, `name` (`[a-z0-9][a-z0-9._-]{0,63}`), `source`, `asset_pattern` (fnmatch, no `/`), `version`, `sha256` (64 lowercase hex), `evidence_tier` (1-5), `published_at` (UTC `YYYY-MM-DDTHH:MM:SSZ`).
-- `[permissions]` is optional and everything defaults to denied: `network`, `network_host` (needs `network`), `audio`, `gpu`, `portals`, `userns` (bool); `dbus_own` (list of session-bus names the app may own), `portal_interfaces` (list of opt-in portal interface names, only with `portals = true`); `display` (`wayland` default, or `xwayland`); `dbus_filter` (list of D-Bus names, optional `.*` suffix); `dirs` (list of absolute or `~/` paths, optional `:ro`/`:rw`, default read-only; `/`, `~/` and `..` rejected).
+- `[permissions]` is optional and everything defaults to denied: `network`, `network_host` (needs `network`), `audio`, `gpu`, `portals`, `userns` (bool; `add` writes `audio` and `gpu` as true unless `--no-audio` or `--no-gpu`); `dbus_own` (list of session-bus names the app may own), `portal_interfaces` (list of opt-in portal interface names, only with `portals = true`); `display` (`wayland` default, or `xwayland`); `dbus_filter` (list of D-Bus names, optional `.*` suffix); `dirs` (list of absolute or `~/` paths, optional `:ro`/`:rw`, default read-only; `/`, `~/` and `..` rejected).
 - Strict: unknown keys, wrong types, control characters and bad formats are errors. The writer is deterministic and atomic, and refuses invalid manifests.
 
 ## Trust tiers (never silently downgraded)
@@ -254,6 +254,8 @@ Deferred (user decisions, 2026-10-20): the GPG tier and other forges (see "Trust
 - seccomp for non-x86_64 is out of scope (see Platform: x86-64 only).
 
 ## Verification
+Layers: the ordinary suite (`APPJAIL_INTEGRATION=1`, no downloads) runs in the guest and in GitHub Actions on every push; the opt-in suites (`APPJAIL_E2E=1` real downloads of approved repos, `APPJAIL_LIVE=1` live API metadata) run in the guest on demand and in the manual/weekly `e2e.yml` workflow. What is verified against real software, and what is not, is stated in each feature's section above.
+
 Integration tests run inside a dedicated qemu-kvm guest (rebuilt from `tests/vm/create.sh`; see CLAUDE.md "Testing environment") (snapshot or throwaway disk) so downloads, extraction and jailed apps cannot affect the host. All tests, unit and integration, run in the guest. It needs bubblewrap, `unsquashfs`, user namespaces and a compositor (Wayland, or headless for non-GUI checks).
 
 Test with 2-3 real GitHub AppImage repos:
