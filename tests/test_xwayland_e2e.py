@@ -23,6 +23,8 @@ pytestmark = pytest.mark.skipif(
     or not shutil.which("xwininfo"),
     reason="set APPJAIL_E2E=1 in the test guest (downloads an AppImage; needs weston, xwayland, x11-utils)")
 
+TAG = "7.1.2-34"
+
 # AppRun runs `magick "$@"`, and `magick display` is the legacy `display` tool. It draws the built-in logo: image,
 # stays open until timeout stops it, and xwininfo lists the windows the app's X server holds.
 SCRIPT = 'timeout 10 /app/AppRun display logo: & sleep 4; xwininfo -root -tree; wait'
@@ -48,7 +50,8 @@ def installed(tmp_path_factory):
     os.environ["APPJAIL_DATA_DIR"] = str(base / "data")
     os.environ["APPJAIL_CONFIG_DIR"] = str(base / "config")
     console = Answers(["2", "y"])  # the gcc build is the second of the two x86_64 AppImages; confirm the download
-    assert cli.main(["add", "ImageMagick/ImageMagick", "--name", "imagemagick"], console=console) == 0, console.lines
+    # pinned to one release so the asset list (and its order) cannot change under the test
+    assert cli.main(["add", "ImageMagick/ImageMagick", "--name", "imagemagick", "--tag", TAG], console=console) == 0, console.lines
     assert any("gcc-x86_64.AppImage" in line for line in console.lines), console.lines
     yield
     shutil.rmtree(base, ignore_errors=True)

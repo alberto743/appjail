@@ -1,0 +1,43 @@
+name: End to end
+
+# The opt-in suites of CLAUDE.md (real downloads from GitHub, real Sigstore verification, real AM index, packaging),
+# kept out of the ordinary CI: run by hand (Actions tab, "Run workflow") and once a week to notice upstream changes.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Allow unprivileged user namespaces
+        run: |
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          unshare --user --map-root-user true
+
+      - name: Install the guest packages
+        run: |
+          sudo apt-get update
+          sed 's/#.*//' tests/vm/packages.txt | grep -Ev '^ *linux-image' | xargs sudo apt-get install -y --no-install-recommends
+
+      - name: Run every suite, opt-in ones included
+        env:
+          APPJAIL_INTEGRATION: "1"
+          APPJAIL_E2E: "1"
+          APPJAIL_LIVE: "1"
+          # raises the API limit from 60 requests an hour per address; appjail sends it to api.github.com only
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -m pytest -q -rs
