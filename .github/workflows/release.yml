@@ -1,6 +1,7 @@
 name: Release
 
-# Creates the GitHub release for a version tag (vX.Y.Z), with notes generated from the commits since the previous tag.
+# Creates the GitHub release for a version tag (vX.Y.Z), with notes generated from the commits since the previous tag
+# and the sdist attached (the same file pypi.yml publishes, built once by build-dist.yml).
 # A tag with a pre-release suffix (v1.0.0rc1, v1.0.0-beta.1) is marked as a pre-release. Runs only after CI passed.
 
 on:
@@ -17,8 +18,14 @@ jobs:
       actions: read
       contents: read
 
-  release:
+  build:
     needs: ci
+    uses: ./.github/workflows/build-dist.yml
+    permissions:
+      contents: read
+
+  release:
+    needs: build
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
@@ -27,10 +34,14 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist/
       - name: Create the release
         run: |
           case "$GITHUB_REF_NAME" in
             v*[!0-9.]*) pre=--prerelease ;;
             *) pre= ;;
           esac
-          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" $pre
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" $pre dist/*.tar.gz
