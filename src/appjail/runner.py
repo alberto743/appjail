@@ -182,6 +182,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     in_pasta = perms.network and not perms.network_host
     with contextlib.ExitStack() as stack:
         filter_fd = filter_file = None
+        life = stack.enter_context(jail.Lifeline(env.get("XDG_RUNTIME_DIR"))) if in_pasta else None
         if in_pasta:
             fd, filter_file = tempfile.mkstemp(prefix="appjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
             stack.callback(os.unlink, filter_file)
@@ -218,7 +219,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), files=extra_files)
         argv = [jail.find_bwrap(), *args]
         if perms.network and not perms.network_host:
-            argv = jail.net_wrap(argv, required=True, fd_files={
+            argv = jail.net_wrap(argv, required=True, lifeline=life.path, fd_files={
                 PASTA_SECCOMP_FD: filter_file,
                 **({PASTA_STATUS_FD: (">", pipes.paths["status"]), PASTA_BLOCK_FD: ("<", pipes.paths["block"])} if pipes else {})})
         if runner:

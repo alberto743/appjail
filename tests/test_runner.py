@@ -815,7 +815,8 @@ import sys
 from appjail import jail, runner
 argv = [jail.find_bwrap(), "--unshare-all", "--die-with-parent", "--ro-bind", "/", "/", "sleep", sys.argv[1]]
 if sys.argv[2] == "pasta":
-    argv = jail.net_wrap(argv, required=True)
+    life = jail.Lifeline()
+    argv = jail.net_wrap(argv, required=True, lifeline=life.path)
 sys.exit(runner._run_app(argv))
 """
 
@@ -826,9 +827,10 @@ def _alive(marker):
 
 @integration
 @pytest.mark.parametrize("mode", ["plain", "pasta"])
-@pytest.mark.parametrize("sig", ["SIGTERM", "SIGHUP"])
+@pytest.mark.parametrize("sig", ["SIGTERM", "SIGHUP", "SIGKILL"])
 def test_terminating_the_launcher_stops_the_whole_jail(tmp_path, mode, sig):
-    """Killing pasta alone leaves the jail running; the launcher must take the whole group down."""
+    """Killing pasta alone leaves the jail running; the launcher must take the whole group down. SIGKILL cannot be
+    handled, so behind pasta the watcher inside the namespace (jail.Lifeline) must notice the launcher's death."""
     import signal
     if mode == "pasta" and not jail.find_pasta():
         pytest.skip("pasta not installed (package passt)")
@@ -845,7 +847,7 @@ def test_terminating_the_launcher_stops_the_whole_jail(tmp_path, mode, sig):
         assert _alive(marker), "the jail did not start"
         proc.send_signal(getattr(signal, sig))
         proc.wait(timeout=15)
-        for _ in range(50):
+        for _ in range(80):  # the watcher polls once a second
             if not _alive(marker):
                 break
             time.sleep(0.1)

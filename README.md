@@ -143,8 +143,9 @@ appjail search editor     # candidates only; installing is always `appjail add o
 - x86-64 only. The GNOME and KDE portal backends have not been tested (the GTK backend and a real X11-only AppImage
   have, under headless weston; the portal dialogs themselves are not driven). Real internet IPv6 under `pasta` is
   untested; IPv6 forwarding is tested in a fake network.
-- Stopping `appjail run` with SIGINT, SIGTERM or SIGHUP stops the whole jail, including `pasta`. If appjail itself is
-  killed with SIGKILL, an app with `network` can keep running (stop it with `pkill` on its name).
+- Stopping `appjail run` with SIGINT, SIGTERM or SIGHUP stops the whole jail, including `pasta`. If appjail is killed
+  with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace (a
+  small empty directory `appjail-life-*` stays in the runtime directory).
 - The audio permission includes the microphone.
 
 The full design, the reasoning behind each choice and the verification notes are in [DESIGN.md](DESIGN.md).

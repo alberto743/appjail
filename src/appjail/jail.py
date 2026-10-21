@@ -7,11 +7,13 @@ Argument builders are pure functions so they can be unit-tested without bwrap.
 """
 
 import os
+import shlex
 import shutil
 import signal
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -49,7 +51,7 @@ def find_pasta():
     return shutil.which("pasta")
 
 
-def net_wrap(argv, required=False, fd_files=None):
+def net_wrap(argv, required=False, fd_files=None, lifeline=None):
     """Run a network jail's bwrap inside a private network namespace made by pasta.
 
     pasta gives the namespace outbound access through ordinary host sockets, but no path to the host's loopback
@@ -60,6 +62,7 @@ def net_wrap(argv, required=False, fd_files=None):
     descriptor, so fd_files ({fd number: host path, or (shell redirect operator, host path)}) are opened inside
     the namespace for bwrap (--seccomp N, and the portal's --json-status-fd / --block-fd through FIFOs): the
     caller keeps those files private and removes them after the run. Descriptor numbers must be one digit (dash).
+    lifeline: path of a Lifeline FIFO; when the launcher dies the jail is killed (see Lifeline).
     """
     global _warned_no_pasta
     pasta = find_pasta()
@@ -72,14 +75,52 @@ def net_wrap(argv, required=False, fd_files=None):
             print("Warning: pasta (package passt) is not installed: network jails share the host network, "
                   "including services on localhost.", file=sys.stderr)
         return argv
-    if not fd_files:
+    if not fd_files and not lifeline:
         return [pasta, *PASTA_ARGS, "--", *argv]
-    items = [(fd, *(spec if isinstance(spec, tuple) else ("<", spec))) for fd, spec in fd_files.items()]
+    items = [(fd, *(spec if isinstance(spec, tuple) else ("<", spec))) for fd, spec in (fd_files or {}).items()]
     if any(not 0 <= fd <= 9 for fd, _, _ in items):
         raise RunError("net_wrap: descriptor numbers must be a single digit")
-    script = "".join(f"p{i}=$1; shift; " for i in range(len(items)))
+    script = (_watchdog(lifeline) if lifeline else "") + "".join(f"p{i}=$1; shift; " for i in range(len(items)))
     script += 'exec "$@" ' + " ".join(f'{fd}{op}"$p{i}"' for i, (fd, op, _) in enumerate(items))
     return [pasta, *PASTA_ARGS, "--", "/bin/sh", "-c", script, "sh", *(path for _, _, path in items), *argv]
+
+
+class Lifeline:
+    """A FIFO held open by the launcher, so a jail behind pasta can notice that the launcher died.
+
+    pasta runs its command as pid 1 of a pid namespace of its own and keeps running it when pasta or appjail is killed
+    (bwrap's --die-with-parent does not follow pasta's namespace), so an app with `network` would outlive appjail after
+    a SIGKILL. The launcher holds the FIFO open read-write; a watcher inside the namespace reads it, sees end-of-file
+    when the launcher's last descriptor closes (a clean end of the run, or sudden death) and kills the jail. The host
+    pid cannot be polled instead: the namespace has its own /proc. The kernel closes the descriptor on death, but the
+    FIFO's (empty) directory stays behind in that case; it lives in the runtime directory.
+    """
+
+    def __init__(self, parent=None):
+        self.dir = tempfile.mkdtemp(prefix="appjail-life-", dir=parent or None)
+        self.path = os.path.join(self.dir, "fifo")
+        os.mkfifo(self.path, 0o600)
+        self.fd = os.open(self.path, os.O_RDWR | os.O_CLOEXEC)
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def _watchdog(fifo):
+    """Shell prefix: when the lifeline FIFO reaches end-of-file, kill every process of the namespace but pid 1 (which
+    exec'd bwrap and exits with its child). Only if this shell is pid 1 of a private pid namespace: `kill -1` outside
+    one would hit all of the user's processes."""
+    return (f'( cat < {shlex.quote(fifo)}; if [ "$$" = 1 ]; then for i in 1 2 3 4 5; do kill -KILL -1; sleep 0.2; done; fi ) '
+            '>/dev/null 2>&1 & ')
 
 
 def find_bwrap():
