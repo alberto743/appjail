@@ -17,7 +17,7 @@ jobs:
           Xwayland -version 2>&1 | head -1; weston --version
           weston --backend=headless --renderer=pixman --socket=wl-diag >/dev/null 2>&1 &
           sleep 3
-          for variant in "" "-shm" "XWAYLAND_NO_GLAMOR=1"; do
+          for variant in "" "-shm"; do
             echo "=== variant: '$variant'"
             rm -f /tmp/dpy
             if [ "${variant#XWAYLAND}" != "$variant" ]; then export $variant; fi
@@ -31,7 +31,8 @@ jobs:
             kill $XP 2>/dev/null; wait $XP 2>/dev/null || true
             unset XWAYLAND_NO_GLAMOR
           done
-      - name: Same Xwayland with ImageMagick display (no appjail, no jail)
+      - if: always()
+        name: Same Xwayland with ImageMagick display (no appjail, no jail)
         run: |
           export XDG_RUNTIME_DIR=/tmp/xrt2; mkdir -m 700 -p $XDG_RUNTIME_DIR
           mkdir /tmp/im && cd /tmp/im
