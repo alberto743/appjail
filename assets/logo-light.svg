@@ -1,0 +1,16 @@
+<!--
+SPDX-FileCopyrightText: 2026 Alberto P
+SPDX-License-Identifier: MPL-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="appjail logo">
+  <rect width="256" height="256" rx="56" fill="#1f2937"/>
+  <!-- sandbox: four corner brackets, open at the top centre -->
+  <g fill="none" stroke="#38bdf8" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 52H76a24 24 0 0 0-24 24v24"/>
+    <path d="M156 52h24a24 24 0 0 1 24 24v24"/>
+    <path d="M52 156v24a24 24 0 0 0 24 24h104a24 24 0 0 0 24-24v-24"/>
+  </g>
+  <!-- the app -->
+  <rect x="92" y="92" width="72" height="72" rx="16" fill="#f9fafb"/>
+  <circle cx="128" cy="128" r="10" fill="#1f2937"/>
+</svg>
