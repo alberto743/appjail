@@ -686,3 +686,55 @@ def test_xwayland_script_waits_for_a_slow_start_but_not_for_a_dead_one(sandbox, 
     else:
         assert proc.returncode == 1 and "did not start" in proc.stderr
         assert time.monotonic() - start < 5  # it does not sit out the whole wait
+
+
+PASTA_PROBE = """#!/usr/bin/python3
+import ctypes, socket, sys, urllib.request
+urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # not counted against the limit
+r = ctypes.CDLL(None, use_errno=True).unshare(0x10000000)  # CLONE_NEWUSER: allowed only with the userns permission
+errno_ = ctypes.get_errno() if r == -1 else 0
+v6 = "none"
+if len(sys.argv) > 1:
+    try:
+        ai = socket.getaddrinfo("api.github.com", 443, socket.AF_INET6, socket.SOCK_STREAM)
+        socket.create_connection(ai[0][4][:2], timeout=5).close()
+        v6 = "ok"
+    except OSError:
+        v6 = "fail"
+print(errno_, v6)
+"""
+
+
+def _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=(), **perms):
+    kw = build(sandbox, runtime, network=True, **perms)
+    (kw["root"] / "AppRun").write_text(PASTA_PROBE)
+    (kw["root"] / "AppRun").chmod(0o755)
+    m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", SHA, 3, "2026-01-01T00:00:00Z",
+                          permissions=manifest.Permissions(network=True, **perms))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                         say=lambda *_: None, restricted=NO_RESTRICTION, extra_args=list(args))
+    out = capfd.readouterr()
+    assert code == 0, out.err
+    return out.out.split()
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@pytest.mark.parametrize("userns", [False, True])
+def test_network_with_userns_under_pasta(sandbox, runtime, monkeypatch, capfd, userns):
+    """Connectivity works in both cases; nested user namespaces are denied (EPERM=1) unless `userns` is granted."""
+    errno_, _ = _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, userns=userns)
+    assert errno_ == ("0" if userns else "1")
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+def test_ipv6_under_pasta_matches_the_hosts_reachability(sandbox, runtime, monkeypatch, capfd):
+    try:
+        ai = socket.getaddrinfo("api.github.com", 443, socket.AF_INET6, socket.SOCK_STREAM)
+        socket.create_connection(ai[0][4][:2], timeout=5).close()
+    except OSError:
+        pytest.skip("the host has no working IPv6 route")
+    _, v6 = _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=["v6"])
+    assert v6 == "ok"
