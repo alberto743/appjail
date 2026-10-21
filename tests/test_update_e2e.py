@@ -80,7 +80,7 @@ def test_real_tier4_hash_is_recorded_in_quarantine_and_compared_at_install(tmp_p
     # Pretend an older release is installed, so the same real release is a candidate.
     manifest.dump(path, replace(real, version="old", sha256="0" * 64, published_at="2020-01-01T00:00:00Z"))
 
-    # Inside the quarantine: the user lets bjail hash the candidate now (a real jailed download).
+    # Inside the quarantine: the user lets appjail hash the candidate now (a real jailed download).
     c = Answers(["y"])
     assert cli.main(["update", "kit"], console=c) == 0, c.lines
     assert any("sha256 recorded for the quarantine" in line for line in c.lines), c.lines
