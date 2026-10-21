@@ -13,6 +13,7 @@ import pytest
 
 from appjail import dbusproxy, jail, manifest, portal, runner
 from appjail.jail import RunError
+from appjail.portal import bus_call as real_bus_call
 from appjail.manifest import Manifest, ManifestError, Permissions
 from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
@@ -196,6 +197,29 @@ def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, mo
     assert "AccessDenied" in r["host_control"] and "ServiceUnknown" in r["Flatpak"]
     assert not (runtime / ".flatpak").exists()
     assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
+
+
+@integration
+@needs_proxy
+@needs_portal
+def test_revoking_a_grant_made_through_the_real_portal(sandbox, runtime, portal_stack, monkeypatch, capfd):
+    env, log = portal_stack
+    perms = {"portals": True}
+    kw = app_root(sandbox, runtime, perms)
+    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    assert runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=NO_RESTRICTION) == 0
+    capfd.readouterr()
+    monkeypatch.setattr(portal, "bus_call", real_bus_call)
+    app = portal.app_id("app")
+    granted = portal.granted_documents(app, env)
+    assert len(granted) == 1 and "read" in next(iter(granted.values()))
+    doc = next(iter(granted))
+    view = runtime / "doc" / "by-app" / app / doc
+    assert view.is_dir()
+    portal.revoke_documents(app, env, granted)
+    assert portal.granted_documents(app, env) == {}
+    assert not view.exists()  # the document portal stops showing the file at once
 
 
 @integration

@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from appjail import appimage, history
+from appjail import appimage, history, portal
+from appjail.jail import RunError
 
 from .helpers import Harness
 
@@ -17,6 +18,14 @@ from .helpers import Harness
 def no_history(monkeypatch):
     """Most tests do not need (or want) a git repository in the fake config directory."""
     monkeypatch.setattr(history, "enabled", False)
+
+
+@pytest.fixture(autouse=True)
+def no_portal_store(monkeypatch):
+    """No test reaches the real session bus's permission store unless it installs its own double."""
+    def unreachable(*a, **k):
+        raise RunError("no permission store in tests")
+    monkeypatch.setattr(portal, "bus_call", unreachable)
 
 
 @pytest.fixture

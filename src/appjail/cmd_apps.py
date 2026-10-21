@@ -3,10 +3,11 @@
 
 """`appjail tools`, `history`, `list`, `remove` and `perms`."""
 
+import os
 from dataclasses import replace
 from pathlib import Path
 
-from . import appimage, history, jail, manifest, store, tools, updater
+from . import appimage, history, jail, manifest, portal, store, tools, updater
 from .console import Abort
 from .permargs import PERMISSION_FLAGS, dbus_from_args, describe_permissions, dirs_from_args, portals_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
 
@@ -61,6 +62,20 @@ def cmd_list(console):
                     + (f"  (update seen: {pending['tag']})" if pending else ""))
 
 
+def revoke_portal_grants(name, mpath, console):
+    """Drop the app's document-portal grants; only worth a note when the app had portals and the store is unreachable."""
+    app = portal.app_id(name)
+    try:
+        portal.revoke_documents(app, os.environ, portal.granted_documents(app, os.environ))
+    except jail.RunError as e:
+        try:
+            had_portals = manifest.load(mpath).permissions.portals
+        except (manifest.ManifestError, OSError):
+            had_portals = False
+        if had_portals:
+            console.out(f"note: document-portal grants were not revoked ({e}); see `appjail portals`")
+
+
 def cmd_remove(args, console):
     name = args.app
     if not manifest.NAME_RE.fullmatch(name):
@@ -71,6 +86,7 @@ def cmd_remove(args, console):
     console.out(f"This deletes the manifest and the app's files, including its private home (its settings and data): {adir}")
     if not args.yes and not console.confirm(f"Remove {name}?"):
         raise Abort("cancelled")
+    revoke_portal_grants(name, mpath, console)
     appimage.remove_tree(adir)
     mpath.unlink(missing_ok=True)
     history.record(f"remove {name}")

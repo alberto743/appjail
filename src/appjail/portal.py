@@ -106,6 +106,63 @@ def doc_dir(runtime_dir, app, host_env=None):
     return path
 
 
+STORE_NAME = "org.freedesktop.impl.portal.PermissionStore"
+STORE_PATH = "/org/freedesktop/impl/portal/PermissionStore"
+DOC_PERMISSIONS = ("read", "write", "grant-permissions", "delete")
+DOC_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def bus_call(host_env, dest, path, member, *args, timeout=10.0):
+    """Call a method on the host session bus (`dbus-send`, the same way as `activate_documents`)."""
+    rt = host_env.get("XDG_RUNTIME_DIR", "")
+    dbus_send = "/usr/bin/dbus-send"
+    if not rt or not os.access(dbus_send, os.X_OK):
+        raise RunError("dbus-send is needed to reach the portals (package dbus-bin)")
+    env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": rt}
+    if host_env.get("DBUS_SESSION_BUS_ADDRESS"):
+        env["DBUS_SESSION_BUS_ADDRESS"] = host_env["DBUS_SESSION_BUS_ADDRESS"]
+    try:
+        r = subprocess.run([dbus_send, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
+                            f"--dest={dest}", path, member, *args],
+                           env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout + 2)
+    except (OSError, subprocess.SubprocessError) as e:
+        raise RunError(f"cannot reach the portals: {e}") from e
+    if r.returncode != 0:
+        raise RunError("the portal refused the call: " + (r.stderr.strip().splitlines() or ["?"])[-1])
+    return r.stdout
+
+
+def store_call(host_env, method, *args):
+    return bus_call(host_env, STORE_NAME, STORE_PATH, f"{STORE_NAME}.{method}", *args)
+
+
+def granted_documents(app, host_env):
+    """Document ids the document portal has granted to this app id, with the permissions, sorted."""
+    ids = re.findall(r'^\s*string "([^"]*)"\s*$', store_call(host_env, "List", "string:documents"), re.M)
+    found = {}
+    for doc in ids:
+        if not DOC_ID_RE.fullmatch(doc):
+            continue
+        reply = store_call(host_env, "Lookup", "string:documents", f"string:{doc}")
+        m = re.search(r'dict entry\(\s*string "' + re.escape(app) + r'"\s*array \[(.*?)\]', reply, re.S)
+        perms = re.findall(r'string "([^"]*)"', m.group(1)) if m else []
+        if perms:
+            found[doc] = perms
+    return dict(sorted(found.items()))
+
+
+def revoke_documents(app, host_env, ids):
+    """Remove this app id's permissions on each document; other apps' grants and the document are untouched.
+
+    This goes through the document portal, not the permission store: the portal keeps its own copy and
+    would keep serving the file after a store-only change (verified against the real portal).
+    """
+    for doc in ids:
+        bus_call(host_env, DOCUMENTS_NAME, "/org/freedesktop/portal/documents",
+                 "org.freedesktop.portal.Documents.RevokePermissions",
+                 f"string:{doc}", f"string:{app}", "array:string:" + ",".join(DOC_PERMISSIONS))
+
+
 class Instance:
     """One running app's portal identity: `.flatpak/<id>/{info,bwrapinfo.json}` in the host runtime dir."""
 

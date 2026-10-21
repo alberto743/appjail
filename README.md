@@ -107,6 +107,8 @@ appjail perms lagrange --add-dbus org.example.Name  # talk to one session-bus na
 appjail perms lagrange --add-dbus-own org.example.Name  # own a session-bus name (MPRIS player, single instance)
 appjail perms lagrange --allow portals              # desktop portals (file chooser, notifications, ...)
 appjail perms lagrange --deny network --rm-dir ~/Documents   # take grants back (also --rm-dbus, --rm-dbus-own, --rm-portal)
+appjail portals lagrange                           # files it was granted through the file chooser
+appjail portals lagrange --revoke-all               # take those grants back (also --revoke DOC_ID)
 appjail run lagrange --file ~/report.pdf            # one file, for this run only
 ```
 

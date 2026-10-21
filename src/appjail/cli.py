@@ -13,6 +13,7 @@ from . import github, index, indexsync, jail, manifest, runner, tools, updater
 from .cmd_add import cmd_add
 from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
 from .cmd_index import cmd_index_rollback, cmd_index_status, cmd_index_update, cmd_search
+from .cmd_portals import cmd_portals
 from .cmd_update import cmd_update
 from .console import Abort, Console
 from .permargs import PERMISSION_FLAGS, dirs_from_args, files_from_args
@@ -80,6 +81,11 @@ def build_parser():
     rm = sub.add_parser("remove", help="delete an app, including its private home")
     rm.add_argument("app")
     rm.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    por = sub.add_parser("portals", help="list or revoke the files an app was granted through the document portal")
+    por.add_argument("app")
+    por.add_argument("--revoke", action="append", default=[], metavar="DOC_ID", help="revoke one document grant (repeatable)")
+    por.add_argument("--revoke-all", action="store_true", help="revoke every document grant")
+    por.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     perms = sub.add_parser("perms", help="show or change an app's permissions (the pinned release is unchanged)")
     perms.add_argument("app")
     perms.add_argument("--allow", action="append", default=[], choices=PERMISSION_FLAGS)
@@ -135,6 +141,8 @@ def main(argv=None, client=None, console=None):
             cmd_history(args, console)
         elif args.command == "remove":
             cmd_remove(args, console)
+        elif args.command == "portals":
+            cmd_portals(args, console)
         elif args.command == "perms":
             cmd_perms(args, console)
         elif args.command == "run":
