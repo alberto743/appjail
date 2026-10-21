@@ -1,0 +1,36 @@
+name: Release
+
+# Creates the GitHub release for a version tag (vX.Y.Z), with notes generated from the commits since the previous tag.
+# A tag with a pre-release suffix (v1.0.0rc1, v1.0.0-beta.1) is marked as a pre-release. Runs only after CI passed.
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-gate.yml
+    permissions:
+      actions: read
+      contents: read
+
+  release:
+    needs: ci
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: write  # create the release; only this job
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Create the release
+        run: |
+          case "$GITHUB_REF_NAME" in
+            v*[!0-9.]*) pre=--prerelease ;;
+            *) pre= ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" $pre

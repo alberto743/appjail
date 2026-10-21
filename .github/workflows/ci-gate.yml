@@ -1,0 +1,39 @@
+name: CI gate
+
+# Reusable: succeeds only if the CI workflow passed on this commit on main. The publishing workflows (pypi.yml,
+# release.yml) call it first, so a tag on a commit whose CI is red, missing or cancelled publishes nothing. It waits
+# for a CI run that is still going; a tag pushed together with its commit gets two minutes for the run to appear.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 35
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: CI must have passed on this commit
+        run: |
+          waited=0
+          while :; do
+            runs=$(gh run list --workflow ci.yml --branch main --event push --commit "$GITHUB_SHA" \
+                   --json status,conclusion --jq '[.[] | if .status == "completed" then .conclusion else "active" end] | join(" ")')
+            echo "CI runs for $GITHUB_SHA on main: ${runs:-none}"
+            case " $runs " in
+              *" success "*) exit 0 ;;
+              *" active "*) ;;
+              "  ") [ "$waited" -lt 120 ] || { echo "no CI run for this commit on main" >&2; exit 1; } ;;
+              *) echo "CI did not pass for this commit" >&2; exit 1 ;;
+            esac
+            [ "$waited" -lt 1800 ] || { echo "CI still running after 30 minutes" >&2; exit 1; }
+            sleep 30; waited=$((waited + 30))
+          done

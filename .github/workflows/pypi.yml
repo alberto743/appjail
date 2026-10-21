@@ -2,7 +2,8 @@ name: PyPI
 
 # Publishes to PyPI when a version tag (vX.Y.Z) is pushed. Uses PyPI trusted publishing (OIDC): no API token is
 # stored. One-time setup on PyPI: add a trusted publisher for project "appjail" (owner alberto743, repository
-# appjail, workflow pypi.yml, environment pypi), and create the "pypi" environment in the repository settings.
+# appjail, workflow pypi.yml, environment pypi). The "pypi" environment exists in the repository settings (tags only).
+# Nothing is built or published unless CI passed on the tagged commit (ci-gate.yml).
 
 on:
   push:
@@ -12,7 +13,14 @@ permissions:
   contents: read
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci-gate.yml
+    permissions:
+      actions: read
+      contents: read
+
   build:
+    needs: ci
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
