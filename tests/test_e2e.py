@@ -110,6 +110,47 @@ def test_gui_app_runs_through_a_private_xwayland(installed):
         weston.wait(timeout=10)
 
 
+@pytest.mark.skipif(not shutil.which("pasta"), reason="pasta is installed in the test guest (packages.txt)")
+def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
+    """Lagrange (a Gemini browser) is given a gemini:// URL. Its trust-on-first-use store, written into the private
+    home, records the server certificate only if the TLS connection really went through the pasta namespace.
+    Depends on one public Gemini server (geminiprotocol.net) being up."""
+    import signal
+    from appjail import jail
+    assert cli.main(["perms", "lagrange", "--allow", "network", "--yes"], console=Answers([])) == 0
+    rt = Path(f"/run/user/{os.getuid()}")
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-e2n"],
+                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    launched = []
+
+    def run(argv):
+        launched.append(argv[0])
+        proc = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        try:
+            proc.wait(timeout=12)  # still running when the time is up: that is the normal case for a GUI
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGTERM)  # the whole group: pasta alone leaves the jail running
+            proc.wait(timeout=10)
+        return proc.returncode
+
+    try:
+        for _ in range(50):
+            if (rt / "appjail-e2n").exists():
+                break
+            time.sleep(0.1)
+        env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-e2n", "LANG": "C.UTF-8"}
+        runner.launch("lagrange", extra_args=["gemini://geminiprotocol.net/"], host_env=env, say=lambda *_: None,
+                      runner=run)
+    finally:
+        weston.terminate()
+        weston.wait(timeout=10)
+    assert launched[0] == jail.find_pasta()
+    trusted = store.home_path("lagrange") / ".config" / "lagrange" / "trusted.2.txt"
+    assert "geminiprotocol.net;1965" in trusted.read_text(), "no certificate was stored: the app did not connect"
+
+
+# keep last: it damages the stored image
 def test_tampered_image_is_refused(installed):
     with open(store.appimage_path("lagrange"), "ab") as f:
         f.write(b"x")
