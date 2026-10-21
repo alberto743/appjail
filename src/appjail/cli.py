@@ -18,8 +18,21 @@ from .console import Abort, Console
 from .permargs import PERMISSION_FLAGS, dirs_from_args, files_from_args
 
 
+class _HelpOnErrorParser(argparse.ArgumentParser):
+    """Argument errors show the full help of the parser that failed, not just the usage line.
+
+    The subparsers are created with the class of their parent, so this covers every command.
+    """
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        sys.stderr.write(f"{self.prog}: error: {message}\n\n")
+        self.print_help(sys.stderr)
+        self.exit(2)
+
+
 def build_parser():
-    p = argparse.ArgumentParser(prog="appjail", description="Sandboxed AppImage manager")
+    p = _HelpOnErrorParser(prog="appjail", description="Sandboxed AppImage manager")
     sub = p.add_subparsers(dest="command", required=True)
     add = sub.add_parser("add", help="add an app from a GitHub owner/repo")
     add.add_argument("source", help="GitHub owner/repo")
