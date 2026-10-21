@@ -29,5 +29,5 @@ fuse3                 # the document portal's FUSE mount (fusermount3)
 python3-dbus          # fake portal backend and in-jail test client
 python3-gi            # GLib main loop for python3-dbus
 xwayland              # rootless X server for display = "xwayland" (run inside the app's jail)
-x11-utils             # xdpyinfo, the X11 client used by the Xwayland test
+x11-utils             # xdpyinfo and xwininfo, the X11 clients used by the Xwayland tests
 passt                 # pasta: private network namespace for the download, attestation and index jails and for every app with `network` (required there)
