@@ -56,7 +56,14 @@ sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland git
 ## Install
 
 appjail is a Python package with no dependencies. Install it as a command with [pipx](https://pipx.pypa.io/)
-or pip (pip downloads only the build backend, Hatchling):
+or pip:
+
+```sh
+pipx install appjail    # or: pip install --user appjail
+appjail --help
+```
+
+Or from a clone (pip downloads only the build backend, Hatchling):
 
 ```sh
 git clone <repository-url> appjail
@@ -66,7 +73,7 @@ appjail --help
 ```
 
 To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m appjail --help`.
-Update appjail with `git pull` after reading what changed, then reinstall.
+appjail never updates itself: upgrade with `pipx upgrade appjail` (or `git pull` and reinstall) after reading what changed.
 
 Data lives in `~/.local/share/appjail` (images, extracted trees, private homes, staging) and `~/.config/appjail`
 (manifests, tracked in a small local git repository). `APPJAIL_DATA_DIR` and `APPJAIL_CONFIG_DIR` override them.
@@ -82,8 +89,10 @@ appjail remove lagrange          # delete the app and its private home
 ```
 
 `add` also takes `--tag TAG` (a specific release instead of the latest), `--name`, `--prerelease`, and the permission
-options below at install time (`--allow`, `--dir`, `--dbus`, `--display xwayland`, `--no-audio`, `--no-gpu`).
-`run` takes `--dir PATH[:ro|:rw]` and `--file PATH[:rw]` for one run only.
+options below at install time (`--allow`, `--dir`, `--dbus`, `--dbus-own`, `--portal`, `--display xwayland`,
+`--no-audio`, `--no-gpu`). `run` takes `--dir PATH[:ro|:rw]` and `--file PATH[:rw]` for one run only, and passes
+everything after `--` to the app (`appjail run lagrange -- --help`). `remove` and `perms` ask for confirmation unless
+given `--yes`.
 
 `add` shows the repository owner, account age, stars and fork or archive status before it downloads anything, and
 asks if several release assets match. By default an app gets audio and GPU access and nothing else.
@@ -95,9 +104,17 @@ appjail perms lagrange                              # show
 appjail perms lagrange --allow network              # outbound network only (see below)
 appjail perms lagrange --add-dir ~/Documents:rw     # a directory, read-only unless :rw
 appjail perms lagrange --add-dbus org.example.Name  # talk to one session-bus name through a filtering proxy
+appjail perms lagrange --add-dbus-own org.example.Name  # own a session-bus name (MPRIS player, single instance)
 appjail perms lagrange --allow portals              # desktop portals (file chooser, notifications, ...)
+appjail perms lagrange --deny network --rm-dir ~/Documents   # take grants back (also --rm-dbus, --rm-dbus-own, --rm-portal)
 appjail run lagrange --file ~/report.pdf            # one file, for this run only
 ```
+
+**Giving one file.** `run --file PATH` (add `:rw` to allow writing) makes just that file visible, not the rest of its
+directory, and appends its path inside the sandbox to the app's arguments. It applies to that run only and is never
+saved in the manifest; for a standing grant use a directory, or `portals` and the file chooser. Credentials, browser
+profiles and the like are refused as for directories, and shell startup files are never writable. Apps that save by
+writing a temporary file and renaming it fail on `:rw`.
 
 | Permission | Effect |
 |---|---|
@@ -107,6 +124,7 @@ appjail run lagrange --file ~/report.pdf            # one file, for this run onl
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `dirs` | Directories mapped into the private home. Credentials, browser profiles, shell startup files and system trees are refused. |
+| `dbus`, `dbus_own` | Session-bus names the app may talk to or own, through `xdg-dbus-proxy`. Desktop namespaces are refused. |
 | `display` | `wayland` (default) or `xwayland`. |
 
 Every sandbox also drops all capabilities, has its own PID, IPC and UTS namespaces, a read-only system, a minimal
@@ -144,9 +162,11 @@ appjail index status      # show the pinned snapshot
 appjail search editor     # candidates only; installing is always `appjail add owner/repo`
 ```
 
+`search` shows 20 results; use `--limit N` or `--all` for more.
+
 ## Other commands
 
-- `appjail history [app]`: every change to the manifests, from the local git repository. `appjail run` warns if a
+- `appjail history [app] [--limit N]`: every change to the manifests, from the local git repository. `appjail run` warns if a
   manifest was edited outside appjail.
 - `appjail tools status|install NAME`: helper binaries whose URL, size and hash are pinned in appjail's source (`gh` for
   attestations, `dwarfs` for DwarFS-based AppImages).
