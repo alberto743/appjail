@@ -808,3 +808,48 @@ def test_ipv6_is_brought_up_and_forwarded_by_pasta_in_a_fake_network(tmp_path):
     if proc.returncode != 0 and "unshare" in proc.stderr and "failed" not in proc.stdout:
         pytest.skip("cannot create a user and network namespace: " + proc.stderr.strip())
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+KILL_DRIVER = """
+import sys
+from appjail import jail, runner
+argv = [jail.find_bwrap(), "--unshare-all", "--die-with-parent", "--ro-bind", "/", "/", "sleep", sys.argv[1]]
+if sys.argv[2] == "pasta":
+    argv = jail.net_wrap(argv, required=True)
+sys.exit(runner._run_app(argv))
+"""
+
+
+def _alive(marker):
+    return subprocess.run(["pgrep", "-f", f"sleep {marker}$"], capture_output=True).returncode == 0
+
+
+@integration
+@pytest.mark.parametrize("mode", ["plain", "pasta"])
+@pytest.mark.parametrize("sig", ["SIGTERM", "SIGHUP"])
+def test_terminating_the_launcher_stops_the_whole_jail(tmp_path, mode, sig):
+    """Killing pasta alone leaves the jail running; the launcher must take the whole group down."""
+    import signal
+    if mode == "pasta" and not jail.find_pasta():
+        pytest.skip("pasta not installed (package passt)")
+    marker = str(30000 + os.getpid() % 10000)
+    driver = tmp_path / "driver.py"
+    driver.write_text(KILL_DRIVER)
+    proc = subprocess.Popen([sys.executable, str(driver), marker, mode],
+                            env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(Path(runner.__file__).parent.parent)})
+    try:
+        for _ in range(100):
+            if _alive(marker):
+                break
+            time.sleep(0.1)
+        assert _alive(marker), "the jail did not start"
+        proc.send_signal(getattr(signal, sig))
+        proc.wait(timeout=15)
+        for _ in range(50):
+            if not _alive(marker):
+                break
+            time.sleep(0.1)
+        assert not _alive(marker), "the jail outlived its launcher"
+    finally:
+        proc.kill()
+        subprocess.run(["pkill", "-f", f"sleep {marker}$"], capture_output=True)

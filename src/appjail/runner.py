@@ -8,6 +8,7 @@ import json
 import os
 import select
 import shutil
+import signal
 import subprocess
 import tempfile
 from dataclasses import replace
@@ -103,6 +104,32 @@ class Pipes:
             self.close(name)
 
 
+def _wait_group(proc):
+    """Wait for the app's process group; forward SIGINT, SIGTERM and SIGHUP to the whole group and leave nothing behind.
+
+    Needed because killing pasta alone (or appjail) does not stop the jail it started: bwrap's --die-with-parent does
+    not follow pasta's namespace helper, so an app with `network` would keep running, unsupervised, after its launcher.
+    """
+    def forward(signum, _frame):
+        try:
+            os.killpg(proc.pid, signum)
+        except ProcessLookupError:
+            pass
+    try:
+        old = {sig: signal.signal(sig, forward) for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
+    except ValueError:  # not the main thread: no handlers, the group is still cleaned up below
+        old = {}
+    try:
+        return proc.wait()
+    finally:
+        for sig, handler in old.items():
+            signal.signal(sig, handler)
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
 def _run_app(argv, filter_fd=None, pipes=None, instance=None):
     """Start the jail, publish its init pid for the portal, then let the app run; return its exit status.
 
@@ -112,8 +139,9 @@ def _run_app(argv, filter_fd=None, pipes=None, instance=None):
     env = {"PATH": "/usr/bin:/bin"}
     keep = () if filter_fd is None else (filter_fd,)
     if instance is None:
-        return subprocess.call(argv, env=env, pass_fds=keep)
-    proc = subprocess.Popen(argv, env=env, pass_fds=(*keep, *(pipes.fds[n] for n in ("status_w", "block_r") if n in pipes.fds)))
+        return _wait_group(subprocess.Popen(argv, env=env, pass_fds=keep, start_new_session=True))
+    proc = subprocess.Popen(argv, env=env, start_new_session=True,
+                            pass_fds=(*keep, *(pipes.fds[n] for n in ("status_w", "block_r") if n in pipes.fds)))
     try:
         pipes.close("status_w")
         pipes.close("block_r")
@@ -127,10 +155,11 @@ def _run_app(argv, filter_fd=None, pipes=None, instance=None):
             raise RunError("the jail did not report its process id") from None
         instance.child_started(pid)
         pipes.close("block_w")  # the app starts now
-        return proc.wait()
+        return _wait_group(proc)
     finally:
         if proc.poll() is None:
-            proc.kill()
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(proc.pid, signal.SIGKILL)
             proc.wait()
 
 
