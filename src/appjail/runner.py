@@ -22,6 +22,7 @@ from . import (
     jail,
     manifest,
     portal,
+    runtimejail,
     seccomp,
     store,
     wayland,
@@ -33,7 +34,7 @@ PASTA_SECCOMP_FD, PASTA_STATUS_FD, PASTA_BLOCK_FD = 9, 8, 7
 
 
 def _passwd(uid, gid):
-    return (f"root:x:0:0:root:/root:/usr/sbin/nologin\napp:x:{uid}:{gid}:app:{jail.APP_HOME}:/bin/sh\n",
+    return (f"root:x:0:0:root:/root:/usr/sbin/nologin\napp:x:{uid}:{gid}:app:{runtimejail.APP_HOME}:/bin/sh\n",
             f"root:x:0:\napp:x:{gid}:\n")
 
 
@@ -185,7 +186,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     if extra_dirs:
         perms = replace(perms, dirs=grants.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
-    file_dests = jail.file_binds(extra_files, Path.home())[1] if extra_files else []
+    file_dests = runtimejail.file_binds(extra_files, Path.home())[1] if extra_files else []
     if file_dests:
         say("Temporary file access for this run: " + ", ".join(file_dests))
         extra_args = [*extra_args, *file_dests]
@@ -223,9 +224,9 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         pipes = Pipes(fifo_dir) if instance else None
         if pipes:
             stack.callback(pipes.close_all)
-        args = jail.runtime_args(
+        args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-            command=[f"{jail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
+            command=[f"{runtimejail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
             wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
             block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), files=extra_files)
         argv = [jail.find_bwrap(), *args]

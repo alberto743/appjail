@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import cli, jail, manifest, runner, store
+from appjail import cli, jail, manifest, runner, runtimejail, store
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston") or not shutil.which("Xwayland")
@@ -77,13 +77,13 @@ def weston():
 
 def run_display(display, env, monkeypatch):
     # let Xwayland's own messages reach the test output, so a failure on another machine can be diagnosed
-    script = jail.XWAYLAND_SCRIPT.replace(">/dev/null 2>&1 &", ">&2 &")
+    script = runtimejail.XWAYLAND_SCRIPT.replace(">/dev/null 2>&1 &", ">&2 &")
     # headless weston has no GBM/dmabuf, so Xwayland falls back from glamor; on the GitHub runner (Ubuntu 26.04) that
     # fallback segfaults as soon as a client maps a window. -shm makes Xwayland use shared-memory buffers from the start.
-    monkeypatch.setattr(jail, "XWAYLAND_SCRIPT", script.replace("-rootless", "-rootless -shm"))
+    monkeypatch.setattr(runtimejail, "XWAYLAND_SCRIPT", script.replace("-rootless", "-rootless -shm"))
     m, root, home, etc = runner.prepare("imagemagick", say=lambda *_: None)
     perms = replace(m.permissions, display=display)
-    argv = [jail.find_bwrap(), *jail.runtime_args(
+    argv = [jail.find_bwrap(), *runtimejail.runtime_args(
         root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
         command=["/bin/sh", "-c", SCRIPT], host_home=Path.home())]
     return jail.supervise(argv, timeout=60)

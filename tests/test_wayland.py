@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import jail, wayland
+from appjail import jail, runtimejail, wayland
 from appjail.jail import RunError
 
 from .helpers import build, integration
@@ -160,7 +160,7 @@ def test_real_compositor_hides_privileged_protocols(sandbox):
             kw["host_env"] = env
             (kw["root"] / "AppRun").write_text("#!/bin/sh\nexec /usr/bin/timeout 3 /usr/bin/weston-simple-shm\n")
             (kw["root"] / "AppRun").chmod(0o755)
-            proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw, wayland_socket=path)], timeout=30)
+            proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, wayland_socket=path)], timeout=30)
             assert proc.returncode == 124, proc.stderr  # still running at the timeout = it connected
         assert not Path(path).parent.exists()
     finally:

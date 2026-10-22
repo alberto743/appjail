@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import jail, seccomp
+from appjail import runtimejail, seccomp
 
 from .helpers import integration, run_in_jail
 
@@ -103,6 +103,6 @@ def test_userns_grant_allows_a_nested_user_namespace(sandbox, runtime):
 def test_bwrap_refuses_nested_user_namespaces_without_the_grant(sandbox, runtime):
     """--disable-userns is the kernel-level half: it must be present even if the filter were bypassed."""
     from .test_runner import build
-    args = jail.runtime_args(**build(sandbox, runtime))
+    args = runtimejail.runtime_args(**build(sandbox, runtime))
     assert "--disable-userns" in args
-    assert "--disable-userns" not in jail.runtime_args(**build(sandbox, runtime, userns=True))
+    assert "--disable-userns" not in runtimejail.runtime_args(**build(sandbox, runtime, userns=True))

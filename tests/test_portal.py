@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import dbusproxy, grants, jail, manifest, portal, runner
+from appjail import dbusproxy, grants, jail, manifest, portal, runner, runtimejail
 from appjail.jail import RunError
 from appjail.manifest import Manifest, ManifestError, Permissions
 from appjail.portal import bus_call as real_bus_call
@@ -106,7 +106,7 @@ def test_identity_is_bound_into_the_proxy_jail_only(sandbox, runtime, tmp_path):
     args = dbusproxy.proxy_args("/run/user/1/bus", tmp_path, perms, 7, identity=info)
     assert (str(info), "/.flatpak-info") in pairs(args, "--ro-bind")
     assert "--filter" in args and any(a.startswith("--call=org.freedesktop.portal.Desktop=") for a in args)
-    app = jail.runtime_args(**build(sandbox, runtime, portals=True), dbus_socket="/x/bus", portal_docs=sandbox)
+    app = runtimejail.runtime_args(**build(sandbox, runtime, portals=True), dbus_socket="/x/bus", portal_docs=sandbox)
     assert "/.flatpak-info" not in [a for a in app if isinstance(a, str)]
     assert (str(sandbox), f"/run/user/{os.getuid()}/doc") in pairs(app, "--bind")
     assert dict(pairs(app, "--setenv"))["GTK_USE_PORTAL"] == "1"
@@ -114,13 +114,13 @@ def test_identity_is_bound_into_the_proxy_jail_only(sandbox, runtime, tmp_path):
 
 def test_portals_need_the_proxy_and_the_document_directory(sandbox, runtime):
     with pytest.raises(RunError, match="filtered bus socket"):
-        jail.runtime_args(**build(sandbox, runtime, portals=True))
+        runtimejail.runtime_args(**build(sandbox, runtime, portals=True))
     with pytest.raises(RunError, match="document portal"):
-        jail.runtime_args(**build(sandbox, runtime, portals=True), dbus_socket="/x/bus")
+        runtimejail.runtime_args(**build(sandbox, runtime, portals=True), dbus_socket="/x/bus")
 
 
 def test_status_and_block_fds_are_passed_to_bwrap(sandbox, runtime):
-    args = jail.runtime_args(**build(sandbox, runtime), status_fd=11, block_fd=12)
+    args = runtimejail.runtime_args(**build(sandbox, runtime), status_fd=11, block_fd=12)
     assert args[args.index("--json-status-fd") + 1] == "11" and args[args.index("--block-fd") + 1] == "12"
 
 

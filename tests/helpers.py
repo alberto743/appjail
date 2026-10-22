@@ -13,7 +13,17 @@ from pathlib import Path
 
 import pytest
 
-from appjail import appimage, cli, dbusproxy, github, jail, manifest, seccomp, store
+from appjail import (
+    appimage,
+    cli,
+    dbusproxy,
+    github,
+    jail,
+    manifest,
+    runtimejail,
+    seccomp,
+    store,
+)
 from appjail.cli import Abort
 from appjail.manifest import Manifest, Permissions
 
@@ -305,7 +315,7 @@ def run_in_jail(sandbox, runtime, script=FACTS, extra=(), **perms):
     kw["command"] = ["/app/AppRun", *extra]
     fd = seccomp.open_fd(kw["perms"].userns)
     try:
-        args = jail.runtime_args(**kw, seccomp_fd=fd)
+        args = runtimejail.runtime_args(**kw, seccomp_fd=fd)
         return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd,))
     finally:
         os.close(fd)

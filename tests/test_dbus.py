@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import dbusproxy, grants, jail, manifest, runner
+from appjail import dbusproxy, grants, jail, manifest, runner, runtimejail
 from appjail.jail import RunError
 from appjail.manifest import ManifestError, Permissions
 
@@ -86,7 +86,7 @@ def test_rules_add_own_policy_and_a_bus_is_needed():
 
 def test_dbus_own_without_proxy_socket_is_refused(sandbox, runtime):
     with pytest.raises(RunError, match="filtered bus socket"):
-        jail.runtime_args(**build(sandbox, runtime, dbus_own=("org.example.A",)))
+        runtimejail.runtime_args(**build(sandbox, runtime, dbus_own=("org.example.A",)))
 
 
 @pytest.mark.parametrize("env,expected", [
@@ -127,25 +127,25 @@ def test_proxy_runs_in_its_own_jail_without_network_or_home(tmp_path):
 
 
 def test_app_jail_gets_only_the_filtered_socket(sandbox, runtime):
-    args = jail.runtime_args(**build(sandbox, runtime, dbus_filter=NAMES[:1]), dbus_socket="/x/bus")
+    args = runtimejail.runtime_args(**build(sandbox, runtime, dbus_filter=NAMES[:1]), dbus_socket="/x/bus")
     assert ("/x/bus", f"/run/user/{os.getuid()}/bus") in pairs(args, "--ro-bind")
     env = dict(pairs(args, "--setenv"))
     assert env["DBUS_SESSION_BUS_ADDRESS"] == f"unix:path=/run/user/{os.getuid()}/bus"
 
 
 def test_no_bus_without_dbus_filter(sandbox, runtime):
-    args = jail.runtime_args(**build(sandbox, runtime))
+    args = runtimejail.runtime_args(**build(sandbox, runtime))
     assert "DBUS_SESSION_BUS_ADDRESS" not in dict(pairs(args, "--setenv"))
 
 
 def test_filtered_manifest_without_proxy_socket_is_refused(sandbox, runtime):
     with pytest.raises(RunError, match="filtered bus socket"):
-        jail.runtime_args(**build(sandbox, runtime, dbus_filter=NAMES[:1]))
+        runtimejail.runtime_args(**build(sandbox, runtime, dbus_filter=NAMES[:1]))
 
 
 def test_portals_stay_refused(sandbox, runtime):
     with pytest.raises(RunError, match="portals"):
-        jail.runtime_args(**build(sandbox, runtime, portals=True), dbus_socket="/x/bus")
+        runtimejail.runtime_args(**build(sandbox, runtime, portals=True), dbus_socket="/x/bus")
 
 
 def test_proxy_failure_is_reported_and_cleaned_up(runtime, monkeypatch):
@@ -223,7 +223,7 @@ def test_filtered_bus_end_to_end(sandbox, runtime, session_bus):
         kw = build(sandbox, runtime, dbus_filter=perms.dbus_filter)
         (kw["root"] / "AppRun").write_text(PROBE)
         (kw["root"] / "AppRun").chmod(0o755)
-        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw, dbus_socket=sock)], timeout=60)
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, dbus_socket=sock)], timeout=60)
     assert proc.returncode == 0, proc.stderr
     r = json.loads(proc.stdout)
     assert r["addr"] == f"unix:path=/run/user/{os.getuid()}/bus"
@@ -271,7 +271,7 @@ def test_owning_a_granted_name_end_to_end(sandbox, runtime, session_bus):
         kw = build(sandbox, runtime, dbus_own=perms.dbus_own)
         (kw["root"] / "AppRun").write_text(OWN_PROBE)
         (kw["root"] / "AppRun").chmod(0o755)
-        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw, dbus_socket=sock)], timeout=60)
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, dbus_socket=sock)], timeout=60)
     assert proc.returncode == 0, proc.stderr
     r = json.loads(proc.stdout)
     assert r["owned"] == "ok" and r["wild"] == "ok"

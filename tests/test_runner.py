@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import appimage, jail, manifest, runner, seccomp, store
+from appjail import appimage, jail, manifest, runner, runtimejail, seccomp, store
 from appjail.jail import RunError
 
 from .helpers import (
@@ -42,7 +42,7 @@ SHA = "a" * 64
 
 
 def test_baseline_isolation(sandbox, runtime):
-    args = jail.runtime_args(**build(sandbox, runtime))
+    args = runtimejail.runtime_args(**build(sandbox, runtime))
     for flag in ("--unshare-all", "--die-with-parent", "--new-session", "--clearenv"):
         assert flag in args
     assert args[args.index("--cap-drop") + 1] == "ALL"
@@ -56,7 +56,7 @@ def test_baseline_isolation(sandbox, runtime):
 
 
 def test_only_whitelisted_environment_is_set(sandbox, runtime):
-    args = jail.runtime_args(**build(sandbox, runtime))
+    args = runtimejail.runtime_args(**build(sandbox, runtime))
     env = {k: v for k, v in pairs(args, "--setenv")}
     assert "SECRET" not in env
     assert env["HOME"] == "/home/app" and env["WAYLAND_DISPLAY"] == "wayland-0" and env["LANG"] == "it_IT.UTF-8"
@@ -65,13 +65,13 @@ def test_only_whitelisted_environment_is_set(sandbox, runtime):
 
 
 def test_wayland_socket_is_bound(sandbox, runtime):
-    args = jail.runtime_args(**build(sandbox, runtime))
+    args = runtimejail.runtime_args(**build(sandbox, runtime))
     assert (str(runtime / "wayland-test"), f"/run/user/{os.getuid()}/wayland-0") in pairs(args, "--ro-bind")
 
 
 @pytest.mark.parametrize("audio", [False, True])
 def test_audio_sockets_only_when_granted(sandbox, runtime, audio):
-    args = jail.runtime_args(**build(sandbox, runtime, audio=audio))
+    args = runtimejail.runtime_args(**build(sandbox, runtime, audio=audio))
     dests = [d for _, d in pairs(args, "--ro-bind")]
     env = dict(pairs(args, "--setenv"))
     rt = f"/run/user/{os.getuid()}"
@@ -80,20 +80,20 @@ def test_audio_sockets_only_when_granted(sandbox, runtime, audio):
 
 
 def test_gpu_only_when_granted(sandbox, runtime):
-    off = jail.runtime_args(**build(sandbox, runtime, gpu=False))
+    off = runtimejail.runtime_args(**build(sandbox, runtime, gpu=False))
     assert "/dev/dri" not in off and not pairs(off, "--dev-bind")
     if os.path.isdir("/dev/dri"):
-        assert ("/dev/dri", "/dev/dri") in pairs(jail.runtime_args(**build(sandbox, runtime, gpu=True)), "--dev-bind")
+        assert ("/dev/dri", "/dev/dri") in pairs(runtimejail.runtime_args(**build(sandbox, runtime, gpu=True)), "--dev-bind")
 
 
 def test_network_is_opt_in(sandbox, runtime):
-    assert "--share-net" in jail.runtime_args(**build(sandbox, runtime, network=True))
+    assert "--share-net" in runtimejail.runtime_args(**build(sandbox, runtime, network=True))
 
 
 def test_network_host_keeps_the_host_resolver(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
-    private = jail.runtime_args(**build(sandbox, runtime, network=True))
-    host = jail.runtime_args(**build(sandbox, runtime, network=True, network_host=True))
+    private = runtimejail.runtime_args(**build(sandbox, runtime, network=True))
+    host = runtimejail.runtime_args(**build(sandbox, runtime, network=True, network_host=True))
     assert "/etc/resolv.conf" in private and "resolv.conf.pasta" in " ".join(private)
     assert "resolv.conf.pasta" not in " ".join(host)
 
@@ -134,7 +134,7 @@ def test_dirs_map_into_private_home(sandbox, runtime, monkeypatch):
     shared.mkdir()
     kw = build(sandbox, runtime, dirs=("~/Docs", "~/Out:rw", str(shared)))
     kw["host_home"] = fake_home
-    args = jail.runtime_args(**kw)
+    args = runtimejail.runtime_args(**kw)
     assert (str(fake_home / "Docs"), "/home/app/Docs") in pairs(args, "--ro-bind")
     assert (str(fake_home / "Out"), "/home/app/Out") in pairs(args, "--bind")
     assert (str(shared), str(shared)) in pairs(args, "--ro-bind")
@@ -144,7 +144,7 @@ def test_missing_granted_dir_is_an_error(sandbox, runtime):
     kw = build(sandbox, runtime, dirs=("~/NoSuchDir",))
     kw["host_home"] = sandbox
     with pytest.raises(RunError, match="does not exist"):
-        jail.runtime_args(**kw)
+        runtimejail.runtime_args(**kw)
 
 
 @pytest.mark.parametrize("what", ["home", "parent"])
@@ -152,7 +152,7 @@ def test_dirs_cannot_expose_the_whole_home(sandbox, runtime, what):
     kw = build(sandbox, runtime, dirs=(str(sandbox if what == "home" else sandbox.parent),))
     kw["host_home"] = sandbox
     with pytest.raises(RunError, match="whole home"):
-        jail.runtime_args(**kw)
+        runtimejail.runtime_args(**kw)
 
 
 @pytest.mark.parametrize("where", ["data", "config", "inside_data", "parent_of_data"])
@@ -163,7 +163,7 @@ def test_dirs_cannot_expose_appjail_itself(sandbox, runtime, where):
     path = {"data": store.data_dir(), "config": store.config_dir(), "inside_data": store.data_dir() / "apps",
             "parent_of_data": store.data_dir().parent}[where]
     with pytest.raises(RunError, match="appjail's own data"):
-        jail.runtime_args(**build(sandbox, runtime, dirs=(str(path),)))
+        runtimejail.runtime_args(**build(sandbox, runtime, dirs=(str(path),)))
 
 
 @pytest.mark.parametrize("perms,match", [
@@ -172,12 +172,12 @@ def test_dirs_cannot_expose_appjail_itself(sandbox, runtime, where):
 ])
 def test_unimplemented_permissions_are_refused_not_ignored(sandbox, runtime, perms, match):
     with pytest.raises(RunError, match=match):
-        jail.runtime_args(**build(sandbox, runtime, **perms))
+        runtimejail.runtime_args(**build(sandbox, runtime, **perms))
 
 
 def test_xwayland_wraps_the_command_and_switches_the_toolkits(sandbox, runtime, monkeypatch):
-    monkeypatch.setattr(jail, "XWAYLAND_PATHS", ("/bin/sh",))  # any executable stands in for the binary
-    args = jail.runtime_args(**build(sandbox, runtime, display="xwayland"))
+    monkeypatch.setattr(runtimejail, "XWAYLAND_PATHS", ("/bin/sh",))  # any executable stands in for the binary
+    args = runtimejail.runtime_args(**build(sandbox, runtime, display="xwayland"))
     env = {v[0]: v[1] for v in (args[i + 1:i + 3] for i, a in enumerate(args) if a == "--setenv")}
     assert "WAYLAND_DISPLAY" not in env and env["GDK_BACKEND"] == "x11" and env["QT_QPA_PLATFORM"] == "xcb"
     cmd = args[args.index("--") + 1:]
@@ -186,22 +186,22 @@ def test_xwayland_wraps_the_command_and_switches_the_toolkits(sandbox, runtime, 
 
 
 def test_xwayland_without_the_binary_is_an_error(sandbox, runtime, monkeypatch):
-    monkeypatch.setattr(jail, "XWAYLAND_PATHS", ("/nonexistent/Xwayland",))
+    monkeypatch.setattr(runtimejail, "XWAYLAND_PATHS", ("/nonexistent/Xwayland",))
     with pytest.raises(RunError, match="Xwayland"):
-        jail.runtime_args(**build(sandbox, runtime, display="xwayland"))
+        runtimejail.runtime_args(**build(sandbox, runtime, display="xwayland"))
 
 
 def test_missing_or_hostile_wayland_socket(sandbox, runtime):
     kw = build(sandbox, runtime)
     kw["host_env"] = dict(kw["host_env"], WAYLAND_DISPLAY="nope")
     with pytest.raises(RunError, match="not found"):
-        jail.runtime_args(**kw)
+        runtimejail.runtime_args(**kw)
     kw["host_env"] = dict(kw["host_env"], WAYLAND_DISPLAY="../x")
     with pytest.raises(RunError, match="no usable Wayland"):
-        jail.runtime_args(**kw)
+        runtimejail.runtime_args(**kw)
     kw["host_env"] = {}
     with pytest.raises(RunError, match="no usable Wayland"):
-        jail.runtime_args(**kw)
+        runtimejail.runtime_args(**kw)
 
 
 # -- prepare: pin verification and re-extraction -----------------------------------------
@@ -432,7 +432,7 @@ def test_real_wayland_client_runs_against_headless_weston(sandbox):
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-test"}
         (kw["root"] / "AppRun").write_text("#!/bin/sh\nexec /usr/bin/timeout 3 /usr/bin/weston-simple-shm\n")
         (kw["root"] / "AppRun").chmod(0o755)
-        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw)], timeout=30)
         assert proc.returncode == 124, proc.stderr  # killed by timeout while running = it connected
     finally:
         weston.terminate()
@@ -448,7 +448,7 @@ def test_sensitive_dirs_refused_after_symlink_resolution(sandbox, runtime, sub, 
     target.mkdir(parents=True)
     (fake_home / "innocent").symlink_to(target)
     with pytest.raises(RunError, match="refused"):
-        jail.dir_binds([f"~/innocent{mode}"], fake_home)
+        runtimejail.dir_binds([f"~/innocent{mode}"], fake_home)
 
 
 def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):
@@ -457,7 +457,7 @@ def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):
     s.bind(str(restricted))
     try:
         kw = build(sandbox, runtime)
-        args = jail.runtime_args(**kw, wayland_socket=str(restricted))
+        args = runtimejail.runtime_args(**kw, wayland_socket=str(restricted))
         rt = f"/run/user/{os.getuid()}"
         assert (str(restricted), f"{rt}/wayland-0") in pairs(args, "--ro-bind")
         assert str(Path(runtime) / kw["host_env"]["WAYLAND_DISPLAY"]) not in [a for a in args if isinstance(a, str)]
@@ -488,7 +488,7 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
             "#!/bin/sh\n/usr/bin/xdpyinfo > /app/out.txt 2>&1; echo \"display=$DISPLAY wl=$WAYLAND_DISPLAY\" >> /app/out.txt\n"
             .replace("/app/out.txt", "/home/app/out.txt"))
         (kw["root"] / "AppRun").chmod(0o755)
-        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw)], timeout=30)
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw)], timeout=30)
         assert (kw["home"] / "out.txt").exists(), f"the app never ran: {proc.stderr}"
         text = (kw["home"] / "out.txt").read_text()
         assert proc.returncode == 0 and "name of display" in text, text + proc.stderr
@@ -507,17 +507,17 @@ def test_file_binds_read_only_by_default_and_rw_on_request(sandbox):
     ro, rw, outside = home / "docs" / "a.txt", home / "docs" / "b.txt", sandbox / "c.txt"
     for f in (ro, rw, outside):
         f.write_text("x")
-    args, dests = jail.file_binds([str(ro), f"{rw}:rw", str(outside)], home)
-    assert pairs(args, "--ro-bind") == [(str(ro), f"{jail.APP_HOME}/docs/a.txt"), (str(outside), str(outside))]
-    assert pairs(args, "--bind") == [(str(rw), f"{jail.APP_HOME}/docs/b.txt")]
-    assert dests == [f"{jail.APP_HOME}/docs/a.txt", f"{jail.APP_HOME}/docs/b.txt", str(outside)]
+    args, dests = runtimejail.file_binds([str(ro), f"{rw}:rw", str(outside)], home)
+    assert pairs(args, "--ro-bind") == [(str(ro), f"{runtimejail.APP_HOME}/docs/a.txt"), (str(outside), str(outside))]
+    assert pairs(args, "--bind") == [(str(rw), f"{runtimejail.APP_HOME}/docs/b.txt")]
+    assert dests == [f"{runtimejail.APP_HOME}/docs/a.txt", f"{runtimejail.APP_HOME}/docs/b.txt", str(outside)]
 
 
 def test_file_binds_refuse_directories_missing_and_special_files(sandbox):
     (sandbox / "d").mkdir()
     for bad, msg in [(sandbox / "d", "not a regular file"), (sandbox / "nope", "does not exist"), (Path("/dev/null"), "not a regular file")]:
         with pytest.raises(RunError, match=msg):
-            jail.file_binds([str(bad)], sandbox)
+            runtimejail.file_binds([str(bad)], sandbox)
 
 
 @pytest.mark.parametrize("rel,mode", [(".ssh/id_ed25519", ""), (".gnupg/pubring.kbx", ""), ("vault.kdbx", ""), (".bashrc", ":rw")])
@@ -530,7 +530,7 @@ def test_file_binds_apply_the_sensitive_path_policy(sandbox, rel, mode):
     link.symlink_to(f)
     for path in (f, link):  # a link must not dodge the policy
         with pytest.raises(RunError, match="refused"):
-            jail.file_binds([f"{path}{mode}"], home)
+            runtimejail.file_binds([f"{path}{mode}"], home)
 
 
 def test_file_binds_refuse_appjails_own_data(sandbox):
@@ -538,7 +538,7 @@ def test_file_binds_refuse_appjails_own_data(sandbox):
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text("x")
     with pytest.raises(RunError, match="own data"):
-        jail.file_binds([str(f)], sandbox)
+        runtimejail.file_binds([str(f)], sandbox)
 
 
 def test_launch_binds_files_and_passes_their_jail_paths_to_the_app(sandbox, runtime):
@@ -569,7 +569,7 @@ def test_only_the_granted_file_is_visible_in_the_jail(sandbox, runtime):
     kw["command"] = ["/app/AppRun", str(d / "in.txt")]
     fd = seccomp.open_fd(kw["perms"].userns)
     try:
-        proc = jail.supervise([jail.find_bwrap(), *jail.runtime_args(**kw, seccomp_fd=fd, files=[str(d / "in.txt")])], timeout=60, pass_fds=(fd,))
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=fd, files=[str(d / "in.txt")])], timeout=60, pass_fds=(fd,))
     finally:
         os.close(fd)
     assert proc.returncode == 0, proc.stderr
@@ -610,14 +610,14 @@ def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, r
         if host_net:
             fd = seccomp.open_fd(False)
             try:
-                argv = [jail.find_bwrap(), *jail.runtime_args(**kw, seccomp_fd=fd)]
+                argv = [jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=fd)]
                 proc = jail.supervise(argv, timeout=60, pass_fds=(fd,))
             finally:
                 os.close(fd)
         else:
             filt = sandbox / "filter.bpf"
             filt.write_bytes(seccomp.program(False))
-            argv = [jail.find_bwrap(), *jail.runtime_args(**kw, seccomp_fd=runner.PASTA_SECCOMP_FD)]
+            argv = [jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=runner.PASTA_SECCOMP_FD)]
             argv = jail.net_wrap(argv, required=True, fd_files={runner.PASTA_SECCOMP_FD: str(filt)})
             assert argv[0] == jail.find_pasta()
             proc = jail.supervise(argv, timeout=60)
@@ -688,7 +688,7 @@ def test_xwayland_script_waits_for_a_slow_start_but_not_for_a_dead_one(sandbox, 
     x.write_text(f"#!/bin/sh\n{fake}\n")
     x.chmod(0o755)
     argv = [jail.find_bwrap(), "--unshare-user", "--ro-bind", "/", "/", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX",
-            "--", "/bin/sh", "-c", jail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "/bin/sh", "-c", "echo $DISPLAY"]
+            "--", "/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "/bin/sh", "-c", "echo $DISPLAY"]
     start = time.monotonic()
     proc = jail.supervise(argv, timeout=30)
     if ok:
