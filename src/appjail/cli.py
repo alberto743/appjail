@@ -221,6 +221,9 @@ def main(argv=None, client=None, console=None):
     except Abort as e:
         console.out(str(e))
         return 1
+    except KeyboardInterrupt:
+        console.out("interrupted")
+        return 130
     except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, IndexProblem, OSError) as e:
         console.out(f"error: {e}")
         return 1

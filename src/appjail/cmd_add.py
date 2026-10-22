@@ -83,6 +83,46 @@ def gather_evidence(client, info, staged, digest, base_tier, console, verify=att
     return 1, None
 
 
+def choose_release_asset(client, console, source, args):
+    """The release (latest, or --tag) and the AppImage asset in it; the user chooses when several match."""
+    release = (client.release_by_tag(source, args.tag) if args.tag
+               else client.latest_release(source, args.prerelease))
+    console.out(f"Release    : {release.tag}, published {release.published_at}"
+                + ("  (pre-release)" if release.prerelease else ""))
+    console.out(f"             {release.html_url}")
+    candidates = github.appimage_candidates(release)
+    if not candidates:
+        names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
+        raise Abort(f"no x86_64 AppImage asset in this release ({names})")
+    if len(candidates) == 1:
+        asset = candidates[0]
+    else:
+        console.out("Several AppImage assets match; choose one:")
+        asset = candidates[console.choose("Asset", [f"{a.name} ({human_size(a.size)})" for a in candidates])]
+    if not 0 < asset.size <= MAX_ASSET:
+        raise Abort(f"unexpected asset size ({asset.size} bytes)")
+    return release, asset
+
+
+def show_asset_evidence(client, console, source, asset):
+    """Print the asset, its GitHub digest and whether an attestation exists; returns the tier before the download."""
+    attestation = "not checked"
+    if asset.sha256:
+        try:
+            if client.has_attestation(source, asset.sha256):
+                attestation = ("present (verified after the download)" if tools.status("gh") == "ok"
+                               else "present, cannot be verified: run `appjail tools install gh` to enable tier 1")
+            else:
+                attestation = "none found"
+        except github.GitHubError:
+            attestation = "lookup failed"
+    console.out(f"Asset      : {asset.name} ({human_size(asset.size)})")
+    console.out(f"GitHub sha256 digest: {asset.sha256 or 'none'}   attestation: {attestation}")
+    if not asset.sha256:
+        console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
+    return 3 if asset.sha256 else 4
+
+
 def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,
             extract_ok=appimage.have_unsquashfs, verify=attest.verify):
     name = args.name or default_name(args.source.partition("/")[2])
@@ -100,38 +140,8 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         raise Abort("cancelled")
     source = info.full_name
 
-    release = (client.release_by_tag(source, args.tag) if args.tag
-               else client.latest_release(source, args.prerelease))
-    console.out(f"Release    : {release.tag}, published {release.published_at}"
-                + ("  (pre-release)" if release.prerelease else ""))
-    console.out(f"             {release.html_url}")
-    candidates = github.appimage_candidates(release)
-    if not candidates:
-        names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
-        raise Abort(f"no x86_64 AppImage asset in this release ({names})")
-    if len(candidates) == 1:
-        asset = candidates[0]
-    else:
-        console.out("Several AppImage assets match; choose one:")
-        asset = candidates[console.choose("Asset", [f"{a.name} ({human_size(a.size)})" for a in candidates])]
-    if not 0 < asset.size <= MAX_ASSET:
-        raise Abort(f"unexpected asset size ({asset.size} bytes)")
-
-    attestation = "not checked"
-    if asset.sha256:
-        try:
-            if client.has_attestation(source, asset.sha256):
-                attestation = ("present (verified after the download)" if tools.status("gh") == "ok"
-                               else "present, cannot be verified: run `appjail tools install gh` to enable tier 1")
-            else:
-                attestation = "none found"
-        except github.GitHubError:
-            attestation = "lookup failed"
-    console.out(f"Asset      : {asset.name} ({human_size(asset.size)})")
-    console.out(f"GitHub sha256 digest: {asset.sha256 or 'none'}   attestation: {attestation}")
-    tier = 3 if asset.sha256 else 4
-    if tier == 4:
-        console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
+    release, asset = choose_release_asset(client, console, source, args)
+    tier = show_asset_evidence(client, console, source, asset)
     show_permissions(console, perms)
 
     fallback = ask_extractor(console, extract_ok)

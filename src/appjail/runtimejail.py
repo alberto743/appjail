@@ -101,6 +101,74 @@ def xwayland_command(command):
     raise RunError("display = xwayland needs the Xwayland binary in /usr/bin (package xwayland)")
 
 
+def _wayland_args(host_env, wayland_socket, rt):
+    if wayland_socket:
+        sock = Path(wayland_socket)
+    else:
+        host_rt, wl = host_env.get("XDG_RUNTIME_DIR", ""), host_env.get("WAYLAND_DISPLAY", "wayland-0")
+        if "/" in wl or not wl or not host_rt:
+            raise RunError("no usable Wayland session (XDG_RUNTIME_DIR / WAYLAND_DISPLAY)")
+        sock = Path(host_rt) / wl
+    if not sock.is_socket():
+        raise RunError(f"Wayland socket not found: {sock}")
+    return ["--ro-bind", str(sock), f"{rt}/wayland-0"]
+
+
+def _app_env(host_env, rt, xwayland):
+    env = {
+        "PATH": f"{APP_DIR}/usr/bin:/usr/local/bin:/usr/bin:/bin", "HOME": APP_HOME, "USER": "app",
+        "LOGNAME": "app", "SHELL": "/bin/sh", "LANG": host_env.get("LANG") or "C.UTF-8",
+        "XDG_RUNTIME_DIR": rt, "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
+    }
+    if xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
+        env.update({"XDG_SESSION_TYPE": "x11", "GDK_BACKEND": "x11", "QT_QPA_PLATFORM": "xcb",
+                    "ELECTRON_OZONE_PLATFORM_HINT": "x11", "SDL_VIDEODRIVER": "x11"})
+    else:
+        env.update({"WAYLAND_DISPLAY": "wayland-0", "XDG_SESSION_TYPE": "wayland", "GDK_BACKEND": "wayland",
+                    "QT_QPA_PLATFORM": "wayland", "MOZ_ENABLE_WAYLAND": "1",
+                    "ELECTRON_OZONE_PLATFORM_HINT": "wayland", "SDL_VIDEODRIVER": "wayland"})
+    if host_env.get("TZ"):
+        env["TZ"] = host_env["TZ"]
+    return env
+
+
+def _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env):
+    """The filtered bus socket and the document portal's directory; adds their variables to `env`."""
+    args = []
+    if dbus_socket:
+        args += ["--ro-bind", str(dbus_socket), f"{rt}/bus"]
+        env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={rt}/bus"
+    if perms.portals:
+        args += ["--bind", str(portal_docs), f"{rt}/doc"]
+        if host_rt and Path(host_rt) != Path(rt):  # the portal hands out paths under the host's runtime dir
+            args += ["--bind", str(portal_docs), f"{host_rt}/doc"]
+        env["GTK_USE_PORTAL"] = "1"
+    return args
+
+
+def _audio_args(host_rt, rt, env):
+    args = []
+    pw, pulse = Path(host_rt) / "pipewire-0", Path(host_rt) / "pulse" / "native"
+    if pw.is_socket():
+        args += ["--ro-bind", str(pw), f"{rt}/pipewire-0"]
+    if pulse.is_socket():
+        args += ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
+        env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
+    return args
+
+
+def _gpu_args():
+    args = []
+    if os.path.isdir("/dev/dri"):
+        args += ["--dev-bind", "/dev/dri", "/dev/dri"]
+    for node in sorted(Path("/dev").glob("nvidia*")):
+        args += ["--dev-bind", str(node), str(node)]
+    for p in GPU_RO:
+        if os.path.exists(p):
+            args += ["--ro-bind", p, p]
+    return args
+
+
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
                  portal_docs=None, status_fd=None, block_fd=None, files=()):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
@@ -116,7 +184,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     if perms.portals and not portal_docs:
         raise RunError("portals need the document portal's directory for this app (appjail.portal.doc_dir)")
 
-    rt = f"/run/user/{uid}"
+    rt, host_rt = f"/run/user/{uid}", host_env.get("XDG_RUNTIME_DIR", "")
     args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
             "--hostname", "appjail"]
     if not perms.userns:
@@ -140,60 +208,14 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     if perms.network:
         args += etc_args(private_net=not perms.network_host)
     args += ["--ro-bind", str(root), APP_DIR, "--bind", str(home), APP_HOME]
+    args += _wayland_args(host_env, wayland_socket, rt)
 
-    host_rt = host_env.get("XDG_RUNTIME_DIR", "")
-    wl = host_env.get("WAYLAND_DISPLAY", "wayland-0")
-    if wayland_socket:
-        sock = Path(wayland_socket)
-    else:
-        if "/" in wl or not wl or not host_rt:
-            raise RunError("no usable Wayland session (XDG_RUNTIME_DIR / WAYLAND_DISPLAY)")
-        sock = Path(host_rt) / wl
-    if not sock.is_socket():
-        raise RunError(f"Wayland socket not found: {sock}")
-    args += ["--ro-bind", str(sock), f"{rt}/wayland-0"]
-
-    env = {
-        "PATH": f"{APP_DIR}/usr/bin:/usr/local/bin:/usr/bin:/bin", "HOME": APP_HOME, "USER": "app",
-        "LOGNAME": "app", "SHELL": "/bin/sh", "LANG": host_env.get("LANG") or "C.UTF-8",
-        "XDG_RUNTIME_DIR": rt, "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
-    }
-    if xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
-        env.update({"XDG_SESSION_TYPE": "x11", "GDK_BACKEND": "x11", "QT_QPA_PLATFORM": "xcb",
-                    "ELECTRON_OZONE_PLATFORM_HINT": "x11", "SDL_VIDEODRIVER": "x11"})
-    else:
-        env.update({"WAYLAND_DISPLAY": "wayland-0", "XDG_SESSION_TYPE": "wayland", "GDK_BACKEND": "wayland",
-                    "QT_QPA_PLATFORM": "wayland", "MOZ_ENABLE_WAYLAND": "1",
-                    "ELECTRON_OZONE_PLATFORM_HINT": "wayland", "SDL_VIDEODRIVER": "wayland"})
-    if host_env.get("TZ"):
-        env["TZ"] = host_env["TZ"]
-
-    if dbus_socket:
-        args += ["--ro-bind", str(dbus_socket), f"{rt}/bus"]
-        env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={rt}/bus"
-    if perms.portals:
-        args += ["--bind", str(portal_docs), f"{rt}/doc"]
-        if host_rt and Path(host_rt) != Path(rt):  # the portal hands out paths under the host's runtime dir
-            args += ["--bind", str(portal_docs), f"{host_rt}/doc"]
-        env["GTK_USE_PORTAL"] = "1"
-
+    env = _app_env(host_env, rt, xwayland)
+    args += _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env)
     if perms.audio:
-        pw, pulse = Path(host_rt) / "pipewire-0", Path(host_rt) / "pulse" / "native"
-        if pw.is_socket():
-            args += ["--ro-bind", str(pw), f"{rt}/pipewire-0"]
-        if pulse.is_socket():
-            args += ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
-            env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
-
+        args += _audio_args(host_rt, rt, env)
     if perms.gpu:
-        if os.path.isdir("/dev/dri"):
-            args += ["--dev-bind", "/dev/dri", "/dev/dri"]
-        for node in sorted(Path("/dev").glob("nvidia*")):
-            args += ["--dev-bind", str(node), str(node)]
-        for p in GPU_RO:
-            if os.path.exists(p):
-                args += ["--ro-bind", p, p]
-
+        args += _gpu_args()
     args += dir_binds(perms.dirs, host_home)
     args += file_binds(files, host_home)[0]
     for k, v in env.items():

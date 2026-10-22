@@ -126,12 +126,8 @@ def without(names, remove, what):
     return tuple(n for n in names if n not in remove)
 
 
-def cmd_perms(args, console):
-    name = args.app
-    if not manifest.NAME_RE.fullmatch(name) or not store.manifest_path(name).is_file():
-        raise Abort(f"unknown app '{name}'")
-    m = manifest.load(store.manifest_path(name))
-    p = m.permissions
+def flag_changes(args):
+    """The boolean permissions and the display mode that --allow, --deny and --display change."""
     changes = {}
     for flag in sorted(set(args.allow) & set(args.deny)):
         raise Abort(f"{flag} cannot be both allowed and denied")
@@ -145,7 +141,11 @@ def cmd_perms(args, console):
         changes["network_host"] = False
     if args.display:
         changes["display"] = args.display
-    dirs = p.dirs
+    return changes
+
+
+def dir_changes(args, dirs):
+    """The directories after --rm-dir and --add-dir."""
     if args.rm_dir:
         drop = set()
         for spec in args.rm_dir:
@@ -160,8 +160,11 @@ def cmd_perms(args, console):
         dirs = tuple(d for d in dirs if d.partition(":")[0] not in drop)
     if args.add_dir:
         dirs = grants.merge_dirs(dirs, dirs_from_args(args.add_dir))
-    if dirs != p.dirs:
-        changes["dirs"] = dirs
+    return dirs
+
+
+def bus_and_portal_changes(args, p, changes):
+    """Add the changed D-Bus names and portal interfaces to `changes`."""
     bus = without(dbus_from_args(args.add_dbus, p.dbus_filter), args.rm_dbus, "not allowed")
     if bus != p.dbus_filter:
         changes["dbus_filter"] = bus
@@ -176,6 +179,33 @@ def cmd_perms(args, console):
         changes["portal_interfaces"] = portal_names
     if portal_names and not changes.get("portals", p.portals):
         raise Abort("--add-portal needs portals to be allowed (--allow portals)")
+
+
+RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopback)"),
+                ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
+                ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"))
+
+
+def warn_new_grants(console, old, new):
+    for risky, text in RISKY_GRANTS:
+        if getattr(new, risky) and not getattr(old, risky):
+            console.warn(f"this grants {text}")
+    warn_sensitive_dbus(console, set(new.dbus_filter) - set(old.dbus_filter))
+    warn_owned_dbus(console, set(new.dbus_own) - set(old.dbus_own))
+    warn_privileged_portals(console, set(new.portal_interfaces) - set(old.portal_interfaces))
+
+
+def cmd_perms(args, console):
+    name = args.app
+    if not manifest.NAME_RE.fullmatch(name) or not store.manifest_path(name).is_file():
+        raise Abort(f"unknown app '{name}'")
+    m = manifest.load(store.manifest_path(name))
+    p = m.permissions
+    changes = flag_changes(args)
+    dirs = dir_changes(args, p.dirs)
+    if dirs != p.dirs:
+        changes["dirs"] = dirs
+    bus_and_portal_changes(args, p, changes)
     if not changes:
         console.out(f"{name}: {describe_permissions(p)}")
         return
@@ -185,14 +215,7 @@ def cmd_perms(args, console):
         require_pasta(new.permissions)
     console.out(f"{name} before: {describe_permissions(p)}")
     console.out(f"{name} after : {describe_permissions(new.permissions)}")
-    for risky, text in (("network", "network access (outbound only, off the host's loopback)"),
-                        ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
-                        ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)")):
-        if getattr(new.permissions, risky) and not getattr(p, risky):
-            console.warn(f"this grants {text}")
-    warn_sensitive_dbus(console, set(new.permissions.dbus_filter) - set(p.dbus_filter))
-    warn_owned_dbus(console, set(new.permissions.dbus_own) - set(p.dbus_own))
-    warn_privileged_portals(console, set(new.permissions.portal_interfaces) - set(p.portal_interfaces))
+    warn_new_grants(console, p, new.permissions)
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")
     manifest.dump(store.manifest_path(name), new)

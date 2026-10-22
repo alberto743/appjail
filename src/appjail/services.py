@@ -17,3 +17,15 @@ class Services:
     extract: Callable = appimage.extract
     extract_ok: Callable = appimage.have_unsquashfs
     verify: Callable = attest.verify  # Sigstore attestation check
+
+
+@dataclass(frozen=True)
+class UpdateRun:
+    """Everything one app's update step needs besides its own findings: who, what is installed, the options, where
+    to talk and what to call."""
+    name: str
+    m: object  # the installed manifest
+    args: object  # the parsed command line
+    console: object
+    svc: Services
+    now: object  # datetime

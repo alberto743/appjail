@@ -267,6 +267,18 @@ Sources are listed in `~/.local/share/appjail/index/`.
   commits after it); it prints `unknown` when run from a source tree that is not installed.
 - Set `GITHUB_TOKEN` to raise the GitHub API rate limit. It is only ever sent to `api.github.com`.
 
+## Troubleshooting
+
+| Message or symptom | Cause and fix |
+|---|---|
+| bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
+| `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`). |
+| An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
+| `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`; it is only sent to `api.github.com`. |
+| `unsquashfs is not installed` | Install `squashfs-tools`, or accept the offer to run the AppImage's own extractor in a jail with no network. |
+| DwarFS-based AppImage | `appjail tools install dwarfs` fetches the pinned helper. |
+| An app cannot see a file or folder | Nothing outside its private home is visible by default: `appjail perms APP --add-dir PATH`, or `appjail run APP --file PATH` for one run. |
+
 ## Limits
 
 - **Not audited, not a security boundary you should bet on yet.** bwrap and the Linux kernel do the isolation; appjail

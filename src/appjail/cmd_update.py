@@ -12,7 +12,7 @@ from .cmd_desktop import refresh_after_update
 from .cmd_updateimage import update_file, update_url
 from .console import Abort, human_size
 from .permargs import granted_summary
-from .services import Services
+from .services import Services, UpdateRun
 
 
 def hash_candidate(asset, download):
@@ -49,15 +49,16 @@ def describe_candidate(console, m, release, asset):
     console.out(f"  permissions: unchanged ({granted_summary(m.permissions) or 'none'})")
 
 
-def wait_in_quarantine(name, args, console, svc, asset, key, first, due):
+def wait_in_quarantine(run, asset, key, first, due):
+    name, console = run.name, run.console
     console.out(f"  quarantine : first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
-                f"({args.quarantine} days; --quarantine DAYS to change)")
+                f"({run.args.quarantine} days; --quarantine DAYS to change)")
     pending = updater.load_pending(name)
     if not asset.sha256 and not (pending and pending.get("sha256")):
         # no GitHub digest to catch a swapped asset: fix its hash now, compare it when installing
         if console.confirm(f"Download {asset.name} in the network-only jail now, only to record its sha256 "
                            "so a change during the quarantine is detected?"):
-            digest = hash_candidate(asset, svc.download)
+            digest = hash_candidate(asset, run.svc.download)
             updater.record_hash(name, key, digest)
             console.out(f"  sha256 recorded for the quarantine: {digest}")
         else:
@@ -65,7 +66,8 @@ def wait_in_quarantine(name, args, console, svc, asset, key, first, due):
     return "waiting"
 
 
-def install_release(name, m, args, client, console, svc, now, info, release, asset, key):
+def install_release(run, client, info, release, asset, key):
+    name, m, args, console, svc = run.name, run.m, run.args, run.console, run.svc
     if args.quarantine < updater.DEFAULT_QUARANTINE_DAYS:
         console.warn(f"quarantine shortened to {args.quarantine} days")
     if not svc.extract_ok():
@@ -81,7 +83,7 @@ def install_release(name, m, args, client, console, svc, now, info, release, ass
             console.warn(f"CHANGED DURING QUARANTINE: the asset hashed {pending['sha256']} when first seen but downloads "
                          f"as {digest} now. Nothing was installed; the quarantine starts again for the new content.")
             updater.clear_pending(name)
-            updater.note_seen(name, key, release.tag, now)
+            updater.note_seen(name, key, release.tag, run.now)
             updater.record_hash(name, key, digest)
             return "blocked"
         tier, why = gather_evidence(client, info, staged, digest, 3 if asset.sha256 else 4, console, svc.verify)
@@ -113,6 +115,7 @@ def update_github(name, m, args, client, console, svc, now):
     if m.channel == "pinned":
         console.out(f"  pinned to {m.version}: not checked (use --channel stable or prerelease to follow releases)")
         return "pinned"
+    run = UpdateRun(name, m, args, console, svc, now)
     prerelease = args.prerelease or m.channel == "prerelease"
     release = client.latest_release(info.full_name, prerelease)
     asset = pick_asset(console, release, m.asset_pattern)
@@ -142,17 +145,16 @@ def update_github(name, m, args, client, console, svc, now):
     first = updater.note_seen(name, key, release.tag, now)
     due = updater.quarantine_ends(first, args.quarantine)
     if now < due:
-        return wait_in_quarantine(name, args, console, svc, asset, key, first, due)
-    return install_release(name, m, args, client, console, svc, now, info, release, asset, key)
+        return wait_in_quarantine(run, asset, key, first, due)
+    return install_release(run, client, info, release, asset, key)
 
 
 def update_app(name, args, client, console, svc, now):
     """Update one app. Returns 'updated', 'current', 'pinned', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
-    if m.kind == "file":
-        return update_file(name, m, args, console, svc, now)
-    if m.kind == "url":
-        return update_url(name, m, args, console, svc, now)
+    if m.kind in ("file", "url"):
+        run = UpdateRun(name, m, args, console, svc, now)
+        return (update_file if m.kind == "file" else update_url)(run)
     if args.file or args.sha256:
         raise Abort("--file and --sha256 apply to apps installed from a file or a URL")
     return update_github(name, m, args, client, console, svc, now)

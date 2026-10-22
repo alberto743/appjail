@@ -61,3 +61,16 @@ def test_version_is_unknown_when_the_package_is_not_installed(monkeypatch):
 
     monkeypatch.setattr(cli.metadata, "version", missing)
     assert cli.version_string() == "unknown"
+
+
+def test_ctrl_c_at_a_prompt_ends_cleanly(monkeypatch):
+    class Out(cli.Console):
+        def __init__(self):
+            self.lines = []
+
+        def out(self, line=""):
+            self.lines.append(line)
+
+    monkeypatch.setitem(cli.COMMANDS, "list", lambda *a: (_ for _ in ()).throw(KeyboardInterrupt()))
+    console = Out()
+    assert cli.main(["list"], console=console) == 130 and console.lines == ["interrupted"]
