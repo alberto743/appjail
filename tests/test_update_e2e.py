@@ -104,3 +104,43 @@ def test_real_tier4_hash_is_recorded_in_quarantine_and_compared_at_install(tmp_p
     assert now.version == real.version and now.evidence_tier == 4
     assert updater.load_pending("kit") is None
     runner.prepare("kit", say=lambda *_: None)  # pin matches, tree matches
+
+
+def test_real_url_app_is_added_checked_cheaply_and_updated_from_the_stored_candidate(tmp_path, monkeypatch):
+    """`add --url` of the real AppImageKit asset (2 MiB, user-approved), then `update` through real range requests in
+    the jail: unchanged means no full download; a recorded older state makes the same file a candidate that is
+    kept on disk and installed from there after the quarantine."""
+    from appjail import github
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("APPJAIL_CONFIG_DIR", str(tmp_path / "config"))
+    client = github.Client()
+    url = github.appimage_candidates(client.latest_release("AppImage/AppImageKit"))[0].url
+
+    c = Answers(["y"])
+    assert cli.main(["add", "--url", url, "--name", "kit"], console=c) == 0, c.lines
+    path = store.manifest_path("kit")
+    real = manifest.load(path)
+    assert real.kind == "url" and real.evidence_tier == 5 and real.fingerprint.size == store.appimage_path("kit").stat().st_size
+    assert real.sha256 == appimage.sha256_file(store.appimage_path("kit"))
+
+    c = Answers([])  # a prompt would pop from an empty list: the cheap check must be enough
+    assert cli.main(["update", "kit"], console=c) == 0, c.lines
+    assert any("up to date" in line for line in c.lines), c.lines
+    assert not any("downloaded" in line for line in c.lines), c.lines
+
+    # Pretend an older file is installed: the real one is now a changed candidate.
+    older = replace(real, version="old", sha256="0" * 64, fingerprint=replace(real.fingerprint, chunks="a" * 64, etag=None, last_modified=None))
+    manifest.dump(path, older)
+    c = Answers(["y"])
+    assert cli.main(["update", "kit"], console=c) == 0, c.lines
+    assert any("quarantine" in line for line in c.lines), c.lines
+    pending = updater.load_pending("kit")
+    assert pending["sha256"] == real.sha256 and updater.pending_image("kit").is_file()
+
+    c = Answers(["y", "y"])  # quarantine over (0 days): the stored candidate is installed, the server only asked
+    assert cli.main(["update", "kit", "--quarantine", "0"], console=c) == 0, c.lines
+    assert not any("downloaded" in line for line in c.lines), c.lines
+    now = manifest.load(path)
+    assert now.sha256 == real.sha256 == appimage.sha256_file(store.appimage_path("kit")) and now.evidence_tier == 5
+    assert updater.load_pending("kit") is None
+    runner.prepare("kit", say=lambda *_: None)

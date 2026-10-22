@@ -95,6 +95,9 @@ def build_parser():
     upd_app.add_argument("--channel", choices=manifest.CHANNELS, help="set which releases this app follows from now on: stable, prerelease, or pinned (never updated)")
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
+    upd_app.add_argument("--file", metavar="PATH", help="an app installed from a file: replace it with this AppImage")
+    upd_app.add_argument("--sha256", metavar="HEX", help="url/file apps: the hash the publisher gives for the new content (keeps or earns tier 4)")
+    upd_app.add_argument("--verify", action="store_true", help="url apps: at the end of the quarantine download the file again and compare it with the candidate")
     sub.add_parser("list", help="list installed apps")
     dsk = sub.add_parser("desktop", help="create, refresh or remove the menu entry of an app")
     dsk.add_argument("app", nargs="?")

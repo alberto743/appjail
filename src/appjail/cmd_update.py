@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from . import appimage, attest, github, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
 from .cmd_desktop import refresh_after_update
+from .cmd_updateimage import update_file, update_url
 from .console import Abort, human_size
 from .permargs import granted_summary
 
@@ -24,9 +25,16 @@ def hash_candidate(asset, download):
         appimage.remove_tree(stage)
 
 
-def update_app(name, args, client, console, download, now, extract, extract_ok, verify=attest.verify):
+def update_app(name, args, client, console, download, now, extract, extract_ok, verify=attest.verify,
+               download_url=jail.download_url, check_url=jail.check_url):
     """Update one app. Returns 'updated', 'current', 'pinned', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
+    if m.kind == "file":
+        return update_file(name, m, args, console, now, extract, extract_ok)
+    if m.kind == "url":
+        return update_url(name, m, args, console, now, download_url, check_url, extract, extract_ok)
+    if args.file or args.sha256:
+        raise Abort("--file and --sha256 apply to apps installed from a file or a URL")
     info = client.repo_info(m.target)
     console.out(f"{name}: {info.full_name}, installed {m.version} (published {m.published_at}, tier {m.evidence_tier})")
     if args.channel and args.channel != m.channel:
@@ -129,7 +137,8 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
 
 
 def cmd_update(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-               extract_ok=appimage.have_unsquashfs, verify=attest.verify):
+               extract_ok=appimage.have_unsquashfs, verify=attest.verify, download_url=jail.download_url,
+               check_url=jail.check_url):
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
@@ -142,7 +151,8 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
     results = {}
     for i, name in enumerate(names):
         try:
-            results[name] = update_app(name, args, client, console, download, now, extract, extract_ok, verify)
+            results[name] = update_app(name, args, client, console, download, now, extract, extract_ok, verify,
+                                       download_url, check_url)
         except github.RateLimited as e:
             console.out(f"  {name}: {e}")
             results[name] = "failed"

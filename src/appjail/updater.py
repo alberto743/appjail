@@ -16,6 +16,8 @@ from . import manifest, store
 
 DEFAULT_QUARANTINE_DAYS = 7
 TIME_FMT = "%Y-%m-%dT%H:%M:%SZ"
+# A pending candidate of a `url:` app also keeps what the server said about it (see cmd_updateimage).
+PENDING_KEYS = {"key", "tag", "first_seen", "sha256", "size", "chunks", "etag", "last_modified"}
 
 
 def stamp(when):
@@ -81,10 +83,11 @@ def load_pending(name):
     """The recorded candidate, or None if absent or unreadable (treated as never seen)."""
     try:
         data = json.loads(pending_path(name).read_text(encoding="utf-8"))
-        if (isinstance(data, dict) and {"key", "tag", "first_seen"} <= set(data) <= {"key", "tag", "first_seen", "sha256"}
-                and all(isinstance(data[k], str) for k in data)):
+        if (isinstance(data, dict) and {"key", "tag", "first_seen"} <= set(data) <= PENDING_KEYS
+                and all(isinstance(v, int) if k == "size" else isinstance(v, str) for k, v in data.items())
+                and not isinstance(data.get("size"), bool)):
             parse_stamp(data["first_seen"])
-            if "sha256" in data and not manifest.SHA256_RE.fullmatch(data["sha256"]):
+            if any(k in data and not manifest.SHA256_RE.fullmatch(data[k]) for k in ("sha256", "chunks")):
                 return None
             return data
     except (OSError, ValueError):
@@ -121,8 +124,24 @@ def record_hash(name, key, digest):
     _write_pending(name, {**prev, "sha256": digest})
 
 
+def pending_image(name):
+    """The candidate AppImage kept during the quarantine of a `url:` app."""
+    return store.app_dir(name) / "pending.AppImage"
+
+
+def record_url_candidate(name, tag, now, digest, fingerprint=None, etag=None, last_modified=None):
+    """Start the quarantine of a downloaded `url:` candidate, keyed by its sha256, and remember what the server said
+    about it (so a later check can ask whether it still serves the same file)."""
+    data = {"key": digest, "tag": tag, "first_seen": stamp(now), "sha256": digest}
+    if fingerprint is not None:
+        data |= {"size": fingerprint.size, "chunks": fingerprint.chunks}
+    data |= {k: v for k, v in (("etag", etag), ("last_modified", last_modified)) if v}
+    _write_pending(name, data)
+
+
 def clear_pending(name):
     pending_path(name).unlink(missing_ok=True)
+    pending_image(name).unlink(missing_ok=True)
 
 
 def installed():

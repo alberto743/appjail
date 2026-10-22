@@ -161,12 +161,67 @@ def installed(h, **kw):
 
 
 def update(h, client, answers=("y",), days=7, now=T0, app="app", extra=(), download=None, extract=None,
-           extract_ok=lambda: True):
+           extract_ok=lambda: True, **kw):
     console = Script(answers)
     args = cli.build_parser().parse_args(["update", *([app] if app else []), "--quarantine", str(days), *extra])
     code = cli.cmd_update(args, client, console, download=download or h.download(NEW_IMAGE), now=now,
-                          extract=extract or h.extract, extract_ok=extract_ok)
+                          extract=extract or h.extract, extract_ok=extract_ok, **kw)
     return code, console
+
+
+class UrlServer:
+    """A stand-in for the jailed URL fetcher: serves `content`, answers the cheap check like fetcher.check does."""
+
+    def __init__(self, content=FAKE_APPIMAGE, etag='"e1"', ranges=True):
+        self.content, self.etag, self.ranges = content, etag, ranges
+        self.last_modified = "Tue, 20 Oct 2026 08:00:00 GMT"
+        self.http_hop = False
+        self.downloads, self.checks = 0, []
+
+    def download(self, url, stage, filename, max_size):
+        self.downloads += 1
+        path = Path(stage) / filename
+        path.write_bytes(self.content)
+        return path, {"size": len(self.content), "final_url": url, "http_hop": self.http_hop, "etag": self.etag,
+                      "last_modified": self.last_modified}
+
+    def check(self, url, stage, etag=None, last_modified=None):
+        from appjail import fetcher
+        self.checks.append((etag, last_modified))
+        if etag and etag == self.etag:
+            return {"status": "unchanged"}
+        got = {"etag": self.etag, "last_modified": self.last_modified}
+        if not self.ranges:
+            return {"status": "no-range", **got}
+        probe = Path(stage) / "probe"
+        probe.write_bytes(self.content)
+        size, chunks = fetcher.fingerprint_file(probe)
+        return {"status": "fingerprint", "size": size, "chunks": chunks, **got}
+
+    @property
+    def kw(self):
+        return {"download_url": self.download, "check_url": self.check}
+
+
+URL_APP = "https://example.org/dl/App.AppImage"
+
+
+def install_url(h, server, *extra, answers=("y",)):
+    """`add --url` of a stand-in server as the app 'app'."""
+    from appjail import cmd_addimage
+    console = Script(answers)
+    args = cli.build_parser().parse_args(["add", "--url", URL_APP, "--name", "app", *extra])
+    cmd_addimage.cmd_add_url(args, console, download_url=server.download, extract=h.extract, extract_ok=lambda: True, now=NOW)
+    server.downloads = 0  # counts what the update does
+    return console
+
+
+def install_file(h, path, *extra, answers=("y",)):
+    from appjail import cmd_addimage
+    console = Script(answers)
+    args = cli.build_parser().parse_args(["add", "--file", str(path), "--name", "app", *extra])
+    cmd_addimage.cmd_add_file(args, console, extract=h.extract, extract_ok=lambda: True, now=NOW)
+    return console
 
 
 needs_proxy = pytest.mark.skipif(not os.access(dbusproxy.PROXY, os.X_OK) or not shutil.which("dbus-daemon"),
