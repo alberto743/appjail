@@ -153,11 +153,17 @@ def refresh_validators(name, m, res):
         manifest.dump(store.manifest_path(name), replace(m, fingerprint=replace(f, etag=etag, last_modified=modified)))
 
 
-def fetch_candidate(m, expected, console, download_url, max_mib=DEFAULT_MAX_MIB):
+def download_cap(m):
+    """How much an update may download: the default limit of `add --url`, or twice the installed file if that is more
+    (the limit given at `add` time is not stored)."""
+    return min(MAX_ASSET, max(DEFAULT_MAX_MIB * 1024 ** 2, 2 * m.fingerprint.size))
+
+
+def fetch_candidate(m, expected, console, download_url):
     """Download the URL in the jail into a new stage; returns (stage, staged path, sha256, server info)."""
     stage = store.new_staging_dir()
     try:
-        staged, info = download_url(m.target, stage, "download.AppImage", max_mib * 1024 ** 2)
+        staged, info = download_url(m.target, stage, "download.AppImage", download_cap(m))
     except jail.JailError as e:
         appimage.remove_tree(stage)
         raise Abort(str(e)) from e

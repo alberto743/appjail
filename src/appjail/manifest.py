@@ -366,6 +366,8 @@ def _source(m):
             check_url(target)
         elif not FILE_NAME_RE.fullmatch(target) or target in (".", ".."):
             raise ManifestError(f"a file source is a base name, never a path: {target!r}")
+    if kind == "url" and m.fingerprint is None:
+        raise ManifestError("a url source needs a fingerprint")
     if m.fingerprint is not None:
         if kind != "url":
             raise ManifestError("fingerprint applies to a url source only")

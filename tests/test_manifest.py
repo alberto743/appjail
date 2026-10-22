@@ -304,3 +304,11 @@ def test_channel_defaults_to_stable_and_round_trips():
     assert manifest.loads(manifest.dumps(m)).channel == "pinned"
     with pytest.raises(ManifestError):
         manifest.validate(make(channel="nightly"))
+
+
+def test_url_source_needs_a_fingerprint():
+    with pytest.raises(ManifestError, match="needs a fingerprint"):
+        manifest.validate(make_url(fingerprint=None))
+    text = manifest.dumps(make_url()).replace(manifest._fingerprint_line(FP) + "\n", "")
+    with pytest.raises(ManifestError, match="needs a fingerprint"):
+        manifest.loads(text)

@@ -350,3 +350,16 @@ def test_all_apps_run_checks_mixed_kinds(h, tmp_path):
                               extract=h.extract, extract_ok=lambda: True, now=NOW)
     code, c = update(h, None, app=None, **server.kw)
     assert code == 0 and "app: current" in c.text and "other: current" in c.text
+
+
+def test_update_cap_follows_the_installed_size():
+    from appjail import cmd_updateimage
+    small = manifest.Manifest(**{**mf_args(), "fingerprint": manifest.Fingerprint(size=5, chunks="c" * 64)})
+    big = manifest.Manifest(**{**mf_args(), "fingerprint": manifest.Fingerprint(size=900 * 1024 ** 2, chunks="c" * 64)})
+    assert cmd_updateimage.download_cap(small) == 1024 * 1024 ** 2
+    assert cmd_updateimage.download_cap(big) == 1800 * 1024 ** 2
+
+
+def mf_args():
+    return {"name": "app", "source": "url:https://example.org/a.AppImage", "version": "v", "sha256": SHA,
+            "evidence_tier": 5, "published_at": "2026-01-01T00:00:00Z"}
