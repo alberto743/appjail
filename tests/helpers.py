@@ -260,7 +260,7 @@ def install(sandbox, name="app", content=b"image-bytes", sha=None, **perms):
     store.appimage_path(name).parent.mkdir(parents=True, exist_ok=True)
     store.appimage_path(name).write_bytes(content)
     digest = appimage.sha256_file(store.appimage_path(name))
-    m = Manifest(name=name, source="o/r", asset_pattern="*", version="v1", sha256=sha or digest,
+    m = Manifest(name=name, source="github:o/r", asset_pattern="*", version="v1", sha256=sha or digest,
                  evidence_tier=3, published_at="2026-01-01T00:00:00Z", permissions=Permissions(**perms))
     manifest.dump(store.manifest_path(name), m)
     return digest

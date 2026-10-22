@@ -37,7 +37,7 @@ def test_names_that_hand_over_the_host_are_refused(name):
 
 
 def test_blocked_names_are_refused_when_loading_a_manifest():
-    text = manifest.dumps(manifest.Manifest("a", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z",
+    text = manifest.dumps(manifest.Manifest("a", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                                             permissions=Permissions(dbus_filter=("org.example.A",))))
     with pytest.raises(ManifestError):
         manifest.loads(text.replace("org.example.A", "org.freedesktop.systemd1"))
@@ -62,7 +62,7 @@ def test_owning_desktop_services_is_refused(name):
 
 
 def test_dbus_own_round_trips_and_is_checked_when_loading():
-    m = manifest.Manifest("a", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z",
+    m = manifest.Manifest("a", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                           permissions=Permissions(dbus_own=("org.example.A",)))
     text = manifest.dumps(m)
     assert manifest.loads(text).permissions.dbus_own == ("org.example.A",)
@@ -174,7 +174,7 @@ def test_launch_wraps_the_run_in_the_proxy(sandbox, runtime, monkeypatch):
         def __exit__(self, *a):
             events.append("stop")
 
-    m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z",
+    m = manifest.Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                           permissions=Permissions(dbus_filter=NAMES[:1]))
     kw = build(sandbox, runtime, dbus_filter=NAMES[:1])
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))

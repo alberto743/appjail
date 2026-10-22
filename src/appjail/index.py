@@ -96,10 +96,10 @@ def classify(site):
     """(owner/repo, note) for a SITE value."""
     if not site:
         return "", "no source in the index"
-    if manifest.SOURCE_RE.fullmatch(site):
+    if manifest.REPO_RE.fullmatch(site):
         return site, ""
     m = GITHUB_URL_RE.fullmatch(site)
-    if m and manifest.SOURCE_RE.fullmatch(m.group(1)):
+    if m and manifest.REPO_RE.fullmatch(m.group(1)):
         return m.group(1), ""
     return "", "resolve manually: " + textsafe.clean(site, 100)
 

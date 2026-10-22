@@ -82,10 +82,10 @@ def test_never_and_unknown_interfaces_are_refused(name):
 
 
 def test_manifest_round_trip_and_consistency():
-    m = Manifest("a", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z",
+    m = Manifest("a", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                  permissions=Permissions(portals=True, portal_interfaces=("OpenURI", "Screenshot")))
     assert manifest.loads(manifest.dumps(m)).permissions.portal_interfaces == ("OpenURI", "Screenshot")
-    bad = Manifest("a", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z",
+    bad = Manifest("a", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                    permissions=Permissions(portal_interfaces=("OpenURI",)))
     with pytest.raises(ManifestError, match="needs portals"):
         manifest.dumps(bad)
@@ -183,7 +183,7 @@ def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, mo
     env, log = portal_stack
     perms = {"portals": True}
     kw = app_root(sandbox, runtime, perms)
-    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=NO_RESTRICTION)
     out = capfd.readouterr()
@@ -206,7 +206,7 @@ def test_revoking_a_grant_made_through_the_real_portal(sandbox, runtime, portal_
     env, _log = portal_stack
     perms = {"portals": True}
     kw = app_root(sandbox, runtime, perms)
-    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     assert runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=NO_RESTRICTION) == 0
     capfd.readouterr()
@@ -229,7 +229,7 @@ def test_opt_in_interface_reaches_the_portal(sandbox, runtime, portal_stack, mon
     env, _ = portal_stack
     perms = {"portals": True, "portal_interfaces": ("OpenURI",)}
     kw = app_root(sandbox, runtime, perms)
-    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     assert runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=NO_RESTRICTION) == 0
     r = json.loads(capfd.readouterr().out.strip().splitlines()[-1])
@@ -245,7 +245,7 @@ def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal
     env, log = portal_stack
     perms = {"portals": True, "network": True, "network_host": host_net}  # without network_host the app runs behind pasta
     kw = app_root(sandbox, runtime, perms)
-    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, restricted=NO_RESTRICTION)
     out = capfd.readouterr()
@@ -296,7 +296,7 @@ def test_real_gtk_backend_answers_through_the_filtered_bus(sandbox, runtime, gtk
     kw = build(sandbox, runtime, **perms)
     (kw["root"] / "AppRun").write_text("#!/usr/bin/python3\n" + (HERE / "client_real.py").read_text())
     (kw["root"] / "AppRun").chmod(0o755)
-    m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))
+    m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env=env, say=lambda *_: None, restricted=NO_RESTRICTION)
     out = capfd.readouterr()

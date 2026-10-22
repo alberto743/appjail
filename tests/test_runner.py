@@ -645,7 +645,7 @@ def test_launch_applies_the_seccomp_filter_in_every_network_mode(sandbox, runtim
     kw = build(sandbox, runtime, **perms)
     (kw["root"] / "AppRun").write_text(FILTER_PROBE)
     (kw["root"] / "AppRun").chmod(0o755)
-    m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", SHA, 3, "2026-01-01T00:00:00Z",
+    m = manifest.Manifest("app", "github:o/a", "v1", SHA, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                           permissions=manifest.Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
@@ -719,7 +719,7 @@ def _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=(), **perms):
     kw = build(sandbox, runtime, network=True, **perms)
     (kw["root"] / "AppRun").write_text(PASTA_PROBE)
     (kw["root"] / "AppRun").chmod(0o755)
-    m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", SHA, 3, "2026-01-01T00:00:00Z",
+    m = manifest.Manifest("app", "github:o/a", "v1", SHA, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                           permissions=manifest.Permissions(network=True, **perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
@@ -789,7 +789,7 @@ def test_ipv6_forwarding_inside_the_fake_namespace(sandbox, runtime, monkeypatch
         kw = build(sandbox, runtime, network=True)
         (kw["root"] / "AppRun").write_text(V6_PROBE)
         (kw["root"] / "AppRun").chmod(0o755)
-        m = manifest.Manifest("app", "o/a", "*.AppImage", "v1", SHA, 3, "2026-01-01T00:00:00Z",
+        m = manifest.Manifest("app", "github:o/a", "v1", SHA, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
                               permissions=manifest.Permissions(network=True))
         monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
         code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},

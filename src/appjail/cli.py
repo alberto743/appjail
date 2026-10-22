@@ -153,7 +153,7 @@ def main(argv=None, client=None, console=None):
     console = console or Console()
     try:
         if args.command == "add":
-            if not manifest.SOURCE_RE.fullmatch(args.source):
+            if not manifest.REPO_RE.fullmatch(args.source):
                 raise Abort("source must be a GitHub owner/repo")
             cmd_add(args, client or github.Client(), console)
         elif args.command == "index":

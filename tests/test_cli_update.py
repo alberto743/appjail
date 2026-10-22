@@ -169,7 +169,7 @@ def test_tier4_update_shows_the_new_hash_and_asks_again(h):
 def test_renamed_repo_is_noted_and_recorded(h):
     path = installed(h)
     _code, c = update(h, FakeClient(info_=info(full_name="o/App2", renamed=True), release_=release2()), days=0)
-    assert "renamed or transferred" in c.text and manifest.load(path).source == "o/App2"
+    assert "renamed or transferred" in c.text and manifest.load(path).source == "github:o/App2"
 
 
 def test_missing_owner_pin_is_noted_and_filled_in(h):
@@ -215,7 +215,7 @@ def test_list(h):
     update(h, FakeClient(release_=release2()))
     c = Script()
     cli.cmd_list(c)
-    assert "app  v1.0  o/App  tier 3" in c.text and "network" in c.text and "update seen: v2.0" in c.text
+    assert "app  v1.0  github:o/App  tier 3" in c.text and "network" in c.text and "update seen: v2.0" in c.text
 
 
 def test_remove_deletes_everything_after_confirmation(h):

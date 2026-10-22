@@ -17,7 +17,7 @@ from .helpers import FAKE_APPIMAGE, SHA, FakeClient, Script, asset, info, releas
 def test_success_with_digest(h):
     console = h.add()
     m = manifest.load(store.manifest_path("app"))
-    assert (m.source, m.version, m.sha256, m.evidence_tier, m.owner_id) == ("o/App", "v1.0", SHA, 3, 42)
+    assert (m.source, m.version, m.sha256, m.evidence_tier, m.owner_id) == ("github:o/App", "v1.0", SHA, 3, 42)
     assert m.asset_pattern == "App-*-x86_64.AppImage"
     assert store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
     assert store.appimage_path("app").stat().st_mode & 0o777 == 0o600
@@ -153,7 +153,7 @@ def test_no_candidates(h):
 def test_renamed_repo_requires_confirmation_and_pins_canonical_name(h):
     renamed = info(full_name="new/App", renamed=True)
     console = h.add(client=FakeClient(info_=renamed), answers=("y", "y"))
-    assert manifest.load(store.manifest_path("app")).source == "new/App"
+    assert manifest.load(store.manifest_path("app")).source == "github:new/App"
     assert "renamed or transferred" in console.text
     with pytest.raises(Abort, match="cancelled"):
         h.add(client=FakeClient(info_=renamed), answers=("n",), extra=["--name", "other"])

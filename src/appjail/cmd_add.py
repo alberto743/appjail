@@ -159,7 +159,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         if why:
             console.warn(f"attestation not counted: {why}")
         record = manifest.Manifest(
-            name=name, source=source, asset_pattern=github.suggest_pattern(asset.name, release.tag),
+            name=name, source=manifest.github_source(source), asset_pattern=github.suggest_pattern(asset.name, release.tag),
             version=release.tag, sha256=digest, evidence_tier=tier, published_at=release.published_at,
             owner_id=info.owner_id, permissions=perms,
             channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")

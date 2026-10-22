@@ -228,7 +228,7 @@ class Client:
 
 
 def _check_source(source):
-    if not isinstance(source, str) or not manifest.SOURCE_RE.fullmatch(source):
+    if not isinstance(source, str) or not manifest.REPO_RE.fullmatch(source):
         raise GitHubError(f"not a GitHub owner/repo: {textsafe.clean(source, 80)!r}")
 
 

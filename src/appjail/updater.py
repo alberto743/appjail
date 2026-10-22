@@ -55,8 +55,8 @@ def cautions(m, info):
     out = []
     if m.owner_id is None:
         out.append("this app was added before owner pinning: the owner account cannot be checked")
-    if info.full_name.lower() != m.source.lower():
-        out.append(f"the repository was renamed or transferred: {m.source} -> {info.full_name}")
+    if info.full_name.lower() != m.target.lower():
+        out.append(f"the repository was renamed or transferred: {m.target} -> {info.full_name}")
     if info.archived:
         out.append("the repository is archived")
     return out

@@ -27,7 +27,7 @@ def hash_candidate(asset, download):
 def update_app(name, args, client, console, download, now, extract, extract_ok, verify=attest.verify):
     """Update one app. Returns 'updated', 'current', 'pinned', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
-    info = client.repo_info(m.source)
+    info = client.repo_info(m.target)
     console.out(f"{name}: {info.full_name}, installed {m.version} (published {m.published_at}, tier {m.evidence_tier})")
     if args.channel and args.channel != m.channel:
         m = replace(m, channel=args.channel)
@@ -116,7 +116,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
             if not console.confirm("Install this version?"):
                 return "declined"
         record = replace(m, version=release.tag, sha256=digest, published_at=release.published_at,
-                         evidence_tier=tier, source=info.full_name, owner_id=info.owner_id)
+                         evidence_tier=tier, source=manifest.github_source(info.full_name), owner_id=info.owner_id)
         manifest.validate(record)
         entries, size = swap_in(name, staged, stage, record, extract, False)
     finally:
