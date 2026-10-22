@@ -153,14 +153,6 @@ def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
     assert "geminiprotocol.net;1965" in trusted.read_text(), "no certificate was stored: the app did not connect"
 
 
-# keep last: it damages the stored image
-def test_tampered_image_is_refused(installed):
-    with open(store.appimage_path("lagrange"), "ab") as f:
-        f.write(b"x")
-    with pytest.raises(runner.RunError, match="pinned sha256"):
-        runner.prepare("lagrange", say=lambda *_: None)
-
-
 def _jail_processes(needle):
     """Pids of processes whose command line contains needle (a bytes path), read from /proc."""
     found = []
@@ -248,3 +240,11 @@ def test_a_file_opened_through_the_menu_entry_reaches_the_jail(installed, tmp_pa
                 pass
         weston.terminate()
         weston.wait(timeout=10)
+
+
+# keep last: it damages the stored image
+def test_tampered_image_is_refused(installed):
+    with open(store.appimage_path("lagrange"), "ab") as f:
+        f.write(b"x")
+    with pytest.raises(runner.RunError, match="pinned sha256"):
+        runner.prepare("lagrange", say=lambda *_: None)
