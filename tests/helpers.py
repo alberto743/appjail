@@ -8,7 +8,7 @@ import hashlib
 import os
 import shutil
 import struct
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -39,7 +39,7 @@ FAKE_APPIMAGE = b"\x7fELF\x02\x01\x01\x00AI\x02" + b"payload" * 10
 SHA = hashlib.sha256(FAKE_APPIMAGE).hexdigest()
 
 
-NOW = datetime(2026, 10, 17, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 17, tzinfo=UTC)
 
 
 class FakeClient:
@@ -123,14 +123,15 @@ class Script(cli.Console):
         return "\n".join(self.lines)
 
 
-def asset(name="App-1.0-x86_64.AppImage", sha=SHA, size=len(FAKE_APPIMAGE)):
+def asset(name="App-1.0-x86_64.AppImage", sha=SHA, size=None):
+    size = len(FAKE_APPIMAGE) if size is None else size
     return github.Asset(name, size, sha, f"https://github.com/o/App/releases/download/v1.0/{name}")
 
 
 def info(**kw):
-    base = dict(full_name="o/App", owner="o", owner_id=42, owner_type="User", owner_created_at="2015-01-02T03:04:05Z",
-                stars=500, fork=False, parent="", archived=False, description="An app",
-                html_url="https://github.com/o/App", renamed=False)
+    base = {"full_name": "o/App", "owner": "o", "owner_id": 42, "owner_type": "User", "owner_created_at": "2015-01-02T03:04:05Z",
+                "stars": 500, "fork": False, "parent": "", "archived": False, "description": "An app",
+                "html_url": "https://github.com/o/App", "renamed": False}
     base.update(kw)
     return github.RepoInfo(**base)
 
@@ -145,15 +146,16 @@ NEW_IMAGE = FAKE_APPIMAGE + b"-v2"
 NEW_SHA = hashlib.sha256(NEW_IMAGE).hexdigest()
 
 
-T0 = datetime(2026, 10, 17, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 17, tzinfo=UTC)
 
 
-def release2(sha=NEW_SHA, tag="v2.0", published="2026-10-10T00:00:00Z", name="App-2.0-x86_64.AppImage", size=len(NEW_IMAGE)):
+def release2(sha=NEW_SHA, tag="v2.0", published="2026-10-10T00:00:00Z", name="App-2.0-x86_64.AppImage", size=None):
+    size = len(NEW_IMAGE) if size is None else size
     a = github.Asset(name, size, sha, f"https://github.com/o/App/releases/download/{tag}/{name}")
     return github.Release(tag, published, False, f"https://github.com/o/App/releases/tag/{tag}", (a,))
 
 
-def installed(h, **kw):  # noqa: F811
+def installed(h, **kw):
     h.add(**kw)
     return store.manifest_path("app")
 
@@ -193,8 +195,8 @@ def build(sandbox, runtime, **perms):
     home = sandbox / "home"
     home.mkdir(exist_ok=True)
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test", "LANG": "it_IT.UTF-8", "SECRET": "x"}
-    kw = dict(root=root, home=home, etc_dir=etc, perms=Permissions(**perms), uid=os.getuid(), host_env=env,
-              command=["/app/AppRun"], host_home=Path.home())
+    kw = {"root": root, "home": home, "etc_dir": etc, "perms": Permissions(**perms), "uid": os.getuid(), "host_env": env,
+              "command": ["/app/AppRun"], "host_home": Path.home()}
     return kw
 
 

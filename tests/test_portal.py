@@ -13,10 +13,10 @@ import pytest
 
 from appjail import dbusproxy, jail, manifest, portal, runner
 from appjail.jail import RunError
-from appjail.portal import bus_call as real_bus_call
 from appjail.manifest import Manifest, ManifestError, Permissions
-from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
+from appjail.portal import bus_call as real_bus_call
 
+from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
 HERE = Path(__file__).parent / "portal"
 
@@ -203,7 +203,7 @@ def test_file_chooser_through_the_real_portal(sandbox, runtime, portal_stack, mo
 @needs_proxy
 @needs_portal
 def test_revoking_a_grant_made_through_the_real_portal(sandbox, runtime, portal_stack, monkeypatch, capfd):
-    env, log = portal_stack
+    env, _log = portal_stack
     perms = {"portals": True}
     kw = app_root(sandbox, runtime, perms)
     m = Manifest("app", "o/a", "*.AppImage", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", permissions=Permissions(**perms))

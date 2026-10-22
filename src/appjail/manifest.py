@@ -145,7 +145,7 @@ def check_dbus_name(name, key="dbus_filter"):
 def check_dbus_own(name):
     """A D-Bus name an app may own: like a talk name, and never inside a desktop service namespace."""
     check_dbus_name(name, "dbus_own")
-    base = name[:-2] if name.endswith(".*") else name
+    base = name.removesuffix(".*")
     if base.startswith(DBUS_OWN_OK):
         return name
     if (base + ".").startswith(DBUS_NO_OWN) or any(n.startswith(base + ".") for n in DBUS_NO_OWN):
@@ -216,7 +216,7 @@ def _check_dir(entry):
     path, _, mode = entry.partition(":")
     if mode not in ("", "ro", "rw"):
         raise ManifestError(f"dirs entry {entry!r}: mode must be ro or rw")
-    if not (path.startswith("/") or path.startswith("~/")):
+    if not (path.startswith(("/", "~/"))):
         raise ManifestError(f"dirs entry {entry!r}: path must be absolute or start with ~/")
     if path in ("/", "~/") or ".." in path.split("/"):
         raise ManifestError(f"dirs entry {entry!r}: path is too broad or contains '..'")
@@ -252,7 +252,7 @@ def split_file_mode(spec):
     """(path, "rw" or "") for a PATH, PATH:ro or PATH:rw file argument."""
     if spec.endswith(":rw"):
         return spec[:-3], "rw"
-    return (spec[:-3] if spec.endswith(":ro") else spec), ""
+    return (spec.removesuffix(":ro")), ""
 
 
 def merge_dirs(base, extra):

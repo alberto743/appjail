@@ -7,7 +7,7 @@ python3               # the interpreter appjail and the tests run on
 python3-pytest        # test runner (development dependency only)
 reuse                 # `reuse lint`: SPDX/REUSE compliance check
 python3-venv          # venv with pip: the packaging test installs appjail the way a user would (pip downloads hatchling)
-python3-pyflakes      # static check for unused names, undefined names and shadowing (tests/test_lint.py)
+python3-pip           # installs the pinned ruff (tests/vm/install-ruff.sh): no distribution package
 ca-certificates       # TLS roots for the HTTPS tests (GitHub API, downloads)
 weston                # headless Wayland compositor and weston-simple-shm test client
 sway                  # headless wlroots compositor: offers wp_security_context_v1, which weston 14 does not

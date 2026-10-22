@@ -44,7 +44,7 @@ def test_update_to_the_analysed_commit_then_search(data):
     assert cli.main(["index", "update", "--commit", PINNED], console=console) == 0, console.lines
     assert indexsync.current() == PINNED
     assert any("8735" in line or "install scripts" in line for line in console.lines)
-    hits, total = index.search(["cura"], limit=5)
+    hits, _total = index.search(["cura"], limit=5)
     assert any(h.name == "cura" and h.source == "Ultimaker/Cura" for h in hits)
     entries = index.parse_list(index.read_text(str(index.tree_path() / index.LIST_FILE), index.MAX_LIST_BYTES))
     assert len(entries) == 8140

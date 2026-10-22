@@ -14,7 +14,17 @@ import tempfile
 from dataclasses import replace
 from pathlib import Path
 
-from . import appimage, dbusproxy, history, jail, manifest, portal, seccomp, store, wayland
+from . import (
+    appimage,
+    dbusproxy,
+    history,
+    jail,
+    manifest,
+    portal,
+    seccomp,
+    store,
+    wayland,
+)
 from .jail import RunError
 
 # Descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).

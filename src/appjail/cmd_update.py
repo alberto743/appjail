@@ -5,13 +5,12 @@
 
 import secrets
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from . import appimage, attest, github, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
 from .console import Abort, human_size
 from .permargs import granted_summary
-
 
 
 def hash_candidate(asset, download):
@@ -129,7 +128,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
 
 def cmd_update(args, client, console, download=jail.download, now=None, extract=appimage.extract,
                extract_ok=appimage.have_unsquashfs, verify=attest.verify):
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
     names = [args.app] if args.app else updater.installed()

@@ -192,7 +192,7 @@ def test_fetch_parses_commit_and_signature(tmp_path):
     run = FakeRun(f"commit {C1}\nsigned yes\n")
     got = indexsync.fetch(tmp_path, C2, run=run)
     assert (got.commit, got.signed, got.tree) == (C1, True, tmp_path / "repo")
-    args, timeout, watch = run.calls[0]
+    args, _timeout, watch = run.calls[0]
     assert args[args.index("--") + 1:][-2:] == [C2, indexsync.AM_URL]
     assert watch[0] == tmp_path and watch[1] == indexsync.MAX_WORK_BYTES
 

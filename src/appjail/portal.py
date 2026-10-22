@@ -138,13 +138,13 @@ def store_call(host_env, method, *args):
 
 def granted_documents(app, host_env):
     """Document ids the document portal has granted to this app id, with the permissions, sorted."""
-    ids = re.findall(r'^\s*string "([^"]*)"\s*$', store_call(host_env, "List", "string:documents"), re.M)
+    ids = re.findall(r'^\s*string "([^"]*)"\s*$', store_call(host_env, "List", "string:documents"), re.MULTILINE)
     found = {}
     for doc in ids:
         if not DOC_ID_RE.fullmatch(doc):
             continue
         reply = store_call(host_env, "Lookup", "string:documents", f"string:{doc}")
-        m = re.search(r'dict entry\(\s*string "' + re.escape(app) + r'"\s*array \[(.*?)\]', reply, re.S)
+        m = re.search(r'dict entry\(\s*string "' + re.escape(app) + r'"\s*array \[(.*?)\]', reply, re.DOTALL)
         perms = re.findall(r'string "([^"]*)"', m.group(1)) if m else []
         if perms:
             found[doc] = perms

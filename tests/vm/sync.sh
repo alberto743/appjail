@@ -6,5 +6,5 @@
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 root="$here/../.."
-tar -C "$root" --exclude=./vm --exclude=__pycache__ --exclude=.git -cf - . |
+tar -C "$root" --exclude=./vm --exclude=__pycache__ --exclude=.ruff_cache --exclude=.git -cf - . |
 	"$here/ssh.sh" 'rm -rf ~/appjail && mkdir ~/appjail && tar -C ~/appjail -xf -'

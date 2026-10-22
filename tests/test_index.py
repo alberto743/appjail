@@ -124,7 +124,7 @@ def test_symlinked_and_missing_scripts_are_not_followed(root):
 
 
 def test_traversal_name_never_reaches_the_filesystem(root):
-    hits, total = hit(root, "evil")
+    _hits, total = hit(root, "evil")
     assert total == 0
 
 

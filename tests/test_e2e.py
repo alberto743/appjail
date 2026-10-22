@@ -87,6 +87,7 @@ def test_gui_app_runs_in_jail_against_headless_weston(installed, tmp_path):
 def test_gui_app_runs_through_a_private_xwayland(installed):
     """Same app, forced onto X11 (no WAYLAND_DISPLAY, SDL_VIDEODRIVER=x11): it can only run through the jail's Xwayland."""
     from dataclasses import replace
+
     from appjail import jail
     rt = Path(f"/run/user/{os.getuid()}")
     weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-e2x"],
@@ -116,6 +117,7 @@ def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
     home, records the server certificate only if the TLS connection really went through the pasta namespace.
     Depends on one public Gemini server (geminiprotocol.net) being up."""
     import signal
+
     from appjail import jail
     assert cli.main(["perms", "lagrange", "--allow", "network", "--yes"], console=Answers([])) == 0
     rt = Path(f"/run/user/{os.getuid()}")

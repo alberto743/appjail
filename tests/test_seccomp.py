@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from appjail import jail, seccomp
-from .helpers import integration, run_in_jail
 
+from .helpers import integration, run_in_jail
 
 HEADER = Path("/usr/include/x86_64-linux-gnu/asm/unistd_64.h")
 

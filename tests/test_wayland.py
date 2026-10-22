@@ -15,8 +15,8 @@ import pytest
 
 from appjail import jail, wayland
 from appjail.jail import RunError
-from .helpers import build, integration
 
+from .helpers import build, integration
 
 
 def event(obj, opcode, payload=b""):
@@ -92,12 +92,12 @@ def compositor(sandbox):
 
 
 def test_globals_are_listed(compositor):
-    c, env = compositor(["wl_compositor", "zwlr_screencopy_manager_v1"])
+    _c, env = compositor(["wl_compositor", "zwlr_screencopy_manager_v1"])
     assert wayland.advertised(env) == {"wl_compositor", "zwlr_screencopy_manager_v1"}
 
 
 def test_no_protocol_means_no_restricted_socket(compositor):
-    c, env = compositor(["wl_compositor"])
+    _c, env = compositor(["wl_compositor"])
     with wayland.RestrictedSocket(env) as path:
         assert path is None
 
@@ -113,10 +113,9 @@ def test_restricted_socket_is_registered_and_cleaned_up(compositor):
 
 
 def test_protocol_error_is_reported_and_leaves_nothing(compositor):
-    c, env = compositor([wayland.MANAGER], fail_commit=True)
-    with pytest.raises(RunError, match="boom"):
-        with wayland.RestrictedSocket(env):
-            pass
+    _c, env = compositor([wayland.MANAGER], fail_commit=True)
+    with pytest.raises(RunError, match="boom"), wayland.RestrictedSocket(env):
+        pass
     assert not list(Path(env["XDG_RUNTIME_DIR"]).glob("appjail-wl-*"))
 
 

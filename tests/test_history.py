@@ -7,8 +7,8 @@ import shutil
 import pytest
 
 from appjail import cli, history, store
-from .helpers import Script
 
+from .helpers import Script
 
 needs_git = pytest.mark.skipif(not (os.environ.get("APPJAIL_INTEGRATION") == "1" and shutil.which("git")),
                                reason="real bwrap and git: run in the test guest")

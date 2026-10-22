@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 
 from appjail import appimage, cli, jail, store, tools
-from .helpers import Script, integration, write_image
 
+from .helpers import Script, integration, write_image
 
 BODY = b"#!/bin/sh\necho fake dwarfs tool\n"
 
@@ -101,6 +101,6 @@ def test_real_dwarfs_appimage_is_extracted_and_validated(sandbox, tmp_path):
     shentsize, shnum = struct.unpack_from("<HH", elf, 0x3A)
     assert shoff + shentsize * shnum == len(elf), "runtime stub must end with its section table"
     (tmp_path / "x.AppImage").write_bytes(bytes(elf) + image.read_bytes())
-    entries, size = appimage.extract(tmp_path / "x.AppImage", tmp_path / "root")
+    entries, _size = appimage.extract(tmp_path / "x.AppImage", tmp_path / "root")
     assert (tmp_path / "root" / "AppRun").is_file() and entries >= 3
     assert not any((tmp_path / "root").rglob("*.tmp"))

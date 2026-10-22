@@ -32,8 +32,8 @@ dirs = ["~/Downloads:rw", "/mnt/data"]
 
 
 def make(**kw):
-    base = dict(name="gh", source="cli/cli", asset_pattern="*.AppImage", version="v1",
-                sha256=SHA, evidence_tier=4, published_at="2026-09-30T02:40:02Z")
+    base = {"name": "gh", "source": "cli/cli", "asset_pattern": "*.AppImage", "version": "v1",
+                "sha256": SHA, "evidence_tier": 4, "published_at": "2026-09-30T02:40:02Z"}
     base.update(kw)
     return Manifest(**base)
 

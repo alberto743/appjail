@@ -10,7 +10,7 @@ on an old `published_at`: a different candidate starts a new clock.
 
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from . import manifest, store
 
@@ -19,11 +19,11 @@ TIME_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def stamp(when):
-    return when.astimezone(timezone.utc).strftime(TIME_FMT)
+    return when.astimezone(UTC).strftime(TIME_FMT)
 
 
 def parse_stamp(text):
-    return datetime.strptime(text, TIME_FMT).replace(tzinfo=timezone.utc)
+    return datetime.strptime(text, TIME_FMT).replace(tzinfo=UTC)
 
 
 def candidate_key(release, asset):

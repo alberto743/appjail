@@ -24,7 +24,7 @@ NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,80}")
 # "◆ name : description" (the bullet, and anything before the name, is ignored)
 LIST_RE = re.compile(r"^[^\w\s]{0,2}\s*([A-Za-z0-9][A-Za-z0-9._+-]{0,80}) : (.*)$")
 # SITE="..." / SITE2='...' / SITE=bare, possibly several assignments on one line
-SITE_RE = re.compile(r"""(?:^|[\s;])(SITE2?)=(?:"([^"\n]*)"|'([^'\n]*)'|([^\s"';#]*))""", re.M)
+SITE_RE = re.compile(r"""(?:^|[\s;])(SITE2?)=(?:"([^"\n]*)"|'([^'\n]*)'|([^\s"';#]*))""", re.MULTILINE)
 GITHUB_URL_RE = re.compile(r"https?://(?:www\.)?github\.com/([^/\s]+/[^/\s#?]+?)(?:\.git)?(?:/.*)?")
 
 

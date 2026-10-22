@@ -3,7 +3,7 @@
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -256,7 +256,7 @@ def test_attestation_invalid_digest_makes_no_request():
 
 
 def test_age_days():
-    now = datetime(2026, 10, 17, tzinfo=timezone.utc)
+    now = datetime(2026, 10, 17, tzinfo=UTC)
     assert github.age_days("2026-09-30T02:40:02Z", now) == 16
 
 

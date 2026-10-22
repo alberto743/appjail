@@ -34,11 +34,14 @@ jobs:
           sudo apt-get update
           sed 's/#.*//' tests/vm/packages.txt | grep -Ev '^ *linux-image' | xargs sudo apt-get install -y --no-install-recommends
 
+      - name: Install ruff (no distribution package)
+        run: tests/vm/install-ruff.sh
+
       - name: Show the versions under test
         run: |
           . /etc/os-release && echo "$PRETTY_NAME, kernel $(uname -r)"
           bwrap --version; pasta --version | head -1; Xwayland -version 2>&1 | head -1
-          /usr/libexec/xdg-desktop-portal --version; weston --version; reuse --version; python3 --version
+          /usr/libexec/xdg-desktop-portal --version; weston --version; reuse --version; ruff --version; python3 --version
 
       - name: Run the tests
         env:

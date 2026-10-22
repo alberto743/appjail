@@ -10,8 +10,17 @@ import pytest
 
 from appjail import attest, cli, github, jail, manifest, snappy, store, tools
 from appjail.github import Client, GitHubError
-from .helpers import FakeClient, NEW_IMAGE, NOW, Script, T0, installed, integration, release2
 
+from .helpers import (
+    NEW_IMAGE,
+    NOW,
+    T0,
+    FakeClient,
+    Script,
+    installed,
+    integration,
+    release2,
+)
 
 SHA = "a" * 64
 
@@ -264,7 +273,7 @@ def test_tier_1_app_refuses_an_attestation_that_does_not_verify(h):
 
 def test_tier_1_app_updates_when_the_new_release_verifies(h):
     path = tier1_app(h)
-    code, c = run_update(h, FakeClient(release_=release2(), bundles=[BUNDLE]), fake_verify())
+    code, _c = run_update(h, FakeClient(release_=release2(), bundles=[BUNDLE]), fake_verify())
     assert code == 0 and manifest.load(path).version == "v2.0" and manifest.load(path).evidence_tier == 1
 
 

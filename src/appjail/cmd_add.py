@@ -10,7 +10,14 @@ import shutil
 
 from . import appimage, attest, github, history, jail, manifest, store, tools
 from .console import Abort, human_size
-from .permargs import granted_summary, permissions_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
+from .permargs import (
+    granted_summary,
+    permissions_from_args,
+    require_pasta,
+    warn_owned_dbus,
+    warn_privileged_portals,
+    warn_sensitive_dbus,
+)
 
 MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90

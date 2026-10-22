@@ -5,6 +5,7 @@ import pytest
 
 from appjail import cli, portal, store
 from appjail.cli import Abort
+
 from .helpers import Script, installed
 
 APP = "app.appjail.app"

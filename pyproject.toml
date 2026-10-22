@@ -36,3 +36,15 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 python_files = ["test_*.py"]
 addopts = "-ra"
+
+[tool.ruff.lint.per-file-ignores]
+# These files deal with bidirectional overrides and control characters on purpose.
+"src/appjail/textsafe.py" = ["PLE2502"]
+"tests/test_textsafe.py" = ["PLE2502"]
+# Headless compositors and sway keep their log file open for the life of the test.
+"tests/test_runner.py" = ["SIM115"]
+"tests/test_wayland.py" = ["SIM115"]
+
+[tool.ruff.lint]
+# Return codes are always inspected by hand; check=True would raise instead of the project's own errors.
+extend-ignore = ["PLW1510"]

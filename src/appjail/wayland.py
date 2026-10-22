@@ -61,7 +61,7 @@ class Events:
                     return obj, word & 0xFFFF, msg[8:]
             try:
                 chunk = self.sock.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 raise RunError("Wayland compositor did not answer") from None
             if not chunk:
                 raise RunError("Wayland compositor closed the connection")
@@ -145,7 +145,7 @@ class RestrictedSocket:
         if MANAGER not in offered:
             self.__exit__()
             return None
-        name, version = offered[MANAGER]
+        name, _version = offered[MANAGER]
         rt = self.host_env["XDG_RUNTIME_DIR"]
         self.dir = Path(tempfile.mkdtemp(prefix="appjail-wl-", dir=rt))
         try:

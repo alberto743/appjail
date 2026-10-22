@@ -9,7 +9,17 @@ from pathlib import Path
 
 from . import appimage, history, jail, manifest, portal, store, tools, updater
 from .console import Abort
-from .permargs import PERMISSION_FLAGS, dbus_from_args, describe_permissions, dirs_from_args, portals_from_args, require_pasta, warn_owned_dbus, warn_privileged_portals, warn_sensitive_dbus
+from .permargs import (
+    PERMISSION_FLAGS,
+    dbus_from_args,
+    describe_permissions,
+    dirs_from_args,
+    portals_from_args,
+    require_pasta,
+    warn_owned_dbus,
+    warn_privileged_portals,
+    warn_sensitive_dbus,
+)
 
 
 def cmd_tools(args, console, download=jail.download):

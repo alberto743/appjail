@@ -39,7 +39,8 @@ if out.get("uris"):
     path = out["uris"][0].replace("file://", "")
     out["doc_path"] = path
     try:
-        out["content"] = open(path).read()
+        with open(path) as f:
+            out["content"] = f.read()
     except OSError as e:
         out["read_error"] = str(e)
 

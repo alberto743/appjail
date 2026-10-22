@@ -14,7 +14,16 @@ import pytest
 
 from appjail import appimage, jail, manifest, runner, seccomp, store
 from appjail.jail import RunError
-from .helpers import FACTS, NO_RESTRICTION, build, install, integration, pairs, run_in_jail
+
+from .helpers import (
+    FACTS,
+    NO_RESTRICTION,
+    build,
+    install,
+    integration,
+    pairs,
+    run_in_jail,
+)
 
 SHA = "a" * 64
 
@@ -113,7 +122,7 @@ def test_network_host_and_offline_apps_are_not_wrapped(sandbox, runtime, monkeyp
         install(sandbox, **perms)
         captured = []
         runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
-                      runner=lambda argv: captured.append(argv) or 0, restricted=NO_RESTRICTION)
+                      runner=lambda argv, captured=captured: captured.append(argv) or 0, restricted=NO_RESTRICTION)
         assert captured[0][0] != "/usr/bin/pasta"
 
 

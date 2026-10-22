@@ -12,8 +12,8 @@ import pytest
 from appjail import dbusproxy, jail, manifest, runner
 from appjail.jail import RunError
 from appjail.manifest import ManifestError, Permissions
-from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
+from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
 
 NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.StatusNotifierWatcher")
 
@@ -154,9 +154,9 @@ def test_proxy_failure_is_reported_and_cleaned_up(runtime, monkeypatch):
     s.bind(str(runtime / "bus"))
     s.listen(1)
     monkeypatch.setattr(dbusproxy, "PROXY", "/bin/false")
-    with pytest.raises(RunError, match="did not start"):
-        with dbusproxy.Proxy(Permissions(dbus_filter=NAMES[:1]), {"XDG_RUNTIME_DIR": str(runtime)}):
-            pass
+    with (pytest.raises(RunError, match="did not start"),
+          dbusproxy.Proxy(Permissions(dbus_filter=NAMES[:1]), {"XDG_RUNTIME_DIR": str(runtime)})):
+        pass
     assert [p.name for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
 
 

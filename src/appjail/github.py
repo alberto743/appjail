@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from . import manifest, snappy, textsafe
 
@@ -29,7 +29,7 @@ TIMEOUT = 20
 
 TAG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
 X86_64_TOKENS = ("x86_64", "x86-64", "amd64", "x64")
-OTHER_ARCH_RE = re.compile(r"aarch64|arm64|armhf|armv7|armv6|(?<![a-z0-9])arm(?![a-z0-9])|i[3-6]86|ppc64|riscv|s390x", re.I)
+OTHER_ARCH_RE = re.compile(r"aarch64|arm64|armhf|armv7|armv6|(?<![a-z0-9])arm(?![a-z0-9])|i[3-6]86|ppc64|riscv|s390x", re.IGNORECASE)
 
 
 class GitHubError(Exception):
@@ -133,7 +133,7 @@ class Client:
         if status in (403, 429) and hdrs.get("x-ratelimit-remaining") == "0":
             reset = hdrs.get("x-ratelimit-reset", "")
             try:
-                reset = datetime.fromtimestamp(int(reset), timezone.utc).strftime("%H:%M:%SZ")
+                reset = datetime.fromtimestamp(int(reset), UTC).strftime("%H:%M:%SZ")
             except ValueError:
                 reset = None
             raise RateLimited(reset)
@@ -290,6 +290,6 @@ def suggest_pattern(name, tag):
 
 
 def age_days(timestamp, now=None):
-    now = now or datetime.now(timezone.utc)
-    then = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    now = now or datetime.now(UTC)
+    then = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
     return (now - then).days

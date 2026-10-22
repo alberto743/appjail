@@ -8,23 +8,8 @@ import pytest
 
 from appjail import appimage, cli, cmd_add, github, manifest, store
 from appjail.cli import Abort
-from .helpers import FAKE_APPIMAGE, FakeClient, SHA, Script, asset, info, release
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+from .helpers import FAKE_APPIMAGE, SHA, FakeClient, Script, asset, info, release
 
 # -- success paths -----------------------------------------------------------------------
 

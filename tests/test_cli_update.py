@@ -8,15 +8,22 @@ import pytest
 
 from appjail import appimage, cli, github, manifest, store, updater
 from appjail.cli import Abort
-from .helpers import FAKE_APPIMAGE, FakeClient, NEW_IMAGE, NEW_SHA, SHA, Script, T0, asset, info, installed, release, release2, update
 
-
-
-
-
-
-
-
+from .helpers import (
+    FAKE_APPIMAGE,
+    NEW_IMAGE,
+    NEW_SHA,
+    SHA,
+    T0,
+    FakeClient,
+    Script,
+    asset,
+    info,
+    installed,
+    release,
+    release2,
+    update,
+)
 
 
 def test_up_to_date_downloads_nothing(h):
@@ -69,7 +76,7 @@ def test_permissions_and_name_survive_an_update(h):
 
 def test_quarantine_zero_installs_at_once_with_a_warning(h):
     installed(h)
-    code, c = update(h, FakeClient(release_=release2()), days=0)
+    _code, c = update(h, FakeClient(release_=release2()), days=0)
     assert "updated app" in c.text and "quarantine shortened to 0 days" in c.text
 
 
@@ -104,7 +111,7 @@ def test_older_release_is_not_installed(h):
 def test_declined_changes_nothing(h):
     path = installed(h)
     before = path.read_text()
-    code, c = update(h, FakeClient(release_=release2()), answers=("n",), days=0)
+    code, _c = update(h, FakeClient(release_=release2()), answers=("n",), days=0)
     assert code == 0 and path.read_text() == before and len(h.downloads) == 1
 
 
@@ -134,7 +141,7 @@ def test_extraction_failure_keeps_the_old_install(h):
 def test_failure_while_swapping_restores_the_old_install(h, monkeypatch):
     path = installed(h)
     monkeypatch.setattr(manifest, "dump", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
-    code, c = update(h, FakeClient(release_=release2()), days=0)
+    code, _c = update(h, FakeClient(release_=release2()), days=0)
     assert code == 1
     assert store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
     assert store.root_marker("app").read_text().strip() == SHA
@@ -145,23 +152,23 @@ def test_failure_while_swapping_restores_the_old_install(h, monkeypatch):
 def test_tier4_rolling_tag_unchanged_is_current(h):
     installed(h, client=FakeClient(release_=release(asset(sha=""))))
     same = github.Release("v1.0", "2026-09-30T02:40:02Z", False, "https://x", (asset(sha=""),))
-    code, c = update(h, FakeClient(release_=same), days=0)
+    _code, c = update(h, FakeClient(release_=same), days=0)
     assert "up to date" in c.text and len(h.downloads) == 1
 
 
 def test_tier4_update_shows_the_new_hash_and_asks_again(h):
     path = installed(h, client=FakeClient(release_=release(asset(sha=""))))
-    code, c = update(h, FakeClient(release_=release2(sha="")), answers=("y", "y"), days=0)
+    _code, c = update(h, FakeClient(release_=release2(sha="")), answers=("y", "y"), days=0)
     assert "trust on first use" in c.text and manifest.load(path).evidence_tier == 4
     assert manifest.load(path).sha256 == NEW_SHA
-    code, c = update(h, FakeClient(release_=release2(sha="", tag="v3", published="2026-10-12T00:00:00Z")),
+    _code, c = update(h, FakeClient(release_=release2(sha="", tag="v3", published="2026-10-12T00:00:00Z")),
                      answers=("y", "n"), days=0)
     assert manifest.load(path).version == "v2.0"
 
 
 def test_renamed_repo_is_noted_and_recorded(h):
     path = installed(h)
-    code, c = update(h, FakeClient(info_=info(full_name="o/App2", renamed=True), release_=release2()), days=0)
+    _code, c = update(h, FakeClient(info_=info(full_name="o/App2", renamed=True), release_=release2()), days=0)
     assert "renamed or transferred" in c.text and manifest.load(path).source == "o/App2"
 
 
@@ -170,7 +177,7 @@ def test_missing_owner_pin_is_noted_and_filled_in(h):
     m = manifest.load(path)
     from dataclasses import replace
     manifest.dump(path, replace(m, owner_id=None))
-    code, c = update(h, FakeClient(release_=release2()), days=0)
+    _code, c = update(h, FakeClient(release_=release2()), days=0)
     assert "before owner pinning" in c.text and manifest.load(path).owner_id == 42
 
 
@@ -357,7 +364,7 @@ def test_channel_option_changes_the_policy_and_is_saved(h):
     path = installed(h)
     update(h, FakeClient(release_=release2()), extra=("--channel", "pinned"))
     assert manifest.load(path).channel == "pinned"
-    code, c = update(h, FakeClient(release_=release2()), extra=("--channel", "stable"))
+    _code, c = update(h, FakeClient(release_=release2()), extra=("--channel", "stable"))
     assert manifest.load(path).channel == "stable" and "quarantine" in c.text
 
 
@@ -450,7 +457,7 @@ def test_tier4_candidate_is_hashed_when_first_seen(h):
 
 def test_tier4_hash_is_optional_and_a_refusal_is_warned_about(h):
     installed(h, client=FakeClient(release_=release(asset(sha=""))))
-    code, c = update(h, tier4_client(), answers=("n",))
+    _code, c = update(h, tier4_client(), answers=("n",))
     assert "will not be detected" in c.text and "sha256" not in (updater.load_pending("app") or {})
     assert len(h.downloads) == 1
 
@@ -470,7 +477,7 @@ def test_tier4_asset_swapped_during_quarantine_is_blocked_and_restarts_the_clock
 def test_tier4_unchanged_asset_installs_after_the_quarantine(h):
     path = installed(h, client=FakeClient(release_=release(asset(sha=""))))
     update(h, tier4_client())
-    code, c = update(h, tier4_client(), answers=("y", "y"), now=T0 + timedelta(days=7))
+    _code, c = update(h, tier4_client(), answers=("y", "y"), now=T0 + timedelta(days=7))
     assert "updated app" in c.text and manifest.load(path).sha256 == NEW_SHA
 
 

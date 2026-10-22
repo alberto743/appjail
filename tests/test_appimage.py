@@ -11,6 +11,7 @@ import pytest
 
 from appjail import appimage, jail
 from appjail.appimage import ExtractError, UnsafeTree, UnsupportedImage
+
 from .helpers import stub, write_image
 
 HAVE_TOOLS = bool(shutil.which("bwrap") and shutil.which("mksquashfs") and appimage.have_unsquashfs())
@@ -260,11 +261,10 @@ def test_fifo_in_image_rejected(lab):
 def test_decompression_bomb_stopped(lab):
     lab.good_tree()
     with open(lab.src_dir / "pattern", "wb") as f:
-        for _ in range(400):
-            f.write(b"A" * 1024 * 1024)  # 400 MiB that compresses to almost nothing
-    with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
-        with pytest.raises(UnsafeTree, match="too large"):
-            appimage.extract(lab.build(), lab.base / "root")
+        f.writelines(b"A" * 1024 * 1024 for _ in range(400))  # 400 MiB that compresses to almost nothing
+    with (mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024),
+          pytest.raises(UnsafeTree, match="too large")):
+        appimage.extract(lab.build(), lab.base / "root")
     assert lab.leftovers() == []
 
 
@@ -273,9 +273,9 @@ def test_sparse_huge_file_rejected_by_apparent_size(lab):
     lab.good_tree()
     with open(lab.src_dir / "sparse", "wb") as f:
         f.truncate(400 * 1024 * 1024)  # holes: no disk blocks, but a huge apparent size
-    with mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024):
-        with pytest.raises(UnsafeTree, match="too large"):
-            appimage.extract(lab.build(), lab.base / "root")
+    with (mock.patch.object(appimage, "MAX_EXTRACTED_BYTES", 30 * 1024 * 1024),
+          pytest.raises(UnsafeTree, match="too large")):
+        appimage.extract(lab.build(), lab.base / "root")
     assert lab.leftovers() == []
 
 
