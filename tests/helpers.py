@@ -97,7 +97,7 @@ class Harness:
     def assert_nothing_installed(self, name="app"):
         assert not store.manifest_path(name).exists()
         assert not store.app_dir(name).exists()
-        assert list(store.staging_root().iterdir()) == []
+        assert not store.staging_root().exists() or list(store.staging_root().iterdir()) == []
 
 
 class Script(cli.Console):

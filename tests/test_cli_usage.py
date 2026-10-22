@@ -37,7 +37,7 @@ def test_tools_without_subcommand_shows_its_help(capsys):
     assert "install" in err
 
 
-@pytest.mark.parametrize("argv, option", [(["add"], "--prerelease"), (["remove"], "app")])
+@pytest.mark.parametrize("argv, option", [(["remove"], "app"), (["perms"], "--allow")])
 def test_missing_positional_shows_the_command_help(capsys, argv, option):
     err = run_failing(capsys, argv)
     assert f"appjail {argv[0]}: error:" in err

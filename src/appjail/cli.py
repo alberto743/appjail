@@ -12,6 +12,7 @@ from importlib import metadata
 
 from . import github, index, indexsync, jail, manifest, runner, tools, updater
 from .cmd_add import cmd_add
+from .cmd_addimage import cmd_add_file, cmd_add_url
 from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
 from .cmd_desktop import cmd_desktop
 from .cmd_index import (
@@ -52,8 +53,12 @@ def build_parser():
     p = _HelpOnErrorParser(prog="appjail", description="Sandboxed AppImage manager")
     p.add_argument("--version", action="version", version=f"appjail {version_string()}")
     sub = p.add_subparsers(dest="command", required=True)
-    add = sub.add_parser("add", help="add an app from a GitHub owner/repo")
-    add.add_argument("source", help="GitHub owner/repo")
+    add = sub.add_parser("add", help="add an app from a GitHub owner/repo, a local AppImage (--file) or a URL (--url)")
+    add.add_argument("source", nargs="?", help="GitHub owner/repo (not with --file or --url)")
+    add.add_argument("--file", metavar="PATH", help="install this local AppImage instead of a GitHub release")
+    add.add_argument("--url", metavar="URL", help="install the AppImage at this https URL instead of a GitHub release")
+    add.add_argument("--sha256", metavar="HEX", help="with --file or --url: the hash the publisher gives; a mismatch aborts, a match makes it tier 4")
+    add.add_argument("--max-size", type=int, metavar="MIB", help="with --url: refuse to download more than this (default 1024)")
     add.add_argument("--name", help="local app name (default: repo name)")
     add.add_argument("--prerelease", action="store_true", help="allow pre-releases")
     add.add_argument("--tag", help="use this release tag instead of the latest release")
@@ -153,9 +158,16 @@ def main(argv=None, client=None, console=None):
     console = console or Console()
     try:
         if args.command == "add":
-            if not manifest.REPO_RE.fullmatch(args.source):
-                raise Abort("source must be a GitHub owner/repo")
-            cmd_add(args, client or github.Client(), console)
+            if args.file or args.url:
+                if args.source or (args.file and args.url):
+                    raise Abort("give either a GitHub owner/repo, --file PATH or --url URL")
+                cmd_add_file(args, console) if args.file else cmd_add_url(args, console)
+            else:
+                if not args.source or not manifest.REPO_RE.fullmatch(args.source):
+                    raise Abort("source must be a GitHub owner/repo (or use --file / --url)")
+                if args.sha256 or args.max_size:
+                    raise Abort("--sha256 and --max-size apply to --file / --url only")
+                cmd_add(args, client or github.Client(), console)
         elif args.command == "index":
             if args.index_command == "update":
                 cmd_index_update(args, console)

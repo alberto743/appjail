@@ -141,12 +141,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     warn_owned_dbus(console, perms.dbus_own)
     warn_privileged_portals(console, perms.portal_interfaces)
 
-    fallback = False
-    if not extract_ok():
-        fallback = console.confirm("unsquashfs is not installed. Run the AppImage's own extractor "
-                                   "(--appimage-extract) inside a jail with no network instead?")
-        if not fallback:
-            raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
+    fallback = ask_extractor(console, extract_ok)
 
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail?"):
         raise Abort("cancelled")
@@ -164,26 +159,49 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
             owner_id=info.owner_id, permissions=perms,
             channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")
         manifest.validate(record)
-        dest = store.appimage_path(name)
-        dest.parent.mkdir(parents=True, mode=0o700)
-        try:
-            os.chmod(staged, 0o600)
-            os.replace(staged, dest)
-            try:
-                entries, size = extract(dest, store.root_path(name), fallback)
-            except appimage.EXTRACT_ERRORS as e:
-                raise Abort(f"cannot extract the AppImage: {e}") from e
-            store.root_marker(name).write_text(digest + "\n")
-            store.tree_marker(name).write_text(appimage.tree_digest(store.root_path(name)) + "\n")
-            manifest.dump(store.manifest_path(name), record)
-        except BaseException:
-            appimage.remove_tree(dest.parent)
-            raise
+        entries, size = place_new(name, staged, record, extract, fallback)
     finally:
         shutil.rmtree(stage, ignore_errors=True)
+    finish_add(console, args, record, entries, size)
+
+
+def ask_extractor(console, extract_ok):
+    """Whether to fall back to the AppImage's own extractor (no unsquashfs); aborts when the user declines."""
+    if extract_ok():
+        return False
+    if not console.confirm("unsquashfs is not installed. Run the AppImage's own extractor "
+                           "(--appimage-extract) inside a jail with no network instead?"):
+        raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
+    return True
+
+
+def place_new(name, staged, record, extract, fallback):
+    """Move the staged image into the store, extract it, write the markers and the manifest (last).
+    Nothing is kept when any step fails. Returns (entries, size) of the extracted tree."""
+    dest = store.appimage_path(name)
+    dest.parent.mkdir(parents=True, mode=0o700)
+    try:
+        os.chmod(staged, 0o600)
+        os.replace(staged, dest)
+        try:
+            entries, size = extract(dest, store.root_path(name), fallback)
+        except appimage.EXTRACT_ERRORS as e:
+            raise Abort(f"cannot extract the AppImage: {e}") from e
+        store.root_marker(name).write_text(record.sha256 + "\n")
+        store.tree_marker(name).write_text(appimage.tree_digest(store.root_path(name)) + "\n")
+        manifest.dump(store.manifest_path(name), record)
+    except BaseException:
+        appimage.remove_tree(dest.parent)
+        raise
+    return entries, size
+
+
+def finish_add(console, args, record, entries, size):
+    """The report after an install, the history entry and the optional menu entry."""
+    name = record.name
     console.out(f"Extracted  : {entries} entries, {human_size(size)}")
-    history.record(f"add {name} {release.tag} (tier {tier})")
-    console.out(f"Added '{name}' {release.tag}: sha256 {digest}, evidence tier {tier}")
+    history.record(f"add {name} {record.version} (tier {record.evidence_tier})")
+    console.out(f"Added '{name}' {record.version}: sha256 {record.sha256}, evidence tier {record.evidence_tier}")
     console.out(f"Manifest   : {store.manifest_path(name)}")
     if getattr(args, "desktop", False):
         args.rw = False
