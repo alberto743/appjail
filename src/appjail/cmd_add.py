@@ -151,7 +151,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
             owner_id=info.owner_id, permissions=perms,
             channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")
         manifest.validate(record)
-        entries, size = place_new(name, staged, record, extract, fallback)
+        entries, size = swap_in(name, staged, stage, record, extract, fallback)
     finally:
         shutil.rmtree(stage, ignore_errors=True)
     finish_add(console, args, record, entries, size)
@@ -165,27 +165,6 @@ def ask_extractor(console, extract_ok):
                            "(--appimage-extract) inside a jail with no network instead?"):
         raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
     return True
-
-
-def place_new(name, staged, record, extract, fallback):
-    """Move the staged image into the store, extract it, write the markers and the manifest (last).
-    Nothing is kept when any step fails. Returns (entries, size) of the extracted tree."""
-    dest = store.appimage_path(name)
-    dest.parent.mkdir(parents=True, mode=0o700)
-    try:
-        os.chmod(staged, 0o600)
-        os.replace(staged, dest)
-        try:
-            entries, size = extract(dest, store.root_path(name), fallback)
-        except appimage.EXTRACT_ERRORS as e:
-            raise Abort(f"cannot extract the AppImage: {e}") from e
-        store.root_marker(name).write_text(record.sha256 + "\n")
-        store.tree_marker(name).write_text(appimage.tree_digest(store.root_path(name)) + "\n")
-        manifest.dump(store.manifest_path(name), record)
-    except BaseException:
-        appimage.remove_tree(dest.parent)
-        raise
-    return entries, size
 
 
 def finish_add(console, args, record, entries, size):
@@ -216,39 +195,47 @@ def pick_asset(console, release, pattern):
 
 
 def swap_in(name, staged, stage, record, extract, fallback):
-    """Extract the new AppImage, then replace image, tree, marker and manifest; undo on failure."""
+    """Extract `staged` inside `stage`, then put image, tree, markers and manifest (last) in place.
+
+    A new app (no app directory yet) is removed again if anything fails; for an update the previous image and tree
+    are kept aside until everything worked and are restored on failure. Returns (entries, size) of the tree."""
     try:
         entries, size = extract(staged, stage / "root", fallback)
     except appimage.EXTRACT_ERRORS as e:
-        raise Abort(f"cannot extract the new AppImage: {e}") from e
-    dest, root, marker = store.appimage_path(name), store.root_path(name), store.root_marker(name)
+        raise Abort(f"cannot extract the AppImage: {e}") from e
+    app, dest, root = store.app_dir(name), store.appimage_path(name), store.root_path(name)
+    marks = (store.root_marker(name), store.tree_marker(name))
+    fresh = not app.exists()
     old_image, old_root = stage / "old.AppImage", stage / "old-root"
-    old_marker = marker.read_text() if marker.is_file() else None
-    tree_mark = store.tree_marker(name)
-    old_tree_mark = tree_mark.read_text() if tree_mark.is_file() else None
+    old_marks = [m.read_text() if m.is_file() else None for m in marks]
     os.chmod(staged, 0o600)
     placed, backups = [], []  # new things in place, and (original path, where the original went)
     try:
-        if root.exists():
-            os.replace(root, old_root)
-            backups.append((root, old_root))
+        if fresh:
+            app.mkdir(parents=True, mode=0o700)
+        else:
+            if root.exists():
+                os.replace(root, old_root)
+                backups.append((root, old_root))
+            os.replace(dest, old_image)
+            backups.append((dest, old_image))
         os.replace(stage / "root", root)
         placed.append(root)
-        os.replace(dest, old_image)
-        backups.append((dest, old_image))
         os.replace(staged, dest)
         placed.append(dest)
-        marker.write_text(record.sha256 + "\n")
-        tree_mark.write_text(appimage.tree_digest(root) + "\n")
+        marks[0].write_text(record.sha256 + "\n")
+        marks[1].write_text(appimage.tree_digest(root) + "\n")
         manifest.dump(store.manifest_path(name), record)
     except BaseException:
-        for path in placed:
-            appimage.remove_tree(path) if path.is_dir() else path.unlink(missing_ok=True)
-        for original, backup in reversed(backups):
-            os.replace(backup, original)
-        if old_marker is not None:
-            marker.write_text(old_marker)
-        if old_tree_mark is not None:
-            tree_mark.write_text(old_tree_mark)
+        if fresh:
+            appimage.remove_tree(app)
+        else:
+            for path in placed:
+                appimage.remove_tree(path) if path.is_dir() else path.unlink(missing_ok=True)
+            for original, backup in reversed(backups):
+                os.replace(backup, original)
+            for mark, text in zip(marks, old_marks, strict=True):
+                if text is not None:
+                    mark.write_text(text)
         raise
     return entries, size

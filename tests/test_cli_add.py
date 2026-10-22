@@ -26,9 +26,11 @@ def test_success_with_digest(h):
     assert "attestation: present, cannot be verified" in console.text
 
 
-def test_extraction_runs_on_stored_file_and_marks_source_hash(h):
+def test_extraction_runs_on_the_staged_file_and_marks_source_hash(h):
     h.add()
-    assert h.extractions[0] == (store.appimage_path("app"), store.root_path("app"), False)
+    staged, dest, fallback = h.extractions[0]
+    assert (staged.name, dest.name, fallback) == ("download.AppImage", "root", False)
+    assert store.root_path("app").is_dir()
     assert store.root_marker("app").read_text().strip() == SHA
     assert store.tree_marker("app").read_text().strip() == appimage.tree_digest(store.root_path("app"))
 

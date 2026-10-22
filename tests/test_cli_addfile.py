@@ -130,3 +130,12 @@ def test_dispatch_rejects_bad_combinations(sandbox, argv, message):
     console = Script()
     assert cli.main(argv, console=console) == 1
     assert message in console.text
+
+
+def test_a_failure_after_extraction_removes_the_whole_new_app(h, image, monkeypatch):
+    def broken(*a, **k):
+        raise OSError("disk full")
+    monkeypatch.setattr(manifest, "dump", broken)
+    with pytest.raises(OSError, match="disk full"):
+        add_file(h, image, "--name", "x")
+    h.assert_nothing_installed("x")

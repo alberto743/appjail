@@ -14,7 +14,7 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 from . import appimage, jail, manifest, store
-from .cmd_add import MAX_ASSET, ask_extractor, default_name, finish_add, place_new
+from .cmd_add import MAX_ASSET, ask_extractor, default_name, finish_add, swap_in
 from .console import Abort, human_size
 from .imagesrc import (
     DEFAULT_MAX_MIB,
@@ -79,7 +79,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
             manifest.validate(record)
         except manifest.ManifestError as e:
             raise Abort(f"cannot record this file: {e}") from e
-        entries, size = place_new(name, staged, record, extract, fallback)
+        entries, size = swap_in(name, staged, stage, record, extract, fallback)
     finally:
         shutil.rmtree(stage, ignore_errors=True)
     finish_add(console, args, record, entries, size)
@@ -130,7 +130,7 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
             manifest.validate(record)
         except manifest.ManifestError as e:
             raise Abort(f"cannot record this download: {e}") from e
-        entries, size = place_new(name, staged, record, extract, fallback)
+        entries, size = swap_in(name, staged, stage, record, extract, fallback)
     finally:
         shutil.rmtree(stage, ignore_errors=True)
     finish_add(console, args, record, entries, size)
