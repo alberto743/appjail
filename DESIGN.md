@@ -23,8 +23,8 @@ Linux on x86-64 only (decided 2026-10-20). Minimum supported systems (user decis
 
 ## Commands
 - `search <kw>`: text-only lookup in the local AM index (candidates only, never installs).
-- `add owner/repo`: resolve, review, download, pin, write manifest. (Planned: `add --file PATH` / `add --url URL`, see "Planned: `add --file` / `add --url`".)
-- `run <app>`, `update [app]`, `list`, `remove <app>`, `perms <app>` (edit permissions), `history [app]` (recorded manifest changes), `tools status|install NAME` (pinned helper binaries).
+- `add owner/repo`: resolve, review, download, pin, write manifest. `add --file PATH` / `add --url URL` install an AppImage that is not a GitHub release (see "`add --file` / `add --url` and their `update`").
+- `run <app>`, `update [app] [--file PATH] [--sha256 HEX] [--verify]`, `list`, `remove <app>`, `perms <app>` (edit permissions), `history [app]` (recorded manifest changes), `tools status|install NAME` (pinned helper binaries).
 - `index update`, `index rollback`: refresh or roll back the AM search snapshot.
 
 ## Resolver (GitHub first)
@@ -175,7 +175,7 @@ Implemented in `src/appjail/manifest.py` (schema 1), one file per app at `~/.con
 4. Trust on first use.
 5. Cross-check against another source (weak).
 
-For apps installed with `add --file` / `add --url` (planned, see above) tiers 1-3 do not exist: tier 4 means an external confirmation of the bytes (`--sha256` matched), tier 5 means trust on first use of bytes alone. For `github:` apps tier 4 is trust on first use of an asset with no digest, anchored by the pinned owner account id; tier 5 is not assigned.
+For apps installed with `add --file` / `add --url` tiers 1-3 do not exist: tier 4 means an external confirmation of the bytes (`--sha256` matched), tier 5 means trust on first use of bytes alone. For `github:` apps tier 4 is trust on first use of an asset with no digest, anchored by the pinned owner account id; tier 5 is not assigned.
 
 Most AppImages will only reach tiers 3-4. That proves "unchanged, same account", not "safe".
 

@@ -26,8 +26,8 @@ is built around the opposite assumptions:
 
 - **Declarative manifests, no remote code.** An app is a small TOML file: source, pinned hash, permissions. Nothing
   fetched from the network is ever executed or sourced, and appjail has no self-update.
-- **You name the source.** You give a GitHub `owner/repo`. That repository is the only place the app is fetched from,
-  whatever an AppImage's embedded update information says.
+- **You name the source.** You give a GitHub `owner/repo`, or an AppImage file or URL yourself. That is the only
+  place the app is fetched from, whatever an AppImage's embedded update information says.
 - **Downloads are jailed.** The download, the extraction and the verification tools run in throwaway sandboxes
   with only the access they need (a private network namespace for downloads, none for extraction).
 - **Everything is denied by default.** An app starts with a private home and a restricted Wayland socket. Network,
@@ -97,6 +97,20 @@ given `--yes`.
 `add` shows the repository owner, account age, stars and fork or archive status before it downloads anything, and
 asks if several release assets match. By default an app gets audio and GPU access and nothing else.
 
+**Apps that are not GitHub releases.** Give the AppImage itself:
+
+```sh
+appjail add --file ~/Downloads/Tool-x86_64.AppImage [--name tool] [--sha256 HEX]
+appjail add --url https://example.org/dl/Tool-x86_64.AppImage [--name tool] [--sha256 HEX] [--max-size MIB]
+appjail update tool --file ~/Downloads/Tool-new.AppImage       # an app added from a file
+```
+
+Nothing identifies who published such a file, so these apps are tier 5 (trust on first use) or tier 4 when you pass the
+hash the publisher gives with `--sha256` (a mismatch aborts). A URL must be https and is downloaded in the jail (1 GiB
+at most unless `--max-size`); redirects may go to any host, and a redirect through plain http asks for an extra
+confirmation unless `--sha256` matches. `update` of a URL app asks the server first with a conditional request and a
+few small range requests, and downloads the whole file only when something changed.
+
 ### Permissions
 
 ```sh
@@ -141,16 +155,19 @@ Each app is pinned by hash and carries an *evidence tier* that `update` will nev
 |---|---|
 | 1 | A verified GitHub build attestation (Sigstore), checked with a pinned `gh` that you install on request (`appjail tools install gh`). |
 | 3 | The SHA-256 digest GitHub publishes for the release asset. |
-| 4 | Trust on first use: appjail shows you the hash it computed. |
+| 4 | A GitHub asset without a digest: trust on first use, anchored by the pinned owner account. For `--file`/`--url`: the hash you gave with `--sha256` matched. |
+| 5 | `--file`/`--url` without a hash from outside: trust on first use of the bytes alone. |
 
-Tier 2 (GPG signatures) is not implemented. Most AppImages will land on tier 3 or 4, which proves "unchanged and from the
-same account", not "safe".
+Tier 2 (GPG signatures) is not implemented. Most AppImages will land on tier 3 to 5, which proves "unchanged" (and, for
+GitHub, "from the same account"), not "safe". `update APP --sha256 HEX` earns tier 4 for a tier 5 app when the hash
+matches, and a tier 4 URL or file app refuses new content that comes without one.
 
 `appjail update` re-resolves the pinned repository, downloads the candidate in the jail, verifies it, and shows you the
 version, the hashes, the tier and the release link. A release must be seen for the quarantine period before it can
 be installed (`--quarantine DAYS`). For tier 4 apps appjail records the candidate's hash when it is first seen and refuses
 the install if the content changed in the meantime. A change of repository owner or a drop in tier blocks the update.
-`--channel stable|prerelease|pinned` chooses which releases an app follows.
+`--channel stable|prerelease|pinned` chooses which releases an app follows. A URL app's candidate is kept on disk during
+the quarantine and installed from there (`--verify` downloads it again first); a file app has no quarantine, you hold the bytes.
 
 ## Searching
 
@@ -184,7 +201,9 @@ appjail search editor     # candidates only; installing is always `appjail add o
 
 - **Not audited, not a security boundary you should bet on yet.** bwrap and the Linux kernel do the isolation; appjail
   configures them conservatively but has had no external review.
-- Only GitHub repositories are supported. Apps hosted elsewhere appear in `search` but cannot be added.
+- Releases are resolved on GitHub only. Apps hosted elsewhere appear in `search` and can be added with `--url` or `--file`,
+  but then nothing identifies the publisher (tier 5). The cheap `update` check for URL apps detects a new version; a
+  change confined to bytes it does not sample, with the same size and validators, is only seen by a full download.
 - A sandboxed app can still do whatever its grants allow. An app with `network` can reach other machines on your LAN.
 - Granting a directory, a portal or a D-Bus name widens what a compromised app can do.
 - x86-64 only. The GNOME and KDE portal backends have not been tested (the GTK backend and a real X11-only AppImage
