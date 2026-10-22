@@ -7,7 +7,18 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
-from . import appimage, desktop, history, jail, manifest, portal, store, tools, updater
+from . import (
+    appimage,
+    desktop,
+    grants,
+    history,
+    jail,
+    manifest,
+    portal,
+    store,
+    tools,
+    updater,
+)
 from .cmd_desktop import forget
 from .console import Abort
 from .permargs import (
@@ -139,7 +150,7 @@ def cmd_perms(args, console):
         drop = set()
         for spec in args.rm_dir:
             try:
-                entry = manifest.normalize_dir(spec, Path.home(), Path.cwd())
+                entry = grants.normalize_dir(spec, Path.home(), Path.cwd())
             except manifest.ManifestError as e:
                 raise Abort(f"--rm-dir {spec}: {e}") from e
             drop.add(entry.partition(":")[0])
@@ -148,13 +159,13 @@ def cmd_perms(args, console):
             raise Abort("not granted: " + ", ".join(sorted(missing)))
         dirs = tuple(d for d in dirs if d.partition(":")[0] not in drop)
     if args.add_dir:
-        dirs = manifest.merge_dirs(dirs, dirs_from_args(args.add_dir))
+        dirs = grants.merge_dirs(dirs, dirs_from_args(args.add_dir))
     if dirs != p.dirs:
         changes["dirs"] = dirs
     bus = without(dbus_from_args(args.add_dbus, p.dbus_filter), args.rm_dbus, "not allowed")
     if bus != p.dbus_filter:
         changes["dbus_filter"] = bus
-    own = dbus_from_args(args.add_dbus_own, p.dbus_own, manifest.check_dbus_own, "--add-dbus-own")
+    own = dbus_from_args(args.add_dbus_own, p.dbus_own, grants.check_dbus_own, "--add-dbus-own")
     own = without(own, args.rm_dbus_own, "not owned")
     if own != p.dbus_own:
         changes["dbus_own"] = own

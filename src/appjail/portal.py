@@ -23,7 +23,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import manifest
+from . import grants
 from .jail import RunError
 
 ID_PREFIX = "app.appjail."
@@ -49,7 +49,7 @@ def interfaces(perms):
     """Portal interfaces the app may call: the safe set, plus its opt-ins."""
     if not perms.portals:
         return ()
-    return manifest.PORTAL_SAFE + tuple(perms.portal_interfaces)
+    return grants.PORTAL_SAFE + tuple(perms.portal_interfaces)
 
 
 def identity_file(app, instance, network=False):

@@ -6,7 +6,7 @@
 import os
 from pathlib import Path
 
-from . import jail, manifest
+from . import grants, jail, manifest
 from .console import Abort
 
 PERMISSION_FLAGS = manifest.BOOL_PERMS
@@ -26,7 +26,7 @@ def dirs_from_args(specs, home=None, cwd=None):
     out = []
     for spec in specs:
         try:
-            entry = manifest.normalize_dir(spec, home, cwd)
+            entry = grants.normalize_dir(spec, home, cwd)
         except manifest.ManifestError as e:
             raise Abort(f"--dir {spec}: {e}") from e
         host = Path(home) / entry[2:] if entry.startswith("~/") else Path(entry)
@@ -41,7 +41,7 @@ def files_from_args(specs, cwd=None):
     cwd = Path(cwd or Path.cwd())
     out = []
     for spec in specs:
-        path, mode = manifest.split_file_mode(spec)
+        path, mode = grants.split_file_mode(spec)
         full = Path(os.path.normpath(cwd / path))
         if not full.is_file():
             raise Abort(f"--file {spec}: not a regular file")
@@ -49,7 +49,7 @@ def files_from_args(specs, cwd=None):
     return tuple(out)
 
 
-def dbus_from_args(names, current=(), check=manifest.check_dbus_name, flag="--dbus"):
+def dbus_from_args(names, current=(), check=grants.check_dbus_name, flag="--dbus"):
     """Validated dbus_filter (or dbus_own) names merged into the current list (order kept, no duplicates)."""
     out = list(current)
     for name in names:
@@ -64,7 +64,7 @@ def dbus_from_args(names, current=(), check=manifest.check_dbus_name, flag="--db
 
 def portals_from_args(names, current=()):
     """Validated opt-in portal interfaces merged into the current list (order kept, no duplicates)."""
-    return dbus_from_args(names, current, manifest.check_portal_interface, "--portal")
+    return dbus_from_args(names, current, grants.check_portal_interface, "--portal")
 
 
 def warn_privileged_portals(console, names):
@@ -75,7 +75,7 @@ def warn_privileged_portals(console, names):
 
 def warn_sensitive_dbus(console, names):
     for n in names:
-        if n.startswith(manifest.DBUS_SENSITIVE):
+        if n.startswith(grants.DBUS_SENSITIVE):
             console.warn(f"{n} gives access to stored secrets (passwords, keys)")
 
 
@@ -100,7 +100,7 @@ def permissions_from_args(args):
     return manifest.Permissions(
         portal_interfaces=portals_from_args(args.portal),
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
-        dbus_own=dbus_from_args(args.dbus_own, check=manifest.check_dbus_own, flag="--dbus-own"),
+        dbus_own=dbus_from_args(args.dbus_own, check=grants.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
         portals="portals" in allowed, userns="userns" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,

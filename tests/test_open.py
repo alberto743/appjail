@@ -5,7 +5,7 @@
 
 import pytest
 
-from appjail import cli, cmd_open, desktop, jail, runner
+from appjail import cli, cmd_open, desktop, grants, runner
 
 from .helpers import Script
 
@@ -47,7 +47,7 @@ def test_a_file_named_like_a_mode_suffix_keeps_the_requested_mode(h, launched, t
     f.write_text("x")
     open_(["open", "app", "--", str(f)])
     spec = launched[0][0][2]["extra_files"][0]
-    assert spec == f"{f}:ro" and jail.manifest.split_file_mode(spec) == (str(f), "")
+    assert spec == f"{f}:ro" and grants.split_file_mode(spec) == (str(f), "")
 
 
 def test_a_dash_leading_name_after_the_separator_is_a_file(h, launched, tmp_path, monkeypatch):

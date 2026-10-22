@@ -17,6 +17,7 @@ from pathlib import Path
 from . import (
     appimage,
     dbusproxy,
+    grants,
     history,
     jail,
     manifest,
@@ -182,7 +183,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             f"(see `appjail history {name}` and the config directory's git log).")
     perms = m.permissions
     if extra_dirs:
-        perms = replace(perms, dirs=manifest.merge_dirs(perms.dirs, extra_dirs))
+        perms = replace(perms, dirs=grants.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
     file_dests = jail.file_binds(extra_files, Path.home())[1] if extra_files else []
     if file_dests:

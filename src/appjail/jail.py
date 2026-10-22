@@ -18,7 +18,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import manifest, store
+from . import grants, manifest, store
 from .textsafe import clean
 
 FETCHER = Path(__file__).with_name("fetcher.py")
@@ -346,7 +346,7 @@ def dir_binds(dirs, home):
             rel = real.relative_to(home_real)
         except ValueError:
             rel = None
-        why = manifest.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
+        why = grants.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
         if why:
             raise RunError(f"granted directory {host} is refused: {why}")
         args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]
@@ -362,7 +362,7 @@ def file_binds(files, home):
     args, dests = [], []
     home_real = Path(home).resolve()
     for entry in files:
-        path, mode = manifest.split_file_mode(entry)
+        path, mode = grants.split_file_mode(entry)
         try:
             real = Path(path).resolve(strict=True)
             regular = stat.S_ISREG(real.stat().st_mode)
@@ -377,7 +377,7 @@ def file_binds(files, home):
             rel = real.relative_to(home_real)
         except ValueError:
             rel = None
-        why = manifest.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
+        why = grants.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
         if why:
             raise RunError(f"granted file {path} is refused: {why}")
         dest = f"{APP_HOME}/{rel}" if rel else str(real)

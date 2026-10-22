@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import jail, manifest, portal
+from . import grants, jail, portal
 from .jail import RunError
 
 PROXY = "/usr/bin/xdg-dbus-proxy"
@@ -40,8 +40,8 @@ def host_bus(host_env):
 
 def rules(perms):
     """xdg-dbus-proxy options for the manifest: see nothing, talk to the listed names, own the owned ones."""
-    return (["--filter"] + [f"--talk={manifest.check_dbus_name(n)}" for n in perms.dbus_filter]
-            + [f"--own={manifest.check_dbus_own(n)}" for n in perms.dbus_own]
+    return (["--filter"] + [f"--talk={grants.check_dbus_name(n)}" for n in perms.dbus_filter]
+            + [f"--own={grants.check_dbus_own(n)}" for n in perms.dbus_own]
             + portal.proxy_rules(perms))
 
 

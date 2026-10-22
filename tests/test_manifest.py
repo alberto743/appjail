@@ -4,7 +4,7 @@
 
 import pytest
 
-from appjail import manifest
+from appjail import grants, manifest
 from appjail.manifest import Manifest, ManifestError, Permissions
 
 SHA = "a" * 64
@@ -247,18 +247,18 @@ def test_dump_and_load_are_atomic(tmp_path):
     ("/home/u/Docs/../Music", "~/Music"),
 ])
 def test_normalize_dir(spec, expected):
-    assert manifest.normalize_dir(spec, "/home/u", "/home/u/work") == expected
+    assert grants.normalize_dir(spec, "/home/u", "/home/u/work") == expected
 
 
 @pytest.mark.parametrize("spec", ["/", "~/", "/home/u", "..", "~/..", "", ":rw", "/a\nb", "/home"])
 def test_normalize_dir_rejects_broad_or_odd_paths(spec):
     with pytest.raises(ManifestError):
-        manifest.normalize_dir(spec, "/home/u", "/home/u/work")
+        grants.normalize_dir(spec, "/home/u", "/home/u/work")
 
 
 def test_merge_dirs_read_write_wins_and_order_is_kept():
-    assert manifest.merge_dirs(("~/A", "~/B:rw"), ("~/A:rw", "~/B", "~/C")) == ("~/A:rw", "~/B:rw", "~/C")
-    assert manifest.merge_dirs((), ()) == ()
+    assert grants.merge_dirs(("~/A", "~/B:rw"), ("~/A:rw", "~/B", "~/C")) == ("~/A:rw", "~/B:rw", "~/C")
+    assert grants.merge_dirs((), ()) == ()
 
 
 @pytest.mark.parametrize("path,mode,refused", [
@@ -282,13 +282,13 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/.varnish", "", False),
 ])
 def test_sensitive_reason(path, mode, refused):
-    assert bool(manifest.sensitive_reason(path, mode)) is refused
+    assert bool(grants.sensitive_reason(path, mode)) is refused
 
 
 @pytest.mark.parametrize("spec", ["~/.ssh", "~/.config", "~/.local/bin:rw", "/etc/ssl", "/proc"])
 def test_normalize_dir_refuses_sensitive(spec):
     with pytest.raises(manifest.ManifestError, match="refused"):
-        manifest.normalize_dir(spec, "/home/u", "/home/u/work")
+        grants.normalize_dir(spec, "/home/u", "/home/u/work")
 
 
 def test_userns_defaults_to_denied_and_round_trips():

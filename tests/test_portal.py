@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import dbusproxy, jail, manifest, portal, runner
+from appjail import dbusproxy, grants, jail, manifest, portal, runner
 from appjail.jail import RunError
 from appjail.manifest import Manifest, ManifestError, Permissions
 from appjail.portal import bus_call as real_bus_call
@@ -66,7 +66,7 @@ def test_no_portals_means_no_interfaces_and_no_rules():
 
 def test_safe_set_and_opt_ins():
     p = Permissions(portals=True)
-    assert portal.interfaces(p) == manifest.PORTAL_SAFE
+    assert portal.interfaces(p) == grants.PORTAL_SAFE
     p = Permissions(portals=True, portal_interfaces=("OpenURI",))
     assert "OpenURI" in portal.interfaces(p) and "Screenshot" not in portal.interfaces(p)
     rules = portal.proxy_rules(p)
@@ -78,7 +78,7 @@ def test_safe_set_and_opt_ins():
 @pytest.mark.parametrize("name", ["Flatpak", "DynamicLauncher", "Nonsense", "openuri", ""])
 def test_never_and_unknown_interfaces_are_refused(name):
     with pytest.raises(ManifestError):
-        manifest.check_portal_interface(name)
+        grants.check_portal_interface(name)
 
 
 def test_manifest_round_trip_and_consistency():

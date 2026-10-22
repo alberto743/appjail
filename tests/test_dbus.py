@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import dbusproxy, jail, manifest, runner
+from appjail import dbusproxy, grants, jail, manifest, runner
 from appjail.jail import RunError
 from appjail.manifest import ManifestError, Permissions
 
@@ -23,7 +23,7 @@ NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.S
 
 @pytest.mark.parametrize("name", NAMES + ("org.example.App", "org.example.App.*"))
 def test_ordinary_names_are_accepted(name):
-    assert manifest.check_dbus_name(name) == name
+    assert grants.check_dbus_name(name) == name
 
 
 @pytest.mark.parametrize("name", [
@@ -33,7 +33,7 @@ def test_ordinary_names_are_accepted(name):
 ])
 def test_names_that_hand_over_the_host_are_refused(name):
     with pytest.raises(ManifestError):
-        manifest.check_dbus_name(name)
+        grants.check_dbus_name(name)
 
 
 def test_blocked_names_are_refused_when_loading_a_manifest():
@@ -48,7 +48,7 @@ OWN = ("org.mpris.MediaPlayer2.myplayer", "org.example.App", "org.example.App.*"
 
 @pytest.mark.parametrize("name", OWN)
 def test_ordinary_owned_names_are_accepted(name):
-    assert manifest.check_dbus_own(name) == name
+    assert grants.check_dbus_own(name) == name
 
 
 @pytest.mark.parametrize("name", [
@@ -58,7 +58,7 @@ def test_ordinary_owned_names_are_accepted(name):
 ])
 def test_owning_desktop_services_is_refused(name):
     with pytest.raises(ManifestError):
-        manifest.check_dbus_own(name)
+        grants.check_dbus_own(name)
 
 
 def test_dbus_own_round_trips_and_is_checked_when_loading():
