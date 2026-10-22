@@ -32,3 +32,5 @@ python3-gi            # GLib main loop for python3-dbus
 xwayland              # rootless X server for display = "xwayland" (run inside the app's jail)
 x11-utils             # xdpyinfo and xwininfo, the X11 clients used by the Xwayland tests
 passt                 # pasta: private network namespace for the download, attestation and index jails and for every app with `network` (required there)
+librsvg2-bin          # rsvg-convert: SVG menu icons are rendered to PNG inside a jail (tests/test_desktop.py)
+desktop-file-utils    # desktop-file-validate and update-desktop-database for the generated menu entries

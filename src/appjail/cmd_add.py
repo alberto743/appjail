@@ -9,6 +9,7 @@ import secrets
 import shutil
 
 from . import appimage, attest, github, history, jail, manifest, store, tools
+from .cmd_desktop import install_entry
 from .console import Abort, human_size
 from .permargs import (
     granted_summary,
@@ -184,6 +185,12 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     history.record(f"add {name} {release.tag} (tier {tier})")
     console.out(f"Added '{name}' {release.tag}: sha256 {digest}, evidence tier {tier}")
     console.out(f"Manifest   : {store.manifest_path(name)}")
+    if getattr(args, "desktop", False):
+        args.rw = False
+        try:
+            install_entry(name, console, args, yes=True, ask=False)
+        except Abort as e:
+            console.out(f"menu entry not created: {e} (`appjail desktop {name}` retries)")
 
 
 def pick_asset(console, release, pattern):

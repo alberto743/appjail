@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 from . import appimage, attest, github, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
+from .cmd_desktop import refresh_after_update
 from .console import Abort, human_size
 from .permargs import granted_summary
 
@@ -123,6 +124,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
     updater.clear_pending(name)
     history.record(f"update {name} {m.version} -> {release.tag} (tier {record.evidence_tier})")
     console.out(f"  updated {name}: {m.version} -> {release.tag}, sha256 {digest}, {entries} entries, {human_size(size)}")
+    refresh_after_update(name, console)
     return "updated"
 
 

@@ -140,11 +140,11 @@ def check_tree(root):
     return count, total
 
 
-def resolve_entry(root, rel="AppRun"):
+def resolve_entry(root, rel="AppRun", executable=True):
     """Resolve rel inside root as the jail would see it, refusing anything that leaves root.
 
     Relative symlinks are followed; absolute targets and '..' above the root are rejected.
-    Returns the path of an executable regular file.
+    Returns the path of a regular file, which must be executable unless executable is False (icons, metadata).
     """
     root = os.path.realpath(root)
     parts = [p for p in rel.split("/") if p]
@@ -176,8 +176,8 @@ def resolve_entry(root, rel="AppRun"):
             resolved.append(part)
     final = os.path.join(root, *resolved)
     st = os.lstat(final)
-    if not stat.S_ISREG(st.st_mode) or not st.st_mode & 0o111:
-        raise UnsafeTree(f"{rel} is not an executable file")
+    if not stat.S_ISREG(st.st_mode) or (executable and not st.st_mode & 0o111):
+        raise UnsafeTree(f"{rel} is not {'an executable ' if executable else 'a regular '}file")
     return final
 
 

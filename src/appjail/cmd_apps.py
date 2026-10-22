@@ -7,7 +7,8 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
-from . import appimage, history, jail, manifest, portal, store, tools, updater
+from . import appimage, desktop, history, jail, manifest, portal, store, tools, updater
+from .cmd_desktop import forget
 from .console import Abort
 from .permargs import (
     PERMISSION_FLAGS,
@@ -54,6 +55,8 @@ def cmd_list(console):
     names = updater.installed()
     if not names:
         console.out("No apps installed.")
+    for app, path in desktop.dangling():
+        console.out(f"note: menu entry of the missing app '{app}': {path} (`appjail desktop --prune` deletes it)")
     for name in names:
         try:
             m = manifest.load(store.manifest_path(name))
@@ -101,6 +104,7 @@ def cmd_remove(args, console):
     mpath.unlink(missing_ok=True)
     history.record(f"remove {name}")
     console.out(f"Removed {name}.")
+    forget(name, console)
 
 
 def without(names, remove, what):

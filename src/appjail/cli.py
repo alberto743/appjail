@@ -13,12 +13,14 @@ from importlib import metadata
 from . import github, index, indexsync, jail, manifest, runner, tools, updater
 from .cmd_add import cmd_add
 from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
+from .cmd_desktop import cmd_desktop
 from .cmd_index import (
     cmd_index_rollback,
     cmd_index_status,
     cmd_index_update,
     cmd_search,
 )
+from .cmd_open import cmd_open
 from .cmd_portals import cmd_portals
 from .cmd_update import cmd_update
 from .console import Abort, Console
@@ -68,6 +70,10 @@ def build_parser():
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")
     add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland")
+    add.add_argument("--desktop", action="store_true", help="also create a menu entry that starts the app through appjail")
+    add.add_argument("--mime", action="append", default=[], metavar="TYPE",
+                     help="with --desktop: offer the app for this file type (must be declared by the app); repeatable")
+    add.add_argument("--mime-all", action="store_true", help="with --desktop: offer every file type the app declares (minus refused ones)")
     search = sub.add_parser("search", help="search the local AM index (suggestions only, never installs)")
     search.add_argument("keywords", nargs="+")
     search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
@@ -85,6 +91,18 @@ def build_parser():
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
     sub.add_parser("list", help="list installed apps")
+    dsk = sub.add_parser("desktop", help="create, refresh or remove the menu entry of an app")
+    dsk.add_argument("app", nargs="?")
+    dsk.add_argument("--mime", action="append", default=[], metavar="TYPE", help="offer the app for this file type (repeatable)")
+    dsk.add_argument("--mime-all", action="store_true", help="offer every file type the app declares (minus refused ones)")
+    dsk.add_argument("--rw", action="store_true", help="opened files are writable (default: read-only)")
+    dsk.add_argument("--remove", action="store_true", help="delete the app's menu entry and icons")
+    dsk.add_argument("--prune", action="store_true", help="delete the entries of apps that no longer exist")
+    dsk.add_argument("--yes", action="store_true", help="do not ask (registers no file types unless --mime/--mime-all)")
+    opn = sub.add_parser("open", help="open files with an app, each bound alone into its jail (used by the menu entry)")
+    opn.add_argument("app")
+    opn.add_argument("files", nargs="*", help="files; put them after -- when a name could look like an option")
+    opn.add_argument("--rw", action="store_true", help="the app may write to the files (default: read-only)")
     sub.add_parser("version", help="show the appjail version")
     tl = sub.add_parser("tools", help="pinned helper binaries (e.g. for DwarFS AppImages)")
     tsub = tl.add_subparsers(dest="tools_command", required=True)
@@ -153,6 +171,10 @@ def main(argv=None, client=None, console=None):
             cmd_list(console)
         elif args.command == "version":
             console.out(f"appjail {version_string()}")
+        elif args.command == "desktop":
+            cmd_desktop(args, console)
+        elif args.command == "open":
+            return cmd_open(args, [*args.files, *app_args], console)
         elif args.command == "tools":
             cmd_tools(args, console)
         elif args.command == "history":
