@@ -8,6 +8,7 @@ The names re-exported here are the ones tests and the `appjail` console script (
 
 import argparse
 import sys
+from importlib import metadata
 
 from . import github, index, indexsync, jail, manifest, runner, tools, updater
 from .cmd_add import cmd_add
@@ -37,8 +38,17 @@ class _HelpOnErrorParser(argparse.ArgumentParser):
         self.exit(2)
 
 
+def version_string():
+    """The installed version (from the git tag at build time), or "unknown" when run from a source tree."""
+    try:
+        return metadata.version("appjail")
+    except metadata.PackageNotFoundError:
+        return "unknown"
+
+
 def build_parser():
     p = _HelpOnErrorParser(prog="appjail", description="Sandboxed AppImage manager")
+    p.add_argument("--version", action="version", version=f"appjail {version_string()}")
     sub = p.add_subparsers(dest="command", required=True)
     add = sub.add_parser("add", help="add an app from a GitHub owner/repo")
     add.add_argument("source", help="GitHub owner/repo")
@@ -75,6 +85,7 @@ def build_parser():
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
     sub.add_parser("list", help="list installed apps")
+    sub.add_parser("version", help="show the appjail version")
     tl = sub.add_parser("tools", help="pinned helper binaries (e.g. for DwarFS AppImages)")
     tsub = tl.add_subparsers(dest="tools_command", required=True)
     tsub.add_parser("status", help="show which helpers are installed and intact")
@@ -140,6 +151,8 @@ def main(argv=None, client=None, console=None):
             return cmd_update(args, client or github.Client(), console)
         elif args.command == "list":
             cmd_list(console)
+        elif args.command == "version":
+            console.out(f"appjail {version_string()}")
         elif args.command == "tools":
             cmd_tools(args, console)
         elif args.command == "history":

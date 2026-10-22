@@ -43,3 +43,21 @@ def test_missing_positional_shows_the_command_help(capsys, argv, option):
     assert f"appjail {argv[0]}: error:" in err
     assert "positional arguments" in err
     assert option in err
+
+
+def test_version_command_and_flag_print_the_installed_version(capsys, monkeypatch):
+    monkeypatch.setattr(cli.metadata, "version", lambda name: "4.5.6.dev2+gabc1234")
+    assert cli.main(["version"]) == 0
+    assert capsys.readouterr().out.strip() == "appjail 4.5.6.dev2+gabc1234"
+    with pytest.raises(SystemExit) as e:
+        cli.main(["--version"])
+    assert e.value.code == 0
+    assert capsys.readouterr().out.strip() == "appjail 4.5.6.dev2+gabc1234"
+
+
+def test_version_is_unknown_when_the_package_is_not_installed(monkeypatch):
+    def missing(name):
+        raise cli.metadata.PackageNotFoundError(name)
+
+    monkeypatch.setattr(cli.metadata, "version", missing)
+    assert cli.version_string() == "unknown"

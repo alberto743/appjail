@@ -172,6 +172,8 @@ appjail search editor     # candidates only; installing is always `appjail add o
   manifest was edited outside appjail.
 - `appjail tools status|install NAME`: helper binaries whose URL, size and hash are pinned in appjail's source (`gh` for
   attestations, `dwarfs` for DwarFS-based AppImages).
+- `appjail version` (or `--version`): the installed version. It comes from the git tag at build time (`0.1.2` on a release, `0.1.3.dev4+g1a2b3c4` four
+  commits after it); it prints `unknown` when run from a source tree that is not installed.
 - Set `GITHUB_TOKEN` to raise the GitHub API rate limit. It is only ever sent to `api.github.com`.
 
 ## Limits

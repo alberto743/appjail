@@ -1,7 +1,7 @@
 name: Build distributions
 
-# Reusable: checks that the tag matches the package version, builds the sdist and the wheel, checks their metadata and
-# uploads them as the artifact "dist". pypi.yml publishes that artifact and release.yml attaches the sdist from it, so
+# Reusable: builds the sdist and the wheel (the version is derived from the git tag), checks that the built version is the tag,
+# checks their metadata and uploads them as the artifact "dist". pypi.yml publishes that artifact and release.yml attaches the sdist from it, so
 # both ship the same bytes.
 
 on:
@@ -16,16 +16,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: The tag must match the package version
-        run: |
-          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
-          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME does not match version $version in pyproject.toml" >&2; exit 1; }
+        with:
+          fetch-depth: 0  # the version is derived from the git tags
       - name: Build the sdist and the wheel
         run: |
           python3 -m venv "$RUNNER_TEMP/build"
           "$RUNNER_TEMP/build/bin/pip" install --quiet build twine
           "$RUNNER_TEMP/build/bin/python" -m build --outdir dist
           "$RUNNER_TEMP/build/bin/twine" check --strict dist/*
+      - name: The built version must be the tag
+        run: |
+          test -f "dist/appjail-${GITHUB_REF_NAME#v}.tar.gz" || { echo "tag $GITHUB_REF_NAME does not match the built version:" >&2; ls dist >&2; exit 1; }
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: dist
