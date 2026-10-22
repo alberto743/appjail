@@ -9,32 +9,30 @@ tier 4 when `--sha256` was given and matched, tier 5 (trust on first use) otherw
 
 import re
 import shutil
-import stat
 from datetime import UTC, datetime
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
-from . import appimage, fetcher, jail, manifest, store
+from . import appimage, jail, manifest, store
 from .cmd_add import MAX_ASSET, ask_extractor, default_name, finish_add, place_new
 from .console import Abort, human_size
+from .imagesrc import (
+    DEFAULT_MAX_MIB,
+    NO_ORIGIN,
+    check_appimage,
+    check_download_info,
+    check_expected,
+    parse_sha256,
+    regular_file,
+    timestamp,
+    url_fingerprint,
+    version_of,
+)
 from .permargs import (
     permissions_from_args,
     require_pasta,
     show_permissions,
 )
-
-DEFAULT_MAX_MIB = 1024
-NO_ORIGIN = "nothing identifies who published this file: trust on first use, the hash below is only 'unchanged since now'"
-
-
-def parse_sha256(value):
-    """The lowercase hex digest of --sha256, or None when the option was not given."""
-    if value is None:
-        return None
-    digest = value.strip().lower().removeprefix("sha256:")
-    if not manifest.SHA256_RE.fullmatch(digest):
-        raise Abort("--sha256 must be 64 hexadecimal digits")
-    return digest
 
 
 def app_name(args, basename):
@@ -44,42 +42,6 @@ def app_name(args, basename):
     if store.manifest_path(name).exists() or store.app_dir(name).exists():
         raise Abort(f"'{name}' is already added")
     return name
-
-
-def check_expected(digest, expected):
-    """Tier of the bytes: 4 when they match the hash the user gave, 5 when none was given; a mismatch aborts."""
-    if expected is None:
-        return 5
-    if digest != expected:
-        raise Abort(f"sha256 mismatch: the file is {digest}, --sha256 says {expected}")
-    return 4
-
-
-def check_appimage(path):
-    try:
-        appimage.appimage_type(path)
-    except appimage.NotAnAppImage as e:
-        raise Abort(f"not a usable AppImage: {e}") from e
-
-
-def timestamp(now):
-    return (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def version_of(digest):
-    return f"sha256:{digest[:12]}"
-
-
-def regular_file(path):
-    """The resolved path of a regular file (a symlink is followed once, the target must be regular)."""
-    try:
-        real = Path(path).expanduser().resolve(strict=True)
-        st = real.stat()
-    except OSError as e:
-        raise Abort(f"--file {path}: {e.strerror or e}") from e
-    if not stat.S_ISREG(st.st_mode):
-        raise Abort(f"--file {path}: not a regular file")
-    return real, st
 
 
 def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.have_unsquashfs, now=None):
@@ -126,22 +88,6 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
 def url_basename(url):
     parts = urlsplit(url)
     return unquote(PurePosixPath(parts.path).name) or parts.hostname
-
-
-def check_download_info(console, url, info, tier):
-    """What the server did on the way: where the file really came from, and whether it went through plain http."""
-    final = urlsplit(info["final_url"]).hostname
-    if final != urlsplit(url).hostname:
-        console.out(f"Served by  : {final} (after redirects)")
-    if info["http_hop"]:
-        console.warn("a redirect went through plain http: anyone on the path could have changed the file")
-        if tier != 4 and not console.confirm("No --sha256 confirms the bytes. Install anyway?"):
-            raise Abort("cancelled")
-
-
-def url_fingerprint(staged, info):
-    size, chunks = fetcher.fingerprint_file(staged)
-    return manifest.Fingerprint(size=size, chunks=chunks, etag=info["etag"], last_modified=info["last_modified"])
 
 
 def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.extract,
