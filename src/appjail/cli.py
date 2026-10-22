@@ -151,6 +151,49 @@ def build_parser():
     return p
 
 
+def _add(args, client, console, app_args):
+    if args.file or args.url:
+        if args.source or (args.file and args.url):
+            raise Abort("give either a GitHub owner/repo, --file PATH or --url URL")
+        (cmd_add_file if args.file else cmd_add_url)(args, console)
+        return
+    if not args.source or not manifest.REPO_RE.fullmatch(args.source):
+        raise Abort("source must be a GitHub owner/repo (or use --file / --url)")
+    if args.sha256 or args.max_size:
+        raise Abort("--sha256 and --max-size apply to --file / --url only")
+    cmd_add(args, client or github.Client(), console)
+
+
+def _index(args, client, console, app_args):
+    {"update": lambda: cmd_index_update(args, console),
+     "rollback": lambda: cmd_index_rollback(console),
+     "status": lambda: cmd_index_status(console)}[args.index_command]()
+
+
+def _run(args, client, console, app_args):
+    return runner.launch(args.name, app_args, say=console.out, extra_dirs=dirs_from_args(args.dir),
+                         extra_files=files_from_args(args.file))
+
+
+# command -> handler(args, client, console, app_args); the return value, if any, is the exit status
+COMMANDS = {
+    "add": _add,
+    "index": _index,
+    "search": lambda args, client, console, app_args: cmd_search(args, console),
+    "update": lambda args, client, console, app_args: cmd_update(args, client or github.Client(), console),
+    "list": lambda args, client, console, app_args: cmd_list(console),
+    "version": lambda args, client, console, app_args: console.out(f"appjail {version_string()}"),
+    "desktop": lambda args, client, console, app_args: cmd_desktop(args, console),
+    "open": lambda args, client, console, app_args: cmd_open(args, [*args.files, *app_args], console),
+    "tools": lambda args, client, console, app_args: cmd_tools(args, console),
+    "history": lambda args, client, console, app_args: cmd_history(args, console),
+    "remove": lambda args, client, console, app_args: cmd_remove(args, console),
+    "portals": lambda args, client, console, app_args: cmd_portals(args, console),
+    "perms": lambda args, client, console, app_args: cmd_perms(args, console),
+    "run": _run,
+}
+
+
 def main(argv=None, client=None, console=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     app_args = []
@@ -160,54 +203,11 @@ def main(argv=None, client=None, console=None):
     args = build_parser().parse_args(argv)
     console = console or Console()
     try:
-        if args.command == "add":
-            if args.file or args.url:
-                if args.source or (args.file and args.url):
-                    raise Abort("give either a GitHub owner/repo, --file PATH or --url URL")
-                cmd_add_file(args, console) if args.file else cmd_add_url(args, console)
-            else:
-                if not args.source or not manifest.REPO_RE.fullmatch(args.source):
-                    raise Abort("source must be a GitHub owner/repo (or use --file / --url)")
-                if args.sha256 or args.max_size:
-                    raise Abort("--sha256 and --max-size apply to --file / --url only")
-                cmd_add(args, client or github.Client(), console)
-        elif args.command == "index":
-            if args.index_command == "update":
-                cmd_index_update(args, console)
-            elif args.index_command == "rollback":
-                cmd_index_rollback(console)
-            else:
-                cmd_index_status(console)
-        elif args.command == "search":
-            cmd_search(args, console)
-        elif args.command == "update":
-            return cmd_update(args, client or github.Client(), console)
-        elif args.command == "list":
-            cmd_list(console)
-        elif args.command == "version":
-            console.out(f"appjail {version_string()}")
-        elif args.command == "desktop":
-            cmd_desktop(args, console)
-        elif args.command == "open":
-            return cmd_open(args, [*args.files, *app_args], console)
-        elif args.command == "tools":
-            cmd_tools(args, console)
-        elif args.command == "history":
-            cmd_history(args, console)
-        elif args.command == "remove":
-            cmd_remove(args, console)
-        elif args.command == "portals":
-            cmd_portals(args, console)
-        elif args.command == "perms":
-            cmd_perms(args, console)
-        elif args.command == "run":
-            extra_dirs = dirs_from_args(args.dir)
-            extra_files = files_from_args(args.file)
-            return runner.launch(args.name, app_args, say=console.out, extra_dirs=extra_dirs, extra_files=extra_files)
+        status = COMMANDS[args.command](args, client, console, app_args)
     except Abort as e:
         console.out(str(e))
         return 1
     except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, index.IndexProblem, indexsync.IndexRefused, OSError) as e:
         console.out(f"error: {e}")
         return 1
-    return 0
+    return status or 0
