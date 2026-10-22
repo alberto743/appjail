@@ -8,7 +8,6 @@ tier 4 when `--sha256` was given and matched, tier 5 (trust on first use) otherw
 """
 
 import re
-import secrets
 import shutil
 import stat
 from datetime import UTC, datetime
@@ -19,12 +18,9 @@ from . import appimage, fetcher, jail, manifest, store
 from .cmd_add import MAX_ASSET, ask_extractor, default_name, finish_add, place_new
 from .console import Abort, human_size
 from .permargs import (
-    granted_summary,
     permissions_from_args,
     require_pasta,
-    warn_owned_dbus,
-    warn_privileged_portals,
-    warn_sensitive_dbus,
+    show_permissions,
 )
 
 DEFAULT_MAX_MIB = 1024
@@ -66,13 +62,6 @@ def check_appimage(path):
         raise Abort(f"not a usable AppImage: {e}") from e
 
 
-def show_permissions(console, perms):
-    console.out("Permissions: " + granted_summary(perms))
-    warn_sensitive_dbus(console, perms.dbus_filter)
-    warn_owned_dbus(console, perms.dbus_own)
-    warn_privileged_portals(console, perms.portal_interfaces)
-
-
 def timestamp(now):
     return (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -111,8 +100,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
     if not console.confirm(f"Copy {real.name} into appjail's store as '{name}'?"):
         raise Abort("cancelled")
 
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
+    stage = store.new_staging_dir()
     try:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
@@ -178,8 +166,7 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
     if not console.confirm(f"Download {urlsplit(url).hostname} in a network-only jail?"):
         raise Abort("cancelled")
 
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
+    stage = store.new_staging_dir()
     try:
         try:
             staged, info = download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)

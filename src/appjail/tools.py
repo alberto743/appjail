@@ -10,7 +10,6 @@ jail. Updating a tool means changing these constants in a reviewed commit.
 """
 
 import os
-import secrets
 import shutil
 import tarfile
 from dataclasses import dataclass
@@ -101,8 +100,7 @@ def _unpack(tool, archive, stage):
 def install(name, download=jail.download):
     """Download the tool in the network-only jail and keep it only if size and sha256 match the pins."""
     tool = TOOLS[name]
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
+    stage = store.new_staging_dir()
     try:
         staged = download(tool.url, stage, name, tool.size)
         if staged.stat().st_size != tool.size or sha256_file(staged) != tool.sha256:

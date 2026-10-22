@@ -161,7 +161,7 @@ An app can be given specific directories, never the whole home:
 - Verified in the guest on the three approved AppImages: appimagetool 20 entries/36.9 MB, AppImageKit 48/15.4 MB, CopyQ 439/132.5 MB, each in under a second, `AppRun` a regular file in all three.
 
 ## Manifest (TOML, stored in the user's own git repo)
-`source` (kind-prefixed: `github:owner/repo`; planned `url:`, `file:`), `channel`, `asset_pattern`, `version`, `sha256`, `evidence_tier`, `published_at`, `permissions` (network, audio, gpu, display = wayland|xwayland, dbus_filter, portals, dirs[]).
+`source` (kind-prefixed: `github:owner/repo`, `url:`, `file:`), `channel`, `asset_pattern`, `version`, `sha256`, `evidence_tier`, `published_at`, `permissions` (network, audio, gpu, display = wayland|xwayland, dbus_filter, portals, dirs[]).
 
 Implemented in `src/appjail/manifest.py` (schema 1), one file per app at `~/.config/appjail/apps/<name>.toml`:
 - Top level: `schema = 1`, `name` (`[a-z0-9][a-z0-9._-]{0,63}`), `source` (kind-prefixed: `github:owner/repo`, `url:https://...`, `file:BASENAME`; implemented in `manifest.py`, properties `kind` and `target`), `asset_pattern` (`github:` only; fnmatch, no `/`), optional `fingerprint` (`url:` only), `version`, `sha256` (64 lowercase hex), `evidence_tier` (1-5), `published_at` (UTC `YYYY-MM-DDTHH:MM:SSZ`).

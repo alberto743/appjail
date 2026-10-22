@@ -5,19 +5,15 @@
 
 import os
 import re
-import secrets
 import shutil
 
 from . import appimage, attest, github, history, jail, manifest, store, tools
 from .cmd_desktop import install_entry
 from .console import Abort, human_size
 from .permargs import (
-    granted_summary,
     permissions_from_args,
     require_pasta,
-    warn_owned_dbus,
-    warn_privileged_portals,
-    warn_sensitive_dbus,
+    show_permissions,
 )
 
 MAX_ASSET = 2 * 1024 ** 3
@@ -136,18 +132,14 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     tier = 3 if asset.sha256 else 4
     if tier == 4:
         console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
-    console.out("Permissions: " + granted_summary(perms))
-    warn_sensitive_dbus(console, perms.dbus_filter)
-    warn_owned_dbus(console, perms.dbus_own)
-    warn_privileged_portals(console, perms.portal_interfaces)
+    show_permissions(console, perms)
 
     fallback = ask_extractor(console, extract_ok)
 
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail?"):
         raise Abort("cancelled")
 
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
+    stage = store.new_staging_dir()
     try:
         staged, digest = download_verified(download, asset, stage)
         tier, why = gather_evidence(client, info, staged, digest, tier, console, verify)

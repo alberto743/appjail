@@ -3,7 +3,6 @@
 
 """`appjail update`."""
 
-import secrets
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -17,8 +16,7 @@ from .permargs import granted_summary
 
 def hash_candidate(asset, download):
     """Download the candidate in the jail only to learn its sha256 (nothing is installed); the stage is removed."""
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
+    stage = store.new_staging_dir()
     try:
         return download_verified(download, asset, stage)[1]
     finally:
@@ -102,8 +100,7 @@ def update_app(name, args, client, console, download, now, extract, extract_ok, 
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail and install {release.tag}?"):
         return "declined"
 
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
+    stage = store.new_staging_dir()
     try:
         staged, digest = download_verified(download, asset, stage)
         pending = updater.load_pending(name)

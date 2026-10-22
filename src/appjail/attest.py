@@ -14,7 +14,6 @@ owner account id: a name is not enough, an account id is.
 """
 
 import json
-import secrets
 import shutil
 from dataclasses import dataclass
 
@@ -79,8 +78,7 @@ def verify(subject, full_name, bundles, owner_id=None, run=jail.run):
         gh = tools.require("gh")
     except tools.ToolError as e:
         raise AttestError(str(e)) from e
-    work = store.staging_root() / ("attest-" + secrets.token_hex(8))
-    work.mkdir(parents=True, mode=0o700)
+    work = store.new_staging_dir("attest-")
     try:
         bundle_file = work / "bundle.jsonl"
         bundle_file.write_text("".join(json.dumps(b) + "\n" for b in bundles), encoding="utf-8")

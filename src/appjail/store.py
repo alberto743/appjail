@@ -4,6 +4,7 @@
 """Where appjail keeps its files. Nothing is written outside these two trees."""
 
 import os
+import secrets
 from pathlib import Path
 
 
@@ -39,6 +40,13 @@ def manifest_path(name):
 
 def staging_root():
     return data_dir() / "staging"
+
+
+def new_staging_dir(prefix=""):
+    """A new private directory under the staging root (the caller removes it)."""
+    stage = staging_root() / (prefix + secrets.token_hex(8))
+    stage.mkdir(parents=True, mode=0o700)
+    return stage
 
 
 def root_path(name):

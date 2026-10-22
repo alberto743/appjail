@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`appjail update` for apps installed from a URL or a local file (DESIGN.md "Planned: add --file / add --url").
+"""`appjail update` for apps installed from a URL or a local file (DESIGN.md "`add --file` / `add --url` and their `update`").
 
 `url:` apps are checked cheaply first (conditional request, then a few sampled windows of the file); a full download
 happens only when something differs, and the candidate then waits out the quarantine, kept on disk so the end of the
@@ -9,7 +9,6 @@ quarantine needs no second download. `file:` apps are replaced by `update APP --
 (the user holds the bytes).
 """
 
-import secrets
 import shutil
 from dataclasses import replace
 from urllib.parse import urlsplit
@@ -33,12 +32,6 @@ from .permargs import granted_summary
 
 DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 -> 5 (this app was added with a matching --sha256, the new content has none). "
              "Pass --sha256 HEX with the hash the publisher gives for the new file to keep tier 4.")
-
-
-def new_stage():
-    stage = store.staging_root() / secrets.token_hex(8)
-    stage.mkdir(parents=True, mode=0o700)
-    return stage
 
 
 def header(console, name, m):
@@ -94,7 +87,7 @@ def update_file(name, m, args, console, now, extract, extract_ok):
     real, st = regular_file(args.file)
     if not 0 < st.st_size <= MAX_ASSET:
         raise Abort(f"unexpected file size ({st.st_size} bytes)")
-    stage = new_stage()
+    stage = store.new_staging_dir()
     try:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
@@ -135,7 +128,7 @@ def reference(m, pending):
 def probe(m, pending, check_url):
     """Where the file at the URL stands: ("installed" | "pending" | "unknown" | "new", server answer)."""
     which, etag, modified = reference(m, pending)
-    stage = new_stage()
+    stage = store.new_staging_dir()
     try:
         res = check_url(m.target, stage, etag, modified)
     finally:
@@ -162,7 +155,7 @@ def refresh_validators(name, m, res):
 
 def fetch_candidate(m, expected, console, download_url, max_mib=DEFAULT_MAX_MIB):
     """Download the URL in the jail into a new stage; returns (stage, staged path, sha256, server info)."""
-    stage = new_stage()
+    stage = store.new_staging_dir()
     try:
         staged, info = download_url(m.target, stage, "download.AppImage", max_mib * 1024 ** 2)
     except jail.JailError as e:
@@ -244,7 +237,7 @@ def update_url(name, m, args, console, now, download_url, check_url, extract, ex
             console.warn(DOWNGRADE)
             return "blocked"
         if pending and where != "new" and pending["sha256"] == digest:
-            return conclude(name, m, args, console, now, stage, staged, digest, info, pending, expected, extract, extract_ok)
+            return conclude(name, m, args, console, now, stage, staged, digest, info, expected, extract, extract_ok)
         if pending:
             console.warn(f"CHANGED DURING QUARANTINE: the file hashed {pending['sha256']} when first seen but is "
                          f"{digest} now. Nothing was installed; the quarantine starts again for the new content.")
@@ -266,8 +259,7 @@ def start_quarantine(name, m, args, console, now, stage, staged, digest, info, e
         console.out(f"  quarantine : first seen {updater.stamp(now)}; can be installed from {updater.stamp(due)} "
                     f"({args.quarantine} days; --quarantine DAYS to change)")
         return "waiting"
-    pending = updater.load_pending(name)
-    return conclude(name, m, args, console, now, stage, staged, digest, info, pending, expected, extract, extract_ok)
+    return conclude(name, m, args, console, now, stage, staged, digest, info, expected, extract, extract_ok)
 
 
 def finish_pending(name, m, args, console, now, pending, expected, extract, extract_ok):
@@ -278,19 +270,19 @@ def finish_pending(name, m, args, console, now, pending, expected, extract, extr
         raise Abort("the stored candidate does not match its recorded hash; it was dropped, run update again")
     if not console.confirm(f"Install {pending['tag']} (kept since {pending['first_seen']}) ?"):
         return "declined"
-    stage = new_stage()
+    stage = store.new_staging_dir()
     try:
         staged = stage / "download.AppImage"
         shutil.copyfile(image, staged)
         digest = pending["sha256"]
         info = pending_info(pending)
-        return conclude(name, m, args, console, now, stage, staged, digest, info, pending, expected, extract, extract_ok,
+        return conclude(name, m, args, console, now, stage, staged, digest, info, expected, extract, extract_ok,
                         ask=False)
     finally:
         appimage.remove_tree(stage)
 
 
-def conclude(name, m, args, console, now, stage, staged, digest, info, pending, expected, extract, extract_ok, ask=True):
+def conclude(name, m, args, console, now, stage, staged, digest, info, expected, extract, extract_ok, ask=True):
     tier = check_expected(digest, expected)
     if args.quarantine < updater.DEFAULT_QUARANTINE_DAYS:
         console.warn(f"quarantine shortened to {args.quarantine} days")
