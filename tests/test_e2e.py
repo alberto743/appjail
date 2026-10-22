@@ -10,6 +10,7 @@ Opt-in because it downloads an 11 MB AppImage (skyjake/lagrange, approved test a
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -158,3 +159,92 @@ def test_tampered_image_is_refused(installed):
         f.write(b"x")
     with pytest.raises(runner.RunError, match="pinned sha256"):
         runner.prepare("lagrange", say=lambda *_: None)
+
+
+def _jail_processes(needle):
+    """Pids of processes whose command line contains needle (a bytes path), read from /proc."""
+    found = []
+    for p in Path("/proc").iterdir():
+        if p.name.isdigit() and int(p.name) != os.getpid():
+            try:
+                if needle in (p / "cmdline").read_bytes():
+                    found.append(int(p.name))
+            except OSError:
+                pass
+    return found
+
+
+@pytest.mark.skipif(not shutil.which("gio"), reason="gio (libglib2.0-bin) is installed in the test guest (packages.txt)")
+@pytest.mark.parametrize("how", ["launch", "open"])
+def test_a_file_opened_through_the_menu_entry_reaches_the_jail(installed, tmp_path, monkeypatch, how):
+    """The generated entry, driven by GLib the way a file manager does: `gio launch ENTRY FILE`, and `gio open FILE`
+    after the entry is made the default for the file type. The entry's launcher is a logging wrapper around
+    `python3 -m appjail`, so the log shows what GLib expanded the Exec line to (`open lagrange -- FILE`) and what
+    `runner.launch` then granted (read-only, that file alone). Setting a default application is the user's
+    job, never appjail's."""
+    import signal
+
+    from appjail import desktop
+    xdg, conf = tmp_path / "xdg", tmp_path / "conf"
+    monkeypatch.setenv("XDG_DATA_HOME", str(xdg))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(conf))
+    # Lagrange declares only URL schemes (x-scheme-handler/*), which appjail refuses: nothing gets registered.
+    dfile = next(store.root_path("lagrange").glob("*.desktop"))
+    if "text/markdown" not in dfile.read_text():  # the tree is shared by both parameters of this test
+        assert cli.main(["desktop", "lagrange", "--mime-all", "--yes"], console=Answers([])) == 0
+        assert desktop.installed_state("lagrange") == ([], False)
+        # So the test gives the extracted tree a document type of its own (and re-pins the tree digest checked at launch).
+        dfile.write_text(dfile.read_text().replace("MimeType=", "MimeType=text/markdown;"))
+    from appjail import appimage
+    store.tree_marker("lagrange").write_text(appimage.tree_digest(store.root_path("lagrange")) + "\n")
+    assert cli.main(["desktop", "lagrange", "--mime-all", "--yes"], console=Answers([])) == 0
+    mimes, rw = desktop.installed_state("lagrange")
+    assert mimes == ["text/markdown"] and not rw
+    assert not (conf / "mimeapps.list").exists(), "appjail never sets a default application"
+    log = tmp_path / "launcher.log"
+    wrapper = tmp_path / "appjail-wrapper"
+    wrapper.write_text(f'#!/bin/sh\nprintf "argv: %s\\n" "$*" >> {log}\nexec {sys.executable} -u -m appjail "$@" >> {log} 2>&1\n')
+    wrapper.chmod(0o755)
+    monkeypatch.setattr(desktop, "launcher_argv", lambda: [str(wrapper)])
+    assert cli.main(["desktop", "lagrange", "--yes"], console=Answers([])) == 0  # refresh with the wrapper as launcher
+    assert f"Exec={wrapper} open lagrange -- %F" in desktop.entry_path("lagrange").read_text()
+    entry = desktop.entry_path("lagrange")
+    document = tmp_path / "page.md"
+    document.write_text("# hello\n")
+    rt = Path(f"/run/user/{os.getuid()}")
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-e2o"],
+                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    env = {**os.environ, "XDG_DATA_HOME": str(xdg), "XDG_CONFIG_HOME": str(conf), "XDG_RUNTIME_DIR": str(rt),
+           "WAYLAND_DISPLAY": "appjail-e2o", "PYTHONPATH": str(Path(manifest.__file__).parent.parent)}
+    try:
+        for _ in range(50):
+            if (rt / "appjail-e2o").exists():
+                break
+            time.sleep(0.1)
+        if how == "launch":
+            argv = ["gio", "launch", str(entry), str(document)]
+        else:
+            if "text/markdown" not in mimes:
+                pytest.skip("the tree does not declare text/markdown")
+            assert subprocess.run(["gio", "mime", "text/markdown", entry.name], env=env, capture_output=True).returncode == 0
+            argv = ["gio", "open", str(document)]
+        proc = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=60)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        wanted = f"Temporary file access for this run: {document}"
+        for _ in range(200):
+            if log.exists() and wanted in log.read_text():
+                break
+            time.sleep(0.1)
+        text = log.read_text() if log.exists() else ""
+        assert f"argv: open lagrange -- {document}" in text, f"{text!r} {proc.args} {proc.stdout!r} {proc.stderr!r} {entry.read_text()} {wrapper.read_text()}"
+        assert wanted in text, text
+        assert f"{document}:rw" not in text and (conf / "mimeapps.list").exists() == (how == "open")
+    finally:
+        for pid in _jail_processes(b"open\0lagrange"):  # the launcher stops its whole jail on SIGTERM
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+        weston.terminate()
+        weston.wait(timeout=10)
