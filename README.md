@@ -176,17 +176,61 @@ the quarantine and installed from there (`--verify` downloads it again first); a
 
 ## Searching
 
-appjail can search the [AM](https://github.com/ivan-hc/AM) application list as a source of suggestions. It reads that data
-as plain text only and never runs anything from it.
+`search` looks through **catalogs**: lists of apps with, where known, the GitHub repository each one comes from. A hit
+is only a suggestion; installing is always `appjail add owner/repo` (or `--file`/`--url`), after you have checked
+the owner. Catalogs are untrusted data: appjail parses them strictly, strips terminal escape sequences from every
+text, and never runs anything from them.
 
 ```sh
-appjail index update      # fetch the list in a jail, review the changes, pin it
-appjail index rollback    # go back to the previous snapshot
-appjail index status      # show the pinned snapshot
-appjail search editor     # candidates only; installing is always `appjail add owner/repo`
+appjail index update                  # refresh every catalog: fetch, show what changed, ask before accepting
+appjail index status                  # the sources, their revisions and update times
+appjail index rollback [NAME]         # back to the previous catalog of a source (default: am)
+appjail index add mine --url https://example.org/apps.json    # another catalog (https; fetched in the jail)
+appjail index add local --file ~/apps.json                    # or a local file
+appjail index update mine             # refresh one source (--commit SHA is for am only)
+appjail index remove mine
+appjail search editor                 # all sources; with several, each hit shows its source in brackets
 ```
 
 `search` shows 20 results; use `--limit N` or `--all` for more.
+
+**Sources.** The built-in `am` source is the [AM](https://github.com/ivan-hc/AM) application list: `index update` fetches
+its repository in a network-only jail (only the list and the install scripts, no hooks or submodules), reads
+each script as text to find the `SITE=` line, and keeps the result as a catalog. The scripts themselves are not
+kept. Sources you add yourself provide a catalog directly. Every update shows the number of apps, the apps added and
+removed, and every app whose repository changed, with a loud warning when the owner changed, and asks before it
+replaces the catalog. One previous catalog is kept per source for `index rollback`.
+
+**Catalog format.** One UTF-8 JSON document, at most 16 MiB and 50,000 apps:
+
+```json
+{
+  "format": "appjail-catalog",
+  "version": 1,
+  "origin": "https://example.org/my-apps",
+  "revision": "2026-10-22",
+  "apps": [
+    {"name": "lagrange", "description": "A Gemini browser", "source": "skyjake/lagrange"},
+    {"name": "tool", "description": "Hosted elsewhere", "note": "resolve manually: https://example.org/tool"}
+  ]
+}
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `format` | yes | Always `"appjail-catalog"`. |
+| `version` | yes | The integer `1`. A different version is refused. |
+| `origin` | no | Where the catalog comes from, shown to you. Up to 300 characters. |
+| `revision` | no | Anything that tells two states of the catalog apart (a commit, a date). Up to 300 characters. |
+| `apps` | yes | A list of objects, with unique `name`s. |
+| `apps[].name` | yes | The name to search for: letters, digits, `.`, `_`, `+`, `-`; starts with a letter or digit; up to 81 characters. |
+| `apps[].description` | no | One line of text, up to 300 characters. |
+| `apps[].source` | no | A GitHub `owner/repo`. Anything else is refused: put other locations in `note`. |
+| `apps[].note` | no | Why there is no usable `source`, or a flag such as a repackager. Up to 200 characters. |
+
+Unknown keys are errors, so a catalog means the same thing to every version that accepts it. A catalog that breaks
+a rule is refused as a whole and nothing changes. appjail writes the catalog it validated, not the downloaded bytes.
+Sources are listed in `~/.local/share/appjail/index/`.
 
 ## Command reference
 
@@ -202,7 +246,8 @@ appjail search editor     # candidates only; installing is always `appjail add o
 | `desktop APP` / `open APP -- FILE...` | Menu entry, and opening files with an app. |
 | `remove APP` | Delete the app and its private home. |
 | `history [APP]` | Recorded changes to the manifests. |
-| `search WORDS` / `index update\|rollback\|status` | Suggestions from the AM list. |
+| `search WORDS` | Suggestions from the catalogs. |
+| `index add\|remove\|update\|rollback\|status` | Manage the catalogs `search` reads (the built-in AM list and any you add). |
 | `tools status\|install NAME` | Pinned helper binaries (`gh`, `dwarfs`). |
 | `version` | The installed version. |
 
