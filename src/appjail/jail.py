@@ -6,6 +6,7 @@
 Argument builders are pure functions so they can be unit-tested without bwrap.
 """
 
+import json
 import os
 import shlex
 import shutil
@@ -254,6 +255,61 @@ def download(url, stage_dir, filename, expected_size):
     if proc.returncode != 0:
         raise JailError("download failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
     return Path(stage_dir) / filename
+
+
+def _fetcher_json(args, stage_dir):
+    """Run the fetcher in the network-only jail with `args` and return its one JSON line, checked and cleaned."""
+    proc = run(download_args(stage_dir, ["/usr/bin/python3", "-I", "/fetcher.py", *args]))
+    if proc.returncode != 0:
+        raise JailError("download failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
+    try:
+        data = json.loads(proc.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        raise JailError("the fetcher gave no usable answer") from None
+    if not isinstance(data, dict):
+        raise JailError("the fetcher gave no usable answer")
+    return data
+
+
+def _opt_str(data, key, limit=256):
+    value = data.get(key)
+    return clean(value, limit) if isinstance(value, str) and value else None
+
+
+def download_url(url, stage_dir, filename, max_size):
+    """Download any https URL (see fetcher.py --any). Returns (path, info) where info holds `size`, `final_url`,
+    `http_hop` (a redirect went through plain http), `etag` and `last_modified` as the server said them."""
+    data = _fetcher_json(["--any", url, f"/stage/{filename}", str(int(max_size))], stage_dir)
+    size = data.get("size")
+    if type(size) is not int or size < 0:
+        raise JailError("the fetcher gave no usable answer")
+    info = {"size": size, "final_url": _opt_str(data, "final_url", 2048) or url,
+            "http_hop": data.get("http_hop") is True, "etag": _opt_str(data, "etag"),
+            "last_modified": _opt_str(data, "last_modified")}
+    return Path(stage_dir) / filename, info
+
+
+def check_url(url, stage_dir, etag=None, last_modified=None):
+    """The cheap changed/unchanged test of fetcher.py --check, as a dict with a `status` of "unchanged",
+    "fingerprint" (plus `size`, `chunks`, `etag`, `last_modified`) or "no-range"."""
+    args = ["--check", url]
+    if etag or last_modified:
+        args.append(etag or "")
+        if last_modified:
+            args.append(last_modified)
+    data = _fetcher_json(args, stage_dir)
+    status = data.get("status")
+    if status == "unchanged":
+        return {"status": "unchanged"}
+    out = {"status": status, "etag": _opt_str(data, "etag"), "last_modified": _opt_str(data, "last_modified")}
+    if status == "fingerprint":
+        size, chunks = data.get("size"), data.get("chunks")
+        if type(size) is not int or size < 1 or not isinstance(chunks, str) or not manifest.SHA256_RE.fullmatch(chunks):
+            raise JailError("the fetcher gave no usable answer")
+        return out | {"size": size, "chunks": chunks}
+    if status == "no-range":
+        return out
+    raise JailError("the fetcher gave no usable answer")
 
 
 # -- runtime jail ------------------------------------------------------------------

@@ -12,9 +12,10 @@ import secrets
 import shutil
 import stat
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.parse import unquote, urlsplit
 
-from . import appimage, manifest, store
+from . import appimage, fetcher, jail, manifest, store
 from .cmd_add import MAX_ASSET, ask_extractor, default_name, finish_add, place_new
 from .console import Abort, human_size
 from .permargs import (
@@ -26,6 +27,7 @@ from .permargs import (
     warn_sensitive_dbus,
 )
 
+DEFAULT_MAX_MIB = 1024
 NO_ORIGIN = "nothing identifies who published this file: trust on first use, the hash below is only 'unchanged since now'"
 
 
@@ -133,5 +135,69 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
     finish_add(console, args, record, entries, size)
 
 
-def cmd_add_url(args, console, **kw):
-    raise Abort("add --url is not available yet")
+def url_basename(url):
+    parts = urlsplit(url)
+    return unquote(PurePosixPath(parts.path).name) or parts.hostname
+
+
+def check_download_info(console, url, info, tier):
+    """What the server did on the way: where the file really came from, and whether it went through plain http."""
+    final = urlsplit(info["final_url"]).hostname
+    if final != urlsplit(url).hostname:
+        console.out(f"Served by  : {final} (after redirects)")
+    if info["http_hop"]:
+        console.warn("a redirect went through plain http: anyone on the path could have changed the file")
+        if tier != 4 and not console.confirm("No --sha256 confirms the bytes. Install anyway?"):
+            raise Abort("cancelled")
+
+
+def url_fingerprint(staged, info):
+    size, chunks = fetcher.fingerprint_file(staged)
+    return manifest.Fingerprint(size=size, chunks=chunks, etag=info["etag"], last_modified=info["last_modified"])
+
+
+def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.extract,
+                extract_ok=appimage.have_unsquashfs, now=None):
+    expected = parse_sha256(args.sha256)
+    try:
+        url = manifest.check_url(args.url)
+    except manifest.ManifestError as e:
+        raise Abort(f"--url: {e}") from e
+    name = app_name(args, url_basename(url))
+    max_mib = DEFAULT_MAX_MIB if args.max_size is None else args.max_size
+    if not 0 < max_mib * 1024 ** 2 <= MAX_ASSET:
+        raise Abort(f"--max-size must be between 1 and {MAX_ASSET // 1024 ** 2} MiB")
+    perms = permissions_from_args(args)
+    require_pasta(perms)
+
+    console.out(f"URL        : {url}")
+    console.out(f"Limit      : {human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http")
+    console.warn(NO_ORIGIN)
+    show_permissions(console, perms)
+    fallback = ask_extractor(console, extract_ok)
+    if not console.confirm(f"Download {urlsplit(url).hostname} in a network-only jail?"):
+        raise Abort("cancelled")
+
+    stage = store.staging_root() / secrets.token_hex(8)
+    stage.mkdir(parents=True, mode=0o700)
+    try:
+        try:
+            staged, info = download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
+        except jail.JailError as e:
+            raise Abort(str(e)) from e
+        digest = appimage.sha256_file(staged)
+        tier = check_expected(digest, expected)
+        check_appimage(staged)
+        console.out(f"Downloaded : {human_size(info['size'])}, sha256 {digest}" + ("  (matches --sha256)" if tier == 4 else ""))
+        check_download_info(console, url, info, tier)
+        record = manifest.Manifest(
+            name=name, source=f"url:{url}", version=version_of(digest), sha256=digest, evidence_tier=tier,
+            published_at=timestamp(now), fingerprint=url_fingerprint(staged, info), permissions=perms)
+        try:
+            manifest.validate(record)
+        except manifest.ManifestError as e:
+            raise Abort(f"cannot record this download: {e}") from e
+        entries, size = place_new(name, staged, record, extract, fallback)
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+    finish_add(console, args, record, entries, size)
