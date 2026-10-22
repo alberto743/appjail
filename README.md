@@ -166,7 +166,12 @@ matches, and a tier 4 URL or file app refuses new content that comes without one
 version, the hashes, the tier and the release link. A release must be seen for the quarantine period before it can
 be installed (`--quarantine DAYS`). For tier 4 apps appjail records the candidate's hash when it is first seen and refuses
 the install if the content changed in the meantime. A change of repository owner or a drop in tier blocks the update.
-`--channel stable|prerelease|pinned` chooses which releases an app follows. A URL app's candidate is kept on disk during
+`--channel stable|prerelease|pinned` chooses which releases an app follows.
+
+What `update` prints per app: *up to date*; *waiting* (a candidate was seen and its quarantine has not ended: run `update`
+again later, it needs no action); *blocked* (the owner changed, the evidence got weaker, or the content changed during
+the quarantine: nothing was installed and the message says why); *declined* (you answered no); *pinned* (the app follows
+no releases). The exit status is 1 if any app was blocked or failed. A URL app's candidate is kept on disk during
 the quarantine and installed from there (`--verify` downloads it again first); a file app has no quarantine, you hold the bytes.
 
 ## Searching
@@ -182,6 +187,26 @@ appjail search editor     # candidates only; installing is always `appjail add o
 ```
 
 `search` shows 20 results; use `--limit N` or `--all` for more.
+
+## Command reference
+
+| Command | What it does |
+|---|---|
+| `add owner/repo` | Install the latest release (or `--tag`, `--prerelease`) of a GitHub project. |
+| `add --file PATH` / `add --url URL` | Install an AppImage you give yourself; `--sha256 HEX` confirms it (tier 4). |
+| `run APP [-- ARGS]` | Run an app; `--dir PATH[:ro\|:rw]` and `--file PATH[:rw]` grant access for this run only. |
+| `list` | Installed apps, versions, sources, tiers, permissions and updates seen. |
+| `update [APP]` | Check, quarantine and install new versions (see "How trust works"). |
+| `perms APP` | Show or change an app's permissions. |
+| `portals APP` | List or revoke the files an app was granted through the file chooser. |
+| `desktop APP` / `open APP -- FILE...` | Menu entry, and opening files with an app. |
+| `remove APP` | Delete the app and its private home. |
+| `history [APP]` | Recorded changes to the manifests. |
+| `search WORDS` / `index update\|rollback\|status` | Suggestions from the AM list. |
+| `tools status\|install NAME` | Pinned helper binaries (`gh`, `dwarfs`). |
+| `version` | The installed version. |
+
+`appjail COMMAND --help` lists every option.
 
 ## Other commands
 
@@ -227,10 +252,10 @@ APPJAIL_INTEGRATION=1 python3 -m pytest
 ```
 
 Without `APPJAIL_INTEGRATION=1` the tests that need real sandboxes are skipped. Tests that download from the network are
-opt-in (`APPJAIL_E2E=1`, `APPJAIL_LIVE=1`). The project's own workflow runs the suite inside a disposable QEMU guest built
-from `tests/vm/` so that downloads and sandboxed apps never run on the developer's machine; see
-[CLAUDE.md](CLAUDE.md) for the details. GitHub Actions runs the full suite and a REUSE compliance check on every push, and a separate workflow runs every
-opt-in suite (real downloads) on demand and weekly.
+opt-in (`APPJAIL_E2E=1`, `APPJAIL_LIVE=1`). The project's own workflow runs the suite inside a disposable QEMU guest
+built from `tests/vm/` (`create.sh`, `start.sh`, `provision.sh`, `test.sh`) so that downloads and sandboxed apps never
+run on the developer's machine. GitHub Actions runs the full suite and a REUSE compliance check on every push, and a
+separate workflow runs every opt-in suite (real downloads) on demand and weekly.
 
 ## License
 
