@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from appjail import cli, index, indexsync
+from appjail import cli, index, indexstore
 
 pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1", reason="set APPJAIL_E2E=1 in the test guest (network)")
 
@@ -42,23 +42,22 @@ def data(tmp_path_factory):
 def test_update_to_the_analysed_commit_then_search(data):
     console = Yes()
     assert cli.main(["index", "update", "--commit", PINNED], console=console) == 0, console.lines
-    assert indexsync.current() == PINNED
-    assert any("8735" in line or "install scripts" in line for line in console.lines)
-    hits, _total = index.search(["cura"], limit=5)
-    assert any(h.name == "cura" and h.source == "Ultimaker/Cura" for h in hits)
-    entries = index.parse_list(index.read_text(str(index.tree_path() / index.LIST_FILE), index.MAX_LIST_BYTES))
-    assert len(entries) == 8140
-    assert not any(p.name.startswith(("work-", "staged-")) for p in indexsync._dir().iterdir())
+    assert indexstore.current("am")["revision"] == PINNED
+    hits, _total, searched = index.search(["cura"], limit=5)
+    assert searched == ["am"] and any(h.name == "cura" and h.source == "Ultimaker/Cura" for h in hits)
+    assert 8000 < len(indexstore.load("am").apps) <= 8140
+    assert (indexstore.base() / "am" / "current.json").stat().st_size < 4 * 1024 ** 2  # the derived form, not 39 MB of scripts
+    assert not any(p.name.startswith("work-") for p in indexstore.base().iterdir())
 
 
 def test_update_to_head_shows_a_diff_and_rollback_returns(data):
     console = Yes()
     assert cli.main(["index", "update"], console=console) == 0, console.lines
-    head = indexsync.current()
+    head = indexstore.current("am")["revision"]
     if head == PINNED:
         pytest.skip("remote HEAD is the pinned commit")
     assert any(line.startswith("Changes since d739e48e7538") for line in console.lines)
-    assert indexsync.previous() == PINNED
+    assert indexstore.previous("am")["revision"] == PINNED
     assert cli.main(["index", "rollback"], console=Yes()) == 0
-    assert indexsync.current() == PINNED and indexsync.previous() == head
+    assert indexstore.current("am")["revision"] == PINNED and indexstore.previous("am")["revision"] == head
     assert index.search(["cura"])[1] >= 1

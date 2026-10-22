@@ -10,12 +10,15 @@ import argparse
 import sys
 from importlib import metadata
 
-from . import github, index, indexsync, jail, manifest, runner, tools, updater
+from . import github, jail, manifest, runner, tools, updater
+from .catalog import IndexProblem
 from .cmd_add import cmd_add
 from .cmd_addimage import cmd_add_file, cmd_add_url
 from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
 from .cmd_desktop import cmd_desktop
 from .cmd_index import (
+    cmd_index_add,
+    cmd_index_remove,
     cmd_index_rollback,
     cmd_index_status,
     cmd_index_update,
@@ -83,12 +86,21 @@ def build_parser():
     search.add_argument("keywords", nargs="+")
     search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
     search.add_argument("--all", action="store_true", help="show every match")
-    idx = sub.add_parser("index", help="manage the local AM search index")
+    idx = sub.add_parser("index", help="manage the catalogs `search` reads (the built-in AM list and any you add)")
     isub = idx.add_subparsers(dest="index_command", required=True)
-    upd = isub.add_parser("update", help="fetch the AM index, review the changes, then pin it")
-    upd.add_argument("--commit", default="HEAD", help="fetch this commit (40 hex digits) instead of the remote HEAD")
-    isub.add_parser("rollback", help="go back to the previous index snapshot")
-    isub.add_parser("status", help="show the pinned index")
+    upd = isub.add_parser("update", help="refresh the catalogs, review the changes, then accept them")
+    upd.add_argument("name", nargs="?", help="one source (default: every source)")
+    upd.add_argument("--commit", default="HEAD", help="am only: fetch this commit (40 hex digits) instead of the remote HEAD")
+    iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (see the README, Search)")
+    iadd.add_argument("name", help="a short name for the source")
+    where = iadd.add_mutually_exclusive_group(required=True)
+    where.add_argument("--url", help="an https URL serving the catalog")
+    where.add_argument("--file", help="a local catalog file")
+    irm = isub.add_parser("remove", help="remove a source you added, with its catalogs")
+    irm.add_argument("name")
+    irb = isub.add_parser("rollback", help="go back to the previous catalog of a source")
+    irb.add_argument("name", nargs="?", help="default: am")
+    isub.add_parser("status", help="list the sources and their catalogs")
     upd_app = sub.add_parser("update", help="check for a newer release and install it after review and quarantine")
     upd_app.add_argument("app", nargs="?", help="app name (default: every installed app)")
     upd_app.add_argument("--prerelease", action="store_true", help="follow pre-releases for this run (see --channel to make it permanent)")
@@ -165,9 +177,11 @@ def _add(args, client, console, app_args):
 
 
 def _index(args, client, console, app_args):
-    {"update": lambda: cmd_index_update(args, console),
-     "rollback": lambda: cmd_index_rollback(console),
-     "status": lambda: cmd_index_status(console)}[args.index_command]()
+    return {"update": lambda: cmd_index_update(args, console),
+            "add": lambda: cmd_index_add(args, console),
+            "remove": lambda: cmd_index_remove(args, console),
+            "rollback": lambda: cmd_index_rollback(args, console),
+            "status": lambda: cmd_index_status(console)}[args.index_command]()
 
 
 def _run(args, client, console, app_args):
@@ -207,7 +221,7 @@ def main(argv=None, client=None, console=None):
     except Abort as e:
         console.out(str(e))
         return 1
-    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, index.IndexProblem, indexsync.IndexRefused, OSError) as e:
+    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, IndexProblem, OSError) as e:
         console.out(f"error: {e}")
         return 1
     return status or 0
