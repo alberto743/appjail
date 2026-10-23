@@ -353,3 +353,40 @@ def test_search_covers_the_previous_catalog_only_after_a_rollback():
     indexstore.install("am", catalog.dumps(cat(("one", "first", "github:a/one"), revision="1")), NOW)
     indexstore.install("am", catalog.dumps(cat(("two", "second", "github:b/two"), revision="2")), NOW)
     assert index.search(["one"])[1] == 0
+
+
+# -- crash safety ---------------------------------------------------------------------------------
+
+
+def test_a_crash_while_installing_leaves_a_readable_catalog_that_the_next_install_heals(monkeypatch):
+    first, second = catalog.dumps(BASE), catalog.dumps(cat(("a", "b", "github:c/d"), revision="x"))
+    indexstore.install("am", first, NOW)
+    real_write = indexstore._write
+
+    def crash_on_state(path, text):
+        if path.name == "state.json":
+            raise OSError("power cut")
+        real_write(path, text)
+
+    monkeypatch.setattr(indexstore, "_write", crash_on_state)
+    with pytest.raises(OSError):
+        indexstore.install("am", second, NOW)
+    monkeypatch.setattr(indexstore, "_write", real_write)
+    assert indexstore.load("am").revision == "x"  # current.json is the new one and parses
+    assert indexstore.install("am", second, NOW) is True  # the stale state does not hide it
+    assert indexstore.current("am")["revision"] == "x" and indexstore.load("am", "previous").revision == "x"
+
+
+def test_state_without_its_fields_is_a_clean_error():
+    indexstore.install("am", catalog.dumps(BASE), NOW)
+    (indexstore.base() / "am" / "state.json").write_text('{"current": {"sha256": "ab"}}')
+    with pytest.raises(IndexProblem, match="malformed"):
+        indexstore.current("am")
+
+
+def test_update_sweeps_what_an_interrupted_one_left_behind():
+    indexstore.install("am", catalog.dumps(BASE), NOW)
+    (indexstore.base() / "work-abc123" / "repo").mkdir(parents=True)
+    (indexstore.base() / "am" / ".current.json.tmp").write_text("x")
+    run_index("update", fetch=am_fetch(BASE))
+    assert leftovers() == [] and not (indexstore.base() / "am" / ".current.json.tmp").exists()

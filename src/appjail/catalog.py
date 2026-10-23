@@ -6,8 +6,8 @@
 A catalog is one JSON document listing apps and, where known, where they come from: a kind-prefixed `source` that
 follows the manifest's grammar (`github:owner/repo`, `gitlab:HOST/group/project`, `forgejo:HOST/owner/repo`,
 `codeberg:owner/repo`, `url:https://...`). Only GitHub and URL sources can be installed today; the others are
-suggestions for a later resolver. A catalog is untrusted data: parsing is strict and bounded, every text is stripped of terminal escape sequences, and nothing in
-it is ever executed. A catalog only suggests; `appjail add` still asks for the repository. See README.md "Search".
+suggestions for a later resolver. A catalog is untrusted data: parsing is strict and bounded, every text is
+stripped of terminal escape sequences, and nothing in it is ever executed. A catalog only suggests; `appjail add` still asks for the repository. See README.md "Search".
 """
 
 import json

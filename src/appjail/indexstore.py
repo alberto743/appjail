@@ -13,7 +13,6 @@ Only the current and the previous catalog are kept. The index only feeds `search
 
 import hashlib
 import json
-import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -23,15 +22,16 @@ from . import catalog, store
 from .catalog import IndexProblem
 
 BUILTIN = "am"
+ENTRY_FIELDS = ("sha256", "revision", "updated")
 SOURCE_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,31}")
-KINDS = ("am", "url", "file")
+EXTRA_KINDS = ("url", "file")  # what `index add` registers; `am` is built in
 
 
 @dataclass(frozen=True)
 class Source:
     name: str
     kind: str  # am | url | file
-    location: str = ""  # the URL, or the file's base name (a file source is a copy: update re-reads the path given)
+    location: str = ""  # the URL, or the resolved path of the file (update re-reads it)
 
 
 @dataclass(frozen=True)
@@ -48,10 +48,7 @@ def base():
 
 def _write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    tmp = path.with_name(path.name + ".new")
-    tmp.write_text(text, encoding="utf-8")
-    tmp.chmod(0o600)
-    os.replace(tmp, path)
+    store.atomic_write(path, text, 0o600)
 
 
 def check_name(name):
@@ -78,7 +75,7 @@ def sources():
     for name in sorted(raw):
         spec = raw[name]
         if (not SOURCE_RE.fullmatch(name) or name == BUILTIN or not isinstance(spec, dict)
-                or spec.get("kind") not in ("url", "file") or not isinstance(spec.get("location"), str)):
+                or spec.get("kind") not in EXTRA_KINDS or not isinstance(spec.get("location"), str)):
             raise IndexProblem(f"the registered index source {name!r} is malformed")
         found[name] = Source(name, spec["kind"], spec["location"])
     return found
@@ -127,7 +124,7 @@ def _state(name):
     except (OSError, ValueError) as e:
         raise IndexProblem(f"cannot read the state of index source '{name}': {e}") from e
     ok = isinstance(data, dict) and all(
-        data.get(k) is None or (isinstance(data.get(k), dict) and all(isinstance(v, str) for v in data[k].values()))
+        data.get(k) is None or (isinstance(data.get(k), dict) and all(isinstance(data[k].get(f), str) for f in ENTRY_FIELDS))
         for k in ("current", "previous"))
     if not ok:
         raise IndexProblem(f"the state of index source '{name}' is malformed")
@@ -165,18 +162,20 @@ def loaded():
     return out
 
 
-def install(name, text, now=None):
+def install(name, text, now=None, digest=None, cat=None):
     """Make the catalog `text` (already validated by the caller) the current one, keeping the old one for rollback.
-    Returns False when it is byte for byte the current catalog."""
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    Returns False when it is byte for byte the current catalog.
+    Every file is replaced atomically and current.json is never moved, so a crash leaves a readable catalog;
+    state.json is written last and a stale one is corrected by the next install."""
+    digest = digest or hashlib.sha256(text.encode("utf-8")).hexdigest()
     state = _state(name)
     if state["current"] and state["current"]["sha256"] == digest:
         return False
-    cat = catalog.parse(text)
+    cat = cat or catalog.parse(text)
     directory = base() / name
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     if state["current"]:
-        os.replace(directory / "current.json", directory / "previous.json")
+        _write(directory / "previous.json", (directory / "current.json").read_text(encoding="utf-8"))
     _write(directory / "current.json", text)
     entry = {"sha256": digest, "revision": cat.revision, "updated": (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")}
     _write(directory / "state.json", json.dumps({"current": entry, "previous": state["current"]}, indent=1) + "\n")
@@ -189,12 +188,21 @@ def rollback(name):
     directory = base() / name
     if not state["previous"] or not (directory / "previous.json").is_file():
         raise IndexProblem(f"index source '{name}' has no previous catalog to roll back to")
-    tmp = directory / "swap.json"
-    os.replace(directory / "current.json", tmp)
-    os.replace(directory / "previous.json", directory / "current.json")
-    os.replace(tmp, directory / "previous.json")
+    cur = (directory / "current.json").read_text(encoding="utf-8")
+    prev = (directory / "previous.json").read_text(encoding="utf-8")
+    _write(directory / "current.json", prev)
+    _write(directory / "previous.json", cur)
     _write(directory / "state.json", json.dumps({"current": state["previous"], "previous": state["current"]}, indent=1) + "\n")
     return state["current"], state["previous"]
+
+
+def sweep():
+    """Remove what an interrupted update left behind: work directories and temp files."""
+    root = base()
+    for stale in list(root.glob("work-*")):
+        shutil.rmtree(stale, ignore_errors=True)
+    for stale in list(root.glob(".*.tmp")) + list(root.glob("*/.*.tmp")):
+        stale.unlink(missing_ok=True)
 
 
 # -- review ---------------------------------------------------------------------------------------

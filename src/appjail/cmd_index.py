@@ -16,11 +16,11 @@ from .imagesrc import regular_file
 
 def add_hint(source):
     kind, _, target = source.partition(":")
+    if kind not in catalog.INSTALLABLE:
+        return "(no resolver for this forge yet: appjail add cannot install it)"
     if kind == "github":
         return f"->  appjail add {target}"
-    if kind == "url":
-        return f"->  appjail add --url {target}"
-    return "(no resolver for this forge yet: appjail add cannot install it)"
+    return f"->  appjail add --url {target}"
 
 
 def cmd_search(args, console):
@@ -55,15 +55,18 @@ def read_catalog_file(path):
 
 
 def download_catalog(url, download_url, console):
-    stage = store.new_staging_dir()
+    try:
+        stage = store.new_staging_dir()
+    except OSError as e:
+        raise IndexProblem(f"cannot prepare a download directory: {e}") from e
     try:
         path, info = download_url(url, stage, "catalog.json", catalog.MAX_BYTES)
         if info["http_hop"]:
             console.warn("a redirect went through plain http: anyone on the path could have changed the catalog")
         try:
             return path.read_text(encoding="utf-8")
-        except UnicodeDecodeError as e:
-            raise IndexProblem(f"the catalog is not UTF-8 text: {e}") from e
+        except (OSError, UnicodeDecodeError) as e:
+            raise IndexProblem(f"cannot read the downloaded catalog as UTF-8 text: {e}") from e
     except jail.JailError as e:
         raise IndexProblem(str(e)) from e
     finally:
@@ -72,7 +75,7 @@ def download_catalog(url, download_url, console):
 
 def fetch_am(args, console, fetch):
     work = indexstore.base() / f"work-{secrets.token_hex(6)}"
-    work.mkdir(parents=True, mode=0o700)
+    work.mkdir(parents=True, mode=0o700, exist_ok=True)
     try:
         console.out(f"Fetching the AM index ({args.commit}) in a network-only jail…")
         got = fetch(work, args.commit)
@@ -116,7 +119,7 @@ def review_and_install(source, text, console, now=None):
         console.out("There is no previous catalog to compare with.")
     if not console.confirm(f"Accept this catalog as the current one for '{source.name}'?"):
         raise Abort("cancelled; the index is unchanged")
-    indexstore.install(source.name, text, now)
+    indexstore.install(source.name, text, now, digest, new)
     return "updated"
 
 
@@ -140,6 +143,7 @@ def show_diff(console, since, d):
 def cmd_index_update(args, console, fetch=amsource.fetch, download_url=jail.download_url, now=None):
     """Refresh one source or all of them; the status is 1 if any failed or was declined for a problem."""
     names = [args.name] if args.name else list(indexstore.sources())
+    indexstore.sweep()
     if args.commit != "HEAD" and names != [indexstore.BUILTIN]:
         raise Abort("--commit applies to the built-in 'am' source only (`appjail index update am --commit SHA`)")
     status = 0
@@ -157,7 +161,7 @@ def cmd_index_update(args, console, fetch=amsource.fetch, download_url=jail.down
 def cmd_index_add(args, console, download_url=jail.download_url, now=None):
     name = indexstore.check_name(args.name)
     if name in indexstore.sources():
-        raise IndexProblem(f"index source '{name}' already exists")
+        raise Abort(f"index source '{name}' already exists")
     if args.url:
         try:
             url = manifest.check_url(args.url)

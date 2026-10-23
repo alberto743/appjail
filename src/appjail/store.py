@@ -42,6 +42,22 @@ def staging_root():
     return data_dir() / "staging"
 
 
+def atomic_write(path, data, mode=0o666):
+    """Replace `path` with `data` (str or bytes) through a temp file in the same directory.
+    The file is created with `mode` (before the umask), so it is never readable wider than asked."""
+    path = Path(path)
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.unlink(missing_ok=True)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data.encode("utf-8") if isinstance(data, str) else data)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def new_staging_dir(prefix=""):
     """A new private directory under the staging root (the caller removes it)."""
     stage = staging_root() / (prefix + secrets.token_hex(8))
