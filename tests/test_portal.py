@@ -6,7 +6,6 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -16,7 +15,7 @@ from appjail.jail import RunError
 from appjail.manifest import Manifest, ManifestError, Permissions
 from appjail.portal import bus_call as real_bus_call
 
-from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs
+from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs, wait_for
 
 HERE = Path(__file__).parent / "portal"
 
@@ -262,10 +261,7 @@ def gtk_portal_stack(sandbox, runtime):
     weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", f"--socket={wl}"],
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(runtime)},
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(50):
-        if (runtime / wl).exists():
-            break
-        time.sleep(0.1)
+    wait_for(lambda: (runtime / wl).exists(), 5.0)
     cfg = sandbox / "cfg"
     (cfg / "xdg-desktop-portal").mkdir(parents=True)
     (cfg / "xdg-desktop-portal" / "portals.conf").write_text("[preferred]\ndefault=gtk\n")

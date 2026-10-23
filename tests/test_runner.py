@@ -23,6 +23,7 @@ from .helpers import (
     integration,
     pairs,
     run_in_jail,
+    wait_for,
 )
 
 SHA = "a" * 64
@@ -422,11 +423,7 @@ def test_real_wayland_client_runs_against_headless_weston(sandbox):
     weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-test"],
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
     try:
-        for _ in range(50):
-            if (rt / "appjail-test").exists():
-                break
-            time.sleep(0.1)
-        else:
+        if not wait_for(lambda: (rt / "appjail-test").exists(), 5.0):
             pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
         kw = build(sandbox, rt, audio=False)
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-test"}
@@ -476,11 +473,7 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox):
     weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-xtest"],
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
     try:
-        for _ in range(50):
-            if (rt / "appjail-xtest").exists():
-                break
-            time.sleep(0.1)
-        else:
+        if not wait_for(lambda: (rt / "appjail-xtest").exists(), 5.0):
             pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
         kw = build(sandbox, rt, audio=False, display="xwayland")
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-xtest"}
@@ -849,17 +842,11 @@ def test_terminating_the_launcher_stops_the_whole_jail(tmp_path, mode, sig):
     proc = subprocess.Popen([sys.executable, str(driver), marker, mode],
                             env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(Path(runner.__file__).parent.parent)})
     try:
-        for _ in range(100):
-            if _alive(marker):
-                break
-            time.sleep(0.1)
+        wait_for(lambda: _alive(marker), 10.0)
         assert _alive(marker), "the jail did not start"
         proc.send_signal(getattr(signal, sig))
         proc.wait(timeout=15)
-        for _ in range(80):  # the watcher polls once a second
-            if not _alive(marker):
-                break
-            time.sleep(0.1)
+        wait_for(lambda: not _alive(marker), 8.0)
         assert not _alive(marker), "the jail outlived its launcher"
     finally:
         proc.kill()

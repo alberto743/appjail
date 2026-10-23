@@ -29,6 +29,13 @@ def no_portal_store(monkeypatch):
 
 
 @pytest.fixture
+def data(tmp_path, monkeypatch):
+    """An empty data directory for tests that use the index or store directly (no config directory)."""
+    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
+    return tmp_path
+
+
+@pytest.fixture
 def h(tmp_path, monkeypatch):
     monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("APPJAIL_CONFIG_DIR", str(tmp_path / "config"))

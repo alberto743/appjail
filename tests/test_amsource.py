@@ -39,9 +39,7 @@ SCRIPTS = {
 }
 
 
-@pytest.fixture(autouse=True)
-def data(tmp_path, monkeypatch):
-    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
+pytestmark = pytest.mark.usefixtures("data")
 
 
 @pytest.fixture

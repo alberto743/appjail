@@ -16,10 +16,7 @@ C1, C2 = "1" * 40, "2" * 40
 NOW = datetime(2026, 10, 22, tzinfo=UTC)
 
 
-@pytest.fixture(autouse=True)
-def data(tmp_path, monkeypatch):
-    monkeypatch.setenv("APPJAIL_DATA_DIR", str(tmp_path / "data"))
-    return tmp_path
+pytestmark = pytest.mark.usefixtures("data")
 
 
 def cat(*apps, revision="r1", origin=""):

@@ -8,6 +8,7 @@ import hashlib
 import os
 import shutil
 import struct
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -329,3 +330,13 @@ def install(sandbox, name="app", content=b"image-bytes", sha=None, **perms):
                  evidence_tier=3, published_at="2026-01-01T00:00:00Z", permissions=Permissions(**perms))
     manifest.dump(store.manifest_path(name), m)
     return digest
+
+
+def wait_for(condition, timeout, interval=0.1):
+    """Poll `condition` until it is true or `timeout` seconds pass; return whether it became true."""
+    deadline = time.monotonic() + timeout
+    while not condition():
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(interval)
+    return True

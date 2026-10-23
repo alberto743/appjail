@@ -10,13 +10,14 @@ Opt-in because it downloads a 32 MB AppImage (ImageMagick/ImageMagick, approved 
 import os
 import shutil
 import subprocess
-import time
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from appjail import cli, jail, manifest, runner, runtimejail, store
+
+from .helpers import wait_for
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston") or not shutil.which("Xwayland")
@@ -65,10 +66,7 @@ def weston():
                             env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(50):
-            if (rt / "appjail-e2xw").exists():
-                break
-            time.sleep(0.1)
+        wait_for(lambda: (rt / "appjail-e2xw").exists(), 5.0)
         yield {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-e2xw", "LANG": "C.UTF-8"}
     finally:
         proc.terminate()

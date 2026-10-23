@@ -11,12 +11,13 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest
 
 from appjail import cli, manifest, runner, runtimejail, store
+
+from .helpers import wait_for
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston"),
@@ -64,10 +65,7 @@ def test_gui_app_runs_in_jail_against_headless_weston(installed, tmp_path):
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(50):
-            if (rt / "appjail-e2e").exists():
-                break
-            time.sleep(0.1)
+        wait_for(lambda: (rt / "appjail-e2e").exists(), 5.0)
         env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-e2e", "LANG": "C.UTF-8"}
         m, root, home, etc = runner.prepare("lagrange", say=lambda *_: None)
         from appjail import jail
@@ -95,10 +93,7 @@ def test_gui_app_runs_through_a_private_xwayland(installed):
                               env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(50):
-            if (rt / "appjail-e2x").exists():
-                break
-            time.sleep(0.1)
+        wait_for(lambda: (rt / "appjail-e2x").exists(), 5.0)
         env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-e2x", "LANG": "C.UTF-8"}
         m, root, home, etc = runner.prepare("lagrange", say=lambda *_: None)
         perms = replace(m.permissions, display="xwayland")
@@ -138,10 +133,7 @@ def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
         return proc.returncode
 
     try:
-        for _ in range(50):
-            if (rt / "appjail-e2n").exists():
-                break
-            time.sleep(0.1)
+        wait_for(lambda: (rt / "appjail-e2n").exists(), 5.0)
         env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-e2n", "LANG": "C.UTF-8"}
         runner.launch("lagrange", extra_args=["gemini://geminiprotocol.net/"], host_env=env, say=lambda *_: None,
                       runner=run)
@@ -210,10 +202,7 @@ def test_a_file_opened_through_the_menu_entry_reaches_the_jail(installed, tmp_pa
     env = {**os.environ, "XDG_DATA_HOME": str(xdg), "XDG_CONFIG_HOME": str(conf), "XDG_RUNTIME_DIR": str(rt),
            "WAYLAND_DISPLAY": "appjail-e2o", "PYTHONPATH": str(Path(manifest.__file__).parent.parent)}
     try:
-        for _ in range(50):
-            if (rt / "appjail-e2o").exists():
-                break
-            time.sleep(0.1)
+        wait_for(lambda: (rt / "appjail-e2o").exists(), 5.0)
         if how == "launch":
             argv = ["gio", "launch", str(entry), str(document)]
         else:
@@ -224,10 +213,7 @@ def test_a_file_opened_through_the_menu_entry_reaches_the_jail(installed, tmp_pa
         proc = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=60)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         wanted = f"Temporary file access for this run: {document}"
-        for _ in range(200):
-            if log.exists() and wanted in log.read_text():
-                break
-            time.sleep(0.1)
+        wait_for(lambda: log.exists() and wanted in log.read_text(), 20.0)
         text = log.read_text() if log.exists() else ""
         assert f"argv: open lagrange -- {document}" in text, f"{text!r} {proc.args} {proc.stdout!r} {proc.stderr!r} {entry.read_text()} {wrapper.read_text()}"
         assert wanted in text, text
