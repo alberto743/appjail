@@ -9,7 +9,6 @@ on an old `published_at`: a different candidate starts a new clock.
 """
 
 import json
-import os
 from datetime import UTC, datetime, timedelta
 
 from . import manifest, store
@@ -97,10 +96,7 @@ def load_pending(name):
 
 def _write_pending(name, data):
     path = pending_path(name)
-    tmp = path.with_name(".pending.json.tmp")
-    tmp.write_text(json.dumps(data), encoding="utf-8")
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    store.atomic_write(path, json.dumps(data), 0o600)
 
 
 def note_seen(name, key, tag, now):

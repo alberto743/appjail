@@ -23,7 +23,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import grants
+from . import grants, store
 from .jail import RunError
 
 ID_PREFIX = "app.appjail."
@@ -182,9 +182,7 @@ class Instance:
 
     def child_started(self, pid):
         """Publish the app jail's init pid, as bwrap's status reports it; the portal needs it."""
-        tmp = self.dir / "bwrapinfo.json.tmp"
-        tmp.write_text(json.dumps({"child-pid": int(pid)}), encoding="utf-8")
-        os.replace(tmp, self.dir / "bwrapinfo.json")
+        store.atomic_write(self.dir / "bwrapinfo.json", json.dumps({"child-pid": int(pid)}))
 
     def __exit__(self, *exc):
         shutil.rmtree(self.dir, ignore_errors=True)

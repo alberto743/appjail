@@ -217,9 +217,7 @@ def write_entry(name, text):
     if os.path.lexists(path) and marker_of(path) != name:
         raise DesktopError(f"{path} exists and was not created by appjail; not touching it")
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
+    store.atomic_write(path, text)
     return path
 
 
@@ -286,9 +284,7 @@ def install_icon(name, root, fields, convert=None):
     remove_icons(name)
     target = data_home() / f"icons/hicolor/{size[0]}x{size[1]}/apps/appjail-{name}.png"
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_name(f".{target.name}.tmp")
-    tmp.write_bytes(data)
-    os.replace(tmp, target)
+    store.atomic_write(target, data)
     return f"{size[0]}x{size[1]}"
 
 

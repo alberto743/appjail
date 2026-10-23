@@ -7,7 +7,6 @@ A manifest is declarative data only: where an app comes from, what was pinned an
 what the jail may do. Unknown keys and malformed values are errors, never ignored.
 """
 
-import os
 import re
 import tomllib
 from dataclasses import dataclass, field
@@ -15,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from . import store
 from .grants import (
     check_dbus_name,
     check_dbus_own,
@@ -321,8 +321,5 @@ def dumps(m):
 def dump(path, m):
     """Write atomically (temp file in the same directory, then rename)."""
     path = Path(path)
-    text = dumps(m)
-    tmp = path.with_name(f".{path.name}.tmp")
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
+    store.atomic_write(path, dumps(m))
