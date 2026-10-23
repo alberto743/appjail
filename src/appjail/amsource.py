@@ -31,6 +31,9 @@ LIST_RE = re.compile(r"^[^\w\s]{0,2}\s*([A-Za-z0-9][A-Za-z0-9._+-]{0,80}) : (.*)
 # SITE="..." / SITE2='...' / SITE=bare, possibly several assignments on one line
 SITE_RE = re.compile(r"""(?:^|[\s;])(SITE2?)=(?:"([^"\n]*)"|'([^'\n]*)'|([^\s"';#]*))""", re.MULTILINE)
 GITHUB_URL_RE = re.compile(r"https?://(?:www\.)?github\.com/([^/\s]+/[^/\s#?]+?)(?:\.git)?(?:/.*)?")
+# gitlab.com keeps subgroups, so the project path ends at "/-/" (its page separator), a ".git" or the end
+GITLAB_URL_RE = re.compile(r"https?://(?:www\.)?gitlab\.com/([^\s#?]+?)(?:\.git)?(?:/-/.*|/)?")
+CODEBERG_URL_RE = re.compile(r"https?://(?:www\.)?codeberg\.org/([^/\s]+/[^/\s#?]+?)(?:\.git)?(?:/.*)?")
 
 GIT_SCRIPT = r"""set -eu
 G="git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c core.attributesFile=/dev/null \
@@ -110,14 +113,19 @@ def parse_sites(text):
 
 
 def classify(site):
-    """(owner/repo, note) for a SITE value."""
+    """(catalog source, note) for a SITE value: a bare owner/repo or a github.com URL is GitHub, gitlab.com and
+    codeberg.org URLs are their forges, anything else is left to the user."""
     if not site:
         return "", "no source in the index"
     if manifest.REPO_RE.fullmatch(site):
-        return site, ""
-    m = GITHUB_URL_RE.fullmatch(site)
-    if m and manifest.REPO_RE.fullmatch(m.group(1)):
-        return m.group(1), ""
+        return f"github:{site}", ""
+    for regex, prefix in ((GITHUB_URL_RE, "github:"), (GITLAB_URL_RE, "gitlab:gitlab.com/"), (CODEBERG_URL_RE, "codeberg:")):
+        m = regex.fullmatch(site)
+        if m:
+            try:
+                return "{}:{}".format(*catalog.parse_source(prefix + m.group(1))), ""
+            except ValueError:
+                break
     return "", "resolve manually: " + textsafe.clean(site, 100)
 
 

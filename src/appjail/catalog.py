@@ -3,16 +3,20 @@
 
 """The catalog format: what `search` reads, whoever produced it (the AM converter, a file or a URL).
 
-A catalog is one JSON document listing apps and, where known, the GitHub `owner/repo` they come from. It is
-untrusted data: parsing is strict and bounded, every text is stripped of terminal escape sequences, and nothing in
+A catalog is one JSON document listing apps and, where known, where they come from: a kind-prefixed `source` that
+follows the manifest's grammar (`github:owner/repo`, `gitlab:HOST/group/project`, `forgejo:HOST/owner/repo`,
+`codeberg:owner/repo`, `url:https://...`). Only GitHub and URL sources can be installed today; the others are
+suggestions for a later resolver. A catalog is untrusted data: parsing is strict and bounded, every text is stripped of terminal escape sequences, and nothing in
 it is ever executed. A catalog only suggests; `appjail add` still asks for the repository. See README.md "Search".
 """
 
 import json
 import re
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from . import manifest, textsafe
+from .valid import ManifestError
 
 FORMAT = "appjail-catalog"
 VERSION = 1
@@ -22,6 +26,7 @@ NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,80}")
 TOP_KEYS = {"format", "version", "origin", "revision", "apps"}
 APP_KEYS = {"name", "description", "source", "note"}
 DESCRIPTION_MAX = 300
+SOURCE_MAX = 2048
 NOTE_MAX = 200
 LABEL_MAX = 300
 
@@ -30,11 +35,68 @@ class IndexProblem(Exception):
     """A catalog or index operation cannot proceed; the message says why."""
 
 
+HOST_RE = re.compile(r"(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]")
+SEGMENT_RE = re.compile(r"(?!\.{1,2}$)[A-Za-z0-9_.-]{1,100}")
+CODEBERG_HOST = "codeberg.org"
+KINDS = ("github", "gitlab", "forgejo", "codeberg", "url")
+INSTALLABLE = ("github", "url")  # the kinds `appjail add` can resolve today
+
+
+def _forge_path(target, minimum, maximum):
+    parts = target.split("/")
+    if not minimum <= len(parts) <= maximum or not all(SEGMENT_RE.fullmatch(p) for p in parts):
+        raise ValueError(f"expected {minimum if minimum == maximum else f'{minimum} or more'} path segment(s) "
+                         f"of letters, digits, '.', '_' and '-'")
+    return "/".join(parts)
+
+
+def _host_path(target, minimum, maximum):
+    host, sep, path = target.partition("/")
+    if not sep or not HOST_RE.fullmatch(host.lower()):
+        raise ValueError("expected HOST/path with a DNS host name (no port, no credentials)")
+    return f"{host.lower()}/{_forge_path(path, minimum, maximum)}"
+
+
+def parse_source(value):
+    """(kind, target) of a catalog `source`, normalized: `codeberg:` becomes `forgejo:codeberg.org/`, hosts are
+    lowercased. ValueError says what is wrong. Nothing is contacted; syntax only."""
+    kind, sep, target = value.partition(":")
+    if not sep or kind not in KINDS:
+        raise ValueError(f"must start with one of {', '.join(k + ':' for k in KINDS)}")
+    if kind == "github":
+        if not manifest.REPO_RE.fullmatch(target):
+            raise ValueError("expected github:owner/repo")
+    elif kind == "gitlab":
+        target = _host_path(target, 2, 20)
+    elif kind == "forgejo":
+        target = _host_path(target, 2, 2)
+    elif kind == "codeberg":
+        kind, target = "forgejo", f"{CODEBERG_HOST}/{_forge_path(target, 2, 2)}"
+    else:
+        try:
+            manifest.check_url(target)
+        except ManifestError as e:
+            raise ValueError(str(e)) from e
+    return kind, target
+
+
+def identity(source):
+    """Who stands behind a normalized source, for spotting a change of owner: kind, host and owner, lowercase
+    (`github:cli`, `gitlab:gitlab.com/group`, `forgejo:codeberg.org/user`, `url:example.org`)."""
+    kind, _, target = source.partition(":")
+    if kind == "url":
+        return f"url:{(urlsplit(target).hostname or '').lower()}"
+    if kind == "github":
+        return f"github:{target.split('/', 1)[0].lower()}"
+    host, _, path = target.partition("/")
+    return f"{kind}:{host}/{path.split('/', 1)[0].lower()}"
+
+
 @dataclass(frozen=True)
 class App:
     name: str
     description: str = ""
-    source: str = ""  # GitHub "owner/repo", or "" when the catalog does not know one
+    source: str = ""  # normalized "kind:target" (see parse_source), or "" when the catalog does not know one
     note: str = ""  # why there is no usable source, or a flag such as "repackager ..."
 
 
@@ -64,9 +126,12 @@ def _app(raw, position):
     name = raw.get("name")
     if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         raise IndexProblem(f"{where}: name must match {NAME_RE.pattern}")
-    source = _string(raw.get("source", ""), f"{where}.source", 200)
-    if source and not manifest.REPO_RE.fullmatch(source):
-        raise IndexProblem(f"{where} ({name}): source must be a GitHub owner/repo (other locations go in note)")
+    source = _string(raw.get("source", ""), f"{where}.source", SOURCE_MAX)
+    if source:
+        try:
+            source = "{}:{}".format(*parse_source(source))
+        except ValueError as e:
+            raise IndexProblem(f"{where} ({name}): invalid source: {e} (other locations go in note)") from e
     return App(name, _string(raw.get("description", ""), f"{where}.description", DESCRIPTION_MAX), source,
                _string(raw.get("note", ""), f"{where}.note", NOTE_MAX))
 

@@ -44,7 +44,7 @@ def test_update_to_the_analysed_commit_then_search(data):
     assert cli.main(["index", "update", "--commit", PINNED], console=console) == 0, console.lines
     assert indexstore.current("am")["revision"] == PINNED
     hits, _total, searched = index.search(["cura"], limit=5)
-    assert searched == ["am"] and any(h.name == "cura" and h.source == "Ultimaker/Cura" for h in hits)
+    assert searched == ["am"] and any(h.name == "cura" and h.source == "github:Ultimaker/Cura" for h in hits)
     assert 8000 < len(indexstore.load("am").apps) <= 8140
     assert (indexstore.base() / "am" / "current.json").stat().st_size < 4 * 1024 ** 2  # the derived form, not 39 MB of scripts
     assert not any(p.name.startswith("work-") for p in indexstore.base().iterdir())

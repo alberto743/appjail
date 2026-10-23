@@ -38,7 +38,7 @@ class Source:
 class Diff:
     added: tuple
     removed: tuple
-    owner_changed: tuple  # (name, old owner/repo, new owner/repo)
+    owner_changed: tuple  # (name, old source, new source) where the kind, host or owner differs
     source_changed: tuple
 
 
@@ -200,19 +200,15 @@ def rollback(name):
 # -- review ---------------------------------------------------------------------------------------
 
 
-def _owner(source):
-    return source.split("/", 1)[0].lower()
-
-
 def diff(old, new):
-    """Compare two catalogs: apps added or removed and changed GitHub sources."""
+    """Compare two catalogs: apps added or removed and changed sources (a different kind, host or owner counts as an owner change)."""
     a, b = catalog.by_name(old), catalog.by_name(new)
     owner_changed, source_changed = [], []
     for name in sorted(a.keys() & b.keys()):
         x, y = a[name].source, b[name].source
         if x == y:
             continue
-        if x and y and _owner(x) != _owner(y):
+        if x and y and catalog.identity(x) != catalog.identity(y):
             owner_changed.append((name, x, y))
         else:
             source_changed.append((name, x or "(none)", y or "(none)"))

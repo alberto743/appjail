@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Search over the catalogs of the local index. A hit only suggests a GitHub owner/repo: it never installs."""
+"""Search over the catalogs of the local index. A hit only suggests a source: it never installs."""
 
 from dataclasses import dataclass
 
@@ -13,7 +13,7 @@ from .catalog import IndexProblem
 class Hit:
     name: str
     description: str
-    source: str  # GitHub owner/repo suggested by the catalog, or ""
+    source: str  # kind-prefixed source suggested by the catalog, or ""
     note: str  # why there is no usable source, or a flag such as "repackager"
     catalog: str  # the name of the index source it came from
 

@@ -26,7 +26,7 @@ def cat(*apps, revision="r1", origin=""):
     return Catalog(tuple(App(*a) for a in apps), origin, revision)
 
 
-BASE = cat(("cura", "slicer", "Ultimaker/Cura"), ("gh", "GitHub CLI", "cli/cli"), ("old", "going away", "a/old"), revision=C1)
+BASE = cat(("cura", "slicer", "github:Ultimaker/Cura"), ("gh", "GitHub CLI", "github:cli/cli"), ("old", "going away", "github:a/old"), revision=C1)
 
 
 def am_fetch(catalog_, commit=C1, signed=False):
@@ -37,7 +37,7 @@ def am_fetch(catalog_, commit=C1, signed=False):
         (root / "programs/x86_64-appimages").write_text("".join(f"◆ {a.name} : {a.description}\n" for a in catalog_.apps))
         for a in catalog_.apps:
             if a.source:
-                (root / "programs/x86_64" / a.name).write_text(f'SITE="{a.source}"\n')
+                (root / "programs/x86_64" / a.name).write_text(f'SITE="{a.source.partition(":")[2]}"\n')
         return amsource.Fetched(commit, signed, root)
     return fetch
 
@@ -77,7 +77,7 @@ def test_first_update_asks_installs_and_cleans_up():
 
 def test_declining_changes_nothing():
     run_index("update", fetch=am_fetch(BASE))
-    console, status = run_index("update", answers=("n",), fetch=am_fetch(cat(("x", "y", "p/q"), revision=C2), C2))
+    console, status = run_index("update", answers=("n",), fetch=am_fetch(cat(("x", "y", "github:p/q"), revision=C2), C2))
     assert status == 1 and "cancelled" in console.text
     assert indexstore.current("am")["revision"] == C1 and indexstore.previous("am") is None and leftovers() == []
 
@@ -90,19 +90,19 @@ def test_same_catalog_is_reported_without_prompting():
 
 def test_owner_change_is_a_loud_warning_and_the_old_catalog_is_kept_for_rollback():
     run_index("update", fetch=am_fetch(BASE))
-    changed = cat(("cura", "slicer", "Ultimaker/Cura"), ("gh", "GitHub CLI", "evil/cli"), ("old", "going away", "a/old"), revision=C2)
+    changed = cat(("cura", "slicer", "github:Ultimaker/Cura"), ("gh", "GitHub CLI", "github:evil/cli"), ("old", "going away", "github:a/old"), revision=C2)
     console, _ = run_index("update", fetch=am_fetch(changed, C2))
-    assert "WARNING: OWNER CHANGE for gh: cli/cli -> evil/cli" in console.text and "1 owner changes" in console.text
+    assert "WARNING: OWNER CHANGE for gh: github:cli/cli -> github:evil/cli" in console.text and "1 owner changes" in console.text
     assert (indexstore.current("am")["revision"], indexstore.previous("am")["revision"]) == (C2, C1)
 
 
 def test_diff_lists_added_removed_and_source_changes():
     run_index("update", fetch=am_fetch(BASE))
-    new = cat(("cura", "slicer", "Ultimaker/Cura2"), ("gh", "GitHub CLI", "cli/cli"), ("fresh", "new", "n/n"), revision=C2)
+    new = cat(("cura", "slicer", "github:Ultimaker/Cura2"), ("gh", "GitHub CLI", "github:cli/cli"), ("fresh", "new", "github:n/n"), revision=C2)
     console, _ = run_index("update", fetch=am_fetch(new, C2))
     assert "1 apps added, 1 removed, 0 owner changes, 1 other source changes" in console.text
     assert "added: fresh" in console.text and "removed: old" in console.text
-    assert "source changed: cura: Ultimaker/Cura -> Ultimaker/Cura2" in console.text
+    assert "source changed: cura: github:Ultimaker/Cura -> github:Ultimaker/Cura2" in console.text
 
 
 def test_fetch_failure_leaves_no_work_directory():
@@ -137,7 +137,26 @@ def test_commit_option_applies_to_am_only():
 
 # -- added sources ---------------------------------------------------------------------------------
 
-MINE = catalog.dumps(cat(("tool", "A tool", "me/tool"), ("other", "Another", ""), revision="2026-10-22", origin="https://example.org"))
+def test_a_move_to_another_forge_or_host_is_an_owner_change():
+    d = indexstore.diff(cat(("gh", "x", "github:cli/cli")), cat(("gh", "x", "gitlab:gitlab.com/cli/cli")))
+    assert [x[0] for x in d.owner_changed] == ["gh"]
+    same_owner = indexstore.diff(cat(("gh", "x", "github:cli/a")), cat(("gh", "x", "github:Cli/b")))
+    assert not same_owner.owner_changed and len(same_owner.source_changed) == 1
+
+
+def test_search_hints_depend_on_what_add_can_install():
+    indexstore.install("am", catalog.dumps(cat(
+        ("hub", "d", "github:o/hub"), ("web", "d", "url:https://example.org/web.AppImage"),
+        ("lab", "d", "gitlab:gitlab.example.org/g/lab"), ("berg", "d", "codeberg:u/berg"))), NOW)
+    out = Script()
+    assert cli.main(["search", "--all", "d"], console=out) == 0
+    assert "->  appjail add o/hub" in out.text
+    assert "->  appjail add --url https://example.org/web.AppImage" in out.text
+    assert "source gitlab:gitlab.example.org/g/lab   (no resolver for this forge yet" in out.text
+    assert "source forgejo:codeberg.org/u/berg   (no resolver" in out.text
+
+
+MINE = catalog.dumps(cat(("tool", "A tool", "github:me/tool"), ("other", "Another", ""), revision="2026-10-22", origin="https://example.org"))
 
 
 def test_add_a_file_source_registers_it_and_search_covers_both(tmp_path):
@@ -148,7 +167,7 @@ def test_add_a_file_source_registers_it_and_search_covers_both(tmp_path):
     assert "2 apps" in console.text and "Add 'mine' as an index source?" in console.text
     assert indexstore.get("mine").location == str(path) and list(indexstore.sources()) == ["am", "mine"]
     hits, _total, searched = index.search(["tool"])
-    assert [(h.name, h.catalog, h.source) for h in hits] == [("tool", "mine", "me/tool")] and searched == ["am", "mine"]
+    assert [(h.name, h.catalog, h.source) for h in hits] == [("tool", "mine", "github:me/tool")] and searched == ["am", "mine"]
     out = Script()
     assert cli.main(["search", "tool"], console=out) == 0
     assert "tool: A tool   [mine]" in out.text and "appjail add me/tool" in out.text
@@ -207,9 +226,9 @@ def test_updating_a_file_source_rereads_the_file_and_shows_the_diff(tmp_path):
     path = tmp_path / "c.json"
     path.write_text(MINE)
     run_index("add", "mine", "--file", str(path))
-    path.write_text(catalog.dumps(cat(("tool", "A tool", "evil/tool"), ("fresh", "New", "f/f"), revision="r2")))
+    path.write_text(catalog.dumps(cat(("tool", "A tool", "github:evil/tool"), ("fresh", "New", "github:f/f"), revision="r2")))
     console, status = run_index("update", "mine")
-    assert status == 0 and "OWNER CHANGE for tool: me/tool -> evil/tool" in console.text and "added: fresh" in console.text
+    assert status == 0 and "OWNER CHANGE for tool: github:me/tool -> github:evil/tool" in console.text and "added: fresh" in console.text
     assert indexstore.current("mine")["revision"] == "r2" and indexstore.previous("mine")["revision"] == "2026-10-22"
     path.write_text("not json")
     console, status = run_index("update", "mine", answers=())
@@ -256,8 +275,8 @@ def test_remove_deletes_the_source_and_its_catalogs(tmp_path):
 
 
 def test_rollback_swaps_and_can_be_undone():
-    run_index("update", fetch=am_fetch(cat(("one", "first", "a/one"), revision=C1)))
-    run_index("update", fetch=am_fetch(cat(("two", "second", "b/two"), revision=C2), C2))
+    run_index("update", fetch=am_fetch(cat(("one", "first", "github:a/one"), revision=C1)))
+    run_index("update", fetch=am_fetch(cat(("two", "second", "github:b/two"), revision=C2), C2))
     out = Script()
     assert cli.main(["index", "rollback"], console=out) == 0
     assert indexstore.current("am")["revision"] == C1 and indexstore.previous("am")["revision"] == C2
@@ -292,8 +311,8 @@ def test_install_keeps_two_catalogs_and_ignores_an_identical_one():
     text = catalog.dumps(BASE)
     assert indexstore.install("am", text, NOW) is True
     assert indexstore.install("am", text, NOW) is False
-    indexstore.install("am", catalog.dumps(cat(("a", "b", "c/d"), revision="x")), NOW)
-    indexstore.install("am", catalog.dumps(cat(("e", "f", "g/h"), revision="y")), NOW)
+    indexstore.install("am", catalog.dumps(cat(("a", "b", "github:c/d"), revision="x")), NOW)
+    indexstore.install("am", catalog.dumps(cat(("e", "f", "github:g/h"), revision="y")), NOW)
     assert (indexstore.current("am")["revision"], indexstore.previous("am")["revision"]) == ("y", "x")
     assert indexstore.current("am")["updated"] == "2026-10-22T00:00:00Z"
     assert sorted(p.name for p in (indexstore.base() / "am").iterdir()) == ["current.json", "previous.json", "state.json"]
@@ -315,7 +334,7 @@ def test_corrupt_state_files_are_clean_errors():
 
 def test_search_ranking_limit_and_errors():
     indexstore.install("am", catalog.dumps(cat(
-        ("cura", "slicer", "Ultimaker/Cura"), ("cura-beta", "pre-release", "Ultimaker/Cura"),
+        ("cura", "slicer", "github:Ultimaker/Cura"), ("cura-beta", "pre-release", "github:Ultimaker/Cura"),
         ("novel", "mentions cura in passing", ""), ("0ad", "game", ""))), NOW)
     hits, total, _ = index.search(["cura"])
     assert [h.name for h in hits] == ["cura", "cura-beta", "novel"] and total == 3
@@ -331,6 +350,6 @@ def test_search_without_any_catalog_is_an_error():
 
 
 def test_search_covers_the_previous_catalog_only_after_a_rollback():
-    indexstore.install("am", catalog.dumps(cat(("one", "first", "a/one"), revision="1")), NOW)
-    indexstore.install("am", catalog.dumps(cat(("two", "second", "b/two"), revision="2")), NOW)
+    indexstore.install("am", catalog.dumps(cat(("one", "first", "github:a/one"), revision="1")), NOW)
+    indexstore.install("am", catalog.dumps(cat(("two", "second", "github:b/two"), revision="2")), NOW)
     assert index.search(["one"])[1] == 0

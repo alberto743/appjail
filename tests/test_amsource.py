@@ -86,11 +86,16 @@ def test_site_extraction(text, expected):
 
 
 @pytest.mark.parametrize("site,source,note", [
-    ("cli/cli", "cli/cli", ""),
-    ("https://github.com/cli/cli.git", "cli/cli", ""),
-    ("https://github.com/cli/cli/releases", "cli/cli", ""),
+    ("cli/cli", "github:cli/cli", ""),
+    ("https://github.com/cli/cli.git", "github:cli/cli", ""),
+    ("https://github.com/cli/cli/releases", "github:cli/cli", ""),
+    ("https://gitlab.com/group/sub/proj", "gitlab:gitlab.com/group/sub/proj", ""),
+    ("https://gitlab.com/group/proj/-/releases", "gitlab:gitlab.com/group/proj", ""),
+    ("https://gitlab.com/group/proj.git", "gitlab:gitlab.com/group/proj", ""),
+    ("https://codeberg.org/user/tool/releases", "forgejo:codeberg.org/user/tool", ""),
+    ("https://gitlab.com/solo", "", "resolve manually: https://gitlab.com/solo"),
     ("https://www.firefox.com", "", "resolve manually: https://www.firefox.com"),
-    ("https://gitlab.com/a/b", "", "resolve manually: https://gitlab.com/a/b"),
+    ("https://git.example.org/a/b", "", "resolve manually: https://git.example.org/a/b"),
     ("a b/c", "", "resolve manually: a b/c"),
     ("$VAR", "", "resolve manually: $VAR"),
     ("", "", "no source in the index"),
@@ -106,11 +111,11 @@ def test_convert_builds_the_catalog(tree):
     cat = amsource.convert(tree, C1)
     assert (cat.origin, cat.revision) == (amsource.AM_URL, C1)
     found = {a.name: a for a in cat.apps}
-    assert found["cura"] == App("cura", "3D printing slicer for Ultimaker", "Ultimaker/Cura", "")
-    assert found["cura-beta"].source == "Ultimaker/Cura"
-    assert found["gh"].source == "cli/cli" and found["gh"].description == "GitHub CLI"  # the first of two listings
+    assert found["cura"] == App("cura", "3D printing slicer for Ultimaker", "github:Ultimaker/Cura", "")
+    assert found["cura-beta"].source == "github:Ultimaker/Cura"
+    assert found["gh"].source == "github:cli/cli" and found["gh"].description == "GitHub CLI"  # the first of two listings
     assert found["novel"].source == "" and found["novel"].note.startswith("resolve manually")
-    assert found["firefox"].source == "" and "repackager ivan-hc/Firefox-appimage" in found["firefox"].note
+    assert found["firefox"].source == "" and "repackager github:ivan-hc/Firefox-appimage" in found["firefox"].note
     assert found["ghost-writer"].note.startswith("resolve manually: $SOMEWHERE")
     assert found["0ad"].note == "resolve manually: https://play0ad.com"
     assert "evil" not in found and len(cat.apps) == len(found)

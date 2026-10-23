@@ -176,8 +176,8 @@ the quarantine and installed from there (`--verify` downloads it again first); a
 
 ## Searching
 
-`search` looks through **catalogs**: lists of apps with, where known, the GitHub repository each one comes from. A hit
-is only a suggestion; installing is always `appjail add owner/repo` (or `--file`/`--url`), after you have checked
+`search` looks through **catalogs**: lists of apps with, where known, the project each one comes from. A hit
+is only a suggestion; installing is always `appjail add owner/repo` (or `--url`), after you have checked
 the owner. Catalogs are untrusted data: appjail parses them strictly, strips terminal escape sequences from every
 text, and never runs anything from them.
 
@@ -210,7 +210,11 @@ replaces the catalog. One previous catalog is kept per source for `index rollbac
   "origin": "https://example.org/my-apps",
   "revision": "2026-10-22",
   "apps": [
-    {"name": "lagrange", "description": "A Gemini browser", "source": "skyjake/lagrange"},
+    {"name": "lagrange", "description": "A Gemini browser", "source": "github:skyjake/lagrange"},
+    {"name": "tool-a", "source": "codeberg:user/tool-a"},
+    {"name": "tool-b", "source": "gitlab:gitlab.example.org/group/sub/tool-b"},
+    {"name": "tool-c", "source": "forgejo:git.example.net/user/tool-c"},
+    {"name": "tool-d", "source": "url:https://example.com/dl/tool-d.AppImage"},
     {"name": "tool", "description": "Hosted elsewhere", "note": "resolve manually: https://example.org/tool"}
   ]
 }
@@ -225,8 +229,10 @@ replaces the catalog. One previous catalog is kept per source for `index rollbac
 | `apps` | yes | A list of objects, with unique `name`s. |
 | `apps[].name` | yes | The name to search for: letters, digits, `.`, `_`, `+`, `-`; starts with a letter or digit; up to 81 characters. |
 | `apps[].description` | no | One line of text, up to 300 characters. |
-| `apps[].source` | no | A GitHub `owner/repo`. Anything else is refused: put other locations in `note`. |
+| `apps[].source` | no | Where the app comes from, as `kind:target`: `github:owner/repo`, `gitlab:HOST/group/.../project`, `forgejo:HOST/owner/repo`, `codeberg:owner/repo` (shorthand for `forgejo:codeberg.org/...`), `url:https://...`. The host is always explicit (`gitlab:gitlab.com/...`), without port or credentials. Anything else, including `file:` and a bare `owner/repo`, is refused: put other locations in `note`. |
 | `apps[].note` | no | Why there is no usable `source`, or a flag such as a repackager. Up to 200 characters. |
+
+`search` offers `appjail add` for `github:` and `url:` sources only; GitLab and Forgejo sources are shown as information until appjail can install from those forges. An update that moves an app to another kind, host or owner is flagged as an owner change.
 
 Unknown keys are errors, so a catalog means the same thing to every version that accepts it. A catalog that breaks
 a rule is refused as a whole and nothing changes. appjail writes the catalog it validated, not the downloaded bytes.

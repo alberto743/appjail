@@ -14,6 +14,15 @@ from .console import Abort, human_size
 from .imagesrc import regular_file
 
 
+def add_hint(source):
+    kind, _, target = source.partition(":")
+    if kind == "github":
+        return f"->  appjail add {target}"
+    if kind == "url":
+        return f"->  appjail add --url {target}"
+    return "(no resolver for this forge yet: appjail add cannot install it)"
+
+
 def cmd_search(args, console):
     hits, total, searched = index.search(args.keywords, limit=args.limit if not args.all else 10 ** 9)
     many = len(searched) > 1
@@ -21,7 +30,7 @@ def cmd_search(args, console):
     for h in hits:
         console.out(f"{h.name}: {h.description}" + (f"   [{h.catalog}]" if many else ""))
         if h.source:
-            console.out(f"    source {h.source}   ->  appjail add {h.source}")
+            console.out(f"    source {h.source}   {add_hint(h.source)}")
         if h.note:
             console.out(f"    ({h.note})")
     if hits:
