@@ -302,7 +302,7 @@ Sources are listed in `~/.local/share/appjail/index/`.
   small empty directory `appjail-life-*` stays in the runtime directory).
 - The audio permission includes the microphone.
 
-The full design, the reasoning behind each choice and the verification notes are in [DESIGN.md](DESIGN.md).
+The full design is in [DESIGN.md](DESIGN.md); the reasoning behind each choice, rejected alternatives and deferred features are in [DECISIONS.md](DECISIONS.md).
 
 ## Development
 

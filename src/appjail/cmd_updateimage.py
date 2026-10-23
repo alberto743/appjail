@@ -1,8 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`appjail update` for apps installed from a URL or a local file (DESIGN.md "`add --file` / `add --url` and their
-`update`").
+"""`appjail update` for apps installed from a URL or a local file (DESIGN.md "Updating" and "`add --file` / `add --url`").
 
 `url:` apps are checked cheaply first (conditional request, then a few sampled windows of the file); a full download
 happens only when something differs, and the candidate then waits out the quarantine, kept on disk so the end of the

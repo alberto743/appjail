@@ -67,7 +67,7 @@ def test_sdist_is_small_and_installs_on_its_own(tmp_path):
         names = [n.split("/", 1)[1] for n in tar.getnames() if "/" in n]
     top = {n.split("/")[0] for n in names}
     assert {"src", "LICENSES", "README.md", "pyproject.toml"} <= top
-    assert not top & {"tests", "DESIGN.md", "CLAUDE.md", "vm", "bin", ".github"}, top
+    assert not top & {"tests", "DESIGN.md", "DECISIONS.md", "CLAUDE.md", "vm", "bin", ".github"}, top
     assert sdist.stat().st_size < 150_000  # source and docs only: a stray vm/ image or a test fixture would blow far past this
     # the tarball alone is enough to build and install the command
     fresh = tmp_path / "fresh"

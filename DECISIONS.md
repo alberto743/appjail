@@ -1,0 +1,60 @@
+# appjail: decisions
+
+Why appjail is built the way it is: alternatives that were evaluated and rejected, features deliberately deferred, and the facts those choices rest on. How the tool behaves is in [DESIGN.md](DESIGN.md). Each entry gives the decision, the reason, and the condition for revisiting it.
+
+## Deferred features
+| Feature | Why | Revisit when |
+|---|---|---|
+| GPG tier (tier 2) | A signature proves a key, not its owner, so `add` would still be trust on first use for the key fingerprint. It needs a per-app fingerprint pin, a jailed `gpgv`, update rules (a key change blocks, a lost signature is a downgrade) and a source for the signature file. The attestation tier plus the quarantine hash already cover attested and unattested apps. | A wanted app signs with GPG and has no GitHub attestation. |
+| Resolvers for other forges (GitLab, Codeberg/Forgejo, SourceForge, vendor sites) | Only GitHub is supported. The AM index lists about 224 apps whose `SITE=` points elsewhere, which `search` shows and `add` cannot install. Other forges expose release assets with sizes but not GitHub's `digest` or attestations, so apps from them would be tier 4 at best. The catalog format already carries `gitlab:`, `forgejo:` and `codeberg:` sources. | A wanted app lives only on another forge. A resolver sits behind the interface of `github.py`. |
+| Other architectures | x86-64 only; see "arm64" below. | The arm64 decision is taken. |
+| Allowlisting proxy for the LAN | With `network`, other hosts on the LAN stay reachable (pasta has no filtering). Attacks from an app against LAN hosts are outside the threat model; the goal is to keep apps off the user's own host services. | Host filtering for the app jail's `network` permission is wanted. |
+| `mic` permission | PipeWire and Pulse cannot restrict a client by device without a portal-style filter; a separate permission would be a promise appjail cannot keep. | A portal-based audio path exists. |
+
+## Rejected alternatives
+### Building on `sas` (Samueru-sama/simple-appimage-sandbox)
+A 952-line POSIX shell wrapper around bwrap that mounts the AppImage and runs it. Rejected as a base: it is shell (the project is Python), its defaults are permissive (D-Bus, network, audio, X11 and Wayland sockets all on; `/tmp` and `/etc` shared; `/dev` fully bound; a host `xdg-open` daemon), it mounts with FUSE instead of extracting, and it is a moving external dependency. Taken as reference only: `--unshare-user/pid/uts/ipc/cgroup`, `--die-with-parent`, `--new-session`, GPU binds including nvidia nodes. AM also supports `aisap`, not evaluated.
+
+### Flatpak
+Mature sandbox, portals, signed OSTree remotes and permission overrides; covers the need when the app exists on Flathub. It does not cover AppImages released only on GitHub, user-pinned per-release hashes with a quarantine, or declarative manifests in the user's own git repo. appjail targets that gap and does not replace Flatpak: prefer Flatpak when the app is there. appjail writes a `.flatpak-info` identity file only because xdg-desktop-portal understands no other sandbox identity (see DESIGN.md, Portals).
+
+### Firejail (netblue30/firejail)
+A setuid-root C program under GPL-2.0 with 900+ maintainer-written profiles. Not a base and not a dependency: it needs setuid root (appjail runs unprivileged bubblewrap), its profiles are implicitly trusted text rather than pinned declarative manifests, and GPL-2.0 rules out copying code or profile text into this MPL-2.0 project. Only ideas were taken, written from scratch: its denylist categories were the checklist for the `dirs` sensitive-path policy; it strips token variables from the environment (appjail clears the whole environment and passes a whitelist); its `--x11` defaults to Xephyr and it dropped Xpra, which supports a separate X server inside the jail, never the host X11 socket.
+
+### Landlock
+An unprivileged kernel filesystem and network filter. bwrap cannot apply it, so each jail's program would need a launcher calling `landlock_restrict_self` (raw `syscall` from Python, like the seccomp filter). Its filesystem rules duplicate the mount namespace; its network rules cover only TCP bind/connect by port, not UDP or DNS or host names, so they add nothing for the download jails and would break apps needing other ports; abstract-socket and signal scoping are already given by the unshared namespaces. Not worth it. Revisit if a network jail starts running third-party code, a bwrap release gains Landlock support, or an allowlisting proxy is wanted.
+
+### A private network namespace built without pasta
+Would have needed a host-side CONNECT proxy with a host allowlist on a unix socket plus an in-jail TCP relay for `git` and `gh`, which speak no HTTP proxy over unix sockets: new code on the path of every download. Superseded: pasta (package `passt`) gives a private namespace with ordinary outbound sockets and is an optional dependency, required only for apps with `network`.
+
+### Mounting AppImages
+FUSE mounts do not work well in user namespaces. Images are extracted and `AppRun` is executed.
+
+## Facts the design rests on
+### GitHub API
+- Release assets have a `digest` field (`sha256:<64 hex>` or null). Older releases may lack it, hence tier 4 (trust on first use) as the fallback.
+- Attestations: `GET /users/{u}/attestations/{digest}` and the `orgs/` variant need a token. The repo-scoped `GET /repos/{owner}/{repo}/attestations/{digest}` works unauthenticated and returns `attestations[]` with `bundle_url` (a short-lived signed blob URL). appjail uses the repo-scoped endpoint with the digest from the release asset. Existence alone is not proof; the bundle is verified (DESIGN.md, Attestation verification).
+- The unauthenticated rate limit is 60 requests per hour per address; `GET /rate_limit` is free. One `add` costs about 4 requests, one `update` about 4.
+
+### AM index (ivan-hc/AM)
+- `AppMan/appman` is a stub that downloads `APP-MANAGER` from `main`; AM self-updates and runs install and updater scripts from `main` outside any sandbox. Only 6 of 8,735 install scripts mention a checksum or signature. Its own sandbox wraps `sas` or `aisap`.
+- `programs/x86_64-appimages` has lines `◆ name : description` (U+25C6); `programs/x86_64/<app>` holds the scripts. 8,247 scripts have `SITE="owner/repo"`, about 224 point elsewhere, a few use `SITE2=` for a repackager. `SITE=` may appear more than once in a script: the first assignment counts, matched by regex, never sourced.
+- Commit signatures (last 200 commits at the analysed state): 139 carry a PGP signature (GitHub web-flow key), 2 SSH, 59 unsigned; the maintainer's own commits are unsigned. They cannot prove maintainer authenticity. Not to be redone.
+- Reference clone for reading: a blobless no-checkout clone, read with `git show <commit>:<path>` as text. Existing sandbox flags are in `modules/install.am`.
+
+## arm64 (aarch64): evaluated, not implemented, decision pending
+Feasible and moderate in code, expensive in verification. Scope if done: aarch64 only (armhf, riscv64 and i386 stay out; the ELF parsers accept 64-bit little-endian only).
+- **Where x86-64 is hard-wired:**
+  - `seccomp.py`: `AUDIT_ARCH_X86_64`, the `SYSCALLS` numbers, the x32 guard and the `platform.machine()` refusal. aarch64 uses the generic syscall table (different numbers; no `_sysctl`, `uselib`, `create_module`, `get_kernel_syms`, `query_module`, `nfsservctl`, `ioperm`, `iopl`), `AUDIT_ARCH_AARCH64 = 0xC00000B7`, no x32. The table becomes per architecture, skipping names the architecture lacks, still refusing unknown architectures. `clone` flags stay argument 0. A wrong number either leaves a hole or denies a needed call, so every name must be cross-checked against the kernel header table and probed natively.
+  - `github.py` (`X86_64_TOKENS`, `OTHER_ARCH_RE`, `appimage_candidates`) and the error text in `cmd_add.py`: parametrize by host architecture; add an ELF `e_machine` check (0x3E, 0xB7) in `appimage.py`/`fetcher.py` as the backstop (also covers `add --file/--url`).
+  - `tools.py`: `dwarfs` and `gh` are single x86-64 pins; `Tool` would carry per-architecture variants. Both projects publish aarch64 builds; the pins need real, user-approved downloads.
+  - `amsource.py`: AM has parallel aarch64 lists (to confirm); select by host architecture and keep a snapshot of one architecture from serving another.
+  - `runtimejail.py`/`jail.py` look architecture-neutral (to verify: the `/lib64` bind).
+- **Verification cost:** an arm64 guest on an x86 host runs under TCG (5-20x slower: fine for unit tests and seccomp probes, painful for GUI e2e) and needs `qemu-system-arm` and `qemu-efi-aarch64` on the host and an arm64 Debian image. `tests/vm/*.sh` would take a `VM_ARCH`. Real arm64 AppImages need new approvals. `ubuntu-24.04-arm` is below the minimum supported system; without a 26.04 arm runner arm64 would be "supported, tested in an emulated guest only", and the README must say so.
+- **Staging if approved:** (1) architecture-aware core with no change on x86, unit-testable on the x86 guest; (2) arm64 guest scripts and suite under TCG; (3) arm64 helper pins and the AM aarch64 source; (4) one real arm64 AppImage smoke test and an arm CI job if a runner exists; (5) docs at each step.
+
+## Platform and CI
+- Minimum supported systems: Debian 13 and Ubuntu 26.04. On Ubuntu 24.04 the real-portal tests fail (xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend; cause not investigated) and its `reuse` cannot read `REUSE.toml`. No workarounds for older systems.
+- The CI runner label is `ubuntu-26.04`, not `ubuntu-latest` (still Ubuntu 24.04 when tried). GitHub moves `ubuntu-latest` to 26.04 in November 2026; then switch the workflows to `ubuntu-latest` and check CI is green.
+- Actions are referenced by version tag, never by commit SHA, so Dependabot can upgrade them.
+- Known CI-only behaviour: on the runner (Xwayland 24.1.10) a bare Xwayland segfaults on ImageMagick's `display` under headless weston, with no jail involved; the real-X11-app test skips on that signature. Re-check when the runner's Xwayland changes.
