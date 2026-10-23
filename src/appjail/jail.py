@@ -6,6 +6,7 @@
 Argument builders are pure functions so they can be unit-tested without bwrap.
 """
 
+import contextlib
 import json
 import os
 import shlex
@@ -222,10 +223,8 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
             if used > watch[1] or entries > watch[2]:
                 reason = "output too large"
     if reason:
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
         proc.communicate()
         raise (OutputTooLarge if reason == "output too large" else JailError)(f"jailed command aborted: {reason}")
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)

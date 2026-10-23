@@ -169,6 +169,38 @@ def _gpu_args():
     return args
 
 
+def _namespace_args(perms, uid, seccomp_fd):
+    """Namespaces, capabilities, the ids inside the jail and the seccomp filter."""
+    args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
+            "--hostname", "appjail"]
+    if not perms.userns:
+        args += ["--unshare-user", "--disable-userns"]
+    if perms.network and not perms.network_host:
+        # pasta runs the command as uid 0 of a user namespace that maps to the host user; give the app its own
+        # ids back (passwd, D-Bus authentication and file ownership all expect them)
+        args += ["--uid", str(uid), "--gid", str(os.getgid())]
+    if seccomp_fd is not None:
+        args += ["--seccomp", str(seccomp_fd)]
+    if perms.network:
+        args.append("--share-net")
+    return args
+
+
+def _base_filesystem_args(etc_dir, rt, perms):
+    """The system directories, /proc, /dev, the tmpfs mounts, the private passwd and group, and the network's /etc files."""
+    args = system_args()
+    args += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run",
+             "--perms", "0700", "--dir", "/run/user", "--perms", "0700", "--dir", rt]
+    args += ["--ro-bind", str(Path(etc_dir) / "passwd"), "/etc/passwd",
+             "--ro-bind", str(Path(etc_dir) / "group"), "/etc/group"]
+    for f in RUNTIME_ETC:
+        if os.path.exists(f):
+            args += ["--ro-bind", os.path.realpath(f), f]
+    if perms.network:
+        args += etc_args(private_net=not perms.network_host)
+    return args
+
+
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
                  portal_docs=None, status_fd=None, block_fd=None, files=()):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
@@ -185,28 +217,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
         raise RunError("portals need the document portal's directory for this app (appjail.portal.doc_dir)")
 
     rt, host_rt = f"/run/user/{uid}", host_env.get("XDG_RUNTIME_DIR", "")
-    args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
-            "--hostname", "appjail"]
-    if not perms.userns:
-        args += ["--unshare-user", "--disable-userns"]
-    if perms.network and not perms.network_host:
-        # pasta runs the command as uid 0 of a user namespace that maps to the host user; give the app its own
-        # ids back (passwd, D-Bus authentication and file ownership all expect them)
-        args += ["--uid", str(uid), "--gid", str(os.getgid())]
-    if seccomp_fd is not None:
-        args += ["--seccomp", str(seccomp_fd)]
-    if perms.network:
-        args.append("--share-net")
-    args += system_args()
-    args += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run",
-             "--perms", "0700", "--dir", "/run/user", "--perms", "0700", "--dir", rt]
-    args += ["--ro-bind", str(Path(etc_dir) / "passwd"), "/etc/passwd",
-             "--ro-bind", str(Path(etc_dir) / "group"), "/etc/group"]
-    for f in RUNTIME_ETC:
-        if os.path.exists(f):
-            args += ["--ro-bind", os.path.realpath(f), f]
-    if perms.network:
-        args += etc_args(private_net=not perms.network_host)
+    args = _namespace_args(perms, uid, seccomp_fd)
+    args += _base_filesystem_args(etc_dir, rt, perms)
     args += ["--ro-bind", str(root), APP_DIR, "--bind", str(home), APP_HOME]
     args += _wayland_args(host_env, wayland_socket, rt)
 

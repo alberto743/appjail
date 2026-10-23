@@ -123,10 +123,8 @@ def _wait_group(proc):
     not follow pasta's namespace helper, so an app with `network` would keep running, unsupervised, after its launcher.
     """
     def forward(signum, _frame):
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(proc.pid, signum)
-        except ProcessLookupError:
-            pass
     try:
         old = {sig: signal.signal(sig, forward) for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
     except ValueError:  # not the main thread: no handlers, the group is still cleaned up below
@@ -136,10 +134,8 @@ def _wait_group(proc):
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
 
 
 def _run_app(argv, filter_fd=None, pipes=None, instance=None):
@@ -175,14 +171,8 @@ def _run_app(argv, filter_fd=None, pipes=None, instance=None):
             proc.wait()
 
 
-def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
-           extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
-    """Start the app in its jail and return its exit status."""
-    m, root, home, etc = prepare(name, extract, say)
-    if history.modified(name):
-        say(f"Warning: the manifest of {name} was changed outside appjail since its last recorded change "
-            f"(see `appjail history {name}` and the config directory's git log).")
-    perms = m.permissions
+def _temporary_grants(perms, extra_dirs, extra_files, extra_args, say):
+    """Apply the grants of this run only (`--dir`, `--file`): the permissions to use and the app's arguments."""
     if extra_dirs:
         perms = replace(perms, dirs=grants.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
@@ -190,40 +180,68 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     if file_dests:
         say("Temporary file access for this run: " + ", ".join(file_dests))
         extra_args = [*extra_args, *file_dests]
+    return perms, extra_args
+
+
+def _seccomp_filter(stack, perms, env, in_pasta):
+    """The seccomp filter as (lifeline, memfd, file): a file behind pasta, which closes inherited descriptors."""
+    if not in_pasta:
+        filter_fd = seccomp.open_fd(perms.userns)
+        stack.callback(os.close, filter_fd)
+        return None, filter_fd, None
+    life = stack.enter_context(jail.Lifeline(env.get("XDG_RUNTIME_DIR")))
+    fd, filter_file = tempfile.mkstemp(prefix="appjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
+    stack.callback(os.unlink, filter_file)
+    with os.fdopen(fd, "wb") as f:
+        f.write(seccomp.program(perms.userns))
+    return life, None, filter_file
+
+
+def _portal_and_bus(stack, name, perms, env, proxy):
+    """The portal instance and document directory, and the filtered bus socket, each only when the app needs it."""
+    instance = docs = bus = None
+    if perms.portals:
+        rt = env.get("XDG_RUNTIME_DIR", "")
+        if not rt:
+            raise RunError("portals need XDG_RUNTIME_DIR")
+        app = portal.app_id(name)
+        docs = portal.doc_dir(rt, app, env)
+        instance = stack.enter_context(portal.Instance(rt, app, perms.network))
+    if dbusproxy.needed(perms):
+        bus = stack.enter_context(proxy(perms, env, identity=instance.info) if instance else proxy(perms, env))
+    return instance, docs, bus
+
+
+def _status_pipes(stack, instance, env, in_pasta):
+    """The pipes that report the jail's init pid to the portal (FIFOs behind pasta); None without a portal instance."""
+    if not instance:
+        return None
+    fifo_dir = tempfile.mkdtemp(prefix="appjail-pipes-", dir=env.get("XDG_RUNTIME_DIR") or None) if in_pasta else None
+    if fifo_dir:
+        stack.callback(shutil.rmtree, fifo_dir, ignore_errors=True)
+    pipes = Pipes(fifo_dir)
+    stack.callback(pipes.close_all)
+    return pipes
+
+
+def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
+           extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
+    """Start the app in its jail and return its exit status."""
+    m, root, home, etc = prepare(name, extract, say)
+    if history.modified(name):
+        say(f"Warning: the manifest of {name} was changed outside appjail since its last recorded change "
+            f"(see `appjail history {name}` and the config directory's git log).")
+    perms, extra_args = _temporary_grants(m.permissions, extra_dirs, extra_files, extra_args, say)
     env = dict(os.environ if host_env is None else host_env)
     in_pasta = perms.network and not perms.network_host
     with contextlib.ExitStack() as stack:
-        filter_fd = filter_file = None
-        life = stack.enter_context(jail.Lifeline(env.get("XDG_RUNTIME_DIR"))) if in_pasta else None
-        if in_pasta:
-            fd, filter_file = tempfile.mkstemp(prefix="appjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
-            stack.callback(os.unlink, filter_file)
-            with os.fdopen(fd, "wb") as f:
-                f.write(seccomp.program(perms.userns))
-        else:
-            filter_fd = seccomp.open_fd(perms.userns)
-            stack.callback(os.close, filter_fd)
-        instance = docs = None
-        if perms.portals:
-            rt = env.get("XDG_RUNTIME_DIR", "")
-            if not rt:
-                raise RunError("portals need XDG_RUNTIME_DIR")
-            app = portal.app_id(name)
-            docs = portal.doc_dir(rt, app, env)
-            instance = stack.enter_context(portal.Instance(rt, app, perms.network))
-        bus = None
-        if dbusproxy.needed(perms):
-            bus = stack.enter_context(proxy(perms, env, identity=instance.info) if instance else proxy(perms, env))
+        life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
+        instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
         wl_sock = stack.enter_context(restricted(env, app_id=name))
         if wl_sock is None:
             say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
-        fifo_dir = tempfile.mkdtemp(prefix="appjail-pipes-", dir=env.get("XDG_RUNTIME_DIR") or None) if instance and in_pasta else None
-        if fifo_dir:
-            stack.callback(shutil.rmtree, fifo_dir, ignore_errors=True)
-        pipes = Pipes(fifo_dir) if instance else None
-        if pipes:
-            stack.callback(pipes.close_all)
+        pipes = _status_pipes(stack, instance, env, in_pasta)
         args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
             command=[f"{runtimejail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,

@@ -15,6 +15,7 @@ sees, never into the app's jail: the app can neither read nor forge it, and cann
 (the alternative, `org.freedesktop.host.portal.Registry`, lets an app claim any id).
 """
 
+import contextlib
 import json
 import os
 import re
@@ -86,13 +87,11 @@ def activate_documents(host_env, timeout=5.0):
     env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": rt}
     if host_env.get("DBUS_SESSION_BUS_ADDRESS"):
         env["DBUS_SESSION_BUS_ADDRESS"] = host_env["DBUS_SESSION_BUS_ADDRESS"]
-    try:
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
         subprocess.run([dbus_send, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
                         f"--dest={DOCUMENTS_NAME}", "/org/freedesktop/portal/documents",
                         "org.freedesktop.portal.Documents.GetMountPoint"],
                        env=env, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout + 2)
-    except (OSError, subprocess.SubprocessError):
-        pass
 
 
 def doc_dir(runtime_dir, app, host_env=None):
@@ -186,7 +185,5 @@ class Instance:
 
     def __exit__(self, *exc):
         shutil.rmtree(self.dir, ignore_errors=True)
-        try:
+        with contextlib.suppress(OSError):
             self.dir.parent.rmdir()
-        except OSError:
-            pass
