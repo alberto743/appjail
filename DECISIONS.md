@@ -30,6 +30,9 @@ Would have needed a host-side CONNECT proxy with a host allowlist on a unix sock
 ### Mounting AppImages
 FUSE mounts do not work well in user namespaces. Images are extracted and `AppRun` is executed.
 
+### A graphical front end
+`appjail-gui` is a tkinter window over the CLI, shipped in the same package. tkinter is in the standard library, so `dependencies` stays empty, but Debian and Ubuntu split it into `python3-tk`; the GUI is therefore optional and imported lazily, and the CLI never needs it. A toolkit from PyPI (Qt, GTK bindings) would break the stdlib-only rule. The GUI does not reimplement any command: it builds an argv, runs `cli.main` with a console that shows prompts as dialogs, and so keeps one parser, one set of checks and the same reviews. It never passes `--yes` for the user; `perms`, `remove`, `update` and the rest ask through a dialog that defaults to No. Revisit when a command needs progress or cancellation that a worker thread cannot give (downloads run in a jail subprocess with no incremental output).
+
 ## Facts the design rests on
 ### GitHub API
 - Release assets have a `digest` field (`sha256:<64 hex>` or null). Older releases may lack it, hence tier 4 (trust on first use) as the fallback.

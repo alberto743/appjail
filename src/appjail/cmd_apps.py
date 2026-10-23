@@ -62,6 +62,20 @@ def cmd_history(args, console):
         console.out(line)
 
 
+def list_line(name, m):
+    """The one line `list` prints for an app."""
+    p = m.permissions
+    granted = [k for k in PERMISSION_FLAGS if getattr(p, k)] + [f"display={p.display}"]
+    pending = updater.load_pending(name)
+    return (f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
+            + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
+            + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
+            + (f"  dbus-own: {', '.join(p.dbus_own)}" if p.dbus_own else "")
+            + (f"  portals: {', '.join(p.portal_interfaces)}" if p.portal_interfaces else "")
+            + (f"  channel: {m.channel}" if m.channel != "stable" else "")
+            + (f"  (update seen: {pending['tag']})" if pending else ""))
+
+
 def cmd_list(console):
     names = updater.installed()
     if not names:
@@ -74,16 +88,7 @@ def cmd_list(console):
         except (manifest.ManifestError, OSError) as e:
             console.out(f"{name}: unreadable manifest ({e})")
             continue
-        p = m.permissions
-        granted = [k for k in PERMISSION_FLAGS if getattr(p, k)] + [f"display={p.display}"]
-        pending = updater.load_pending(name)
-        console.out(f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
-                    + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
-                    + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
-                    + (f"  dbus-own: {', '.join(p.dbus_own)}" if p.dbus_own else "")
-                    + (f"  portals: {', '.join(p.portal_interfaces)}" if p.portal_interfaces else "")
-                    + (f"  channel: {m.channel}" if m.channel != "stable" else "")
-                    + (f"  (update seen: {pending['tag']})" if pending else ""))
+        console.out(list_line(name, m))
 
 
 def revoke_portal_grants(name, mpath, console):

@@ -14,6 +14,7 @@ dependencies = []  # standard library only, by design
 classifiers = [
     "Operating System :: POSIX :: Linux",
     "Environment :: Console",
+    "Environment :: X11 Applications",
     "Programming Language :: Python :: 3",
     "Topic :: Security",
     "Topic :: System :: Software Distribution",
@@ -21,6 +22,9 @@ classifiers = [
 
 [project.scripts]
 appjail = "appjail.cli:main"
+
+[project.gui-scripts]
+appjail-gui = "appjail.gui:main"
 
 # The version is the last vX.Y.Z tag, plus the commits since it and the short hash (PEP 440, like `git describe`). An sdist has
 # no git history: it carries the version in its PKG-INFO.

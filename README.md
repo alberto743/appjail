@@ -48,6 +48,7 @@ is built around the opposite assumptions:
   - `xdg-dbus-proxy`: D-Bus filtering and portals.
   - `xwayland`: X11-only apps.
   - `git`: the search index (`index update`) and the manifest history.
+- Optional: `python3-tk` for the window (`appjail-gui`, see [Graphical interface](#graphical-interface)).
 - A Wayland compositor for GUI apps. The host X11 socket is never shared.
 
 On Debian or Ubuntu:
@@ -94,6 +95,14 @@ appjail remove lagrange          # delete the app and its private home
 
 `remove` and `perms` ask for confirmation unless given `--yes`. `appjail COMMAND --help` lists every option.
 `GITHUB_TOKEN`, if set, raises the GitHub API rate limit; it is only ever sent to `api.github.com`.
+
+## Graphical interface
+
+`appjail-gui` opens a window with the same commands and options: the installed apps (run, run with extra access
+for one run, open a file, update, permissions, portals, history, menu entry, remove), adding an app, searching the
+catalogs and the helper tools. It runs the
+CLI underneath, so it shows the same reviews and asks the same questions (the default answer is always No) in
+dialogs. It needs the system package `python3-tk` (`sudo apt install python3-tk`) and a display.
 
 ## Installing apps
 
@@ -293,6 +302,7 @@ owner change.
 | `index add\|remove\|update\|rollback\|status` | Manage the catalogs `search` reads (the built-in AM list and any you add). |
 | `tools status\|install NAME` | Helper binaries whose URL, size and hash are pinned in appjail's source (`gh` for attestations, `dwarfs` for DwarFS-based AppImages). |
 | `version` | The installed version. |
+| `appjail-gui` (separate command) | The window; see [Graphical interface](#graphical-interface). |
 
 ## Troubleshooting
 

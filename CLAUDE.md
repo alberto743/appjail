@@ -24,6 +24,7 @@ All need a decision or an app/session the user approves; none is blocked on code
 - Install and update: `github.py` (release resolver), `attest.py` (attestation check with the pinned `gh`), `appimage.py` (inspection, jailed extraction, tree validation), `fetcher.py` (downloader run inside the network-only jail), `tools.py` (pinned helper binaries), `updater.py` (policy, quarantine clock, pending state), `history.py` (manifest history in a local git repo).
 - Running: `runner.py` (verify, prepare, launch), `runtimejail.py` (bwrap arguments of the app jail), `jail.py` (download, extraction, git and pasta jails), `wayland.py`, `seccomp.py`, `dbusproxy.py`, `portal.py`, `desktop.py`.
 - Index: `catalog.py` (format), `amsource.py` (AM converter), `indexstore.py` (sources, snapshots), `index.py` (search), `snappy.py` (bounded decompressor).
+- `gui/` is the optional tkinter front end (`appjail-gui`): `argv.py` (form state to CLI argv, no tkinter), `console.py` (`GuiConsole`, the prompt bridge, no tkinter), `worker.py` (threads and detached children), `apps.py` (installed apps as data), `dialogs.py`, `app.py` (window). It runs the CLI; it never reimplements a command or adds `--yes`. Tests: `test_gui_*.py` (the smoke test needs `python3-tk` and `xvfb`, otherwise skips).
 - `__main__.py` is the entry point.
 
 ## Testing environment
