@@ -76,8 +76,8 @@ def test_audio_sockets_only_when_granted(sandbox, runtime, audio):
     dests = [d for _, d in pairs(args, "--ro-bind")]
     env = dict(pairs(args, "--setenv"))
     rt = f"/run/user/{os.getuid()}"
-    assert (f"{rt}/pipewire-0" in dests) is audio and (f"{rt}/pulse/native" in dests) is audio
-    assert ("PULSE_SERVER" in env) is audio
+    assert (f"{rt}/pulse/native" in dests) is audio and ("PULSE_SERVER" in env) is audio
+    assert f"{rt}/pipewire-0" not in dests  # never: it would expose cameras and screen casts (see test_audio.py)
 
 
 def test_gpu_only_when_granted(sandbox, runtime):
@@ -366,7 +366,7 @@ def test_wayland_reachable_and_nothing_else_in_runtime_dir(sandbox, runtime):
 @integration
 def test_audio_sockets_visible_only_when_granted(sandbox, runtime):
     on, off = facts(sandbox, runtime, audio=True), facts(sandbox, runtime, audio=False)
-    assert (on["pipewire"], on["pulse"]) == (True, True)
+    assert (on["pipewire"], on["pulse"]) == (False, True)
     assert (off["pipewire"], off["pulse"]) == (False, False)
 
 

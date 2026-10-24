@@ -147,10 +147,11 @@ def _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env):
 
 
 def _audio_args(host_rt, rt, env):
+    """The Pulse socket only. PipeWire's own socket is never bound: PipeWire restricts only clients it recognises as
+    sandboxed (by a .flatpak-info in their root), so a jailed app on pipewire-0 would see and use every node, cameras
+    and other apps' screen casts included. pipewire-pulse serves audio and nothing else."""
     args = []
-    pw, pulse = Path(host_rt) / "pipewire-0", Path(host_rt) / "pulse" / "native"
-    if pw.is_socket():
-        args += ["--ro-bind", str(pw), f"{rt}/pipewire-0"]
+    pulse = Path(host_rt) / "pulse" / "native"
     if pulse.is_socket():
         args += ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
         env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"

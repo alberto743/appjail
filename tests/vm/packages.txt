@@ -37,3 +37,7 @@ passt                 # pasta: private network namespace for the download, attes
 librsvg2-bin          # rsvg-convert: SVG menu icons are rendered to PNG inside a jail (tests/test_desktop.py)
 desktop-file-utils    # desktop-file-validate and update-desktop-database for the generated menu entries
 libglib2.0-bin        # gio: tests/test_e2e.py opens a file through the generated menu entry with `gio launch` / `gio open`
+pipewire              # tests/test_audio.py: a private PipeWire, to check that the `audio` permission never exposes its socket
+pipewire-bin          # pw-dump: what a client can see, from the host and from the jail (tests/test_audio.py)
+pipewire-pulse        # the Pulse server whose socket the `audio` permission binds (tests/test_audio.py)
+libspa-0.2-modules    # SPA plugins, including videotestsrc: the camera stand-in of tests/test_audio.py (the guest has no video device)

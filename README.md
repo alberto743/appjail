@@ -157,7 +157,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 |---|---|
 | `network` | Outbound internet through a private network namespace made by `pasta`. The app cannot reach services on your machine's localhost or its own addresses. Needs `passt`; without it the app is refused rather than put on the host network. |
 | `network_host` | The host's own network, including localhost services (`--allow network_host`, which implies `network`). For apps that really need them. |
-| `audio`, `gpu` | On by default; `--no-audio` and `--no-gpu` at `add` time, or `--deny` later. Audio includes the microphone. |
+| `audio`, `gpu` | On by default; `--no-audio` and `--no-gpu` at `add` time, or `--deny` later. Audio (the Pulse socket) includes the microphone. |
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files and system trees are refused. |
@@ -332,7 +332,9 @@ owner change.
   only seen by a full download.
 - A sandboxed app can still do whatever its grants allow. An app with `network` can reach other machines on your LAN.
 - Granting a directory, a portal or a D-Bus name widens what a compromised app can do.
-- The audio permission includes the microphone.
+- The audio permission includes the microphone. It is Pulse only (served by `pipewire-pulse` on PipeWire systems):
+  PipeWire's own socket would also expose cameras and screen casts, so apps that speak only native PipeWire get no
+  audio.
 - x86-64 only. The GNOME and KDE portal backends have not been tested (the GTK backend and a real X11-only AppImage
   have, under headless weston; the portal dialogs themselves are not driven). Real internet IPv6 under `pasta` is
   untested; IPv6 forwarding is tested in a fake network.
