@@ -26,6 +26,17 @@ def test_syscall_table_matches_the_kernel_headers():
                                                                   "nfsservctl", "query_module", "uselib"}
 
 
+def test_every_call_flatpak_blocks_is_denied():
+    # flatpak-run.c setup_seccomp: syscall_blocklist and syscall_nondevel_blocklist (umount has no x86_64 number)
+    flatpak = {"syslog", "uselib", "acct", "quotactl", "add_key", "keyctl", "request_key", "move_pages", "mbind",
+               "get_mempolicy", "set_mempolicy", "migrate_pages", "unshare", "setns", "mount", "umount2",
+               "pivot_root", "chroot", "clone", "ioctl", "clone3", "open_tree", "move_mount", "fsopen", "fsconfig",
+               "fsmount", "fspick", "mount_setattr", "perf_event_open", "personality", "ptrace"}
+    denied = set(seccomp.ALWAYS) | set(seccomp.NAMESPACE) | {"clone", "clone3", "ioctl", "personality"}
+    assert flatpak <= denied
+    assert flatpak <= set(seccomp.SYSCALLS)
+
+
 def decode(prog):
     return [struct.unpack("HBBI", prog[i:i + 8]) for i in range(0, len(prog), 8)]
 

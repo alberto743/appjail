@@ -3,8 +3,8 @@
 
 """Seccomp filter for the app jail and the helper jails, as a classic BPF program that bubblewrap loads (`--seccomp FD`).
 
-Default allow, deny list: the calls below fail with EPERM. The list follows what Flatpak blocks for
-applications (kernel modules, kexec, bpf, perf, keyrings, userfaultfd, mount API, NUMA policy,
+Default allow, deny list: the calls below fail with EPERM. The list is what Flatpak blocks for
+applications plus extra hardening (kernel modules, kexec, bpf, perf, keyrings, userfaultfd, mount API, NUMA policy,
 cross-process memory access, handle-based opens, socket families beyond unix/inet/netlink, personality
 switches) plus the terminal-injection ioctls and io_uring (ENOSYS). Unless the
 manifest grants `userns`, creating namespaces and mounting are denied too (`clone` with any
@@ -37,7 +37,7 @@ OFF_NR, OFF_ARCH, OFF_ARGS = 0, 4, 16
 SYSCALLS = {
     "_sysctl": 156, "acct": 163, "add_key": 248, "bpf": 321, "chroot": 161, "clone": 56, "clone3": 435,
     "create_module": 174, "delete_module": 176, "fanotify_init": 300, "finit_module": 313, "fsconfig": 431,
-    "fsmount": 432, "fsopen": 430, "fspick": 433, "get_kernel_syms": 177, "init_module": 175, "ioctl": 16,
+    "fsmount": 432, "fsopen": 430, "fspick": 433, "get_kernel_syms": 177, "get_mempolicy": 239, "init_module": 175, "ioctl": 16,
     "io_uring_enter": 426, "io_uring_register": 427, "io_uring_setup": 425,
     "ioperm": 173, "iopl": 172, "kexec_file_load": 320, "kexec_load": 246, "keyctl": 250,
     "lookup_dcookie": 212, "mbind": 237, "migrate_pages": 256, "mount": 165, "mount_setattr": 442,
@@ -52,7 +52,7 @@ SYSCALLS = {
 
 # Always denied, whatever the manifest says.
 ALWAYS = ("_sysctl", "acct", "add_key", "bpf", "create_module", "delete_module", "fanotify_init", "finit_module",
-          "get_kernel_syms", "init_module", "ioperm", "iopl", "kexec_file_load", "kexec_load", "keyctl",
+          "get_kernel_syms", "get_mempolicy", "init_module", "ioperm", "iopl", "kexec_file_load", "kexec_load", "keyctl",
           "lookup_dcookie", "mbind", "migrate_pages", "move_pages", "name_to_handle_at", "nfsservctl",
           "open_by_handle_at", "perf_event_open", "process_vm_readv", "process_vm_writev", "ptrace",
           "query_module", "quotactl", "reboot", "request_key", "set_mempolicy", "swapoff", "swapon", "syslog",
