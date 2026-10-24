@@ -24,13 +24,33 @@ HERE = Path(__file__).parent / "portal"
 
 @pytest.mark.parametrize("name,expected", [
     ("lagrange", "app.appjail.lagrange"),
-    ("my-app", "app.appjail.my_app"),
-    ("a.b-c", "app.appjail.a.b_c"),
-    ("7zip", "app.appjail.x7zip"),
-    ("a..b", "app.appjail.a.b"),
+    ("my-app", "app.appjail.my_happ"),
+    ("my_app", "app.appjail.my_uapp"),
+    ("a.b-c", "app.appjail.a.b_hc"),
+    ("7zip", "app.appjail._7zip"),
+    ("x7zip", "app.appjail.x7zip"),
+    ("a..b", "app.appjail.a._e.b"),
+    ("a.", "app.appjail.a._e"),
+    ("a.1", "app.appjail.a._1"),
 ])
 def test_app_id(name, expected):
     assert portal.app_id(name) == expected and portal.APP_ID_RE.fullmatch(expected)
+
+
+@pytest.mark.parametrize("a,b", [("foo-bar", "foo_bar"), ("1app", "x1app"), ("a.b", "a..b"), ("a_h", "a-")])
+def test_app_ids_of_different_names_differ(a, b):
+    """Two apps sharing an id would share document grants and permission-store decisions."""
+    assert portal.app_id(a) != portal.app_id(b)
+
+
+def test_app_id_is_one_to_one_on_every_short_name():
+    alphabet = "a1._-uhe"
+    names = [""]
+    for _ in range(4):
+        names = [n + c for n in names for c in alphabet] + names
+    valid = sorted({n for n in names if manifest.NAME_RE.fullmatch(n)})
+    ids = [portal.app_id(n) for n in valid]
+    assert len(set(ids)) == len(valid) and all(portal.APP_ID_RE.fullmatch(i) for i in ids)
 
 
 def test_identity_file_is_minimal():
@@ -219,6 +239,23 @@ def test_revoking_a_grant_made_through_the_real_portal(sandbox, runtime, portal_
     portal.revoke_documents(app, env, granted)
     assert portal.granted_documents(app, env) == {}
     assert not view.exists()  # the document portal stops showing the file at once
+
+
+@integration
+@needs_portal
+def test_forgetting_an_apps_decisions_in_the_real_permission_store(portal_stack, monkeypatch):
+    env, _ = portal_stack
+    monkeypatch.setattr(portal, "bus_call", real_bus_call)
+    app, other = portal.app_id("app"), portal.app_id("other")
+    for table, entry, who, value in (("devices", "camera", app, "yes"), ("devices", "camera", other, "yes"),
+                                     ("screenshot", "screenshot", app, "yes")):
+        portal.store_call(env, "SetPermission", f"string:{table}", "boolean:true", f"string:{entry}", f"string:{who}",
+                          f"array:string:{value}")
+    removed = portal.forget_permissions(app, env)  # also lists every table this system never used: no error
+    assert sorted(removed) == [("devices", "camera"), ("screenshot", "screenshot")]
+    camera = portal.store_call(env, "Lookup", "string:devices", "string:camera")
+    assert f'"{other}"' in camera and f'"{app}"' not in camera
+    assert portal.forget_permissions(app, env) == []
 
 
 @integration

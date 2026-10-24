@@ -12,26 +12,31 @@ APP = "app.appjail.app"
 
 
 class FakeStore:
-    """Answers like `dbus-send --print-reply` for the PermissionStore's documents table."""
+    """Answers like `dbus-send --print-reply` for the PermissionStore (any table) and the document portal's revoke."""
 
-    def __init__(self, docs):
-        self.docs, self.calls = {d: dict(a) for d, a in docs.items()}, []
+    def __init__(self, docs, tables=None):
+        self.tables = {"documents": {d: dict(a) for d, a in docs.items()}}
+        self.tables |= {t: {i: dict(a) for i, a in ids.items()} for t, ids in (tables or {}).items()}
+        self.docs, self.calls = self.tables["documents"], []
 
     def __call__(self, host_env, dest, path, member, *args, timeout=10.0):
         method = member.rsplit(".", 1)[1]
+        values = [a.removeprefix("string:") for a in args]
         self.calls.append((method, *args))
         if method == "List":
-            ids = "".join(f'      string "{d}"\n' for d in self.docs)
+            ids = "".join(f'      string "{d}"\n' for d in self.tables.get(values[0], {}))
             return f"method return time=1 sender=:1.1 -> destination=:1.2 serial=3 reply_serial=2\n   array [\n{ids}   ]\n"
         if method == "Lookup":
-            doc = args[1].removeprefix("string:")
             entries = "".join(f'      dict entry(\n         string "{a}"\n         array [\n'
                               + "".join(f'            string "{p}"\n' for p in perms) + "         ]\n      )\n"
-                              for a, perms in self.docs.get(doc, {}).items())
+                              for a, perms in self.tables[values[0]][values[1]].items())
             return f"method return\n   array [\n{entries}   ]\n   variant       byte 0\n"
+        if method == "DeletePermission":
+            self.tables[values[0]][values[1]].pop(values[2])
+            return "method return\n"
         if method == "RevokePermissions":
             assert args[2] == "array:string:read,write,grant-permissions,delete"
-            self.docs[args[0].removeprefix("string:")].pop(args[1].removeprefix("string:"))
+            self.docs[values[0]].pop(values[1])
             return "method return\n"
         raise AssertionError(method)
 
@@ -90,3 +95,26 @@ def test_remove_revokes_the_grants(h, docs):
     installed(h)
     cli.cmd_remove(cli.build_parser().parse_args(["remove", "app", "--yes"]), Script())
     assert all(APP not in apps for apps in docs.docs.values()) and not store.manifest_path("app").exists()
+
+
+def test_remove_forgets_the_apps_other_portal_decisions(h, monkeypatch):
+    """A later app with the same name must not inherit camera, location or screenshot decisions."""
+    fake = FakeStore({}, {"devices": {"camera": {APP: ["yes"], "app.appjail.other": ["yes"]}, "microphone": {APP: ["no"]}},
+                          "screenshot": {"screenshot": {APP: ["yes"]}},
+                          "desktop-used-apps": {"image/png": {APP: ["org.x.Viewer", "3", "3"]}},
+                          "not-a-portal-table": {"x": {APP: ["yes"]}}})
+    monkeypatch.setattr(portal, "bus_call", fake)
+    installed(h)
+    cli.cmd_remove(cli.build_parser().parse_args(["remove", "app", "--yes"]), Script())
+    assert fake.tables["devices"] == {"camera": {"app.appjail.other": ["yes"]}, "microphone": {}}
+    assert fake.tables["screenshot"] == {"screenshot": {}} and fake.tables["desktop-used-apps"] == {"image/png": {}}
+    assert fake.tables["not-a-portal-table"] == {"x": {APP: ["yes"]}}  # only the portal's own tables are touched
+    assert {c[1] for c in fake.calls if c[0] == "List"} >= {f"string:{t}" for t in portal.STORE_TABLES}
+
+
+def test_app_ids_of_colliding_names_now_see_only_their_own_grants(h, monkeypatch):
+    """foo-bar and foo_bar used to share one id, and so each other's documents."""
+    fake = FakeStore({"aaa": {portal.app_id("foo-bar"): ["read"]}})
+    monkeypatch.setattr(portal, "bus_call", fake)
+    assert portal.granted_documents(portal.app_id("foo_bar"), {}) == {}
+    assert portal.granted_documents(portal.app_id("foo-bar"), {}) == {"aaa": ["read"]}

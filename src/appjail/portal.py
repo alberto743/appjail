@@ -35,11 +35,17 @@ PORTAL_PATH = "/org/freedesktop/portal/desktop"
 
 
 def app_id(name):
-    """Valid reverse-DNS application id for an installed app name (`[a-z0-9][a-z0-9._-]*`)."""
+    """Valid reverse-DNS application id for an installed app name (`[a-z0-9][a-z0-9._-]*`), one per name.
+
+    The id is the portal's whole notion of who the app is (document grants, permission store), so two names must
+    never share one. Each dot-separated part is escaped: `_` becomes `_u`, `-` becomes `_h`, an empty part (from
+    `..` or a trailing dot) becomes `_e`, and a part starting with a digit gets a leading `_`. After an escape `_`
+    only u, h, e or a leading digit can follow, so the mapping can be undone. Plain names keep their own spelling.
+    """
     parts = []
-    for part in re.split(r"\.+", name):
-        part = re.sub(r"[^A-Za-z0-9]", "_", part) or "_"
-        parts.append(("x" + part) if part[0].isdigit() else part)
+    for part in name.split("."):
+        part = part.replace("_", "_u").replace("-", "_h")
+        parts.append("_e" if not part else "_" + part if part[0].isdigit() else part)
     result = ID_PREFIX + ".".join(parts)
     if not APP_ID_RE.fullmatch(result):
         raise RunError(f"cannot derive a portal application id from {name!r}")
@@ -109,6 +115,12 @@ STORE_NAME = "org.freedesktop.impl.portal.PermissionStore"
 STORE_PATH = "/org/freedesktop/impl/portal/PermissionStore"
 DOC_PERMISSIONS = ("read", "write", "grant-permissions", "delete")
 DOC_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+# Tables xdg-desktop-portal (1.20) keeps per-app decisions in, besides the document grants: device access (camera,
+# microphone, speakers), location, screenshots, background, screen-cast restore tokens, chosen URI handlers, ... The
+# store cannot list its tables, so this is what `remove` clears; a table this system does not use is simply empty.
+STORE_TABLES = ("background", "desktop-used-apps", "devices", "gamemode", "global-shortcuts", "inhibit", "input-capture",
+                "location", "notifications", "realtime", "remote-desktop", "screencast", "screenshot", "usb", "wallpaper")
+STORE_ID_RE = re.compile(r'[^"\\\x00-\x1f\x7f]{1,255}')
 
 
 def bus_call(host_env, dest, path, member, *args, timeout=10.0):
@@ -135,19 +147,35 @@ def store_call(host_env, method, *args):
     return bus_call(host_env, STORE_NAME, STORE_PATH, f"{STORE_NAME}.{method}", *args)
 
 
+def _entries(app, host_env, table, id_re):
+    """{id: values} of every entry of a permission-store table that names this app id (the values may be empty)."""
+    ids = re.findall(r'^\s*string "([^"]*)"\s*$', store_call(host_env, "List", f"string:{table}"), re.MULTILINE)
+    found = {}
+    for entry in ids:
+        if not id_re.fullmatch(entry):
+            continue
+        reply = store_call(host_env, "Lookup", f"string:{table}", f"string:{entry}")
+        m = re.search(r'dict entry\(\s*string "' + re.escape(app) + r'"\s*array \[(.*?)\]', reply, re.DOTALL)
+        if m:
+            found[entry] = re.findall(r'string "([^"]*)"', m.group(1))
+    return dict(sorted(found.items()))
+
+
 def granted_documents(app, host_env):
     """Document ids the document portal has granted to this app id, with the permissions, sorted."""
-    ids = re.findall(r'^\s*string "([^"]*)"\s*$', store_call(host_env, "List", "string:documents"), re.MULTILINE)
-    found = {}
-    for doc in ids:
-        if not DOC_ID_RE.fullmatch(doc):
-            continue
-        reply = store_call(host_env, "Lookup", "string:documents", f"string:{doc}")
-        m = re.search(r'dict entry\(\s*string "' + re.escape(app) + r'"\s*array \[(.*?)\]', reply, re.DOTALL)
-        perms = re.findall(r'string "([^"]*)"', m.group(1)) if m else []
-        if perms:
-            found[doc] = perms
-    return dict(sorted(found.items()))
+    return {doc: perms for doc, perms in _entries(app, host_env, "documents", DOC_ID_RE).items() if perms}
+
+
+def forget_permissions(app, host_env):
+    """Delete this app id's entries from every portal table in STORE_TABLES, so a later app with the same name starts
+    with no remembered decision (camera, location, screenshots, ...). Other apps' entries stay. Returns the (table,
+    id) pairs removed. Document grants are not here: only the document portal can revoke those (revoke_documents)."""
+    removed = []
+    for table in STORE_TABLES:
+        for entry in _entries(app, host_env, table, STORE_ID_RE):
+            store_call(host_env, "DeletePermission", f"string:{table}", f"string:{entry}", f"string:{app}")
+            removed.append((table, entry))
+    return removed
 
 
 def revoke_documents(app, host_env, ids):

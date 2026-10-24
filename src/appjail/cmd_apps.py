@@ -92,10 +92,13 @@ def cmd_list(console):
 
 
 def revoke_portal_grants(name, mpath, console):
-    """Drop the app's document-portal grants; only worth a note when the app had portals and the store is unreachable."""
+    """Drop the app's document-portal grants and its other remembered portal decisions (camera, location, ...), so a
+    later app with the same name starts with none; only worth a note when the app had portals and the store is
+    unreachable."""
     app = portal.app_id(name)
     try:
         portal.revoke_documents(app, os.environ, portal.granted_documents(app, os.environ))
+        portal.forget_permissions(app, os.environ)
     except jail.RunError as e:
         try:
             had_portals = manifest.load(mpath).permissions.portals
