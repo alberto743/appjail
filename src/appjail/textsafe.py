@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Neutralise untrusted text (network, AM index) before it reaches a terminal."""
+"""Neutralise untrusted text (network, catalogs) before it reaches a terminal."""
 
 import re
 

@@ -3,7 +3,7 @@
 Read `DESIGN.md` first: it specifies the behaviour. `DECISIONS.md` records rejected alternatives and deferred features, with the reasons. Do not deviate from the principles in `DESIGN.md` without asking.
 
 ## Project
-A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinned and verified downloads, bwrap jails, quarantined updates, a derived catalog index. The version comes from the git tag (`[tool.hatch.version]`); pushing a `vX.Y.Z` tag runs `release.yml` and `pypi.yml` after the CI gate. Commits stay local until the user asks to push.
+A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinned and verified downloads, bwrap jails, quarantined updates, a derived catalog index (the built-in catalog is built by the sister project `../appjail-db`; `catalog.py` here defines the format and appjail-db keeps a copy). The version comes from the git tag (`[tool.hatch.version]`); pushing a `vX.Y.Z` tag runs `release.yml` and `pypi.yml` after the CI gate. Commits stay local until the user asks to push.
 
 ## Open items
 Planned code work is marked as such; everything else needs a decision or an app/session the user approves.
@@ -22,9 +22,9 @@ Planned code work is marked as such; everything else needs a decision or an app/
 - `cli.py` is only the parser and the command table (`COMMANDS`), and re-exports what tests import. Add new commands as `cmd_<name>.py`.
 - Commands: `cmd_add.py` (also the install steps `update` shares), `cmd_addimage.py` (`add --file/--url`), `cmd_update.py`, `cmd_updateimage.py` (`update` of url/file apps), `cmd_apps.py` (tools, history, list, remove, perms), `cmd_portals.py`, `cmd_index.py` (search, index commands), `cmd_desktop.py`, `cmd_open.py`.
 - Shared: `imagesrc.py` (url/file helpers), `grants.py` (what may be granted: D-Bus names, portal interfaces, directories), `valid.py` (value checks, `ManifestError`), `manifest.py` (schema, strict parser, writer), `store.py` (paths, `atomic_write` for every temp-and-rename write), `console.py` (Abort, Console), `permargs.py` (permission options), `services.py` (what `update` does to the outside world, replaceable in tests), `textsafe.py` (neutralises untrusted text).
-- Install and update: `github.py` (release resolver), `attest.py` (attestation check with the pinned `gh`), `appimage.py` (inspection, jailed extraction, tree validation), `fetcher.py` (downloader run inside the network-only jail), `tools.py` (pinned helper binaries), `updater.py` (policy, quarantine clock, pending state), `history.py` (manifest history in a local git repo).
+- Install and update: `github.py` (release resolver, head commit), `snappy.py` (bounded decompressor of attestation bundles), `attest.py` (attestation check with the pinned `gh`), `appimage.py` (inspection, jailed extraction, tree validation), `fetcher.py` (downloader run inside the network-only jail), `tools.py` (pinned helper binaries), `updater.py` (policy, quarantine clock, pending state), `history.py` (manifest history in a local git repo).
 - Running: `runner.py` (verify, prepare, launch), `runtimejail.py` (bwrap arguments of the app jail), `jail.py` (download, extraction, git and pasta jails), `wayland.py`, `seccomp.py`, `landlock.py` (abstract-socket scope), `dbusproxy.py`, `portal.py`, `desktop.py`.
-- Index: `catalog.py` (format), `amsource.py` (AM converter), `indexstore.py` (sources, snapshots), `index.py` (search), `snappy.py` (bounded decompressor).
+- Index: `catalog.py` (format), `indexstore.py` (sources, snapshots; the built-in source is the sister project appjail-db), `index.py` (search).
 - `gui/` is the optional tkinter front end (`appjail-gui`): `argv.py` (form state to CLI argv, no tkinter), `console.py` (`GuiConsole`, the prompt bridge, no tkinter), `worker.py` (threads and detached children), `apps.py` (installed apps as data), `dialogs.py`, `app.py` (window). It runs the CLI; it never reimplements a command or adds `--yes`. Tests: `test_gui_*.py` (the smoke test needs `python3-tk` and `xvfb`, otherwise skips).
 - `__main__.py` is the entry point.
 
@@ -39,7 +39,7 @@ Planned code work is marked as such; everything else needs a decision or an app/
   3. `provision.sh` brings the running guest to the expected state (packages, regular kernel for `/dev/dri`, `tester` in `video` and `render`, reboot if the kernel changed); idempotent, rerun after editing `packages.txt`.
   4. `sync.sh` copies the project to `~/appjail` in the guest; `ssh.sh CMD` runs commands; `test.sh` syncs and runs the suite; `down.sh` stops the guest.
   - Resume: `start.sh`, wait for ssh, `provision.sh` if `packages.txt` changed, then `test.sh`.
-- Approved test AppImages (guest only; anything else needs a new approval): `AppImage/appimagetool`, `AppImage/AppImageKit`, `skyjake/lagrange` (the GUI test app), `pkgforge-dev/htop-AppImage` and `pkgforge-dev/Galculator-AppImage` (DwarFS), `ImageMagick/ImageMagick` (X11-only), `mhx/dwarfs` universal-small and `cli/cli` gh tarball (pinned tools). `hluk/CopyQ` cannot run in the Debian 13 guest (glibc 2.43 needed). `cli/cli` is also the repository for API metadata checks.
+- Approved test AppImages (guest only; anything else needs a new approval): `AppImage/appimagetool`, `AppImage/AppImageKit`, `skyjake/lagrange` (the GUI test app), `pkgforge-dev/htop-AppImage` and `pkgforge-dev/Galculator-AppImage` (DwarFS), `ImageMagick/ImageMagick` (X11-only), `mhx/dwarfs` universal-small and `cli/cli` gh tarball (pinned tools). `hluk/CopyQ` cannot run in the Debian 13 guest (glibc 2.43 needed). `cli/cli` is also the repository for API metadata checks. `alberto743/appjail-db` (`catalog.json`, ~1.5 MB text) is approved for the index e2e test.
 - GitHub limit: 60 unauthenticated requests per hour, shared by every run from the guest (a full suite with the opt-in suites uses about 45, one `update` about 4). Check `https://api.github.com/rate_limit` (free) before an e2e run and run one group at a time. Each download needs approval.
 
 ### Running tests (guest only)
@@ -56,7 +56,7 @@ Planned code work is marked as such; everything else needs a decision or an app/
   | DwarFS helper | `APPJAIL_E2E=1 APPJAIL_INTEGRATION=1` | `tests/test_tools.py` |
   | Sigstore verification (pinned `gh`) | `APPJAIL_E2E=1 APPJAIL_INTEGRATION=1` | `tests/test_attest.py` |
   | Packaging (pip install in a venv, sdist) | `APPJAIL_E2E=1` | `tests/test_packaging.py` |
-  | AM index update/rollback (text only) | `APPJAIL_E2E=1` | `tests/test_index_e2e.py` |
+  | appjail-db catalog update/rollback (text only; 1 API request, 1 raw download) | `APPJAIL_E2E=1` | `tests/test_index_e2e.py` |
 - Try the CLI: `tests/vm/ssh.sh 'cd ~/appjail && PYTHONPATH=src python3 -m appjail ...'`. It writes to the guest's `~/.local/share/appjail` and `~/.config/appjail`, never the host's. There is no `bin/` launcher; the console script comes from `[project.scripts]`.
 - Harness note: a test that launches a jail behind pasta must kill the whole process group; SIGTERM to pasta alone leaves the jail running. Background jobs started in a session do not survive it.
 
@@ -69,7 +69,7 @@ Planned code work is marked as such; everything else needs a decision or an app/
 - CI runs on GitHub's runners, not on the host. After pushing, read results with `gh run list/view/watch` (read-only). A red CI on `main` is a bug to fix. A failure that only shows on CI is often a test-fixture assumption (the runner's uid is 1001, the guest's 1000): find the cause with a captured log before adding a workaround.
 
 ## Hard rules
-- Never source, execute or `eval` any AM script or any text from the network. Parse as text only and strip terminal escape sequences. The tool has no self-update and never fetches code to run.
+- Never source, execute or `eval` any text from the network (catalogs included). Parse as text only and strip terminal escape sequences. appjail never reads the AM repository; the sister project `../appjail-db` (github.com/alberto743/appjail-db) converts it to the catalog the built-in `appjail-db` source downloads. The tool has no self-update and never fetches code to run.
 - No sudo for Claude (sudo lines in the VM recipe are for the user on a new machine). Install nothing outside this directory and the tool's own data directories (`~/.local/share/appjail`, `~/.config/appjail`).
 - Ask before downloading any AppImage or other binary. Network tests use small, well-known repositories the user names.
 - Extraction: prefer `unsquashfs` on the SquashFS offset; fall back to `--appimage-extract` only inside the no-network jail. Never run the AppImage runtime outside a jail.

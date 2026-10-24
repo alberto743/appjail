@@ -6,7 +6,7 @@ Why appjail is built the way it is: alternatives that were evaluated and rejecte
 | Feature | Why | Revisit when |
 |---|---|---|
 | GPG tier (tier 2) | A signature proves a key, not its owner, so `add` would still be trust on first use for the key fingerprint. It needs a per-app fingerprint pin, a jailed `gpgv`, update rules (a key change blocks, a lost signature is a downgrade) and a source for the signature file. The attestation tier plus the quarantine hash already cover attested and unattested apps. | A wanted app signs with GPG and has no GitHub attestation. |
-| Resolvers for other forges (GitLab, Codeberg/Forgejo, SourceForge, vendor sites) | Only GitHub is supported. The AM index lists about 224 apps whose `SITE=` points elsewhere, which `search` shows and `add` cannot install. Other forges expose release assets with sizes but not GitHub's `digest` or attestations, so apps from them would be tier 4 at best. The catalog format already carries `gitlab:`, `forgejo:` and `codeberg:` sources. | A wanted app lives only on another forge. A resolver sits behind the interface of `github.py`. |
+| Resolvers for other forges (GitLab, Codeberg/Forgejo, SourceForge, vendor sites) | Only GitHub is supported. The appjail-db catalog (built from AM) lists about 224 apps whose `SITE=` points elsewhere, which `search` shows and `add` cannot install. Other forges expose release assets with sizes but not GitHub's `digest` or attestations, so apps from them would be tier 4 at best. The catalog format already carries `gitlab:`, `forgejo:` and `codeberg:` sources. | A wanted app lives only on another forge. A resolver sits behind the interface of `github.py`. |
 | Other architectures | x86-64 only; see "arm64" below. | The arm64 decision is taken. |
 | Allowlisting proxy for the LAN | With `network`, other hosts on the LAN stay reachable (pasta has no filtering). Attacks from an app against LAN hosts are outside the threat model; the goal is to keep apps off the user's own host services. | Host filtering for the app jail's `network` permission is wanted. |
 | `mic` permission | The Pulse server cannot restrict a client by device without a portal-style filter; a separate permission would be a promise appjail cannot keep. | A portal-based audio path exists. |
@@ -43,10 +43,18 @@ FUSE mounts do not work well in user namespaces. Images are extracted and `AppRu
 - The unauthenticated rate limit is 60 requests per hour per address; `GET /rate_limit` is free. One `add` costs about 4 requests, one `update` about 4.
 
 ### AM index (ivan-hc/AM)
+Analysis done for appjail-db, which now converts AM; appjail itself no longer reads AM. Not to be redone.
 - `AppMan/appman` is a stub that downloads `APP-MANAGER` from `main`; AM self-updates and runs install and updater scripts from `main` outside any sandbox. Only 6 of 8,735 install scripts mention a checksum or signature. Its own sandbox wraps `sas` or `aisap`.
 - `programs/x86_64-appimages` has lines `◆ name : description` (U+25C6); `programs/x86_64/<app>` holds the scripts. 8,247 scripts have `SITE="owner/repo"`, about 224 point elsewhere, a few use `SITE2=` for a repackager. `SITE=` may appear more than once in a script: the first assignment counts, matched by regex, never sourced.
 - Commit signatures (last 200 commits at the analysed state): 139 carry a PGP signature (GitHub web-flow key), 2 SSH, 59 unsigned; the maintainer's own commits are unsigned. They cannot prove maintainer authenticity. Not to be redone.
 - Reference clone for reading: a blobless no-checkout clone, read with `git show <commit>:<path>` as text. Existing sandbox flags are in `modules/install.am`.
+
+### Catalog built by appjail-db, not on the user's machine
+- **Decided:** the built-in `appjail-db` source downloads `catalog.json` from `alberto743/appjail-db` at a commit resolved through the GitHub API. The conversion (sparse git fetch of AM, parsing 8,700 install scripts) lives in appjail-db and runs weekly in CI.
+- **Why:** the client no longer needs a network git jail, a 39 MB fetch or a parser of untrusted shell text; one build point carries the size and shrink checks (fewer than 5,000 apps or a drop of more than 10% is refused) and records owner changes in its history; the update is a 1.5 MB text download. The commit pin makes every catalog traceable and an older one re-fetchable (`--commit`).
+- **Rejected:** converting AM on the client (the previous design), and an unpinned raw URL (no way to say which state was reviewed, and a failed API lookup would silently skip the pin).
+- **Cost:** appjail-db becomes a dependency of `search` (not of installs); the catalog is unsigned, so its integrity rests on HTTPS and on who can write to appjail-db.
+- **Revisit when:** appjail-db is unmaintained (any other catalog works with `index add`), or catalog signing becomes worthwhile (a signature by a key pinned in appjail).
 
 ## arm64 (aarch64): evaluated, not implemented, decision pending
 Feasible and moderate in code, expensive in verification. Scope if done: aarch64 only (armhf, riscv64 and i386 stay out; the ELF parsers accept 64-bit little-endian only).
@@ -54,7 +62,7 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
   - `seccomp.py`: `AUDIT_ARCH_X86_64`, the `SYSCALLS` numbers, the x32 guard and the `platform.machine()` refusal. aarch64 uses the generic syscall table (different numbers; no `_sysctl`, `uselib`, `create_module`, `get_kernel_syms`, `query_module`, `nfsservctl`, `ioperm`, `iopl`), `AUDIT_ARCH_AARCH64 = 0xC00000B7`, no x32. The table becomes per architecture, skipping names the architecture lacks, still refusing unknown architectures. `clone` flags stay argument 0. A wrong number either leaves a hole or denies a needed call, so every name must be cross-checked against the kernel header table and probed natively.
   - `github.py` (`X86_64_TOKENS`, `OTHER_ARCH_RE`, `appimage_candidates`) and the error text in `cmd_add.py`: parametrize by host architecture; add an ELF `e_machine` check (0x3E, 0xB7) in `appimage.py`/`fetcher.py` as the backstop (also covers `add --file/--url`).
   - `tools.py`: `dwarfs` and `gh` are single x86-64 pins; `Tool` would carry per-architecture variants. Both projects publish aarch64 builds; the pins need real, user-approved downloads.
-  - `amsource.py`: AM has parallel aarch64 lists (to confirm); select by host architecture and keep a snapshot of one architecture from serving another.
+  - Catalog: AM has parallel aarch64 lists (to confirm), so appjail-db would publish one catalog per architecture and `indexstore.py` would select by host architecture, keeping a snapshot of one architecture from serving another.
   - `seccomp.py` also filters `socket`, `socketpair` and `personality`, which have other numbers on aarch64; the `io_uring` calls share theirs.
   - `landlock.py`: the Landlock system calls have the same numbers on aarch64; only its `platform.machine()` check is x86-64.
   - `runtimejail.py`/`jail.py` look architecture-neutral (to verify: the `/lib64` bind).

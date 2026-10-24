@@ -48,6 +48,21 @@ def client(routes, token=""):
     return Client(token=token, fetch=fake), fake
 
 
+# -- head commit -------------------------------------------------------------------------
+
+
+def test_head_commit_returns_the_full_sha():
+    c, fake = client({"/repos/o/r/commits/HEAD": (200, {}, {"sha": "c" * 40})})
+    assert c.head_commit("o/r") == "c" * 40 and fake.calls[0][0].endswith("/repos/o/r/commits/HEAD")
+
+
+@pytest.mark.parametrize("body", [{}, {"sha": "C" * 40}, {"sha": "c" * 39}, {"sha": 7}])
+def test_head_commit_refuses_an_unusable_answer(body):
+    c, _ = client({"/repos/o/r/commits/HEAD": (200, {}, body)})
+    with pytest.raises(GitHubError, match="no usable commit"):
+        c.head_commit("o/r")
+
+
 # -- repo info ---------------------------------------------------------------------------
 
 

@@ -28,6 +28,7 @@ MAX_REDIRECTS = 3
 TIMEOUT = 20
 
 TAG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
+COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 X86_64_TOKENS = ("x86_64", "x86-64", "amd64", "x64")
 OTHER_ARCH_RE = re.compile(r"aarch64|arm64|armhf|armv7|armv6|(?<![a-z0-9])arm(?![a-z0-9])|i[3-6]86|ppc64|riscv|s390x", re.IGNORECASE)
 
@@ -161,6 +162,14 @@ class Client:
             html_url=repo["html_url"],
             renamed=repo["full_name"].lower() != source.lower(),
         )
+
+    def head_commit(self, source, ref="HEAD"):
+        """The full commit SHA that `ref` (default: the default branch) points to in `source`."""
+        _check_source(source)
+        sha = self._get(f"/repos/{source}/commits/{ref}").get("sha")
+        if not isinstance(sha, str) or not COMMIT_RE.fullmatch(sha):
+            raise GitHubError("GitHub returned no usable commit")
+        return sha
 
     def latest_release(self, source, prereleases=False):
         _check_source(source)

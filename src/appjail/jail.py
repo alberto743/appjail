@@ -332,26 +332,17 @@ def check_url(url, stage_dir, etag=None, last_modified=None):
     raise JailError("the fetcher gave no usable answer")
 
 
-# -- git jail (index updates) ---------------------------------------------------------
+# -- git jail (manifest history) ------------------------------------------------------
 
 GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_TERMINAL_PROMPT": "0",
            "GIT_ALLOW_PROTOCOL": "https", "GIT_LFS_SKIP_SMUDGE": "1"}
 
 
-def _git_jail(workdir, command, network):
+def local_git_args(workdir, command):
+    """No network: git on a local repository. Only workdir (at /work) is visible and writable; git's own config
+    is neutralised."""
     env = []
     for k, v in GIT_ENV.items():
         env += ["--setenv", k, v]
-    net = ["--share-net", *etc_args(private_net=True)] if network else []
-    return (common_args() + net + env
+    return (common_args() + env
             + ["--bind", str(workdir), "/work", "--remount-ro", "/", "--chdir", "/work", "--"] + command)
-
-
-def local_git_args(workdir, command):
-    """No network: git on a local repository. Only workdir (at /work) is visible and writable."""
-    return _git_jail(workdir, command, network=False)
-
-
-def git_args(workdir, command):
-    """Network jail for git: only workdir (at /work) is writable; git's own config is neutralised."""
-    return _git_jail(workdir, command, network=True)

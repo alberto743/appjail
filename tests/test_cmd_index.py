@@ -7,10 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from appjail import amsource, catalog, cli, index, indexstore
+from appjail import catalog, cli, github, index, indexstore, jail
 from appjail.catalog import App, Catalog, IndexProblem
 
 from .helpers import Script
+
+DB = indexstore.BUILTIN
 
 C1, C2 = "1" * 40, "2" * 40
 NOW = datetime(2026, 10, 22, tzinfo=UTC)
@@ -26,17 +28,22 @@ def cat(*apps, revision="r1", origin=""):
 BASE = cat(("cura", "slicer", "github:Ultimaker/Cura"), ("gh", "GitHub CLI", "github:cli/cli"), ("old", "going away", "github:a/old"), revision=C1)
 
 
-def am_fetch(catalog_, commit=C1, signed=False):
-    """A fake git fetch: lays out a tree that convert() turns back into `catalog_`."""
-    def fetch(workdir, requested="HEAD"):
-        root = Path(workdir) / "repo"
-        (root / "programs/x86_64").mkdir(parents=True)
-        (root / "programs/x86_64-appimages").write_text("".join(f"◆ {a.name} : {a.description}\n" for a in catalog_.apps))
-        for a in catalog_.apps:
-            if a.source:
-                (root / "programs/x86_64" / a.name).write_text(f'SITE="{a.source.partition(":")[2]}"\n')
-        return amsource.Fetched(commit, signed, root)
-    return fetch
+class FakeClient:
+    """Stands in for github.Client: head_commit answers with the commit the 'repository' is at."""
+
+    def __init__(self, commit=C1, error=None):
+        self.commit, self.error, self.asked = commit, error, []
+
+    def head_commit(self, source, ref="HEAD"):
+        self.asked.append((source, ref))
+        if self.error:
+            raise self.error
+        return self.commit
+
+
+def db(catalog_, commit=C1):
+    """The built-in source as the fakes serve it: (client, download) for a repository at `commit` holding `catalog_`."""
+    return FakeClient(commit), downloader(catalog.dumps(catalog_))
 
 
 def downloader(text, http_hop=False):
@@ -47,89 +54,123 @@ def downloader(text, http_hop=False):
     return download
 
 
-def run_index(*argv, answers=("y",), fetch=None, download=None):
+def run_index(*argv, answers=("y",), client=None, download=None):
     console = Script(answers)
     args = cli.build_parser().parse_args(["index", *argv])
-    handlers = {"update": lambda: cli.cmd_index_update(args, console, fetch=fetch, download_url=download, now=NOW),
+    handlers = {"update": lambda: cli.cmd_index_update(args, console, client=client, download_url=download, now=NOW),
                 "add": lambda: cli.cmd_index_add(args, console, download_url=download, now=NOW)}
     result = handlers[argv[0]]()
     return console, result
 
 
-def leftovers():
-    return sorted(p.name for p in indexstore.base().iterdir() if p.name.startswith("work-"))
+def update_db(catalog_, commit=C1, *argv, answers=("y",)):
+    client, download = db(catalog_, commit)
+    return run_index("update", *argv, answers=answers, client=client, download=download)
 
 
-# -- the AM source ---------------------------------------------------------------------------
+# -- the built-in appjail-db source ---------------------------------------------------------------
 
 
-def test_first_update_asks_installs_and_cleans_up():
-    console, status = run_index("update", fetch=am_fetch(BASE, signed=True))
-    assert status == 0 and leftovers() == []
-    assert indexstore.current("am")["revision"] == C1
-    assert "no previous catalog to compare" in console.text and "signature header present (not verified)" in console.text
+def test_the_built_in_source_is_always_there_and_cannot_be_removed():
+    assert indexstore.sources()[DB] == indexstore.Source(DB, "repo", "alberto743/appjail-db")
+    console = Script(["y"])
+    assert cli.main(["index", "remove", DB], console=console) == 1 and "cannot be removed" in console.text
+
+
+def test_first_update_resolves_the_commit_downloads_that_commit_and_records_it():
+    urls = []
+    client, download = db(BASE)
+
+    def spy(url, stage, filename, max_size):
+        urls.append(url)
+        return download(url, stage, filename, max_size)
+
+    console, status = run_index("update", client=client, download=spy)
+    assert status == 0 and client.asked == [("alberto743/appjail-db", "HEAD")]
+    assert urls == [f"https://raw.githubusercontent.com/alberto743/appjail-db/{C1}/catalog.json"]
+    assert indexstore.current(DB)["commit"] == C1 and indexstore.current(DB)["revision"] == C1
+    assert f"commit {C1[:12]}" in console.text and "no previous catalog to compare" in console.text
     assert "Accept this catalog" in console.text
-    assert index.search(["cura"])[1:] == (1, ["am"])
+    assert index.search(["cura"])[1:] == (1, [DB])
+
+
+def test_commit_option_fetches_exactly_that_commit_without_asking_the_api():
+    urls = []
+    client, download = db(BASE, C2)
+    run_index("update", DB, "--commit", C2, client=client, download=lambda u, *a: (urls.append(u), download(u, *a))[1])
+    assert client.asked == [] and urls == [f"https://raw.githubusercontent.com/alberto743/appjail-db/{C2}/catalog.json"]
+    assert indexstore.current(DB)["commit"] == C2
+
+
+@pytest.mark.parametrize("argv", [["--commit", "main"], ["--commit", "A" * 40], ["--commit", "1" * 39]])
+def test_commit_option_must_be_a_full_lowercase_sha(argv):
+    console = Script()
+    assert cli.main(["index", "update", DB, *argv], console=console) == 1
+    assert "40 lowercase hexadecimal digits" in console.text and indexstore.current(DB) is None
+
+
+def test_commit_option_applies_to_the_built_in_source_only(tmp_path):
+    path = tmp_path / "c.json"
+    path.write_text(MINE)
+    run_index("add", "mine", "--file", str(path))
+    for argv in (["update", "mine"], ["update"]):
+        console = Script()
+        assert cli.main(["index", *argv, "--commit", C1], console=console) == 1
+        assert "built-in" in console.text and indexstore.current(DB) is None
+    assert cli.main(["index", "add", "mine2", "--file", "/nonexistent"], console=Script()) == 1
+
+
+def test_api_failure_leaves_the_index_unchanged_and_does_not_fall_back_to_a_floating_url():
+    run_index("update", client=FakeClient(C1), download=downloader(catalog.dumps(BASE)))
+    called = []
+    console, status = run_index("update", client=FakeClient(error=github.RateLimited("12:00:00Z")),
+                                download=lambda *a: called.append(a))
+    assert status == 1 and "rate limit" in console.text and called == []
+    assert indexstore.current(DB)["commit"] == C1
 
 
 def test_declining_changes_nothing():
-    run_index("update", fetch=am_fetch(BASE))
-    console, status = run_index("update", answers=("n",), fetch=am_fetch(cat(("x", "y", "github:p/q"), revision=C2), C2))
+    update_db(BASE)
+    console, status = update_db(cat(("x", "y", "github:p/q"), revision=C2), C2, answers=("n",))
     assert status == 1 and "cancelled" in console.text
-    assert indexstore.current("am")["revision"] == C1 and indexstore.previous("am") is None and leftovers() == []
+    assert indexstore.current(DB)["commit"] == C1 and indexstore.previous(DB) is None
 
 
 def test_same_catalog_is_reported_without_prompting():
-    run_index("update", fetch=am_fetch(BASE))
-    console, status = run_index("update", answers=(), fetch=am_fetch(BASE))
+    update_db(BASE)
+    console, status = update_db(BASE, C2, answers=())
     assert status == 0 and "already up to date" in console.text and "Accept" not in console.text
 
 
 def test_owner_change_is_a_loud_warning_and_the_old_catalog_is_kept_for_rollback():
-    run_index("update", fetch=am_fetch(BASE))
+    update_db(BASE)
     changed = cat(("cura", "slicer", "github:Ultimaker/Cura"), ("gh", "GitHub CLI", "github:evil/cli"), ("old", "going away", "github:a/old"), revision=C2)
-    console, _ = run_index("update", fetch=am_fetch(changed, C2))
+    console, _ = update_db(changed, C2)
     assert "WARNING: OWNER CHANGE for gh: github:cli/cli -> github:evil/cli" in console.text and "1 owner changes" in console.text
-    assert (indexstore.current("am")["revision"], indexstore.previous("am")["revision"]) == (C2, C1)
+    assert f"Changes since {C1[:12]}" in console.text
+    assert (indexstore.current(DB)["commit"], indexstore.previous(DB)["commit"]) == (C2, C1)
 
 
 def test_diff_lists_added_removed_and_source_changes():
-    run_index("update", fetch=am_fetch(BASE))
+    update_db(BASE)
     new = cat(("cura", "slicer", "github:Ultimaker/Cura2"), ("gh", "GitHub CLI", "github:cli/cli"), ("fresh", "new", "github:n/n"), revision=C2)
-    console, _ = run_index("update", fetch=am_fetch(new, C2))
+    console, _ = update_db(new, C2)
     assert "1 apps added, 1 removed, 0 owner changes, 1 other source changes" in console.text
     assert "added: fresh" in console.text and "removed: old" in console.text
     assert "source changed: cura: github:Ultimaker/Cura -> github:Ultimaker/Cura2" in console.text
 
 
-def test_fetch_failure_leaves_no_work_directory():
-    def failing(workdir, requested="HEAD"):
-        (Path(workdir) / "junk").write_text("x")
-        raise IndexProblem("git failed: network")
+def test_a_download_failure_leaves_the_index_unchanged():
+    def failing(url, stage, filename, max_size):
+        raise jail.JailError("network down")
 
-    console, status = run_index("update", fetch=failing)
-    assert status == 1 and "git failed: network" in console.text
-    assert leftovers() == [] and indexstore.current("am") is None
+    console, status = run_index("update", client=FakeClient(), download=failing)
+    assert status == 1 and "network down" in console.text and indexstore.current(DB) is None
 
 
-def test_refused_tree_leaves_nothing_behind():
-    def hostile(workdir, requested="HEAD"):
-        am_fetch(BASE)(workdir)
-        import os
-        os.rename(Path(workdir) / "repo/programs/x86_64", Path(workdir) / "elsewhere")
-        os.symlink(Path(workdir) / "elsewhere", Path(workdir) / "repo/programs/x86_64")
-        return amsource.Fetched(C1, False, Path(workdir) / "repo")
-
-    console, status = run_index("update", fetch=hostile)
-    assert status == 1 and "not a directory" in console.text
-    assert leftovers() == [] and indexstore.current("am") is None
-
-
-def test_commit_option_applies_to_am_only():
-    console = Script()
-    assert cli.main(["index", "update", "--commit", "main"], console=console) == 1
-    assert "commit must be" in console.text
-    assert cli.main(["index", "add", "mine", "--file", "/nonexistent"], console=Script()) == 1
+def test_an_invalid_catalog_is_refused():
+    console, status = run_index("update", client=FakeClient(), download=downloader("not json"))
+    assert status == 1 and "not valid JSON" in console.text and indexstore.current(DB) is None
 
 
 # -- added sources ---------------------------------------------------------------------------------
@@ -142,7 +183,7 @@ def test_a_move_to_another_forge_or_host_is_an_owner_change():
 
 
 def test_search_hints_depend_on_what_add_can_install():
-    indexstore.install("am", catalog.dumps(cat(
+    indexstore.install(DB, catalog.dumps(cat(
         ("hub", "d", "github:o/hub"), ("web", "d", "url:https://example.org/web.AppImage"),
         ("lab", "d", "gitlab:gitlab.example.org/g/lab"), ("berg", "d", "codeberg:u/berg"))), NOW)
     out = Script()
@@ -157,14 +198,14 @@ MINE = catalog.dumps(cat(("tool", "A tool", "github:me/tool"), ("other", "Anothe
 
 
 def test_add_a_file_source_registers_it_and_search_covers_both(tmp_path):
-    run_index("update", fetch=am_fetch(BASE))
+    update_db(BASE)
     path = tmp_path / "mine.json"
     path.write_text(MINE)
     console, _ = run_index("add", "mine", "--file", str(path))
     assert "2 apps" in console.text and "Add 'mine' as an index source?" in console.text
-    assert indexstore.get("mine").location == str(path) and list(indexstore.sources()) == ["am", "mine"]
+    assert indexstore.get("mine").location == str(path) and list(indexstore.sources()) == [DB, "mine"]
     hits, _total, searched = index.search(["tool"])
-    assert [(h.name, h.catalog, h.source) for h in hits] == [("tool", "mine", "github:me/tool")] and searched == ["am", "mine"]
+    assert [(h.name, h.catalog, h.source) for h in hits] == [("tool", "mine", "github:me/tool")] and searched == [DB, "mine"]
     out = Script()
     assert cli.main(["search", "tool"], console=out) == 0
     assert "tool: A tool   [mine]" in out.text and "appjail add me/tool" in out.text
@@ -188,7 +229,7 @@ def test_add_refuses_bad_urls(url):
     assert "--url" in console.text and "web" not in indexstore.sources()
 
 
-@pytest.mark.parametrize("bad", ["am", "Bad Name", "", "x" * 40])
+@pytest.mark.parametrize("bad", [DB, "Bad Name", "", "x" * 40])
 def test_add_refuses_bad_names(bad, tmp_path):
     path = tmp_path / "c.json"
     path.write_text(MINE)
@@ -201,7 +242,7 @@ def test_add_refuses_an_invalid_catalog_and_registers_nothing(tmp_path):
     path.write_text('{"format": "appjail-catalog", "version": 1, "apps": [{"name": "../x"}]}')
     console = Script(["y"])
     assert cli.main(["index", "add", "mine", "--file", str(path)], console=console) == 1
-    assert "name must match" in console.text and list(indexstore.sources()) == ["am"]
+    assert "name must match" in console.text and list(indexstore.sources()) == [DB]
 
 
 def test_declining_the_new_source_registers_nothing(tmp_path):
@@ -209,7 +250,7 @@ def test_declining_the_new_source_registers_nothing(tmp_path):
     path.write_text(MINE)
     console = Script(["n"])
     assert cli.main(["index", "add", "mine", "--file", str(path)], console=console) == 1
-    assert "cancelled" in console.text and list(indexstore.sources()) == ["am"] and not (indexstore.base() / "mine").exists()
+    assert "cancelled" in console.text and list(indexstore.sources()) == [DB] and not (indexstore.base() / "mine").exists()
 
 
 def test_adding_the_same_name_twice_is_refused(tmp_path):
@@ -237,8 +278,8 @@ def test_update_without_a_name_does_every_source_and_reports_failures(tmp_path):
     path.write_text(MINE)
     run_index("add", "mine", "--file", str(path))
     path.unlink()
-    console, status = run_index("update", fetch=am_fetch(BASE))
-    assert status == 1 and "mine:" in console.text and indexstore.current("am")["revision"] == C1
+    console, status = update_db(BASE)
+    assert status == 1 and "mine:" in console.text and indexstore.current(DB)["revision"] == C1
 
 
 def test_update_one_source_leaves_the_others_alone(tmp_path):
@@ -246,7 +287,7 @@ def test_update_one_source_leaves_the_others_alone(tmp_path):
     path.write_text(MINE)
     run_index("add", "mine", "--file", str(path))
     console, status = run_index("update", "mine", answers=())
-    assert status == 0 and "already up to date" in console.text and indexstore.current("am") is None
+    assert status == 0 and "already up to date" in console.text and indexstore.current(DB) is None
 
 
 def test_unknown_source_names_are_errors():
@@ -266,24 +307,24 @@ def test_remove_deletes_the_source_and_its_catalogs(tmp_path):
     assert cli.main(["index", "remove", "mine"], console=Script(["n"])) == 1
     assert "mine" in indexstore.sources()
     assert cli.main(["index", "remove", "mine"], console=Script(["y"])) == 0
-    assert list(indexstore.sources()) == ["am"] and not (indexstore.base() / "mine").exists()
+    assert list(indexstore.sources()) == [DB] and not (indexstore.base() / "mine").exists()
     console = Script(["y"])
-    assert cli.main(["index", "remove", "am"], console=console) == 1 and "cannot be removed" in console.text
+    assert cli.main(["index", "remove", DB], console=console) == 1 and "cannot be removed" in console.text
 
 
 def test_rollback_swaps_and_can_be_undone():
-    run_index("update", fetch=am_fetch(cat(("one", "first", "github:a/one"), revision=C1)))
-    run_index("update", fetch=am_fetch(cat(("two", "second", "github:b/two"), revision=C2), C2))
+    update_db(cat(("one", "first", "github:a/one"), revision=C1))
+    update_db(cat(("two", "second", "github:b/two"), revision=C2), C2)
     out = Script()
     assert cli.main(["index", "rollback"], console=out) == 0
-    assert indexstore.current("am")["revision"] == C1 and indexstore.previous("am")["revision"] == C2
+    assert indexstore.current(DB)["revision"] == C1 and indexstore.previous(DB)["revision"] == C2
     assert index.search(["one"])[1] == 1 and index.search(["two"])[1] == 0
-    assert cli.main(["index", "rollback", "am"], console=Script()) == 0
-    assert indexstore.current("am")["revision"] == C2
+    assert cli.main(["index", "rollback", DB], console=Script()) == 0
+    assert indexstore.current(DB)["revision"] == C2
 
 
 def test_rollback_needs_a_previous_catalog():
-    run_index("update", fetch=am_fetch(BASE))
+    update_db(BASE)
     console = Script()
     assert cli.main(["index", "rollback"], console=console) == 1 and "no previous catalog" in console.text
 
@@ -293,11 +334,11 @@ def test_status_lists_every_source(tmp_path):
     assert cli.main(["index", "status"], console=out) == 0 and "no catalog yet" in out.text
     path = tmp_path / "c.json"
     path.write_text(MINE)
-    run_index("update", fetch=am_fetch(BASE))
+    update_db(BASE)
     run_index("add", "mine", "--file", str(path))
     out = Script()
     cli.main(["index", "status"], console=out)
-    assert "am (am: https://github.com/ivan-hc/AM)" in out.text and f"revision {C1[:12]}" in out.text
+    assert f"{DB} (repo: github:alberto743/appjail-db)" in out.text and f"revision {C1[:12]}" in out.text and f"commit {C1[:12]}" in out.text
     assert f"mine (file: {path})" in out.text
 
 
@@ -306,31 +347,31 @@ def test_status_lists_every_source(tmp_path):
 
 def test_install_keeps_two_catalogs_and_ignores_an_identical_one():
     text = catalog.dumps(BASE)
-    assert indexstore.install("am", text, NOW) is True
-    assert indexstore.install("am", text, NOW) is False
-    indexstore.install("am", catalog.dumps(cat(("a", "b", "github:c/d"), revision="x")), NOW)
-    indexstore.install("am", catalog.dumps(cat(("e", "f", "github:g/h"), revision="y")), NOW)
-    assert (indexstore.current("am")["revision"], indexstore.previous("am")["revision"]) == ("y", "x")
-    assert indexstore.current("am")["updated"] == "2026-10-22T00:00:00Z"
-    assert sorted(p.name for p in (indexstore.base() / "am").iterdir()) == ["current.json", "previous.json", "state.json"]
-    assert oct((indexstore.base() / "am" / "current.json").stat().st_mode & 0o777) == "0o600"
+    assert indexstore.install(DB, text, NOW) is True
+    assert indexstore.install(DB, text, NOW) is False
+    indexstore.install(DB, catalog.dumps(cat(("a", "b", "github:c/d"), revision="x")), NOW)
+    indexstore.install(DB, catalog.dumps(cat(("e", "f", "github:g/h"), revision="y")), NOW)
+    assert (indexstore.current(DB)["revision"], indexstore.previous(DB)["revision"]) == ("y", "x")
+    assert indexstore.current(DB)["updated"] == "2026-10-22T00:00:00Z"
+    assert sorted(p.name for p in (indexstore.base() / DB).iterdir()) == ["current.json", "previous.json", "state.json"]
+    assert oct((indexstore.base() / DB / "current.json").stat().st_mode & 0o777) == "0o600"
 
 
 def test_corrupt_state_files_are_clean_errors():
-    indexstore.install("am", catalog.dumps(BASE), NOW)
-    (indexstore.base() / "am" / "state.json").write_text("{")
+    indexstore.install(DB, catalog.dumps(BASE), NOW)
+    (indexstore.base() / DB / "state.json").write_text("{")
     with pytest.raises(IndexProblem, match="cannot read the state"):
-        indexstore.current("am")
+        indexstore.current(DB)
     (indexstore.base() / "sources.json").write_text('{"sources": {"x": {"kind": "url"}}}')
     with pytest.raises(IndexProblem, match="malformed"):
         indexstore.sources()
-    (indexstore.base() / "sources.json").write_text(json.dumps({"sources": {"am": {"kind": "url", "location": "https://x.org/a"}}}))
+    (indexstore.base() / "sources.json").write_text(json.dumps({"sources": {DB: {"kind": "url", "location": "https://x.org/a"}}}))
     with pytest.raises(IndexProblem, match="malformed"):
         indexstore.sources()
 
 
 def test_search_ranking_limit_and_errors():
-    indexstore.install("am", catalog.dumps(cat(
+    indexstore.install(DB, catalog.dumps(cat(
         ("cura", "slicer", "github:Ultimaker/Cura"), ("cura-beta", "pre-release", "github:Ultimaker/Cura"),
         ("novel", "mentions cura in passing", ""), ("0ad", "game", ""))), NOW)
     hits, total, _ = index.search(["cura"])
@@ -347,8 +388,8 @@ def test_search_without_any_catalog_is_an_error():
 
 
 def test_search_covers_the_previous_catalog_only_after_a_rollback():
-    indexstore.install("am", catalog.dumps(cat(("one", "first", "github:a/one"), revision="1")), NOW)
-    indexstore.install("am", catalog.dumps(cat(("two", "second", "github:b/two"), revision="2")), NOW)
+    indexstore.install(DB, catalog.dumps(cat(("one", "first", "github:a/one"), revision="1")), NOW)
+    indexstore.install(DB, catalog.dumps(cat(("two", "second", "github:b/two"), revision="2")), NOW)
     assert index.search(["one"])[1] == 0
 
 
@@ -357,7 +398,7 @@ def test_search_covers_the_previous_catalog_only_after_a_rollback():
 
 def test_a_crash_while_installing_leaves_a_readable_catalog_that_the_next_install_heals(monkeypatch):
     first, second = catalog.dumps(BASE), catalog.dumps(cat(("a", "b", "github:c/d"), revision="x"))
-    indexstore.install("am", first, NOW)
+    indexstore.install(DB, first, NOW)
     real_write = indexstore._write
 
     def crash_on_state(path, text):
@@ -367,23 +408,22 @@ def test_a_crash_while_installing_leaves_a_readable_catalog_that_the_next_instal
 
     monkeypatch.setattr(indexstore, "_write", crash_on_state)
     with pytest.raises(OSError):
-        indexstore.install("am", second, NOW)
+        indexstore.install(DB, second, NOW)
     monkeypatch.setattr(indexstore, "_write", real_write)
-    assert indexstore.load("am").revision == "x"  # current.json is the new one and parses
-    assert indexstore.install("am", second, NOW) is True  # the stale state does not hide it
-    assert indexstore.current("am")["revision"] == "x" and indexstore.load("am", "previous").revision == "x"
+    assert indexstore.load(DB).revision == "x"  # current.json is the new one and parses
+    assert indexstore.install(DB, second, NOW) is True  # the stale state does not hide it
+    assert indexstore.current(DB)["revision"] == "x" and indexstore.load(DB, "previous").revision == "x"
 
 
 def test_state_without_its_fields_is_a_clean_error():
-    indexstore.install("am", catalog.dumps(BASE), NOW)
-    (indexstore.base() / "am" / "state.json").write_text('{"current": {"sha256": "ab"}}')
+    indexstore.install(DB, catalog.dumps(BASE), NOW)
+    (indexstore.base() / DB / "state.json").write_text('{"current": {"sha256": "ab"}}')
     with pytest.raises(IndexProblem, match="malformed"):
-        indexstore.current("am")
+        indexstore.current(DB)
 
 
 def test_update_sweeps_what_an_interrupted_one_left_behind():
-    indexstore.install("am", catalog.dumps(BASE), NOW)
-    (indexstore.base() / "work-abc123" / "repo").mkdir(parents=True)
-    (indexstore.base() / "am" / ".current.json.tmp").write_text("x")
-    run_index("update", fetch=am_fetch(BASE))
-    assert leftovers() == [] and not (indexstore.base() / "am" / ".current.json.tmp").exists()
+    indexstore.install(DB, catalog.dumps(BASE), NOW)
+    (indexstore.base() / DB / ".current.json.tmp").write_text("x")
+    update_db(BASE)
+    assert not (indexstore.base() / DB / ".current.json.tmp").exists()

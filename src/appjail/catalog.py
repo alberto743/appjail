@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""The catalog format: what `search` reads, whoever produced it (the AM converter, a file or a URL).
+"""The catalog format: what `search` reads, whoever produced it (appjail-db, a file or a URL).
 
 A catalog is one JSON document listing apps and, where known, where they come from: a kind-prefixed `source` that
 follows the manifest's grammar (`github:owner/repo`, `gitlab:HOST/group/project`, `forgejo:HOST/owner/repo`,

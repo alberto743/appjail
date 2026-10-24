@@ -1,6 +1,6 @@
 name: End to end
 
-# The opt-in suites of CLAUDE.md (real downloads from GitHub, real Sigstore verification, real AM index, packaging),
+# The opt-in suites of CLAUDE.md (real downloads from GitHub, real Sigstore verification, real appjail-db catalog, packaging),
 # kept out of the ordinary CI: run by hand (Actions tab, "Run workflow") and once a week to notice upstream changes.
 on:
   workflow_dispatch:

@@ -2,7 +2,7 @@
 # Every entry says why it is there; keep this file and CLAUDE.md "Testing environment" in sync.
 bubblewrap            # the sandbox under test
 squashfs-tools        # unsquashfs (extraction) and mksquashfs (synthetic test images)
-git                   # manifest history and the index fetch (run in jails), and the repository tooling
+git                   # manifest history (run in a jail), and the repository tooling
 python3               # the interpreter appjail and the tests run on
 python3-tk            # tkinter for the optional GUI (appjail-gui); optional on a user's machine, needed by tests/test_gui_smoke.py
 xvfb                  # X server for the GUI smoke test (tkinter needs a display; the guest has Wayland only)

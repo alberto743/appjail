@@ -47,7 +47,7 @@ is built around the opposite assumptions:
     the download jails a private network namespace; without it they use the host network and print a warning.
   - `xdg-dbus-proxy`: D-Bus filtering and portals.
   - `xwayland`: X11-only apps.
-  - `git`: the search index (`index update`) and the manifest history.
+  - `git`: the manifest history.
   - Linux 6.12 or later with Landlock (both supported systems have it): apps with `network_host`, which are
     refused without it.
   - A Pulse server (`pipewire-pulse` on PipeWire systems, or PulseAudio): audio. PipeWire's own socket is never used.
@@ -237,20 +237,22 @@ text, and never runs anything from them.
 ```sh
 appjail index update                  # refresh every catalog: fetch, show what changed, ask before accepting
 appjail index status                  # the sources, their revisions and update times
-appjail index rollback [NAME]         # back to the previous catalog of a source (default: am)
+appjail index rollback [NAME]         # back to the previous catalog of a source (default: appjail-db)
 appjail index add mine --url https://example.org/apps.json    # another catalog (https; fetched in the jail)
 appjail index add local --file ~/apps.json                    # or a local file
-appjail index update mine             # refresh one source (--commit SHA is for am only)
+appjail index update mine             # refresh one source (--commit SHA is for appjail-db only)
 appjail index remove mine
 appjail search editor                 # all sources; with several, each hit shows its source in brackets
 ```
 
 `search` shows 20 results; use `--limit N` or `--all` for more.
 
-**Sources.** The built-in `am` source is the [AM](https://github.com/ivan-hc/AM) application list: `index update` fetches
-its repository in a network-only jail (only the list and the install scripts, no hooks or submodules), reads
-each script as text to find the `SITE=` line, and keeps the result as a catalog. The scripts themselves are not
-kept. Sources you add yourself provide a catalog directly. Every update shows the number of apps, the apps added and
+**Sources.** The built-in `appjail-db` source is the catalog of the sister project
+[appjail-db](https://github.com/alberto743/appjail-db), rebuilt weekly from the [AM](https://github.com/ivan-hc/AM)
+application list. `index update` asks the GitHub API for the latest commit of that repository, downloads its
+`catalog.json` at that commit in a network-only jail and records the commit, so a catalog can be traced to an exact
+state of appjail-db; `index update appjail-db --commit SHA` fetches a chosen commit instead. The catalog is not signed:
+what protects you is HTTPS, the strict parser and the review below. Sources you add yourself provide a catalog directly. Every update shows the number of apps, the apps added and
 removed, and every app whose repository changed, with a loud warning when the owner changed, and asks before it
 replaces the catalog. One previous catalog is kept per source for `index rollback`; sources are stored in
 `~/.local/share/appjail/index/`.
@@ -307,7 +309,7 @@ owner change.
 | `remove APP` | Delete the app and its private home. |
 | `history [APP]` | Recorded changes to the manifests. |
 | `search WORDS` | Suggestions from the catalogs. |
-| `index add\|remove\|update\|rollback\|status` | Manage the catalogs `search` reads (the built-in AM list and any you add). |
+| `index add\|remove\|update\|rollback\|status` | Manage the catalogs `search` reads (the built-in appjail-db list and any you add). |
 | `tools status\|install NAME` | Helper binaries whose URL, size and hash are pinned in appjail's source (`gh` for attestations, `dwarfs` for DwarFS-based AppImages). |
 | `version` | The installed version. |
 | `appjail-gui` (separate command) | The window; see [Graphical interface](#graphical-interface). |

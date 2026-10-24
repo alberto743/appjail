@@ -82,15 +82,15 @@ def build_parser():
     add.add_argument("--mime", action="append", default=[], metavar="TYPE",
                      help="with --desktop: offer the app for this file type (must be declared by the app); repeatable")
     add.add_argument("--mime-all", action="store_true", help="with --desktop: offer every file type the app declares (minus refused ones)")
-    search = sub.add_parser("search", help="search the local AM index (suggestions only, never installs)")
+    search = sub.add_parser("search", help="search the local index (suggestions only, never installs)")
     search.add_argument("keywords", nargs="+")
     search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
     search.add_argument("--all", action="store_true", help="show every match")
-    idx = sub.add_parser("index", help="manage the catalogs `search` reads (the built-in AM list and any you add)")
+    idx = sub.add_parser("index", help="manage the catalogs `search` reads (the built-in appjail-db list and any you add)")
     isub = idx.add_subparsers(dest="index_command", required=True)
     upd = isub.add_parser("update", help="refresh the catalogs, review the changes, then accept them")
     upd.add_argument("name", nargs="?", help="one source (default: every source)")
-    upd.add_argument("--commit", default="HEAD", help="am only: fetch this commit (40 hex digits) instead of the remote HEAD")
+    upd.add_argument("--commit", default="HEAD", help="appjail-db only: fetch this appjail-db commit (40 hex digits) instead of the latest")
     iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (see the README, Search)")
     iadd.add_argument("name", help="a short name for the source")
     where = iadd.add_mutually_exclusive_group(required=True)
@@ -99,7 +99,7 @@ def build_parser():
     irm = isub.add_parser("remove", help="remove a source you added, with its catalogs")
     irm.add_argument("name")
     irb = isub.add_parser("rollback", help="go back to the previous catalog of a source")
-    irb.add_argument("name", nargs="?", help="default: am")
+    irb.add_argument("name", nargs="?", help="default: appjail-db")
     isub.add_parser("status", help="list the sources and their catalogs")
     upd_app = sub.add_parser("update", help="check for a newer release and install it after review and quarantine")
     upd_app.add_argument("app", nargs="?", help="app name (default: every installed app)")
@@ -177,7 +177,7 @@ def _add(args, client, console, app_args):
 
 
 def _index(args, client, console, app_args):
-    return {"update": lambda: cmd_index_update(args, console),
+    return {"update": lambda: cmd_index_update(args, console, client),
             "add": lambda: cmd_index_add(args, console),
             "remove": lambda: cmd_index_remove(args, console),
             "rollback": lambda: cmd_index_rollback(args, console),

@@ -4,10 +4,10 @@
 """The local index: the registered sources and, for each, the current and the previous catalog.
 
 Layout under `~/.local/share/appjail/index/`:
-    sources.json          the sources added with `index add` (the built-in `am` is implicit)
+    sources.json          the sources added with `index add` (the built-in `appjail-db` is implicit)
     <name>/current.json   the catalog `search` reads
     <name>/previous.json  the one before it, for `index rollback`
-    <name>/state.json     sha256, revision and update time of both
+    <name>/state.json     sha256, revision, update time (and, for appjail-db, the commit) of both
 Only the current and the previous catalog are kept. The index only feeds `search`; installed apps never depend on it.
 """
 
@@ -21,17 +21,20 @@ from datetime import UTC, datetime
 from . import catalog, store
 from .catalog import IndexProblem
 
-BUILTIN = "am"
+BUILTIN = "appjail-db"
+BUILTIN_REPO = "alberto743/appjail-db"  # GitHub owner/repo of the reference catalog
+CATALOG_FILE = "catalog.json"
 ENTRY_FIELDS = ("sha256", "revision", "updated")
+OPTIONAL_FIELDS = ("commit",)  # the appjail-db commit a catalog was fetched at
 SOURCE_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,31}")
-EXTRA_KINDS = ("url", "file")  # what `index add` registers; `am` is built in
+EXTRA_KINDS = ("url", "file")  # what `index add` registers; `repo` is the built-in
 
 
 @dataclass(frozen=True)
 class Source:
     name: str
-    kind: str  # am | url | file
-    location: str = ""  # the URL, or the resolved path of the file (update re-reads it)
+    kind: str  # repo | url | file
+    location: str = ""  # the GitHub owner/repo, the URL, or the resolved path of the file (update re-reads it)
 
 
 @dataclass(frozen=True)
@@ -61,8 +64,8 @@ def check_name(name):
 
 
 def sources():
-    """Every source, the built-in `am` first, then the added ones by name."""
-    found = {BUILTIN: Source(BUILTIN, "am")}
+    """Every source, the built-in `appjail-db` first, then the added ones by name."""
+    found = {BUILTIN: Source(BUILTIN, "repo", BUILTIN_REPO)}
     try:
         data = json.loads((base() / "sources.json").read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -124,7 +127,9 @@ def _state(name):
     except (OSError, ValueError) as e:
         raise IndexProblem(f"cannot read the state of index source '{name}': {e}") from e
     ok = isinstance(data, dict) and all(
-        data.get(k) is None or (isinstance(data.get(k), dict) and all(isinstance(data[k].get(f), str) for f in ENTRY_FIELDS))
+        data.get(k) is None or (isinstance(data.get(k), dict)
+                                and all(isinstance(data[k].get(f), str) for f in ENTRY_FIELDS)
+                                and all(isinstance(data[k].get(f, ""), str) for f in OPTIONAL_FIELDS))
         for k in ("current", "previous"))
     if not ok:
         raise IndexProblem(f"the state of index source '{name}' is malformed")
@@ -132,7 +137,7 @@ def _state(name):
 
 
 def current(name):
-    """{"sha256", "revision", "updated"} of the current catalog, or None when the source has none yet."""
+    """{"sha256", "revision", "updated"[, "commit"]} of the current catalog, or None when the source has none yet."""
     return _state(name)["current"]
 
 
@@ -162,7 +167,7 @@ def loaded():
     return out
 
 
-def install(name, text, now=None, digest=None, cat=None):
+def install(name, text, now=None, digest=None, cat=None, commit=""):
     """Make the catalog `text` (already validated by the caller) the current one, keeping the old one for rollback.
     Returns False when it is byte for byte the current catalog.
     Every file is replaced atomically and current.json is never moved, so a crash leaves a readable catalog;
@@ -178,6 +183,8 @@ def install(name, text, now=None, digest=None, cat=None):
         _write(directory / "previous.json", (directory / "current.json").read_text(encoding="utf-8"))
     _write(directory / "current.json", text)
     entry = {"sha256": digest, "revision": cat.revision, "updated": (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    if commit:
+        entry["commit"] = commit
     _write(directory / "state.json", json.dumps({"current": entry, "previous": state["current"]}, indent=1) + "\n")
     return True
 
@@ -197,10 +204,8 @@ def rollback(name):
 
 
 def sweep():
-    """Remove what an interrupted update left behind: work directories and temp files."""
+    """Remove the temp files an interrupted update left behind."""
     root = base()
-    for stale in list(root.glob("work-*")):
-        shutil.rmtree(stale, ignore_errors=True)
     for stale in list(root.glob(".*.tmp")) + list(root.glob("*/.*.tmp")):
         stale.unlink(missing_ok=True)
 
