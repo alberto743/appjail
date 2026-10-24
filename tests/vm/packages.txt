@@ -36,6 +36,7 @@ x11-utils             # xdpyinfo and xwininfo, the X11 clients used by the Xwayl
 x11-apps              # xwd, to take screenshots of the GUI under Xvfb
 passt                 # pasta: private network namespace for the download, attestation and index jails and for every app with `network` (required there)
 librsvg2-bin          # rsvg-convert: SVG menu icons are rendered to PNG inside a jail (tests/test_desktop.py)
+libgtk-3-bin         # gtk-update-icon-cache: run on the user icon theme after an entry is written (tests/test_desktop.py uses a fake)
 desktop-file-utils    # desktop-file-validate and update-desktop-database for the generated menu entries
 libglib2.0-bin        # gio: tests/test_e2e.py opens a file through the generated menu entry with `gio launch` / `gio open`
 pipewire              # tests/test_audio.py: a private PipeWire, to check that the `audio` permission never exposes its socket

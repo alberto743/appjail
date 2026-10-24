@@ -48,6 +48,9 @@ is built around the opposite assumptions:
   - `xdg-dbus-proxy`: D-Bus filtering and portals.
   - `xwayland`: X11-only apps.
   - `git`: the manifest history.
+  - `librsvg2-bin` (`rsvg-convert`): the menu icon of an app that ships only an SVG; without it the entry has no icon
+    (`appjail desktop APP --show` says so). `libgtk-3-bin` (`gtk-update-icon-cache`) makes new icons appear in the
+    menu at once; `desktop-file-utils` registers the file types.
   - Linux 6.12 or later with Landlock (both supported systems have it): apps with `network_host`, which are
     refused without it.
   - A Pulse server (`pipewire-pulse` on PipeWire systems, or PulseAudio): audio. PipeWire's own socket is never used.
@@ -57,7 +60,7 @@ is built around the opposite assumptions:
 On Debian or Ubuntu:
 
 ```sh
-sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland git
+sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland git librsvg2-bin libgtk-3-bin desktop-file-utils
 ```
 
 ## Install

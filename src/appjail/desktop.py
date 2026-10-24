@@ -28,6 +28,7 @@ MAX_SVG_BYTES = 2 * 1024 * 1024
 ICON_SIZE_RANGE = (16, 1024)
 SVG_SIZE = 256
 RSVG = "/usr/bin/rsvg-convert"
+ICON_CACHE_TOOL = "gtk-update-icon-cache"
 MAX_MIMES = 32
 MAX_FIELD = 200
 
@@ -288,6 +289,16 @@ def install_icon(name, root, fields, convert=None):
     return f"{size[0]}x{size[1]}"
 
 
+def icon_status(name, root):
+    """What `desktop --show` says about the icon: the installed size, or why there is none."""
+    if files := icon_files(name):
+        return f"{files[-1].parent.parent.name} PNG"
+    data = find_icon(root, read_app_desktop(root))
+    if data and data[:8] != b"\x89PNG\r\n\x1a\n" and b"<svg" in data[:4096].lower() and not os.access(RSVG, os.X_OK):
+        return "none (SVG icon, rsvg-convert missing: apt install librsvg2-bin, then `appjail desktop` again)"
+    return "none"
+
+
 def remove_icons(name):
     for path in icon_files(name):
         path.unlink(missing_ok=True)
@@ -296,7 +307,12 @@ def remove_icons(name):
 # -- install / remove ----------------------------------------------------------------
 
 def refresh_cache():
-    """Tell the desktop about changed entries (desktop-file-utils); False when the tool is missing."""
+    """Tell the desktop about changed entries (desktop-file-utils) and icons (gtk-update-icon-cache; `-t` because the
+    user's hicolor has no index.theme). False when update-desktop-database is missing."""
+    if tool := shutil.which(ICON_CACHE_TOOL):
+        theme = data_home() / "icons/hicolor"
+        if theme.is_dir():
+            subprocess.run([tool, "-q", "-t", "-f", str(theme)], capture_output=True, check=False, timeout=60)
     tool = shutil.which("update-desktop-database")
     if not tool:
         return False

@@ -3,6 +3,8 @@
 
 """`appjail desktop`: the menu entry of an app, and the hooks `add`, `update` and `remove` call."""
 
+import shutil
+
 from . import desktop, manifest, store
 from .console import Abort
 
@@ -31,6 +33,7 @@ def show_file_types(name, console):
     if not has_entry:
         console.out(f"{name} has no menu entry.")
     else:
+        console.out("Icon       : " + desktop.icon_status(name, store.root_path(name)))
         mode = "read-write" if rw else "read-only"
         console.out("Registered : " + (f"{', '.join(registered)} ({mode})" if registered else "none (launcher only)"))
     console.out("Offered    : " + (", ".join(m + (" *" if m in registered else "") for m in offered) or "none"))
@@ -92,6 +95,8 @@ def install_entry(name, console, args, yes=False, ask=True):
     console.out("Icon       : " + (f"{size} PNG" if size else "none"))
     if note:
         console.out(f"note: {note}")
+    if size and not shutil.which(desktop.ICON_CACHE_TOOL):
+        console.out("note: gtk-update-icon-cache (libgtk-3-bin) is not installed; the icon may appear only after the next login")
     if not desktop.refresh_cache() and mimes:
         console.out("note: update-desktop-database (desktop-file-utils) is not installed; the file types may appear after the next login")
 
@@ -131,10 +136,12 @@ def refresh_after_update(name, console):
     declared = file_type_state(name)[0]
     kept = [m for m in mimes if m in declared]
     try:
-        desktop.install(name, store.root_path(name), kept, rw)
+        _, _, note = desktop.install(name, store.root_path(name), kept, rw)
     except desktop.DesktopError as e:
         console.out(f"  menu entry not refreshed: {e}")
         return
+    if note:
+        console.out(f"  menu entry: {note}")
     if dropped := [m for m in mimes if m not in declared]:
         console.out(f"  menu entry: no longer offered by the app: {', '.join(dropped)}")
     if new := [m for m in declared if m not in mimes]:

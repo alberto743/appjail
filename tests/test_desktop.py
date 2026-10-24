@@ -256,6 +256,42 @@ def test_update_refresh_keeps_known_types_and_only_lists_new_ones(h, xdg):
     assert "no longer offered by the app: text/plain" in console.text and "new file types offered: image/gif" in console.text
 
 
+def test_svg_without_converter_is_explained_by_show_and_fixed_by_update(h, xdg, monkeypatch):
+    def extract(image, dest, fallback=False):
+        dest = Path(dest)
+        dest.mkdir(parents=True)
+        (dest / "AppRun").write_text("#!/bin/sh\n")
+        (dest / "app.desktop").write_text("[Desktop Entry]\nName=X\nIcon=logo\n")
+        (dest / "logo.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>")
+        return 1, 1
+    h.add(extract=extract)
+    monkeypatch.setattr(desktop, "RSVG", "/nonexistent/rsvg-convert")
+    run(["desktop", "app", "--yes"])
+    console = Script()
+    refresh_after_update("app", console)
+    assert "rsvg-convert is not installed" in console.text
+    assert "rsvg-convert missing" in run(["desktop", "app", "--show"]).text
+
+
+def test_show_reports_the_installed_icon(h, xdg):
+    added(h)
+    run(["desktop", "app", "--yes"])
+    assert "Icon       : 64x64 PNG" in run(["desktop", "app", "--show"]).text
+
+
+def test_the_icon_cache_is_refreshed_with_the_gtk_tool(h, xdg, tmp_path, monkeypatch):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    log = tmp_path / "calls"
+    tool = bin_dir / "gtk-update-icon-cache"
+    tool.write_text(f'#!/bin/sh\necho "$@" >> {log}\n')
+    tool.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ['PATH']}")
+    added(h)
+    run(["desktop", "app", "--yes"])
+    assert set(log.read_text().splitlines()) == {f"-q -t -f {xdg / 'icons/hicolor'}"}
+
+
 def test_update_refresh_does_nothing_without_an_entry(h, xdg):
     added(h)
     refresh_after_update("app", Script())
