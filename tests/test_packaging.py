@@ -49,6 +49,14 @@ def test_pip_install_provides_the_appjail_command(tmp_path):
     assert out.split()[-1] == "True" and str(venv) in out
     assert run(str(appjail), "version", env=env, cwd=tmp_path).strip() == f"appjail {VERSION}"
     assert run(str(appjail), "--version", env=env, cwd=tmp_path).strip() == f"appjail {VERSION}"
+    # the window's own menu entry: the command is installed, and the icon travels inside the package
+    gui_env = {**env, "PATH": f"{venv / 'bin'}:/usr/bin:/bin", "XDG_DATA_HOME": str(tmp_path / "xdg")}
+    out = run(str(venv / "bin" / "appjail-gui"), "--desktop", env=gui_env, cwd=tmp_path)
+    entry = (tmp_path / "xdg/applications/appjail.desktop").read_text()
+    assert f"Exec={venv}/bin/appjail-gui\n" in entry and "Icon=appjail" in entry and "appjail.desktop" in out
+    assert b"<svg" in (tmp_path / "xdg/icons/hicolor/scalable/apps/appjail.svg").read_bytes()
+    run(str(venv / "bin" / "appjail-gui"), "--remove-desktop", env=gui_env, cwd=tmp_path)
+    assert not (tmp_path / "xdg/applications/appjail.desktop").exists()
     meta = run(str(pip), "show", "appjail")
     assert f"Version: {VERSION}" in meta and "Requires: \n" in meta  # no dependencies
     run(str(pip), "uninstall", "--yes", "appjail")

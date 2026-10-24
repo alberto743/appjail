@@ -104,6 +104,9 @@ catalogs and the helper tools. It runs the
 CLI underneath, so it shows the same reviews and asks the same questions (the default answer is always No) in
 dialogs. It needs the system package `python3-tk` (`sudo apt install python3-tk`) and a display.
 
+`appjail-gui --desktop` adds appjail to your application menu, with its icon; `appjail-gui --remove-desktop` takes it
+out again. Only a menu entry created that way is ever replaced or deleted.
+
 ## Installing apps
 
 **From a GitHub release.** `appjail add owner/repo` shows the repository owner, account age, stars and fork or archive

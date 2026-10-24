@@ -330,6 +330,75 @@ def remove(name):
     return ours
 
 
+# -- the entry of appjail-gui itself ---------------------------------------------------
+
+GUI_MARKER = "X-Appjail-GUI"
+GUI_ENTRY = "appjail.desktop"  # app entries are appjail-<name>.desktop, so no app name can collide with it
+GUI_ICON = "appjail"
+
+
+def gui_entry_path():
+    return applications_dir() / GUI_ENTRY
+
+
+def gui_icon_path():
+    return data_home() / "icons/hicolor/scalable/apps" / f"{GUI_ICON}.svg"
+
+
+def gui_launcher_argv():
+    found = shutil.which("appjail-gui")
+    # abspath, not realpath: the python of a virtual environment is a symlink to one that does not have appjail
+    return [os.path.realpath(found)] if found else [os.path.abspath(sys.executable), "-m", "appjail.gui"]
+
+
+def build_gui_entry(argv=None, icon=True):
+    lines = ["[Desktop Entry]", "Type=Application", f"{GUI_MARKER}=true", "Name=appjail",
+             "Comment=Sandboxed AppImage manager", "Categories=System;Security;Utility;",
+             "Exec=" + _escape(" ".join(_quote_arg(w) for w in argv or gui_launcher_argv())), "Terminal=false"]
+    if icon:
+        lines.append(f"Icon={GUI_ICON}")
+    return "\n".join(lines) + "\n"
+
+
+def gui_entry_is_ours(path):
+    """True when the file at path carries the GUI marker; a file of anyone else is never replaced or deleted."""
+    try:
+        info = os.lstat(path)  # a symlink is somebody else's file, whatever it points at
+        if info.st_size > MAX_DESKTOP_BYTES or not stat.S_ISREG(info.st_mode):
+            return False
+        return any(line.strip() == f"{GUI_MARKER}=true" for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines())
+    except OSError:
+        return False
+
+
+def install_gui(icon_svg, argv=None):
+    """Write the menu entry of appjail-gui and its icon (the SVG shipped with the package, copied as it is: it is not
+    untrusted input). Returns the entry path."""
+    path = gui_entry_path()
+    if os.path.lexists(path) and not gui_entry_is_ours(path):
+        raise DesktopError(f"{path} exists and was not created by appjail-gui; not touching it")
+    if len(icon_svg) > MAX_SVG_BYTES or b"<svg" not in icon_svg[:4096].lower():
+        raise DesktopError("the packaged icon is missing or damaged; creating the entry without it")
+    icon = gui_icon_path()
+    icon.parent.mkdir(parents=True, exist_ok=True)
+    store.atomic_write(icon, icon_svg)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    store.atomic_write(path, build_gui_entry(argv))
+    refresh_cache()
+    return path
+
+
+def remove_gui():
+    """Delete the entry of appjail-gui (only our own file) and its icon. True if there was an entry."""
+    path = gui_entry_path()
+    ours = gui_entry_is_ours(path)
+    if ours:
+        path.unlink(missing_ok=True)
+        gui_icon_path().unlink(missing_ok=True)
+        refresh_cache()
+    return ours
+
+
 def dangling(exists=lambda n: store.manifest_path(n).exists()):
     """Marked entries whose app is gone: [(app name, path)]."""
     out = []
