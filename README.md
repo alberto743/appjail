@@ -30,8 +30,8 @@ is built around the opposite assumptions:
   app is fetched from, whatever an AppImage's embedded update information says.
 - **Downloads are jailed.** The download, the extraction and the verification tools run in throwaway sandboxes
   with only the access they need (a private network namespace for downloads, none for extraction).
-- **Everything is denied by default.** An app starts with a private home and a restricted Wayland socket. Network,
-  directories, D-Bus names, portals and the rest are explicit grants you can inspect and change.
+- **Everything is denied by default.** An app starts with a private home, a restricted Wayland socket, audio and the
+  GPU. Network, directories, D-Bus names, portals and the rest are explicit grants you can inspect and change.
 - **Updates are reviewed.** A new release waits in quarantine (7 days by default), is shown to you as a diff, and
   is blocked outright if its evidence gets weaker or the repository changes owner.
 
@@ -78,10 +78,11 @@ cd appjail
 pipx install .          # or: pip install --user .
 ```
 
-To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m appjail --help`.
-appjail never updates itself: upgrade with `pipx upgrade appjail` (or `git pull` and reinstall) after reading what changed.
-`appjail version` (or `--version`) prints the installed version, which comes from the git tag at build time (`0.2.0` on a
-release, `0.2.1.dev4+g1a2b3c4` four commits after it) and is `unknown` when run from a source tree that is not installed.
+To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m appjail --help`. appjail never
+updates itself: upgrade with `pipx upgrade appjail` (or `git pull` and reinstall) after reading what changed.
+`appjail version` (or `--version`) prints the installed version, which comes from the git tag at build time (`0.2.0`
+on a release, `0.2.1.dev4+g1a2b3c4` four commits after it) and is `unknown` when run from a source tree that is not
+installed.
 
 Data lives in `~/.local/share/appjail` (images, extracted trees, private homes, staging) and `~/.config/appjail`
 (manifests, tracked in a small local git repository). `APPJAIL_DATA_DIR` and `APPJAIL_CONFIG_DIR` override them.
@@ -96,16 +97,17 @@ appjail update                   # check every app for a newer release
 appjail remove lagrange          # delete the app and its private home
 ```
 
-`remove` and `perms` ask for confirmation unless given `--yes`. `appjail COMMAND --help` lists every option.
+Commands that change or delete something ask first; `remove`, `perms`, `portals` and `desktop` accept `--yes`.
+`appjail COMMAND --help` lists every option.
 `GITHUB_TOKEN`, if set, raises the GitHub API rate limit; it is only ever sent to `api.github.com`.
 
 ## Graphical interface
 
 `appjail-gui` opens a window with the same commands and options: the installed apps (run, run with extra access
 for one run, open a file, update, permissions, portals, history, menu entry, remove), adding an app, searching the
-catalogs and the helper tools. It runs the
-CLI underneath, so it shows the same reviews and asks the same questions (the default answer is always No) in
-dialogs. It needs the system package `python3-tk` (`sudo apt install python3-tk`) and a display.
+catalogs and the helper tools. It runs the CLI underneath, so it shows the same reviews and asks the same questions
+(the default answer is always No) in dialogs. It needs the system package `python3-tk` (`sudo apt install python3-tk`)
+and a display.
 
 `appjail-gui --desktop` adds appjail to your application menu, with its icon; `appjail-gui --remove-desktop` takes it
 out again. Only a menu entry created that way is ever replaced or deleted.
@@ -167,15 +169,15 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
 | `display` | `wayland` (default) or `xwayland`. |
 
-**Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:rw]` grant access for that run only and are never
-saved. `--file` makes just that one file visible, not the rest of its directory, and appends its path inside the sandbox to
-the app's arguments. Credentials, browser profiles and the like are refused as for directories, and shell startup files are
-never writable. Apps that save by writing a temporary file and renaming it fail on `:rw`. For a standing grant use a
-directory, or the portal file chooser.
+**Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:rw]` grant access for that run only and
+are never saved. `--file` makes just that one file visible, not the rest of its directory, and appends its path inside
+the sandbox to the app's arguments. Credentials, browser profiles and the like are refused as for directories, and
+shell startup files are never writable. Apps that save by writing a temporary file and renaming it fail on `:rw`. For
+a standing grant use a directory, or the portal file chooser.
 
 Every sandbox also drops all capabilities, has its own PID, IPC and UTS namespaces, a read-only system, a minimal
-`/dev`, a generated `/etc/passwd`, and a seccomp filter. The extracted app tree is hashed and checked at every
-launch.
+`/dev`, a generated `/etc/passwd` and a seccomp filter. Outside `pasta`'s private network, Landlock also keeps it off
+abstract unix sockets created outside the sandbox. The extracted app tree is hashed and checked at every launch.
 
 ## Menu entry and opening files
 
@@ -317,6 +319,7 @@ owner change.
 | bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
 | `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`). |
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
+| An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |
 | `unsquashfs is not installed` | Install `squashfs-tools`, or accept the offer to run the AppImage's own extractor in a jail with no network. |
 | DwarFS-based AppImage | `appjail tools install dwarfs` fetches the pinned helper. |
@@ -347,13 +350,14 @@ owner change.
   with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace (a
   small empty directory `appjail-life-*` stays in the runtime directory).
 
-The full design is in [DESIGN.md](DESIGN.md); the reasoning behind each choice, rejected alternatives and deferred features are in [DECISIONS.md](DECISIONS.md).
+The full design is in [DESIGN.md](DESIGN.md); the reasoning behind each choice, rejected alternatives and deferred
+features are in [DECISIONS.md](DECISIONS.md).
 
 ## Development
 
-The code is stdlib-only Python under `src/appjail/`; tests are plain `pytest`. Many tests start real sandboxes and need a Linux
-machine with bubblewrap, `unsquashfs`, `pasta`, a headless Wayland compositor (`weston`) and the other packages in
-`tests/vm/packages.txt`.
+The code is stdlib-only Python under `src/appjail/`; tests are plain `pytest`. Many tests start real sandboxes and
+need a Linux machine with bubblewrap, `unsquashfs`, `pasta`, a headless Wayland compositor (`weston`) and the other
+packages in `tests/vm/packages.txt`.
 
 ```sh
 APPJAIL_INTEGRATION=1 python3 -m pytest
