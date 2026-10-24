@@ -207,17 +207,17 @@ def test_every_button_is_visible_at_the_starting_size(window):
     assert root.winfo_height() >= min(root.winfo_reqheight(), root.winfo_screenheight() - 80)
 
 
-def test_choice_list_returns_the_ticked_types_and_keeps_the_form_open_on_a_problem(window, monkeypatch):
+def test_choice_list_returns_the_selected_types_and_keeps_the_form_open_on_a_problem(window, monkeypatch):
     shown = []
     monkeypatch.setattr(dialogs.messagebox, "showerror", lambda *a, **k: shown.append(a[1]))
     calls = []
 
     def fake_wait(top, focus=None):
         box = next(w for w in _walk(top) if isinstance(w, dialogs.ChoiceList))
-        assert box.values() == ("image/png",)  # the registered ones start ticked
+        assert box.values() == ("image/png",)  # the registered ones start selected
         box.box.selection_clear(0, "end")
         ok = next(w for w in _walk(top) if isinstance(w, dialogs.ttk.Button) and w.cget("text") == "Go")
-        ok.invoke()  # nothing ticked: refused, the form stays
+        ok.invoke()  # nothing selected: refused, the form stays
         calls.append(top.winfo_exists())
         box.box.selection_set(1)
         ok.invoke()
@@ -230,5 +230,5 @@ def test_choice_list_returns_the_ticked_types_and_keeps_the_form_open_on_a_probl
     monkeypatch.setattr(dialogs, "_wait", fake_wait)
     got = dialogs.options_dialog(
         window.root, "t", (("choice", "mime", "Types", {"items": ["image/png", "text/plain"], "selected": ["image/png"]}),),
-        ok="Go", validate=lambda v: None if v["mime"] else "tick one")
-    assert shown == ["tick one"] and calls == [1] and got == {"mime": ("text/plain",)}
+        ok="Go", validate=lambda v: None if v["mime"] else "select one")
+    assert shown == ["select one"] and calls == [1] and got == {"mime": ("text/plain",)}

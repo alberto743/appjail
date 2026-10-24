@@ -170,7 +170,7 @@ class ListEditor(ttk.LabelFrame):
 
 
 class ChoiceList(ttk.LabelFrame):
-    """A fixed list of strings to tick (extra: {"items": [...], "selected": [...], "hint": ...}); values() are the ticked ones."""
+    """A fixed list of strings to select (extra: {"items": [...], "selected": [...], "hint": ...}); values() are the selected ones."""
 
     def __init__(self, parent, title, items=(), selected=(), hint=""):
         super().__init__(parent, text=title, padding=6)

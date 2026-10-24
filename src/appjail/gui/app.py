@@ -263,7 +263,7 @@ class App:
         if not app:
             return
         offered, ignored, registered, _rw, _has_entry = apps.file_types(app)
-        hint = "ticked: registered now" if registered else "tick the types to register; none ticked: the command asks"
+        hint = "highlighted: registered now; click to select or deselect" if registered else "select the types to register; none selected: the command asks"
         if ignored:
             hint += "\nNot offered (refused by appjail): " + ", ".join(ignored)
         fields = [("check", "mime_all", "Offer every file type the app declares"),
@@ -275,7 +275,7 @@ class App:
 
         def check(values):  # no --mime means "keep the current types" for an entry that has some
             if registered and not values["mime"] and not values["mime_all"]:
-                return "Tick at least one type, or use Remove menu entry and create the entry again without types."
+                return "Select at least one type, or use Remove menu entry and create the entry again without types."
             return None
 
         got = dialogs.options_dialog(self.root, f"Menu entry of {app}", tuple(fields),
