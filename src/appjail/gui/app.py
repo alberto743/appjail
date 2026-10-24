@@ -206,7 +206,8 @@ class App:
                 ("Update", on(lambda a: self.run(argv.update_argv(a)))), ("Update…", self._update_options),
                 ("Update all", lambda: self.run(argv.update_argv())), ("Portals…", self._portals),
                 ("History", on(lambda a: self.run(argv.history_argv(a)))),
-                ("Menu entry…", self._menu_entry), ("Remove menu entry", on(lambda a: self.run(argv.desktop_argv(a, remove=True)))),
+                ("Menu entry…", self._menu_entry), ("File types", on(lambda a: self.run(argv.desktop_argv(a, show=True)))),
+                ("Remove menu entry", on(lambda a: self.run(argv.desktop_argv(a, remove=True)))),
                 ("Remove app", on(lambda a: self.run(["remove", a]))))):
             ttk.Button(buttons, text=text, command=action).grid(row=i // 5, column=i % 5, sticky="ew", padx=2, pady=2)
         for c in range(5):
@@ -261,12 +262,24 @@ class App:
         app = self.selected()
         if not app:
             return
-        got = dialogs.options_dialog(
-            self.root, f"Menu entry of {app}", (
-                ("list", "mime", "File types to offer", {"hint": "only types the app declares; empty: the command asks"}),
-                ("check", "mime_all", "Offer every file type the app declares"),
-                ("check", "rw", "Opened files are writable (default: read-only)")),
-            "Creates or refreshes the entry; the command shows the types it may register.")
+        offered, ignored, registered, _rw, _has_entry = apps.file_types(app)
+        hint = "ticked: registered now" if registered else "tick the types to register; none ticked: the command asks"
+        if ignored:
+            hint += "\nNot offered (refused by appjail): " + ", ".join(ignored)
+        fields = [("check", "mime_all", "Offer every file type the app declares"),
+                  ("check", "rw", "Opened files are writable (default: read-only)")]
+        if offered:
+            fields.insert(0, ("choice", "mime", "File types the app offers", {"items": offered, "selected": registered, "hint": hint}))
+        else:
+            fields.insert(0, ("list", "mime", "File types to offer", {"hint": "the app declares none that appjail accepts"}))
+
+        def check(values):  # no --mime means "keep the current types" for an entry that has some
+            if registered and not values["mime"] and not values["mime_all"]:
+                return "Tick at least one type, or use Remove menu entry and create the entry again without types."
+            return None
+
+        got = dialogs.options_dialog(self.root, f"Menu entry of {app}", tuple(fields),
+                                     "Creates or refreshes the entry; the command shows what it will register and asks.", validate=check)
         if got:
             self.run(argv.desktop_argv(app, got["mime"], got["mime_all"], got["rw"]))
 

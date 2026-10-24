@@ -118,6 +118,7 @@ def build_parser():
     dsk.add_argument("--mime-all", action="store_true", help="offer every file type the app declares (minus refused ones)")
     dsk.add_argument("--rw", action="store_true", help="opened files are writable (default: read-only)")
     dsk.add_argument("--remove", action="store_true", help="delete the app's menu entry and icons")
+    dsk.add_argument("--show", action="store_true", help="only show the file types registered, offered by the app and refused (writes nothing)")
     dsk.add_argument("--prune", action="store_true", help="delete the entries of apps that no longer exist")
     dsk.add_argument("--yes", action="store_true", help="do not ask (registers no file types unless --mime/--mime-all)")
     opn = sub.add_parser("open", help="open files with an app, each bound alone into its jail (used by the menu entry)")

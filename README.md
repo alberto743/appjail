@@ -185,7 +185,8 @@ abstract unix sockets created outside the sandbox. The extracted app tree is has
 app through appjail. appjail generates it itself; the AppImage's own `.desktop` is never used. File types are opt-in:
 only the ones you pick show under "Open with", and appjail never makes the app a default. Opening a file passes just
 that file to the app, read-only unless `--rw` (`appjail open NAME -- FILE...`). `desktop --remove` and `--prune` delete
-entries; `remove` does it too.
+entries; `remove` does it too. `desktop NAME --show` lists the registered file types, the ones the app offers and the ones
+appjail refuses, and writes nothing (the Apps tab of the GUI has a "File types" button and a checklist in "Menu entry…").
 
 ## Trust and updates
 

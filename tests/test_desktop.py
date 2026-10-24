@@ -152,6 +152,26 @@ def test_undeclared_or_refused_types_are_rejected(h, xdg):
     assert not desktop.entry_path("app").exists()
 
 
+def test_show_lists_registered_offered_and_refused_types(h, xdg):
+    added(h)
+    before = run(["desktop", "app", "--show"]).text
+    assert "app has no menu entry." in before and "Offered    : image/png, image/jpeg, text/plain" in before
+    assert "Not offered: x-scheme-handler/http, application/x-shellscript" in before
+    run(["desktop", "app", "--mime", "image/png", "--rw", "--yes"])
+    after = run(["desktop", "app", "--show"]).text
+    assert "Registered : image/png (read-write)" in after and "image/png *, image/jpeg, text/plain" in after
+    assert desktop.installed_state("app") == (["image/png"], True)  # nothing was written
+
+
+def test_show_excludes_the_writing_options(h, xdg):
+    added(h)
+    with pytest.raises(cli.Abort, match="--show"):
+        run(["desktop", "app", "--show", "--mime", "image/png"])
+    with pytest.raises(cli.Abort, match="--show"):
+        run(["desktop", "--show", "--prune"])
+    assert not desktop.entry_path("app").exists()
+
+
 def test_rw_is_recorded_in_the_exec_and_kept_on_refresh(h, xdg):
     added(h)
     run(["desktop", "app", "--mime", "image/png", "--rw", "--yes"])

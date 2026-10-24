@@ -16,6 +16,29 @@ def _check(name):
         raise Abort(f"'{name}' has no extracted tree; run it once (`appjail run {name}`) and retry")
 
 
+def file_type_state(name):
+    """(offered, ignored, registered, rw) of an app: what it declares and passes the filter, what it declares and does not,
+    and what its installed entry registers (empty, read-only, when there is no entry)."""
+    fields = desktop.read_app_desktop(store.root_path(name))
+    offered, ignored = desktop.split_mimes(fields.get("MimeType"))
+    state = desktop.installed_state(name)
+    return offered, ignored, (state[0] if state else []), bool(state and state[1]), state is not None
+
+
+def show_file_types(name, console):
+    _check(name)
+    offered, ignored, registered, rw, has_entry = file_type_state(name)
+    if not has_entry:
+        console.out(f"{name} has no menu entry.")
+    else:
+        mode = "read-write" if rw else "read-only"
+        console.out("Registered : " + (f"{', '.join(registered)} ({mode})" if registered else "none (launcher only)"))
+    console.out("Offered    : " + (", ".join(m + (" *" if m in registered else "") for m in offered) or "none"))
+    if registered and offered:
+        console.out("             (* = registered)")
+    console.out("Not offered: " + (", ".join(ignored) or "none"))
+
+
 def _select(console, declared, args, current, yes):
     """The MIME types to register: --mime-all, --mime TYPE, the current selection on a refresh, else ask."""
     if args.mime_all:
@@ -49,10 +72,9 @@ def install_entry(name, console, args, yes=False, ask=True):
     _check(name)
     root = store.root_path(name)
     fields = desktop.read_app_desktop(root)
-    declared, ignored = desktop.split_mimes(fields.get("MimeType"))
-    state = desktop.installed_state(name)
-    mimes = _select(console, declared, args, state[0] if state else None, yes or not ask)
-    rw = bool(args.rw) or bool(state and state[1] and not args.mime and not args.mime_all)
+    declared, ignored, current, was_rw, has_entry = file_type_state(name)
+    mimes = _select(console, declared, args, current if has_entry else None, yes or not ask)
+    rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
     shown = desktop.display_fields(fields, name)
     console.out(f"Menu entry : {shown['Name']} (appjail) -> {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
     console.out("File types : " + (", ".join(mimes) + (" (read-write)" if rw else " (read-only)") if mimes else "none (launcher only)"))
@@ -75,6 +97,8 @@ def install_entry(name, console, args, yes=False, ask=True):
 
 
 def cmd_desktop(args, console):
+    if args.prune and args.show:
+        raise Abort("--show cannot be combined with --prune")
     if args.prune:
         gone = desktop.dangling()
         for app, path in gone:
@@ -85,6 +109,11 @@ def cmd_desktop(args, console):
     name = args.app
     if not name:
         raise Abort("name an app, or use --prune")
+    if args.show:
+        if args.remove or args.mime or args.mime_all or args.rw:
+            raise Abort("--show cannot be combined with --remove, --mime, --mime-all or --rw")
+        show_file_types(name, console)
+        return
     if args.remove:
         if not manifest.NAME_RE.fullmatch(name):
             raise Abort("invalid app name")
@@ -99,7 +128,7 @@ def refresh_after_update(name, console):
     if state is None:
         return
     mimes, rw = state
-    declared, _ = desktop.split_mimes(desktop.read_app_desktop(store.root_path(name)).get("MimeType"))
+    declared = file_type_state(name)[0]
     kept = [m for m in mimes if m in declared]
     try:
         desktop.install(name, store.root_path(name), kept, rw)

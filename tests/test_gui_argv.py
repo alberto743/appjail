@@ -75,6 +75,7 @@ def test_run_desktop_portals_history_parse():
     args = parses(argv.desktop_argv("app", ["text/plain"], False, True))
     assert (args.mime, args.rw, args.remove) == (["text/plain"], True, False)
     assert parses(argv.desktop_argv(prune=True)).prune
+    assert parses(argv.desktop_argv("app", show=True)).show
     assert parses(argv.desktop_argv("app", remove=True)).remove
     assert parses(argv.portals_argv("app", ["1", "2"])).revoke == ["1", "2"]
     assert parses(argv.portals_argv("app", (), True)).revoke_all

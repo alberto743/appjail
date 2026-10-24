@@ -125,7 +125,7 @@ def run_argv(app, dirs=(), files=()):
     return ["run", app, *_repeat("--dir", dirs), *_repeat("--file", files)]
 
 
-def desktop_argv(app=None, mime=(), mime_all=False, rw=False, remove=False, prune=False):
+def desktop_argv(app=None, mime=(), mime_all=False, rw=False, remove=False, prune=False, show=False):
     argv = ["desktop"]
     if app:
         argv.append(app)
@@ -133,6 +133,8 @@ def desktop_argv(app=None, mime=(), mime_all=False, rw=False, remove=False, prun
         argv.append("--remove")
     if prune:
         argv.append("--prune")
+    if show:
+        argv.append("--show")
     if mime_all:
         argv.append("--mime-all")
     argv += _repeat("--mime", mime)

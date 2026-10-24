@@ -5,6 +5,7 @@
 
 from .. import manifest, store, textsafe, updater
 from ..cmd_apps import list_line
+from ..cmd_desktop import file_type_state
 from ..permargs import PERMISSION_FLAGS
 
 
@@ -23,9 +24,25 @@ def load_permissions(name):
 def detail(name):
     """The full `list` line of an app (directories, D-Bus names, portals, channel), for the line under the table."""
     try:
-        return textsafe.clean(list_line(name, manifest.load(store.manifest_path(name))), 1000)
+        line = list_line(name, manifest.load(store.manifest_path(name)))
+        offered, _ignored, registered, _rw, has_entry = file_types(name)
+        if has_entry:
+            line += f"; file types: {len(registered)} registered of {len(offered)} offered"
+        return textsafe.clean(line, 1000)
     except (manifest.ManifestError, OSError) as e:
         return textsafe.clean(f"{name}: unreadable manifest ({e})", 300)
+
+
+def file_types(name):
+    """(offered, ignored, registered, rw, has_entry) of an app's menu entry, cleaned; ([], [], [], False, False) when unreadable."""
+    try:
+        offered, ignored, registered, rw, has_entry = file_type_state(name)
+    except (OSError, ValueError):
+        return [], [], [], False, False
+    def clean(items):
+        return [textsafe.clean(m, 130) for m in items]
+
+    return clean(offered), clean(ignored), clean(registered), rw, has_entry
 
 
 def rows():

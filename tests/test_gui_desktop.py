@@ -96,3 +96,12 @@ def test_entry_validates(xdg):
     main(["--desktop"])
     proc = subprocess.run(["desktop-file-validate", str(xdg / "applications/appjail.desktop")], capture_output=True, text=True)
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_file_types_of_an_app_are_plain_data(tmp_path, monkeypatch):
+    from appjail.gui import apps
+
+    monkeypatch.setattr(apps, "file_type_state", lambda name: (["image/png", "text/plain"], ["x-scheme-handler/a"], ["image/png"], True, True))
+    assert apps.file_types("app") == (["image/png", "text/plain"], ["x-scheme-handler/a"], ["image/png"], True, True)
+    monkeypatch.setattr(apps, "file_type_state", lambda name: (_ for _ in ()).throw(OSError("gone")))
+    assert apps.file_types("app") == ([], [], [], False, False)

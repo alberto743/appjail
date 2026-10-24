@@ -4,7 +4,7 @@
 """Modal dialogs: the answers to a command's prompts, an options form, and the permissions editor."""
 
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from ..manifest import DISPLAYS
 from ..permargs import PERMISSION_FLAGS
@@ -169,9 +169,33 @@ class ListEditor(ttk.LabelFrame):
         return tuple(self.box.get(0, "end"))
 
 
-def options_dialog(parent, title, fields, intro="", ok="Continue"):
-    """A small form. fields: (kind, key, label[, extra]) with kind "check", "text", "combo" (extra: values) or "list"
-    (extra: {"hint":..., "browse":...}). Returns {key: value} or None when cancelled."""
+class ChoiceList(ttk.LabelFrame):
+    """A fixed list of strings to tick (extra: {"items": [...], "selected": [...], "hint": ...}); values() are the ticked ones."""
+
+    def __init__(self, parent, title, items=(), selected=(), hint=""):
+        super().__init__(parent, text=title, padding=6)
+        holder = ttk.Frame(self)
+        holder.pack(fill="both", expand=True)
+        self.box = tk.Listbox(holder, height=max(2, min(len(items), 8)), width=16, exportselection=False, selectmode="multiple")
+        bar = ttk.Scrollbar(holder, command=self.box.yview)
+        self.box.configure(yscrollcommand=bar.set)
+        for i, item in enumerate(items):
+            self.box.insert("end", item)
+            if item in selected:
+                self.box.selection_set(i)
+        bar.pack(side="right", fill="y")
+        self.box.pack(side="left", fill="both", expand=True)
+        if hint:
+            ttk.Label(self, text=hint, foreground="gray40", wraplength=480, justify="left").pack(anchor="w", pady=(4, 0))
+
+    def values(self):
+        return tuple(self.box.get(i) for i in self.box.curselection())
+
+
+def options_dialog(parent, title, fields, intro="", ok="Continue", validate=None):
+    """A small form. fields: (kind, key, label[, extra]) with kind "check", "text", "combo" (extra: values), "list"
+    (extra: {"hint":..., "browse":...}) or "choice" (extra: {"items":..., "selected":..., "hint":...}). validate(values)
+    returns an error text to keep the form open. Returns {key: value} or None when cancelled."""
     top = _modal(parent, title)
     frame = ttk.Frame(top, padding=12)
     frame.pack(fill="both", expand=True)
@@ -186,6 +210,9 @@ def options_dialog(parent, title, fields, intro="", ok="Continue"):
         elif kind == "list":
             widgets[key] = ListEditor(frame, label, (), **(extra or {}))
             widgets[key].pack(fill="x", pady=4)
+        elif kind == "choice":
+            widgets[key] = ChoiceList(frame, label, **(extra or {}))
+            widgets[key].pack(fill="x", pady=4)
         else:
             row = ttk.Frame(frame)
             row.pack(fill="x", pady=2)
@@ -198,7 +225,12 @@ def options_dialog(parent, title, fields, intro="", ok="Continue"):
     result = {"value": None}
 
     def accept():
-        result["value"] = {k: (w.values() if isinstance(w, ListEditor) else w.get()) for k, w in widgets.items()}
+        value = {k: (w.values() if isinstance(w, (ListEditor, ChoiceList)) else w.get()) for k, w in widgets.items()}
+        problem = validate(value) if validate else None
+        if problem:
+            messagebox.showerror("appjail", problem, parent=top)
+            return
+        result["value"] = value
         top.destroy()
 
     buttons = ttk.Frame(frame)
