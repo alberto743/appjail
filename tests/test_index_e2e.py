@@ -47,6 +47,8 @@ def test_update_to_the_latest_commit_then_search(data):
     assert cli.main(["index", "update"], console=console) == 0, console.lines
     entry = indexstore.current(DB)
     assert len(entry["commit"]) == 40
+    assert "AppImageHub" in entry["revision"]  # the catalog merges the AM list and the AppImageHub feed
+    assert "AppImageHub" in str(console.lines)  # the review shows the whole revision
     hits, _total, searched = index.search(["cura"], limit=5)
     assert searched == [DB] and any(h.name == "cura" and h.source == "github:Ultimaker/Cura" for h in hits)
     assert 5000 < len(indexstore.load(DB).apps)
