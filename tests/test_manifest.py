@@ -281,6 +281,9 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/.local/share/nemo/scripts", "rw", True),
     ("~/.local/share/nautilus", "rw", True),  # holds the scripts directory
     ("~/.local/share/myapp", "rw", False),
+    ("~/.local/share/icons", "", False),
+    ("~/.local/share/icons/hicolor", "rw", True),  # decoded by the desktop, cached by gtk-update-icon-cache
+    ("~/.icons", "rw", True),
     ("~/.ssh", "", True),
     ("~/Documents", "rw", False),
     ("/mnt/data", "rw", False),
