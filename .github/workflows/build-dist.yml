@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # the version is derived from the git tags
       - name: Build the sdist and the wheel
@@ -27,7 +27,7 @@ jobs:
       - name: The built version must be the tag
         run: |
           test -f "dist/appjail-${GITHUB_REF_NAME#v}.tar.gz" || { echo "tag $GITHUB_REF_NAME does not match the built version:" >&2; ls dist >&2; exit 1; }
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/

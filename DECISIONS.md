@@ -64,5 +64,5 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
 ## Platform and CI
 - Minimum supported systems: Debian 13 and Ubuntu 26.04. On Ubuntu 24.04 the real-portal tests fail (xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend; cause not investigated) and its `reuse` cannot read `REUSE.toml`. No workarounds for older systems.
 - The CI runner label is `ubuntu-26.04`, not `ubuntu-latest` (still Ubuntu 24.04 when tried). GitHub moves `ubuntu-latest` to 26.04 in November 2026; then switch the workflows to `ubuntu-latest` and check CI is green.
-- Actions are referenced by version tag, never by commit SHA, so Dependabot can upgrade them.
+- Actions are pinned to the full commit SHA with a trailing `# vX.Y.Z` comment: a tag can be moved, a SHA cannot. Dependabot's github-actions ecosystem reads the comment and updates SHA and comment together. For an annotated tag, pin the commit it points to (`git ls-remote ... tag^{}`).
 - Known CI-only behaviour: on the runner (Xwayland 24.1.10) a bare Xwayland segfaults on ImageMagick's `display` under headless weston, with no jail involved; the real-X11-app test skips on that signature. Re-check when the runner's Xwayland changes.
