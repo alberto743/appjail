@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 
 from . import catalog, store
 from .catalog import IndexProblem
+from .github import COMMIT_RE
 
 BUILTIN = "appjail-db"
 BUILTIN_REPO = "alberto743/appjail-db"  # GitHub owner/repo of the reference catalog
@@ -129,7 +130,8 @@ def _state(name):
     ok = isinstance(data, dict) and all(
         data.get(k) is None or (isinstance(data.get(k), dict)
                                 and all(isinstance(data[k].get(f), str) for f in ENTRY_FIELDS)
-                                and all(isinstance(data[k].get(f, ""), str) for f in OPTIONAL_FIELDS))
+                                and all(isinstance(data[k].get(f, ""), str) for f in OPTIONAL_FIELDS)
+                                and (not data[k].get("commit") or COMMIT_RE.fullmatch(data[k]["commit"])))
         for k in ("current", "previous"))
     if not ok:
         raise IndexProblem(f"the state of index source '{name}' is malformed")

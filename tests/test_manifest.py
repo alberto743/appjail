@@ -271,6 +271,16 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/.local/bin", "rw", True),
     ("~/.config/myapp", "rw", False),
     ("~/.config/autostart/x", "rw", True),
+    ("~/.local/lib", "", False),
+    ("~/.local/lib/python3.13/site-packages", "rw", True),  # a .pth there runs in every host Python
+    ("~/.local/share/thumbnailers", "rw", True),
+    ("~/.local/share/kio/servicemenus", "rw", True),
+    ("~/.local/share/kservices5/ServiceMenus", "rw", True),
+    ("~/.local/share/nautilus/scripts", "rw", True),
+    ("~/.local/share/nemo/actions", "rw", True),
+    ("~/.local/share/nemo/scripts", "rw", True),
+    ("~/.local/share/nautilus", "rw", True),  # holds the scripts directory
+    ("~/.local/share/myapp", "rw", False),
     ("~/.ssh", "", True),
     ("~/Documents", "rw", False),
     ("/mnt/data", "rw", False),

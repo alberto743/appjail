@@ -422,6 +422,17 @@ def test_state_without_its_fields_is_a_clean_error():
         indexstore.current(DB)
 
 
+@pytest.mark.parametrize("commit", ["abc", "G" * 40, "\x1b[31m" + "1" * 35])
+def test_state_with_a_bad_commit_is_malformed(commit):
+    indexstore.install(DB, catalog.dumps(BASE), NOW, commit=C1)
+    path = indexstore.base() / DB / "state.json"
+    data = json.loads(path.read_text())
+    data["current"]["commit"] = commit
+    path.write_text(json.dumps(data))
+    with pytest.raises(IndexProblem, match="malformed"):
+        indexstore.current(DB)
+
+
 def test_update_sweeps_what_an_interrupted_one_left_behind():
     indexstore.install(DB, catalog.dumps(BASE), NOW)
     (indexstore.base() / DB / ".current.json.tmp").write_text("x")

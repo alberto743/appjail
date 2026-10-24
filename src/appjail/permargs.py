@@ -104,7 +104,7 @@ def permissions_from_args(args):
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
         dbus_own=dbus_from_args(args.dbus_own, check=grants.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
-        portals="portals" in allowed, userns="userns" in allowed,
+        portals="portals" in allowed, userns="userns" in allowed, linger="linger" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
         display=args.display,
     )

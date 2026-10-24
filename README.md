@@ -169,7 +169,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
-| `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused. |
+| `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access where code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, thumbnailers, file-manager scripts, ...). |
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
 | `display` | `wayland` (default) or `xwayland`. |
 

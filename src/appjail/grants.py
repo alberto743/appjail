@@ -80,10 +80,14 @@ SECRET_HOME_DIRS = (".ssh", ".gnupg", ".aws", ".kube", ".docker", ".password-sto
 SECRET_SUFFIXES = (".kdbx", ".kdb", ".key", ".pem", ".p12", ".pfx")
 # Too broad: they contain the secrets of other applications and the persistence locations below.
 BROAD_HOME_DIRS = (".config", ".local", ".local/share", ".local/state", ".cache")
-# Writable access would let the app run code outside the jail later (login, shell, desktop, systemd).
+# Writable access would let the app run code outside the jail later (login, shell, desktop, systemd, the Python user
+# site that every host Python, appjail included, imports, thumbnailers and file-manager actions).
 PERSIST_HOME_DIRS = (".local/bin", ".config/autostart", ".config/systemd", ".config/environment.d", ".config/fish",
                      ".local/share/applications", ".local/share/systemd", ".local/share/dbus-1", ".bashrc.d",
-                     ".profile.d", ".config/plasma-workspace", ".config/Code", ".config/nvim", ".config/zsh")
+                     ".profile.d", ".config/plasma-workspace", ".config/Code", ".config/nvim", ".config/zsh",
+                     ".local/lib", ".local/share/thumbnailers", ".local/share/kio/servicemenus",
+                     ".local/share/kservices5", ".local/share/nautilus/scripts", ".local/share/nemo/actions",
+                     ".local/share/nemo/scripts")
 # Single files that run code outside the jail at login or shell start; never granted read-write.
 PERSIST_HOME_FILES = (".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".profile", ".zshrc", ".zshenv", ".zprofile",
                       ".zlogin", ".xprofile", ".xinitrc", ".xsession", ".xsessionrc", ".pam_environment", ".gitconfig", ".npmrc",

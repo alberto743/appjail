@@ -56,6 +56,17 @@ def test_permission_flags(h):
     assert (p.network, p.audio, p.gpu, p.display) == (True, False, True, "xwayland")
 
 
+@pytest.mark.parametrize("flag", [f for f in cli.PERMISSION_FLAGS if f not in ("audio", "gpu")])
+def test_every_allow_choice_reaches_the_permissions(flag):
+    args = cli.build_parser().parse_args(["add", "o/r", "--allow", flag])
+    assert getattr(cmd_add.permissions_from_args(args), flag) is True
+
+
+def test_allow_linger_is_written_to_the_manifest(h):
+    h.add(extra=["--allow", "linger"])
+    assert manifest.load(store.manifest_path("app")).permissions.linger is True
+
+
 def test_no_digest_is_tier4_with_warning(h):
     console = h.add(client=FakeClient(release_=release(asset(sha=""))))
     assert manifest.load(store.manifest_path("app")).evidence_tier == 4
