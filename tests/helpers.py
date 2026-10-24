@@ -309,8 +309,18 @@ print(json.dumps({
 '''
 
 
-def run_in_jail(sandbox, runtime, script=FACTS, extra=(), **perms):
+def outside_dir():
+    """An existing directory outside the home and outside /tmp (which cannot be granted), for absolute-path grants."""
+    for d in ("/srv", "/mnt", "/opt"):
+        if os.path.isdir(d):
+            return d
+    pytest.skip("no /srv, /mnt or /opt to grant")
+
+
+def run_in_jail(sandbox, runtime, script=FACTS, extra=(), host_home=None, **perms):
     kw = build(sandbox, runtime, **perms)
+    if host_home is not None:
+        kw["host_home"] = host_home
     (kw["root"] / "AppRun").write_text(script)
     (kw["root"] / "AppRun").chmod(0o755)
     kw["command"] = ["/app/AppRun", *extra]

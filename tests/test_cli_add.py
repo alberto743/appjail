@@ -9,7 +9,16 @@ import pytest
 from appjail import appimage, cli, cmd_add, github, manifest, store
 from appjail.cli import Abort
 
-from .helpers import FAKE_APPIMAGE, SHA, FakeClient, Script, asset, info, release
+from .helpers import (
+    FAKE_APPIMAGE,
+    SHA,
+    FakeClient,
+    Script,
+    asset,
+    info,
+    outside_dir,
+    release,
+)
 
 # -- success paths -----------------------------------------------------------------------
 
@@ -64,13 +73,13 @@ def test_tag_selects_that_release(h):
 def test_dir_option_is_stored_canonically(h, tmp_path, monkeypatch):
     home = tmp_path / "fakehome"
     (home / "Docs").mkdir(parents=True)
-    (tmp_path / "shared").mkdir()
+    outside = outside_dir()
     monkeypatch.setattr(Path, "home", lambda: home)
-    h.add(extra=["--dir", str(home / "Docs"), "--dir", f"{tmp_path / 'shared'}:rw"])
-    assert manifest.load(store.manifest_path("app")).permissions.dirs == ("~/Docs", f"{tmp_path / 'shared'}:rw")
+    h.add(extra=["--dir", str(home / "Docs"), "--dir", f"{outside}:rw"])
+    assert manifest.load(store.manifest_path("app")).permissions.dirs == ("~/Docs", f"{outside}:rw")
 
 
-@pytest.mark.parametrize("spec", ["/definitely/not/here", "/", "~/", "relative-missing"])
+@pytest.mark.parametrize("spec", ["/definitely/not/here", "/", "~/", "relative-missing", "/tmp", "/var/tmp"])
 def test_bad_dir_option_aborts_before_any_network(h, spec):
     client = FakeClient()
     with pytest.raises(Abort, match="--dir"):

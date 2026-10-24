@@ -177,6 +177,11 @@ def test_fingerprint_table_is_strict():
     Permissions(dirs=("/etc",)),
     Permissions(dirs=("/run/user/1000",)),
     Permissions(dirs=("/usr/share/fonts",)),
+    Permissions(dirs=("/tmp",)),
+    Permissions(dirs=("/tmp:rw",)),
+    Permissions(dirs=("/tmp/.X11-unix",)),
+    Permissions(dirs=("/tmp/tmux-1000",)),
+    Permissions(dirs=("/var/tmp/work:rw",)),
     Permissions(dirs=("~/.ssh",)),
     Permissions(dirs=("~/.gnupg/private-keys-v1.d",)),
     Permissions(dirs=("~/.config",)),
@@ -285,7 +290,14 @@ def test_sensitive_reason(path, mode, refused):
     assert bool(grants.sensitive_reason(path, mode)) is refused
 
 
-@pytest.mark.parametrize("spec", ["~/.ssh", "~/.config", "~/.local/bin:rw", "/etc/ssl", "/proc"])
+@pytest.mark.parametrize("path,refused", [("/tmp", True), ("/tmp/x/y", True), ("/var/tmp", True), ("/tmpfiles", False),
+                                          ("/var/tmpl", False), ("/mnt/tmp", False), ("~/tmp", False)])
+def test_directory_reason_refuses_the_shared_temp_dirs(path, refused):
+    assert bool(grants.directory_reason(path, "")) is refused
+    assert grants.sensitive_reason(path, "") is None  # single files there are fine
+
+
+@pytest.mark.parametrize("spec", ["~/.ssh", "~/.config", "~/.local/bin:rw", "/etc/ssl", "/proc", "/tmp", "/var/tmp/x"])
 def test_normalize_dir_refuses_sensitive(spec):
     with pytest.raises(manifest.ManifestError, match="refused"):
         grants.normalize_dir(spec, "/home/u", "/home/u/work")

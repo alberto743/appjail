@@ -7,6 +7,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from .helpers import (
     build,
     install,
     integration,
+    outside_dir,
     pairs,
     run_in_jail,
     wait_for,
@@ -131,14 +133,39 @@ def test_dirs_map_into_private_home(sandbox, runtime, monkeypatch):
     fake_home = sandbox / "fakehome"
     (fake_home / "Docs").mkdir(parents=True)
     (fake_home / "Out").mkdir()
-    shared = sandbox / "shared"
-    shared.mkdir()
-    kw = build(sandbox, runtime, dirs=("~/Docs", "~/Out:rw", str(shared)))
+    shared = outside_dir()
+    kw = build(sandbox, runtime, dirs=("~/Docs", "~/Out:rw", shared))
     kw["host_home"] = fake_home
     args = runtimejail.runtime_args(**kw)
     assert (str(fake_home / "Docs"), "/home/app/Docs") in pairs(args, "--ro-bind")
     assert (str(fake_home / "Out"), "/home/app/Out") in pairs(args, "--bind")
-    assert (str(shared), str(shared)) in pairs(args, "--ro-bind")
+    assert (shared, shared) in pairs(args, "--ro-bind")
+
+
+@pytest.mark.parametrize("base", ["/tmp", "/var/tmp"])
+def test_shared_temp_dirs_refused_after_symlink_resolution(sandbox, runtime, base):
+    """A home link into /tmp must not get its sockets (X11, tmux, ...) into the jail, not even read-only.
+    The target is a fresh directory there, since the sandbox (and so the fake home) itself lives below /tmp."""
+    fake_home = sandbox / "fakehome"
+    fake_home.mkdir()
+    target = tempfile.mkdtemp(prefix="appjail-test-", dir=base)
+    try:
+        (fake_home / "scratch").symlink_to(target)
+        with pytest.raises(RunError, match="shared by every program"):
+            runtimejail.dir_binds(["~/scratch"], fake_home)
+    finally:
+        os.rmdir(target)
+
+
+def test_a_single_file_in_tmp_can_still_be_granted(sandbox):
+    """Only directories carry other programs' sockets: a download opened from /tmp stays possible."""
+    fd, path = tempfile.mkstemp(prefix="appjail-test-", dir="/tmp")
+    os.close(fd)
+    try:
+        args, dests = runtimejail.file_binds([path], sandbox)
+        assert dests == [path] and (path, path) in pairs(args, "--ro-bind")
+    finally:
+        os.unlink(path)
 
 
 def test_missing_granted_dir_is_an_error(sandbox, runtime):
@@ -297,20 +324,22 @@ def test_passwd_and_private_home_created(sandbox):
     assert home.stat().st_mode & 0o777 == 0o700
 
 
-def test_launch_merges_temporary_directories_without_touching_the_manifest(sandbox, runtime):
+def test_launch_merges_temporary_directories_without_touching_the_manifest(sandbox, runtime, monkeypatch):
     install(sandbox)
-    granted = sandbox / "granted"
-    granted.mkdir()
+    fake_home = sandbox / "fakehome"
+    granted = fake_home / "granted"
+    granted.mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", lambda: fake_home)
     captured = []
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
     said = []
     code = runner.launch("app", ["--x"], host_env=env, extract=Extractor(), say=said.append,
-                         runner=lambda argv: captured.append(argv) or 0, extra_dirs=(f"{granted}:rw",),
+                         runner=lambda argv: captured.append(argv) or 0, extra_dirs=("~/granted:rw",),
                          restricted=NO_RESTRICTION)
     assert code == 0
     assert any("wp_security_context_v1" in m for m in said)
     argv = captured[0]
-    assert (str(granted), str(granted)) in pairs(argv, "--bind")
+    assert (str(granted), "/home/app/granted") in pairs(argv, "--bind")
     assert argv[-2:] == ["/app/AppRun", "--x"]
     assert any("Temporary access" in line for line in said)
     assert manifest.load(store.manifest_path("app")).permissions.dirs == ()
@@ -390,11 +419,11 @@ def test_gpu_nodes_only_when_granted(sandbox, runtime):
 
 @integration
 def test_granted_directories_modes(sandbox, runtime):
-    ro, rw = sandbox / "ro", sandbox / "rw"
-    ro.mkdir()
-    rw.mkdir()
-    script = FACTS.replace('print(json.dumps({', f'print(json.dumps({{"w_ro": writable("{ro}/x"), "w_rw": writable("{rw}/x"), ')
-    proc = run_in_jail(sandbox, runtime, script=script, dirs=(str(ro), f"{rw}:rw"))
+    fake_home = sandbox / "fakehome"
+    (fake_home / "ro").mkdir(parents=True)
+    (fake_home / "rw").mkdir()
+    script = FACTS.replace('print(json.dumps({', 'print(json.dumps({"w_ro": writable("/home/app/ro/x"), "w_rw": writable("/home/app/rw/x"), ')
+    proc = run_in_jail(sandbox, runtime, script=script, host_home=fake_home, dirs=("~/ro", "~/rw:rw"))
     assert proc.returncode == 0, proc.stderr
     r = json.loads(proc.stdout)
     assert (r["w_ro"], r["w_rw"]) == (False, True)

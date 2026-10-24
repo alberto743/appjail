@@ -42,7 +42,7 @@ def dir_binds(dirs, home):
             rel = real.relative_to(home_real)
         except ValueError:
             rel = None
-        why = grants.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
+        why = grants.directory_reason(f"~/{rel}" if rel else str(real), mode)
         if why:
             raise RunError(f"granted directory {host} is refused: {why}")
         args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]

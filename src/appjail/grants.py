@@ -91,6 +91,10 @@ PERSIST_HOME_FILES = (".bashrc", ".bash_profile", ".bash_login", ".bash_logout",
 # System trees that are never user data; the jail provides its own /dev, /proc, /run and /etc.
 SYSTEM_PATHS = ("/etc", "/dev", "/proc", "/sys", "/run", "/boot", "/root", "/usr", "/bin", "/sbin", "/lib", "/lib32",
                 "/lib64")
+# Shared by every program and full of their sockets (X11, tmux, ssh-agent, ...). A bind mount does not stop connect(),
+# even read-only, so granting such a directory would reach those programs from inside the jail. Only directories are
+# refused: a single regular file there (a download opened from /tmp) carries no socket.
+SHARED_DIRS = ("/tmp", "/var/tmp")
 
 
 def _within(path, base):
@@ -126,6 +130,16 @@ def sensitive_reason(path, mode):
     return None
 
 
+def directory_reason(path, mode):
+    """Why a directory grant (normalized like sensitive_reason's path) must be refused, else None: the sensitive-path
+    policy plus the shared directories, which only matter for a directory."""
+    for d in SHARED_DIRS:
+        if _within(path, d):
+            return (f"{d} is shared by every program and holds their sockets (X11, tmux, ...), which the app could "
+                    "reach even read-only; use a directory elsewhere")
+    return sensitive_reason(path, mode)
+
+
 def check_dir(entry):
     path, _, mode = entry.partition(":")
     if mode not in ("", "ro", "rw"):
@@ -134,7 +148,7 @@ def check_dir(entry):
         raise ManifestError(f"dirs entry {entry!r}: path must be absolute or start with ~/")
     if path in ("/", "~/") or ".." in path.split("/"):
         raise ManifestError(f"dirs entry {entry!r}: path is too broad or contains '..'")
-    reason = sensitive_reason(path.rstrip("/") or path, mode)
+    reason = directory_reason(path.rstrip("/") or path, mode)
     if reason:
         raise ManifestError(f"dirs entry {entry!r} is refused: {reason}")
     return entry

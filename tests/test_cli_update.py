@@ -20,6 +20,7 @@ from .helpers import (
     asset,
     info,
     installed,
+    outside_dir,
     release,
     release2,
     update,
@@ -246,10 +247,9 @@ def test_perms_show(h):
     assert "network=False" in perms(h).text
 
 
-def test_perms_change_and_confirm(h, tmp_path):
+def test_perms_change_and_confirm(h):
     path = installed(h)
-    d = tmp_path / "docs"
-    d.mkdir()
+    d = outside_dir()
     c = perms(h, "--allow", "network", "--deny", "gpu", "--add-dir", f"{d}:rw")
     p = manifest.load(path).permissions
     assert p.network and not p.gpu and p.dirs == (f"{d}:rw",)
