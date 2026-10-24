@@ -136,6 +136,14 @@ def test_interactive_selection(h, xdg):
     assert "MimeType=image/png;text/plain;" in desktop.entry_path("app").read_text()
 
 
+def test_the_type_prompt_states_the_mode_that_will_apply(h, xdg):
+    added(h)
+    assert "read-only)" in run(["desktop", "app"], Script(["1", "y"])).text
+    run(["desktop", "app", "--remove"])
+    text = run(["desktop", "app", "--rw"], Script(["1", "y"])).text
+    assert "read-write; an app that saves by renaming a new file will fail)" in text and "read-only)" not in text
+
+
 def test_undeclared_or_refused_types_are_rejected(h, xdg):
     added(h)
     for bad in ("x-scheme-handler/http", "audio/mpeg"):

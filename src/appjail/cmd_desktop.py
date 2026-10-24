@@ -29,7 +29,8 @@ def _select(console, declared, args, current, yes):
         return [m for m in current if m in declared]
     if not declared or yes:
         return []
-    console.out("The app offers these file types (opening one of them hands that single file to the app, read-only):")
+    mode = "read-write; an app that saves by renaming a new file will fail" if args.rw else "read-only"
+    console.out(f"The app offers these file types (opening one of them hands that single file to the app, {mode}):")
     for i, m in enumerate(declared, 1):
         console.out(f"  {i}. {m}")
     answer = console.ask("Register: numbers separated by commas, 'all', or empty for none: ")
