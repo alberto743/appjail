@@ -6,7 +6,7 @@
 import os
 from pathlib import Path
 
-from . import grants, jail, manifest
+from . import grants, jail, landlock, manifest
 from .console import Abort
 
 PERMISSION_FLAGS = manifest.BOOL_PERMS
@@ -84,9 +84,11 @@ def warn_owned_dbus(console, names):
         console.warn(f"{n}: the app may own this session-bus name (be the service behind it) and talk to it")
 
 
-def require_pasta(perms):
-    """An app with network (and not network_host) runs behind pasta and is refused without it: say so when the
-    permission is granted, not at the first launch."""
+def require_network_isolation(perms):
+    """What keeps a networked app off the host's own services, checked when the permission is granted rather than at
+    the first launch: pasta for `network`, Landlock (abstract unix sockets) for `network_host`."""
+    if perms.network_host and not landlock.available():
+        raise Abort(landlock.NEEDED_FOR_NETWORK_HOST)
     if perms.network and not perms.network_host and not jail.find_pasta():
         raise Abort("network access runs the app in a private network namespace made by pasta, which is not installed "
                     "(package passt, e.g. `apt install passt`). Install it, or use --allow network_host to give the "

@@ -12,7 +12,7 @@ from .cmd_desktop import install_entry
 from .console import Abort, human_size
 from .permargs import (
     permissions_from_args,
-    require_pasta,
+    require_network_isolation,
     show_permissions,
 )
 
@@ -132,7 +132,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         raise Abort(f"'{name}' is already added")
 
     perms = permissions_from_args(args)  # validates --dir before any network access
-    require_pasta(perms)
+    require_network_isolation(perms)
 
     info = client.repo_info(args.source)
     show_review(console, info, now)

@@ -27,7 +27,7 @@ from .permargs import (
     describe_permissions,
     dirs_from_args,
     portals_from_args,
-    require_pasta,
+    require_network_isolation,
     warn_owned_dbus,
     warn_privileged_portals,
     warn_sensitive_dbus,
@@ -220,7 +220,7 @@ def cmd_perms(args, console):
     new = replace(m, permissions=replace(p, **changes))
     manifest.validate(new)
     if new.permissions.network != p.network or new.permissions.network_host != p.network_host:
-        require_pasta(new.permissions)
+        require_network_isolation(new.permissions)
     console.out(f"{name} before: {describe_permissions(p)}")
     console.out(f"{name} after : {describe_permissions(new.permissions)}")
     warn_new_grants(console, p, new.permissions)

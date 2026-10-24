@@ -30,7 +30,7 @@ from .imagesrc import (
 )
 from .permargs import (
     permissions_from_args,
-    require_pasta,
+    require_network_isolation,
     show_permissions,
 )
 
@@ -51,7 +51,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
     if not 0 < st.st_size <= MAX_ASSET:
         raise Abort(f"unexpected file size ({st.st_size} bytes)")
     perms = permissions_from_args(args)  # validates --dir before anything is copied
-    require_pasta(perms)
+    require_network_isolation(perms)
 
     console.out(f"File       : {real}")
     console.out(f"Size       : {human_size(st.st_size)}, modified "
@@ -102,7 +102,7 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
     if not 0 < max_mib * 1024 ** 2 <= MAX_ASSET:
         raise Abort(f"--max-size must be between 1 and {MAX_ASSET // 1024 ** 2} MiB")
     perms = permissions_from_args(args)
-    require_pasta(perms)
+    require_network_isolation(perms)
 
     console.out(f"URL        : {url}")
     console.out(f"Limit      : {human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http")

@@ -156,7 +156,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | Permission | Effect |
 |---|---|
 | `network` | Outbound internet through a private network namespace made by `pasta`. The app cannot reach services on your machine's localhost or its own addresses. Needs `passt`; without it the app is refused rather than put on the host network. |
-| `network_host` | The host's own network, including localhost services (`--allow network_host`, which implies `network`). For apps that really need them. |
+| `network_host` | The host's own network, including localhost services (`--allow network_host`, which implies `network`). For apps that really need them. Landlock (Linux 6.12 or later) keeps the app off the host's abstract unix sockets, such as the X server's; without it the permission is refused. |
 | `audio`, `gpu` | On by default; `--no-audio` and `--no-gpu` at `add` time, or `--deny` later. Audio (the Pulse socket) includes the microphone. |
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |

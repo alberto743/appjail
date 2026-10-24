@@ -20,6 +20,7 @@ from . import (
     grants,
     history,
     jail,
+    landlock,
     manifest,
     portal,
     runtimejail,
@@ -232,6 +233,9 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         say(f"Warning: the manifest of {name} was changed outside appjail since its last recorded change "
             f"(see `appjail history {name}` and the config directory's git log).")
     perms, extra_args = _temporary_grants(m.permissions, extra_dirs, extra_files, extra_args, say)
+    scoped = landlock.available()
+    if perms.network_host and not scoped:
+        raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
     env = dict(os.environ if host_env is None else host_env)
     in_pasta = perms.network and not perms.network_host
     with contextlib.ExitStack() as stack:
@@ -252,6 +256,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             argv = jail.net_wrap(argv, required=True, lifeline=life.path, fd_files={
                 PASTA_SECCOMP_FD: filter_file,
                 **({PASTA_STATUS_FD: (">", pipes.paths["status"]), PASTA_BLOCK_FD: ("<", pipes.paths["block"])} if pipes else {})})
+        if scoped and not in_pasta:  # pasta's private namespace already isolates abstract sockets, and pasta does not
+            argv = landlock.wrap(argv)  # start its command under the no_new_privs that Landlock needs
         if runner:
             return runner(argv)
         return _run_app(argv, filter_fd, pipes, instance)
