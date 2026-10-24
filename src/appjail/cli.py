@@ -82,6 +82,7 @@ def build_parser():
     add.add_argument("--mime", action="append", default=[], metavar="TYPE",
                      help="with --desktop: offer the app for this file type (must be declared by the app); repeatable")
     add.add_argument("--mime-all", action="store_true", help="with --desktop: offer every file type the app declares (minus refused ones)")
+    add.add_argument("--rw", action="store_true", help="with --desktop: opened files are writable (default: read-only)")
     search = sub.add_parser("search", help="search the local index (suggestions only, never installs)")
     search.add_argument("keywords", nargs="+")
     search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")

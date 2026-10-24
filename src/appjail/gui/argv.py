@@ -47,6 +47,8 @@ def add_argv(form):
         if form.get("mime_all"):
             argv.append("--mime-all")
         argv += _repeat("--mime", form.get("mime", ()))
+        if form.get("rw"):
+            argv.append("--rw")
     return argv
 
 
@@ -58,10 +60,10 @@ def defers_menu_entry(form):
     return bool(form.get("desktop") and not form.get("mime_all") and not form.get("mime"))
 
 
-def add_followup(before, after):
+def add_followup(before, after, rw=False):
     """The `desktop NAME` that follows a successful add: the one new app between the two name collections, else None."""
     new = set(after) - set(before)
-    return desktop_argv(next(iter(new))) if len(new) == 1 else None
+    return desktop_argv(next(iter(new)), rw=rw) if len(new) == 1 else None
 
 
 def perms_argv(name, old, new):

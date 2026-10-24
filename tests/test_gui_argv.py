@@ -90,3 +90,6 @@ def test_add_followup_offers_the_declared_types():
     assert argv.add_followup(["a"], ["a", "b"]) == ["desktop", "b"]
     assert argv.add_followup(["a"], ["a"]) is None
     assert argv.add_followup([], ["a", "b"]) is None
+    assert argv.add_followup(["a"], ["a", "b"], rw=True) == ["desktop", "b", "--rw"]
+    args = parses(argv.add_argv({"source": "o/App", "desktop": True, "mime": ["text/plain"], "rw": True}))
+    assert args.rw and args.mime == ["text/plain"]

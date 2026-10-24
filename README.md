@@ -124,7 +124,7 @@ access and nothing else.
 | `--prerelease` | Follow pre-releases. |
 | `--name NAME` | The app's name (default: from the project). |
 | `--allow`, `--dir`, `--dbus`, `--dbus-own`, `--portal`, `--display`, `--no-audio`, `--no-gpu` | Permissions at install time (see [Permissions](#permissions)). |
-| `--desktop [--mime TYPE]` | Also create a menu entry (see [Menu entry](#menu-entry-and-opening-files)). |
+| `--desktop [--mime TYPE] [--rw]` | Also create a menu entry (see [Menu entry](#menu-entry-and-opening-files)). |
 
 `run` passes everything after `--` to the app (`appjail run lagrange -- --help`).
 
@@ -181,7 +181,7 @@ abstract unix sockets created outside the sandbox. The extracted app tree is has
 
 ## Menu entry and opening files
 
-`appjail desktop NAME [--mime TYPE]... [--mime-all] [--rw]` (also `add --desktop`) creates a menu entry that starts the
+`appjail desktop NAME [--mime TYPE]... [--mime-all] [--rw]` (also `add --desktop [--rw]`) creates a menu entry that starts the
 app through appjail. appjail generates it itself; the AppImage's own `.desktop` is never used. File types are opt-in:
 only the ones you pick show under "Open with", and appjail never makes the app a default. Opening a file passes just
 that file to the app, read-only unless `--rw` (`appjail open NAME -- FILE...`). `desktop --remove` and `--prune` delete

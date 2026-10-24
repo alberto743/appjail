@@ -185,7 +185,7 @@ def finish_add(console, args, record, entries, size):
     console.out(f"Added '{name}' {record.version}: sha256 {record.sha256}, evidence tier {record.evidence_tier}")
     console.out(f"Manifest   : {store.manifest_path(name)}")
     if getattr(args, "desktop", False):
-        args.rw = False
+        args.rw = bool(getattr(args, "rw", False))
         try:
             install_entry(name, console, args, yes=True, ask=False)
         except Abort as e:

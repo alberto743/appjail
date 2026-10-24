@@ -28,7 +28,7 @@ class App:
         self.events = worker.new_events()
         self.background = []  # event queues of detached children (run, open)
         self.busy = False
-        self.names_before_add = None  # set while an add waits for its file-types follow-up
+        self.names_before_add = None  # (names, rw) while an add waits for its file-types follow-up
         self.status = tk.StringVar(value="ready")
         bar = ttk.Frame(root)  # packed first, at the bottom: a small window shrinks the panes, never the status line
         bar.pack(side="bottom", fill="x")
@@ -117,9 +117,9 @@ class App:
                     self.progress.pack_forget()
                     self.status.set("ready" if payload == 0 else f"last command ended with status {payload}")
                     self.refresh()
-                    before, self.names_before_add = self.names_before_add, None
-                    if before is not None and payload == 0:
-                        followup = argv.add_followup(before, [r[0] for r in apps.rows()])
+                    pending, self.names_before_add = self.names_before_add, None
+                    if pending is not None and payload == 0:
+                        followup = argv.add_followup(pending[0], [r[0] for r in apps.rows()], pending[1])
                         if followup:
                             self.run(followup)
 
@@ -341,13 +341,14 @@ class App:
         self.desktop = tk.BooleanVar()
         self.mime_all = tk.BooleanVar()
         self.mime = tk.StringVar()
+        self.rw = tk.BooleanVar()
         self.checks = {}
         for var, text in ((self.prerelease, "Allow pre-releases"), (self.desktop, "Create menu entry"),
-                          (self.mime_all, "Offer all file types")):
+                          (self.mime_all, "All file types"), (self.rw, "Files writable")):
             self.checks[text] = ttk.Checkbutton(bottom, text=text, variable=var)
             self.checks[text].pack(side="left", padx=4)
-        ttk.Label(bottom, text="File types (or choose later):").pack(side="left", padx=(12, 2))
-        ttk.Entry(bottom, textvariable=self.mime, width=20).pack(side="left")
+        ttk.Label(bottom, text="File types:").pack(side="left", padx=(12, 2))
+        ttk.Entry(bottom, textvariable=self.mime, width=16).pack(side="left")
         ttk.Button(bottom, text="Add…", command=self._add).pack(side="right")
         self._kind_changed()
 
@@ -369,14 +370,14 @@ class App:
         form.update(kind=self.kind.get(), source=self.source.get(), prerelease=self.prerelease.get(),
                     allow=[f for f, v in self.flag.items() if v.get()], display=self.display.get(),
                     desktop=self.desktop.get(), mime_all=self.mime_all.get(),
-                    mime=self.mime.get().replace(",", " ").split())
+                    mime=self.mime.get().replace(",", " ").split(), rw=self.rw.get())
         form.update({k: ed.values() for k, ed in self.editors.items()})
         if not form["source"].strip():
             messagebox.showinfo("appjail", "Give a source first.", parent=self.root)
             return
         if argv.defers_menu_entry(form):  # `desktop NAME` follows the install and offers the types the app declares
             form["desktop"] = False
-            self.names_before_add = [r[0] for r in apps.rows()]
+            self.names_before_add = ([r[0] for r in apps.rows()], self.rw.get())
         self.run(argv.add_argv(form), "adding")  # the command shows its review and asks before installing
 
     # --- Search and index -------------------------------------------------------------------------------------------
