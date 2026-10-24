@@ -42,6 +42,8 @@ jobs:
           . /etc/os-release && echo "$PRETTY_NAME, kernel $(uname -r)"
           bwrap --version; pasta --version | head -1; Xwayland -version 2>&1 | head -1
           /usr/libexec/xdg-desktop-portal --version; weston --version; reuse --version; ruff --version; python3 --version
+          pipewire --version | head -2 | tail -1
+          python3 -I -c 'import sys; sys.path.insert(0, "src/appjail"); import landlock; print("Landlock ABI", landlock.abi())'
 
       - name: Run the tests
         env:

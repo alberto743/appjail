@@ -48,6 +48,9 @@ is built around the opposite assumptions:
   - `xdg-dbus-proxy`: D-Bus filtering and portals.
   - `xwayland`: X11-only apps.
   - `git`: the search index (`index update`) and the manifest history.
+  - Linux 6.12 or later with Landlock (both supported systems have it): apps with `network_host`, which are
+    refused without it.
+  - A Pulse server (`pipewire-pulse` on PipeWire systems, or PulseAudio): audio. PipeWire's own socket is never used.
 - Optional: `python3-tk` for the window (`appjail-gui`, see [Graphical interface](#graphical-interface)).
 - A Wayland compositor for GUI apps. The host X11 socket is never shared.
 

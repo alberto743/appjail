@@ -6,10 +6,11 @@ Read `DESIGN.md` first: it specifies the behaviour. `DECISIONS.md` records rejec
 A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinned and verified downloads, bwrap jails, quarantined updates, a derived catalog index. The version comes from the git tag (`[tool.hatch.version]`); pushing a `vX.Y.Z` tag runs `release.yml` and `pypi.yml` after the CI gate. Commits stay local until the user asks to push.
 
 ## Open items
-All need a decision or an app/session the user approves; none is blocked on code.
+Planned code work is marked as such; everything else needs a decision or an app/session the user approves.
 - Manual checks on the user's machine: the GNOME and KDE portal backends; IPv6 on a real internet route.
 - Decision pending: arm64 support (`DECISIONS.md`).
 - Deferred by the user (`DECISIONS.md`): the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN.
+- Planned (code): the `camera` device permission (`/dev/video*`, `/dev/media*`); the remaining low audit findings: a symlinked tree root in the `--appimage-extract` fallback, more D-Bus names to refuse (dconf, gvfs, terminals), symlinks in files being opened, unbounded output buffering in `jail.supervise`, app-name validation in `run` and `update`, the `:rw` suffix in `--file` names.
 - When GitHub moves `ubuntu-latest` to 26.04 (November 2026): switch the workflows and check CI.
 
 ## Docs
