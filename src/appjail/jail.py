@@ -334,8 +334,7 @@ def check_url(url, stage_dir, etag=None, last_modified=None):
 
 # -- git jail (manifest history) ------------------------------------------------------
 
-GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_TERMINAL_PROMPT": "0",
-           "GIT_ALLOW_PROTOCOL": "https", "GIT_LFS_SKIP_SMUDGE": "1"}
+GIT_ENV = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_TERMINAL_PROMPT": "0"}
 
 
 def local_git_args(workdir, command):

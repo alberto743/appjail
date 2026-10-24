@@ -18,10 +18,11 @@ def _check(name):
         raise Abort(f"'{name}' has no extracted tree; run it once (`appjail run {name}`) and retry")
 
 
-def file_type_state(name):
-    """(offered, ignored, registered, rw) of an app: what it declares and passes the filter, what it declares and does not,
-    and what its installed entry registers (empty, read-only, when there is no entry)."""
-    fields = desktop.read_app_desktop(store.root_path(name))
+def file_type_state(name, fields=None):
+    """(offered, ignored, registered, rw, has_entry) of an app: what it declares and passes the filter, what it declares
+    and does not, and what its installed entry registers (empty, read-only, when there is no entry). `fields`: the app's
+    own .desktop fields when the caller has read them already."""
+    fields = desktop.read_app_desktop(store.root_path(name)) if fields is None else fields
     offered, ignored = desktop.split_mimes(fields.get("MimeType"))
     state = desktop.installed_state(name)
     return offered, ignored, (state[0] if state else []), bool(state and state[1]), state is not None
@@ -75,7 +76,7 @@ def install_entry(name, console, args, yes=False, ask=True):
     _check(name)
     root = store.root_path(name)
     fields = desktop.read_app_desktop(root)
-    declared, ignored, current, was_rw, has_entry = file_type_state(name)
+    declared, ignored, current, was_rw, has_entry = file_type_state(name, fields)
     mimes = _select(console, declared, args, current if has_entry else None, yes or not ask)
     rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
     shown = desktop.display_fields(fields, name)
@@ -97,7 +98,7 @@ def install_entry(name, console, args, yes=False, ask=True):
         console.out(f"note: {note}")
     if size and not shutil.which(desktop.ICON_CACHE_TOOL):
         console.out("note: gtk-update-icon-cache (libgtk-3-bin) is not installed; the icon may appear only after the next login")
-    if not desktop.refresh_cache() and mimes:
+    if mimes and not shutil.which(desktop.DESKTOP_DB_TOOL):
         console.out("note: update-desktop-database (desktop-file-utils) is not installed; the file types may appear after the next login")
 
 

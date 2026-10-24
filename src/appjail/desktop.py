@@ -29,6 +29,7 @@ ICON_SIZE_RANGE = (16, 1024)
 SVG_SIZE = 256
 RSVG = "/usr/bin/rsvg-convert"
 ICON_CACHE_TOOL = "gtk-update-icon-cache"
+DESKTOP_DB_TOOL = "update-desktop-database"
 MAX_MIMES = 32
 MAX_FIELD = 200
 
@@ -308,16 +309,13 @@ def remove_icons(name):
 
 def refresh_cache():
     """Tell the desktop about changed entries (desktop-file-utils) and icons (gtk-update-icon-cache; `-t` because the
-    user's hicolor has no index.theme). False when update-desktop-database is missing."""
+    user's hicolor has no index.theme); a missing tool is skipped."""
     if tool := shutil.which(ICON_CACHE_TOOL):
         theme = data_home() / "icons/hicolor"
         if theme.is_dir():
             subprocess.run([tool, "-q", "-t", "-f", str(theme)], capture_output=True, check=False, timeout=60)
-    tool = shutil.which("update-desktop-database")
-    if not tool:
-        return False
-    subprocess.run([tool, str(applications_dir())], capture_output=True, check=False, timeout=60)
-    return True
+    if tool := shutil.which(DESKTOP_DB_TOOL):
+        subprocess.run([tool, str(applications_dir())], capture_output=True, check=False, timeout=60)
 
 
 def install(name, root, mimes=(), rw=False, argv=None, convert=None):

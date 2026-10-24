@@ -43,7 +43,7 @@ The jail ends with its main command; the `linger` permission (opt-in per app) wa
 ### GitHub API
 - Release assets have a `digest` field (`sha256:<64 hex>` or null). Older releases may lack it, hence tier 4 (trust on first use) as the fallback.
 - Attestations: `GET /users/{u}/attestations/{digest}` and the `orgs/` variant need a token. The repo-scoped `GET /repos/{owner}/{repo}/attestations/{digest}` works unauthenticated and returns `attestations[]` with `bundle_url` (a short-lived signed blob URL). appjail uses the repo-scoped endpoint with the digest from the release asset. Existence alone is not proof; the bundle is verified (DESIGN.md, Attestation verification).
-- The unauthenticated rate limit is 60 requests per hour per address; `GET /rate_limit` is free. One `add` costs about 4 requests, one `update` about 4.
+- The unauthenticated rate limit is 60 requests per hour per address; `GET /rate_limit` is free. One `add` costs about 4 requests, one `update` about 4, one `index update` of the built-in source 1.
 
 ### AM index (ivan-hc/AM)
 Analysis done for appjail-db, which now converts AM; appjail itself no longer reads AM. Not to be redone.
@@ -70,7 +70,7 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
   - `landlock.py`: the Landlock system calls have the same numbers on aarch64; only its `platform.machine()` check is x86-64.
   - `runtimejail.py`/`jail.py` look architecture-neutral (to verify: the `/lib64` bind).
 - **Verification cost:** an arm64 guest on an x86 host runs under TCG (5-20x slower: fine for unit tests and seccomp probes, painful for GUI e2e) and needs `qemu-system-arm` and `qemu-efi-aarch64` on the host and an arm64 Debian image. `tests/vm/*.sh` would take a `VM_ARCH`. Real arm64 AppImages need new approvals. `ubuntu-24.04-arm` is below the minimum supported system; without a 26.04 arm runner arm64 would be "supported, tested in an emulated guest only", and the README must say so.
-- **Staging if approved:** (1) architecture-aware core with no change on x86, unit-testable on the x86 guest; (2) arm64 guest scripts and suite under TCG; (3) arm64 helper pins and the AM aarch64 source; (4) one real arm64 AppImage smoke test and an arm CI job if a runner exists; (5) docs at each step.
+- **Staging if approved:** (1) architecture-aware core with no change on x86, unit-testable on the x86 guest; (2) arm64 guest scripts and suite under TCG; (3) arm64 helper pins and an aarch64 catalog from appjail-db; (4) one real arm64 AppImage smoke test and an arm CI job if a runner exists; (5) docs at each step.
 
 ## Platform and CI
 - Minimum supported systems: Debian 13 and Ubuntu 26.04. On Ubuntu 24.04 the real-portal tests fail (xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend; cause not investigated) and its `reuse` cannot read `REUSE.toml`. No workarounds for older systems.

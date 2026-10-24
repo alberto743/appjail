@@ -289,7 +289,7 @@ def test_the_icon_cache_is_refreshed_with_the_gtk_tool(h, xdg, tmp_path, monkeyp
     monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ['PATH']}")
     added(h)
     run(["desktop", "app", "--yes"])
-    assert set(log.read_text().splitlines()) == {f"-q -t -f {xdg / 'icons/hicolor'}"}
+    assert log.read_text().splitlines() == [f"-q -t -f {xdg / 'icons/hicolor'}"]  # once per change
 
 
 def test_update_refresh_does_nothing_without_an_entry(h, xdg):
