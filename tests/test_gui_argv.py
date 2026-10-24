@@ -80,3 +80,13 @@ def test_run_desktop_portals_history_parse():
     assert parses(argv.portals_argv("app", (), True)).revoke_all
     assert argv.history_argv() == ["history"]
     assert parses(argv.history_argv("app", 5)).limit == 5
+
+
+def test_add_followup_offers_the_declared_types():
+    assert argv.defers_menu_entry({"desktop": True, "mime": []})
+    assert not argv.defers_menu_entry({"desktop": True, "mime": ["text/plain"]})
+    assert not argv.defers_menu_entry({"desktop": True, "mime_all": True})
+    assert not argv.defers_menu_entry({"desktop": False})
+    assert argv.add_followup(["a"], ["a", "b"]) == ["desktop", "b"]
+    assert argv.add_followup(["a"], ["a"]) is None
+    assert argv.add_followup([], ["a", "b"]) is None

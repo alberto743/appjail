@@ -50,6 +50,20 @@ def add_argv(form):
     return argv
 
 
+def defers_menu_entry(form):
+    """True when the menu entry waits for a follow-up `desktop NAME`: wanted, but no file types chosen yet.
+
+    The types an app declares are only known once it is installed; `desktop` then lists them and asks.
+    """
+    return bool(form.get("desktop") and not form.get("mime_all") and not form.get("mime"))
+
+
+def add_followup(before, after):
+    """The `desktop NAME` that follows a successful add: the one new app between the two name collections, else None."""
+    new = set(after) - set(before)
+    return desktop_argv(next(iter(new))) if len(new) == 1 else None
+
+
 def perms_argv(name, old, new):
     """`appjail perms NAME ...` for the difference between two permission states.
 

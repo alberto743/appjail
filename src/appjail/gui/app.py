@@ -28,6 +28,7 @@ class App:
         self.events = worker.new_events()
         self.background = []  # event queues of detached children (run, open)
         self.busy = False
+        self.names_before_add = None  # set while an add waits for its file-types follow-up
         self.status = tk.StringVar(value="ready")
         bar = ttk.Frame(root)  # packed first, at the bottom: a small window shrinks the panes, never the status line
         bar.pack(side="bottom", fill="x")
@@ -116,6 +117,11 @@ class App:
                     self.progress.pack_forget()
                     self.status.set("ready" if payload == 0 else f"last command ended with status {payload}")
                     self.refresh()
+                    before, self.names_before_add = self.names_before_add, None
+                    if before is not None and payload == 0:
+                        followup = argv.add_followup(before, [r[0] for r in apps.rows()])
+                        if followup:
+                            self.run(followup)
 
     def refresh(self):
         keep = self.tree.selection()
@@ -340,8 +346,8 @@ class App:
                           (self.mime_all, "Offer all file types")):
             self.checks[text] = ttk.Checkbutton(bottom, text=text, variable=var)
             self.checks[text].pack(side="left", padx=4)
-        ttk.Label(bottom, text="File types:").pack(side="left", padx=(12, 2))
-        ttk.Entry(bottom, textvariable=self.mime, width=28).pack(side="left")
+        ttk.Label(bottom, text="File types (or choose later):").pack(side="left", padx=(12, 2))
+        ttk.Entry(bottom, textvariable=self.mime, width=20).pack(side="left")
         ttk.Button(bottom, text="Add…", command=self._add).pack(side="right")
         self._kind_changed()
 
@@ -368,6 +374,9 @@ class App:
         if not form["source"].strip():
             messagebox.showinfo("appjail", "Give a source first.", parent=self.root)
             return
+        if argv.defers_menu_entry(form):  # `desktop NAME` follows the install and offers the types the app declares
+            form["desktop"] = False
+            self.names_before_add = [r[0] for r in apps.rows()]
         self.run(argv.add_argv(form), "adding")  # the command shows its review and asks before installing
 
     # --- Search and index -------------------------------------------------------------------------------------------
