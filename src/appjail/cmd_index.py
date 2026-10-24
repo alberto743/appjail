@@ -110,7 +110,7 @@ def review_and_install(source, text, console, now=None, commit=""):
         console.out(f"{source.name}: already up to date ({len(new.apps)} apps).")
         return "current"
     console.out(f"{source.name}: {len(new.apps)} apps, {human_size(len(text.encode('utf-8')))}"
-                + (f", revision {new.revision[:40]}" if new.revision else "") + (f", commit {commit[:12]}" if commit else "")
+                + (f", revision {new.revision}" if new.revision else "") + (f", commit {commit[:12]}" if commit else "")
                 + f", sha256 {digest[:16]}")
     old = indexstore.load(source.name)
     if old is not None:
@@ -187,7 +187,7 @@ def cmd_index_add(args, console, download_url=jail.download_url, now=None):
 def review_and_install_new(source, text, console, now):
     """The first catalog of a new source: register the source only once the user accepted what it holds."""
     new = catalog.parse(text)
-    console.out(f"{source.name}: {len(new.apps)} apps" + (f", revision {new.revision[:40]}" if new.revision else "")
+    console.out(f"{source.name}: {len(new.apps)} apps" + (f", revision {new.revision}" if new.revision else "")
                 + (f", origin {new.origin}" if new.origin else ""))
     sample = [a.name for a in new.apps[:10]]
     console.out("  e.g. " + ", ".join(sample) + (", …" if len(new.apps) > 10 else ""))
@@ -223,7 +223,7 @@ def cmd_index_status(console):
         where = f"github:{source.location}" if source.kind == "repo" else source.location
         console.out(f"{source.name} ({source.kind}: {where})")
         if cur:
-            console.out(f"    current: {cur['sha256'][:12]}, revision {cur['revision'][:12] or '-'}, updated {cur['updated']}"
+            console.out(f"    current: {cur['sha256'][:12]}, revision {cur['revision'][:72] or '-'}, updated {cur['updated']}"
                         + (f", commit {cur['commit'][:12]}" if cur.get("commit") else "")
                         + (f"; previous: {prev['sha256'][:12]}" if prev else ""))
         else:

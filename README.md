@@ -249,7 +249,7 @@ appjail search editor                 # all sources; with several, each hit show
 
 **Sources.** The built-in `appjail-db` source is the catalog of the sister project
 [appjail-db](https://github.com/alberto743/appjail-db), rebuilt weekly from the [AM](https://github.com/ivan-hc/AM)
-application list. `index update` asks the GitHub API for the latest commit of that repository, downloads its
+application list and the [AppImageHub](https://appimage.github.io) feed. `index update` asks the GitHub API for the latest commit of that repository, downloads its
 `catalog.json` at that commit in a network-only jail and records the commit, so a catalog can be traced to an exact
 state of appjail-db; `index update appjail-db --commit SHA` fetches a chosen commit instead. The catalog is not signed:
 what protects you is HTTPS, the strict parser and the review below. Sources you add yourself provide a catalog directly. Every update shows the number of apps, the apps added and
@@ -291,7 +291,8 @@ replaces the catalog. One previous catalog is kept per source for `index rollbac
 Unknown keys are errors, so a catalog means the same thing to every version that accepts it. A catalog that breaks
 a rule is refused as a whole and nothing changes. appjail writes the catalog it validated, not the downloaded bytes.
 `search` offers `appjail add` for `github:` and `url:` sources only; GitLab and Forgejo sources are shown as information
-until appjail can install from those forges. An update that moves an app to another kind, host or owner is flagged as an
+until appjail can install from those forges. An app the two origins place in different repositories has no `source`; its note says
+`resolve manually: ...` and names both, and you choose the repository at `appjail add`. An update that moves an app to another kind, host or owner is flagged as an
 owner change.
 
 ## Command reference
