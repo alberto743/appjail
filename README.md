@@ -335,6 +335,8 @@ owner change.
 - The audio permission includes the microphone. It is Pulse only (served by `pipewire-pulse` on PipeWire systems):
   PipeWire's own socket would also expose cameras and screen casts, so apps that speak only native PipeWire get no
   audio.
+- Inside the jail only unix, internet and netlink sockets exist (no Bluetooth sockets, for example), and `io_uring`
+  is unavailable; apps that depend on them fail or fall back.
 - x86-64 only. The GNOME and KDE portal backends have not been tested (the GTK backend and a real X11-only AppImage
   have, under headless weston; the portal dialogs themselves are not driven). Real internet IPv6 under `pasta` is
   untested; IPv6 forwarding is tested in a fake network.

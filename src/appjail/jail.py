@@ -169,7 +169,10 @@ def etc_args(private_net=False):
 
 
 def common_args():
-    args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv"]
+    """The base of every helper jail (download, extraction, git, gh, icon conversion, D-Bus proxy). No nested user
+    namespaces: none of these programs needs one, and they are where most kernel privilege escalations start."""
+    args = ["--unshare-all", "--unshare-user", "--disable-userns", "--die-with-parent", "--new-session", "--cap-drop",
+            "ALL", "--clearenv"]
     for k, v in SAFE_ENV.items():
         args += ["--setenv", k, v]
     return args + system_args() + ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
@@ -230,10 +233,29 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
+HELPER_SECCOMP_FD = 9  # behind pasta the filter is opened inside its namespace (see net_wrap: one digit only)
+
+
 def run(args, timeout=1800, watch=None):
-    """Run bwrap with a minimal host environment."""
-    argv = [find_bwrap(), *args]
-    return supervise(net_wrap(argv) if "--share-net" in args else argv, timeout=timeout, watch=watch)
+    """Run bwrap with a minimal host environment and the seccomp filter of the app jail (without the userns grant)."""
+    from . import seccomp  # seccomp imports this module for RunError
+    if "--share-net" in args and find_pasta():
+        # pasta closes inherited descriptors: the filter reaches bwrap through a private file instead
+        fd, path = tempfile.mkstemp(prefix="appjail-seccomp-")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(seccomp.program(False))
+            argv = net_wrap([find_bwrap(), "--seccomp", str(HELPER_SECCOMP_FD), *args],
+                            fd_files={HELPER_SECCOMP_FD: path})
+            return supervise(argv, timeout=timeout, watch=watch)
+        finally:
+            os.unlink(path)
+    fd = seccomp.open_fd(False)
+    try:
+        argv = [find_bwrap(), "--seccomp", str(fd), *args]
+        return supervise(net_wrap(argv) if "--share-net" in args else argv, timeout=timeout, watch=watch, pass_fds=(fd,))
+    finally:
+        os.close(fd)
 
 
 def extract_args(appimage, outdir, command, tools=()):

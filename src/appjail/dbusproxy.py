@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import grants, jail, portal
+from . import grants, jail, portal, seccomp
 from .jail import RunError
 
 PROXY = "/usr/bin/xdg-dbus-proxy"
@@ -45,13 +45,14 @@ def rules(perms):
             + portal.proxy_rules(perms))
 
 
-def proxy_args(bus, sockdir, perms, sync_fd, identity=None):
+def proxy_args(bus, sockdir, perms, sync_fd, identity=None, seccomp_fd=None):
     """bwrap argv (after the binary) that runs the proxy: no network, nothing but the two sockets.
 
     identity: file bound as /.flatpak-info, the portal sandbox identity of the app this proxy serves.
+    seccomp_fd: the filter the helper jails share (seccomp.open_fd).
     """
     ident = ["--ro-bind", str(identity), "/.flatpak-info"] if identity else []
-    return (jail.common_args()
+    return ((["--seccomp", str(seccomp_fd)] if seccomp_fd is not None else []) + jail.common_args()
             + ["--ro-bind", bus, bus, "--bind", str(sockdir), str(sockdir), *ident, "--remount-ro", "/", "--"]
             + [PROXY, f"unix:path={bus}", f"{sockdir}/bus", f"--fd={sync_fd}"] + rules(perms))
 
@@ -69,10 +70,12 @@ class Proxy:
         bus = host_bus(self.host_env)
         self.dir = Path(tempfile.mkdtemp(prefix="appjail-", dir=self.host_env["XDG_RUNTIME_DIR"]))
         read_fd, write_fd = os.pipe()
+        filter_fd = seccomp.open_fd(False)
         try:
-            argv = [jail.find_bwrap(), *proxy_args(bus, self.dir, self.perms, write_fd, self.identity)]
-            self.proc = self._popen(argv, pass_fds=(write_fd,), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.PIPE, env={"PATH": "/usr/bin:/bin"}, start_new_session=True)
+            argv = [jail.find_bwrap(), *proxy_args(bus, self.dir, self.perms, write_fd, self.identity, filter_fd)]
+            self.proc = self._popen(argv, pass_fds=(write_fd, filter_fd), stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env={"PATH": "/usr/bin:/bin"},
+                                    start_new_session=True)
             os.close(write_fd)
             write_fd = None
             ready, _, _ = select.select([read_fd], [], [], READY_TIMEOUT)
@@ -87,6 +90,7 @@ class Proxy:
         finally:
             if write_fd is not None:
                 os.close(write_fd)
+            os.close(filter_fd)
             self._read_fd = read_fd
         return str(self.dir / "bus")
 

@@ -26,8 +26,7 @@ SAFE = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "c
 
 
 def _git(args, workdir):
-    argv = [jail.find_bwrap(), *jail.local_git_args(workdir, [GIT, *SAFE, *args])]
-    return jail.supervise(argv, timeout=30)
+    return jail.run(jail.local_git_args(workdir, [GIT, *SAFE, *args]), timeout=30)
 
 
 def _inside_another_repo(base):

@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import errno
+import json
 import re
 import struct
 from pathlib import Path
 
 import pytest
 
-from appjail import runtimejail, seccomp
+from appjail import jail, runtimejail, seccomp
 
 from .helpers import integration, run_in_jail
 
@@ -66,6 +67,17 @@ try:
     out["newuser"] = 0
 except OSError as e:
     out["newuser"] = e.errno
+out["af_vsock"] = sc(41, 40, 1, 0)
+out["af_alg"] = sc(41, 38, 5, 0)
+out["af_packet"] = sc(41, 17, 3, 0)
+out["socketpair_vsock"] = sc(53, 40, 1, 0, 0)
+out["af_unix"] = sc(41, 1, 1, 0)
+out["af_inet"] = sc(41, 2, 2, 0)
+out["af_inet6"] = sc(41, 10, 2, 0)
+out["af_netlink"] = sc(41, 16, 3, 0)
+out["io_uring_setup"] = sc(425, 1, 0)
+out["personality_no_aslr"] = sc(135, 0x0040000)
+out["personality_query"] = sc(135, 0xFFFFFFFF)
 out["getpid"] = sc(39)
 t = []
 th = threading.Thread(target=lambda: t.append(1)); th.start(); th.join()
@@ -78,7 +90,6 @@ print(json.dumps(out))
 def probe(sandbox, runtime, **perms):
     proc = run_in_jail(sandbox, runtime, script=PROBE, **perms)
     assert proc.returncode == 0, proc.stderr
-    import json
     return json.loads(proc.stdout.strip().splitlines()[-1])
 
 
@@ -90,6 +101,42 @@ def test_filter_denies_dangerous_calls_and_keeps_normal_ones(sandbox, runtime):
     assert r["clone3"] == errno.ENOSYS
     assert r["newuser"] != 0  # no nested user namespace without the grant
     assert r["getpid"] == 0 and r["thread"] == 1 and r["exec"] == 0
+    assert_hardening(r)
+
+
+def assert_hardening(r):
+    """Socket families beyond unix/inet/netlink, io_uring and personality switches; the everyday ones still work."""
+    assert {r[k] for k in ("af_vsock", "af_alg", "af_packet", "socketpair_vsock")} == {errno.EAFNOSUPPORT}
+    assert (r["af_unix"], r["af_inet"], r["af_inet6"], r["af_netlink"]) == (0, 0, 0, 0)
+    assert r["io_uring_setup"] == errno.ENOSYS
+    assert r["personality_no_aslr"] == errno.EPERM and r["personality_query"] == 0
+
+
+def test_socket_and_personality_rules_are_in_the_program():
+    ks = {k for _, _, _, k in decode(seccomp.program(False))}
+    assert {seccomp.SYSCALLS[n] for n in ("socket", "socketpair", "personality", *seccomp.IO_URING)} <= ks
+    assert set(seccomp.SOCKET_FAMILIES) - {0} <= ks  # 0 doubles as an offset elsewhere
+
+
+@integration
+@pytest.mark.parametrize("network", [False, True])
+def test_helper_jails_get_the_filter_and_no_nested_user_namespaces(sandbox, network):
+    """Downloads, extraction, git, gh, icon conversion: the same filter (from a file behind pasta) and --disable-userns."""
+    if network and not jail.find_pasta():
+        pytest.skip("pasta not installed (package passt)")
+    stage = sandbox / "stage"
+    stage.mkdir()
+    (stage / "probe.py").write_text(PROBE)
+    command = ["/usr/bin/python3", "-I", "/stage/probe.py"]
+    args = (jail.download_args(stage, command) if network
+            else jail.common_args() + ["--bind", str(stage), "/stage", "--remount-ro", "/", "--", *command])
+    proc = jail.run(args, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    r = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert r["tiocsti"] == errno.EPERM and r["bpf"] == errno.EPERM and r["mount"] == errno.EPERM
+    assert r["newuser"] != 0 and r["clone3"] == errno.ENOSYS
+    assert r["getpid"] == 0 and r["thread"] == 1 and r["exec"] == 0
+    assert_hardening(r)
 
 
 @integration
