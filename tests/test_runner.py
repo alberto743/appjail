@@ -17,6 +17,7 @@ from appjail import (
     appimage,
     jail,
     landlock,
+    linger,
     manifest,
     runner,
     runtimejail,
@@ -226,6 +227,60 @@ def test_xwayland_without_the_binary_is_an_error(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(runtimejail, "XWAYLAND_PATHS", ("/nonexistent/Xwayland",))
     with pytest.raises(RunError, match="Xwayland"):
         runtimejail.runtime_args(**build(sandbox, runtime, display="xwayland"))
+
+
+def test_linger_runs_the_command_under_the_supervisor_inside_the_xwayland_wrapper(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(runtimejail, "XWAYLAND_PATHS", ("/bin/sh",))
+    plain = runtimejail.runtime_args(**build(sandbox, runtime))
+    assert plain[plain.index("--") + 1:] == ["/app/AppRun"]
+    args = runtimejail.runtime_args(**build(sandbox, runtime, linger=True))
+    assert args[args.index("--") + 1:] == [linger.PYTHON, "-I", "-c", linger.SUPERVISOR, "/app/AppRun"]
+    cmd = runtimejail.runtime_args(**build(sandbox, runtime, linger=True, display="xwayland"))
+    cmd = cmd[cmd.index("--") + 1:]
+    assert cmd[:2] == ["/bin/sh", "-c"] and cmd[5:8] == [linger.PYTHON, "-I", "-c"] and cmd[-1] == "/app/AppRun"
+
+
+def test_linger_without_python_is_an_error(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(linger, "PYTHON", "/nonexistent/python3")
+    with pytest.raises(RunError, match="python3"):
+        runtimejail.runtime_args(**build(sandbox, runtime, linger=True))
+
+
+DETACHING_APP = "#!/bin/sh\n(sleep 1; echo done > /home/app/out.txt) &\nexit 3\n"
+
+
+@integration
+@pytest.mark.parametrize("keep", [False, True])
+def test_linger_keeps_the_jail_for_a_detached_child(sandbox, runtime, keep):
+    """A launcher that starts the app detached and exits: the child dies with the jail unless `linger` is set, and then
+    the jail ends only after it, with the launcher's exit status."""
+    kw = build(sandbox, runtime, linger=keep)
+    (kw["root"] / "AppRun").write_text(DETACHING_APP)
+    (kw["root"] / "AppRun").chmod(0o755)
+    fd = seccomp.open_fd(kw["perms"].userns)
+    try:
+        start = time.monotonic()
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=fd)], timeout=60, pass_fds=(fd,))
+        took = time.monotonic() - start
+    finally:
+        os.close(fd)
+    assert proc.returncode == 3, proc.stderr
+    assert (kw["home"] / "out.txt").exists() is keep
+    assert (took >= 1.0) is keep
+
+
+@integration
+def test_linger_does_not_wait_for_the_xwayland_helper(sandbox):
+    x = sandbox / "fakeX"
+    x.write_text("#!/bin/sh\nsleep 0.3; echo 7 >&3; sleep 300\n")  # the sleep is a child of the helper, as Xwayland's xkbcomp would be
+    x.chmod(0o755)
+    command = ["/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", *linger.wrap(["/bin/sh", "-c", "echo $DISPLAY"])]
+    argv = [jail.find_bwrap(), "--unshare-user", "--unshare-pid", "--die-with-parent", "--ro-bind", "/", "/", "--proc", "/proc", "--dev", "/dev",
+            "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX", "--", *command]
+    start = time.monotonic()
+    proc = jail.supervise(argv, timeout=30)
+    assert proc.returncode == 0 and proc.stdout.split() == [":7"], proc.stderr
+    assert time.monotonic() - start < 10
 
 
 def test_missing_or_hostile_wayland_socket(sandbox, runtime):
@@ -774,6 +829,21 @@ def test_network_with_userns_under_pasta(sandbox, runtime, monkeypatch, capfd, u
     """Connectivity works in both cases; nested user namespaces are denied (EPERM=1) unless `userns` is granted."""
     errno_, _ = _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, userns=userns)
     assert errno_ == ("0" if userns else "1")
+
+
+@integration
+@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+def test_linger_under_pasta_waits_for_the_detached_child(sandbox, runtime, monkeypatch):
+    kw = build(sandbox, runtime, network=True, linger=True)
+    (kw["root"] / "AppRun").write_text(DETACHING_APP)
+    (kw["root"] / "AppRun").chmod(0o755)
+    m = manifest.Manifest("app", "github:o/a", "v1", SHA, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage",
+                          permissions=manifest.Permissions(network=True, linger=True))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                         say=lambda *_: None, restricted=NO_RESTRICTION)
+    assert code == 3
+    assert (kw["home"] / "out.txt").read_text() == "done\n"
 
 
 @integration

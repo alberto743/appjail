@@ -43,8 +43,8 @@ TOP_KEYS = {
 }
 FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
-BOOL_PERMS = ("network", "network_host", "audio", "gpu", "portals", "userns")
-PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "dirs"}
+BOOL_PERMS = ("network", "network_host", "audio", "gpu", "portals", "userns", "linger")
+PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,7 @@ class Permissions:
     portals: bool = False
     portal_interfaces: tuple = ()  # opt-in portal interfaces beyond the safe set (see PORTAL_OPT_IN)
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
+    linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
 
@@ -312,6 +313,7 @@ def dumps(m):
         f"portals = {str(p.portals).lower()}",
         f"portal_interfaces = {_array(p.portal_interfaces)}",
         f"userns = {str(p.userns).lower()}",
+        *(["linger = true"] if p.linger else []),
         f"dirs = {_array(p.dirs)}",
         "",
     ]

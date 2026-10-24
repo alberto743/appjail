@@ -7,7 +7,7 @@ import os
 import stat
 from pathlib import Path
 
-from . import grants, store
+from . import grants, linger, store
 from .jail import RunError, etc_args, system_args
 
 APP_HOME = "/home/app"
@@ -210,6 +210,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     manifest asks for but appjail cannot enforce yet is refused instead of ignored.
     """
     xwayland = perms.display == "xwayland"
+    if perms.linger:
+        command = linger.wrap(command)
     if xwayland:
         command = xwayland_command(command)
     if (perms.dbus_filter or perms.dbus_own or perms.portals) and not dbus_socket:

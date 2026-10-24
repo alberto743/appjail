@@ -6,7 +6,7 @@ import pytest
 from appjail import cli
 from appjail.gui import argv
 
-STATE = {"network": False, "network_host": False, "audio": True, "gpu": True, "portals": False, "userns": False,
+STATE = {"network": False, "network_host": False, "audio": True, "gpu": True, "portals": False, "userns": False, "linger": False,
          "display": "wayland", "dirs": ("~/a", "~/b:rw"), "dbus_filter": (), "dbus_own": (), "portal_interfaces": ()}
 
 

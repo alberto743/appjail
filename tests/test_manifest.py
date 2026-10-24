@@ -310,6 +310,20 @@ def test_userns_defaults_to_denied_and_round_trips():
     assert "userns = false" in manifest.dumps(make())
 
 
+def test_linger_defaults_to_off_is_written_only_when_on_and_round_trips():
+    assert Permissions().linger is False
+    assert "linger" not in manifest.dumps(make())
+    m = make(permissions=Permissions(linger=True))
+    assert "linger = true" in manifest.dumps(m)
+    assert manifest.loads(manifest.dumps(m)).permissions.linger is True
+
+
+def test_linger_must_be_a_boolean():
+    text = manifest.dumps(make(permissions=Permissions(linger=True))).replace("linger = true", 'linger = "yes"')
+    with pytest.raises(manifest.ManifestError, match="linger"):
+        manifest.loads(text)
+
+
 def test_channel_defaults_to_stable_and_round_trips():
     assert make().channel == "stable" and "channel" not in manifest.dumps(make())
     m = make(channel="pinned")
