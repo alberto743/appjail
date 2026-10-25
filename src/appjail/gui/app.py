@@ -250,13 +250,15 @@ class App:
         app = self.selected()
         if not app:
             return
+        header, grants = apps.portal_grants(app)
+        ids = {line: doc for doc, line in grants}
+        fields = [("choice", "revoke", "Document grants to revoke",
+                   {"items": list(ids), "width": 80, "hint": "select none to only list the grants"})] if grants else []
         got = dialogs.options_dialog(
-            self.root, f"Portal grants of {app}", (
-                ("list", "revoke", "Document IDs to revoke", {"hint": "leave empty to only list the grants"}),
-                ("check", "all", "Revoke every grant")),
-            "\n".join(apps.portal_grants(app)) + "\n\nThe command lists the grants and asks before revoking.", ok="Go")
+            self.root, f"Portal grants of {app}", (*fields, ("check", "all", "Revoke every grant")),
+            "\n".join(header) + "\n\nThe command lists the grants and asks before revoking.", ok="Go")
         if got:
-            self.run(argv.portals_argv(app, got["revoke"], got["all"]))
+            self.run(argv.portals_argv(app, [ids[line] for line in got.get("revoke", ())], got["all"]))
 
     def _menu_entry(self):
         app = self.selected()

@@ -172,11 +172,11 @@ class ListEditor(ttk.LabelFrame):
 class ChoiceList(ttk.LabelFrame):
     """A fixed list of strings to select (extra: {"items": [...], "selected": [...], "hint": ...}); values() are the selected ones."""
 
-    def __init__(self, parent, title, items=(), selected=(), hint=""):
+    def __init__(self, parent, title, items=(), selected=(), hint="", width=16):
         super().__init__(parent, text=title, padding=6)
         holder = ttk.Frame(self)
         holder.pack(fill="both", expand=True)
-        self.box = tk.Listbox(holder, height=max(2, min(len(items), 8)), width=16, exportselection=False, selectmode="multiple")
+        self.box = tk.Listbox(holder, height=max(2, min(len(items), 8)), width=width, exportselection=False, selectmode="multiple")
         bar = ttk.Scrollbar(holder, command=self.box.yview)
         self.box.configure(yscrollcommand=bar.set)
         for i, item in enumerate(items):

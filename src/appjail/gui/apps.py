@@ -70,20 +70,19 @@ def rows():
 
 
 def portal_grants(name, host_env=None):
-    """The lines the Portals dialog shows: the interfaces granted in the manifest, then the document grants of the
-    permission store (or why they cannot be read)."""
+    """What the Portals dialog shows: (header lines, [(document id, line)]). The header has the interfaces granted in
+    the manifest and the count of document grants of the permission store (or why they cannot be read)."""
     host_env = dict(os.environ if host_env is None else host_env)
     try:
         interfaces = manifest.load(store.manifest_path(name)).permissions.portal_interfaces
     except (manifest.ManifestError, OSError) as e:
-        return [textsafe.clean(f"unreadable manifest ({e})", 300)]
-    lines = ["Portal interfaces: " + (", ".join(interfaces) if interfaces else "none beyond the defaults")]
+        return [textsafe.clean(f"unreadable manifest ({e})", 300)], []
+    header = ["Portal interfaces: " + (", ".join(interfaces) if interfaces else "none beyond the defaults")]
     app = portal.app_id(name)
     try:
         granted = portal.granted_documents(app, host_env)
     except RunError as e:
-        return lines + [textsafe.clean(f"Document grants: unavailable ({e})", 300)]
-    lines.append(f"Document grants: {len(granted)}")
-    for doc, perms in granted.items():
-        lines.append(textsafe.clean(f"  {doc}  [{', '.join(perms)}]  {', '.join(names_for(doc, app, host_env))}", 300))
-    return lines
+        return header + [textsafe.clean(f"Document grants: unavailable ({e})", 300)], []
+    header.append(f"Document grants: {len(granted)}")
+    return header, [(doc, textsafe.clean(f"{doc}  [{', '.join(perms)}]  {', '.join(names_for(doc, app, host_env))}", 300))
+                    for doc, perms in granted.items()]

@@ -133,12 +133,12 @@ def test_portal_grants_lists_interfaces_and_documents(h, monkeypatch):
     from appjail import portal
     h.add(extra=["--allow", "portals", "--portal", "Camera"])
     monkeypatch.setattr(portal, "granted_documents", lambda app, env: {"abc": ["read", "write"]})
-    lines = apps.portal_grants("app", {})
-    assert lines[0] == "Portal interfaces: Camera"
-    assert lines[1] == "Document grants: 1" and "abc  [read, write]" in lines[2]
+    header, grants = apps.portal_grants("app", {})
+    assert header == ["Portal interfaces: Camera", "Document grants: 1"]
+    assert [d for d, _ in grants] == ["abc"] and "abc  [read, write]" in grants[0][1]
 
 
 def test_portal_grants_reports_unreachable_store(h):
     h.add()
-    lines = apps.portal_grants("app", {})
-    assert "none beyond the defaults" in lines[0] and "unavailable" in lines[1]
+    header, grants = apps.portal_grants("app", {})
+    assert "none beyond the defaults" in header[0] and "unavailable" in header[1] and grants == []
