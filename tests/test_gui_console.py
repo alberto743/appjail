@@ -121,3 +121,24 @@ def test_rows_marks_unreadable_manifest(h):
     p.write_text("not toml [")
     assert "unreadable" in apps.rows()[0][5]
 
+
+
+def test_rows_shows_granted_portal_interfaces(h):
+    h.add(extra=["--allow", "portals", "--portal", "Camera"])
+    (row,) = apps.rows()
+    assert "portals" in row[4] and "portal:" in row[4]
+
+
+def test_portal_grants_lists_interfaces_and_documents(h, monkeypatch):
+    from appjail import portal
+    h.add(extra=["--allow", "portals", "--portal", "Camera"])
+    monkeypatch.setattr(portal, "granted_documents", lambda app, env: {"abc": ["read", "write"]})
+    lines = apps.portal_grants("app", {})
+    assert lines[0] == "Portal interfaces: Camera"
+    assert lines[1] == "Document grants: 1" and "abc  [read, write]" in lines[2]
+
+
+def test_portal_grants_reports_unreachable_store(h):
+    h.add()
+    lines = apps.portal_grants("app", {})
+    assert "none beyond the defaults" in lines[0] and "unavailable" in lines[1]

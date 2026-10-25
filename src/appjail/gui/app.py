@@ -254,7 +254,7 @@ class App:
             self.root, f"Portal grants of {app}", (
                 ("list", "revoke", "Document IDs to revoke", {"hint": "leave empty to only list the grants"}),
                 ("check", "all", "Revoke every grant")),
-            "The command lists the grants and asks before revoking.", ok="Go")
+            "\n".join(apps.portal_grants(app)) + "\n\nThe command lists the grants and asks before revoking.", ok="Go")
         if got:
             self.run(argv.portals_argv(app, got["revoke"], got["all"]))
 

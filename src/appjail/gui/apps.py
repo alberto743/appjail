@@ -3,9 +3,13 @@
 
 """The installed apps as data for the Apps tab (read from the manifests, like `appjail list`). No tkinter."""
 
-from .. import manifest, store, textsafe, updater
+import os
+
+from .. import manifest, portal, store, textsafe, updater
 from ..cmd_apps import list_line
 from ..cmd_desktop import file_type_state
+from ..cmd_portals import names_for
+from ..jail import RunError
 from ..permargs import PERMISSION_FLAGS
 
 
@@ -55,10 +59,31 @@ def rows():
             result.append((name, "", "", "", "", textsafe.clean(f"unreadable manifest ({e})", 120)))
             continue
         p = m.permissions
-        summary = ", ".join([k for k in PERMISSION_FLAGS if getattr(p, k)] + [f"display={p.display}"])
+        summary = ", ".join([k for k in PERMISSION_FLAGS if getattr(p, k)] + [f"display={p.display}"]
+                            + [f"portal:{i}" for i in p.portal_interfaces])
         pending = updater.load_pending(name)
         note = f"update seen: {pending['tag']}" if pending else ""
         if m.channel != "stable":
             note = (f"channel {m.channel}; " + note).rstrip("; ")
         result.append(tuple(textsafe.clean(str(v), 120) for v in (name, m.version, m.source, m.evidence_tier, summary, note)))
     return result
+
+
+def portal_grants(name, host_env=None):
+    """The lines the Portals dialog shows: the interfaces granted in the manifest, then the document grants of the
+    permission store (or why they cannot be read)."""
+    host_env = dict(os.environ if host_env is None else host_env)
+    try:
+        interfaces = manifest.load(store.manifest_path(name)).permissions.portal_interfaces
+    except (manifest.ManifestError, OSError) as e:
+        return [textsafe.clean(f"unreadable manifest ({e})", 300)]
+    lines = ["Portal interfaces: " + (", ".join(interfaces) if interfaces else "none beyond the defaults")]
+    app = portal.app_id(name)
+    try:
+        granted = portal.granted_documents(app, host_env)
+    except RunError as e:
+        return lines + [textsafe.clean(f"Document grants: unavailable ({e})", 300)]
+    lines.append(f"Document grants: {len(granted)}")
+    for doc, perms in granted.items():
+        lines.append(textsafe.clean(f"  {doc}  [{', '.join(perms)}]  {', '.join(names_for(doc, app, host_env))}", 300))
+    return lines
