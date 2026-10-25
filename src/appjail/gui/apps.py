@@ -5,7 +5,7 @@
 
 import os
 
-from .. import manifest, portal, store, textsafe, updater
+from .. import index, manifest, portal, store, textsafe, updater
 from ..cmd_apps import list_line
 from ..cmd_desktop import file_type_state
 from ..cmd_portals import names_for
@@ -86,3 +86,10 @@ def portal_grants(name, host_env=None):
     header.append(f"Document grants: {len(granted)}")
     return header, [(doc, textsafe.clean(f"{doc}  [{', '.join(perms)}]  {', '.join(names_for(doc, app, host_env))}", 300))
                     for doc, perms in granted.items()]
+
+
+def search_hits(words, limit, show_all):
+    """(hits, total, catalogs searched) like `appjail search`; texts cleaned. Raises catalog.IndexProblem."""
+    hits, total, searched = index.search(words.split(), limit=10 ** 9 if show_all or not limit else limit)
+    clean = [index.Hit(*(textsafe.clean(v, 300) for v in (h.name, h.description, h.source, h.note, h.catalog))) for h in hits]
+    return clean, total, searched

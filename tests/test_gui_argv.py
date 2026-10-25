@@ -56,9 +56,15 @@ def test_perms_dir_mode_change_removes_then_adds():
     assert (args.rm_dir, args.add_dir) == (["~/a"], ["~/a:rw"])
 
 
-def test_search_and_update():
-    assert argv.search_argv("video  player", 5) == ["search", "video", "player", "--limit", "5"]
-    assert argv.search_argv("x", 5, True) == ["search", "x", "--all"]
+def test_add_target():
+    assert argv.add_target("github:o/r") == ("github", "o/r")
+    assert argv.add_target("url:https://x.example/a.AppImage") == ("url", "https://x.example/a.AppImage")
+    assert argv.add_target("gitlab:gitlab.com/g/p") is None
+    assert argv.add_target("codeberg:o/r") is None
+    assert argv.add_target("") is None
+
+
+def test_update():
     assert argv.update_argv("app", True, "pinned") == ["update", "app", "--prerelease", "--channel", "pinned"]
 
 

@@ -232,3 +232,21 @@ def test_choice_list_returns_the_selected_types_and_keeps_the_form_open_on_a_pro
         window.root, "t", (("choice", "mime", "Types", {"items": ["image/png", "text/plain"], "selected": ["image/png"]}),),
         ok="Go", validate=lambda v: None if v["mime"] else "select one")
     assert shown == ["select one"] and calls == [1] and got == {"mime": ("text/plain",)}
+
+
+def test_search_hit_goes_to_the_add_tab(window, monkeypatch):
+    hits = [app.apps.index.Hit("good", "an app", "github:o/good", "", "db"),
+            app.apps.index.Hit("other", "elsewhere", "gitlab:gitlab.com/g/p", "", "db")]
+    monkeypatch.setattr(app.apps, "search_hits", lambda *_a: (hits, 2, ["db"]))
+    window.keywords.set("app")
+    window._search()
+    assert len(window.hit_tree.get_children()) == 2
+    window.hit_tree.selection_set("1")
+    window.root.update()
+    assert str(window.use_hit["state"]) == "disabled"
+    window.hit_tree.selection_set("0")
+    window.root.update()
+    assert str(window.use_hit["state"]) == "normal"
+    window._use_hit()
+    assert (window.kind.get(), window.source.get()) == ("github", "o/good")
+    assert window.notebook.select() == str(window.add_tab)

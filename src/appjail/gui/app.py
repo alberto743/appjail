@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from tkinter import font as tkfont
 
 from .. import cli, manifest, textsafe, tools
+from ..catalog import IndexProblem
 from ..permargs import PERMISSION_FLAGS
 from . import apps, argv, dialogs, worker
 
@@ -314,7 +315,7 @@ class App:
     # --- Add --------------------------------------------------------------------------------------------------------
 
     def _build_add_tab(self):
-        tab = ttk.Frame(self.notebook, padding=6)
+        tab = self.add_tab = ttk.Frame(self.notebook, padding=6)
         self.notebook.add(tab, text="Add")
         top = ttk.Frame(tab)
         top.pack(fill="x")
@@ -412,6 +413,24 @@ class App:
         self.show_all = tk.BooleanVar()
         ttk.Checkbutton(row, text="all", variable=self.show_all).pack(side="left")
         ttk.Button(row, text="Search", command=self._search).pack(side="left", padx=6)
+        self.use_hit = ttk.Button(row, text="Add this app…", command=self._use_hit, state="disabled")
+        self.use_hit.pack(side="left")
+        self.hits = []
+        results = ttk.Frame(tab)
+        results.pack(fill="both", expand=True, pady=(6, 0))
+        self.hit_tree = ttk.Treeview(results, columns=("name", "description", "source", "catalog"), show="headings",
+                                     selectmode="browse", height=6)
+        for c, w in (("name", 160), ("description", 420), ("source", 300), ("catalog", 90)):
+            self.hit_tree.heading(c, text=c.title())
+            self.hit_tree.column(c, width=int(w * self.scale), minwidth=40)
+        bar = ttk.Scrollbar(results, command=self.hit_tree.yview)
+        self.hit_tree.configure(yscrollcommand=bar.set)
+        bar.pack(side="right", fill="y")
+        self.hit_tree.pack(fill="both", expand=True)
+        self.hit_tree.bind("<<TreeviewSelect>>", lambda _e: self._hit_selected())
+        self.hit_tree.bind("<Double-1>", lambda _e: self._use_hit())
+        ttk.Label(tab, text="A hit is only a suggestion: check the owner and repository before adding.",
+                  foreground="gray40").pack(anchor="w")
         idx = ttk.LabelFrame(tab, text="Catalogs", padding=6)
         idx.pack(fill="x", pady=10)
         name_row = ttk.Frame(idx)
@@ -435,7 +454,44 @@ class App:
         if not words:
             return
         limit = self.limit.get().strip()
-        self.run(argv.search_argv(words, int(limit) if limit.isdigit() else None, self.show_all.get()))
+        self.hit_tree.delete(*self.hit_tree.get_children())
+        self.hits = []
+        self._hit_selected()
+        self.say(f"$ appjail search {words}")
+        try:
+            hits, total, searched = apps.search_hits(words, int(limit) if limit.isdigit() else None, self.show_all.get())
+        except IndexProblem as e:
+            self.say(f"error: {e}")
+            return
+        self.say(f"{total} match(es) in {', '.join(searched)}" + (f", showing {len(hits)}" if len(hits) < total else ""))
+        self.hits = hits
+        for i, h in enumerate(hits):
+            description = h.description + (f" ({h.note})" if h.note else "")
+            self.hit_tree.insert("", "end", iid=str(i), values=(h.name, description, h.source, h.catalog))
+
+    def _selected_hit(self):
+        sel = self.hit_tree.selection()
+        return self.hits[int(sel[0])] if sel else None
+
+    def _hit_selected(self):
+        hit = self._selected_hit()
+        self.use_hit.configure(state="normal" if hit and argv.add_target(hit.source) else "disabled")
+
+    def _use_hit(self):
+        """Copy the selected hit into the Add form and show it. Nothing is installed: Add… still reviews and asks."""
+        hit = self._selected_hit()
+        if hit is None:
+            return
+        target = argv.add_target(hit.source)
+        if target is None:
+            messagebox.showinfo("appjail", f"{hit.name}: appjail cannot install this source ({hit.note or hit.source or 'none given'}).",
+                                parent=self.root)
+            return
+        self.kind.set(target[0])
+        self.source.set(target[1])
+        for key in ("name", "tag", "sha256", "max_size"):
+            self.text[key].set("")
+        self.notebook.select(self.add_tab)
 
     def _index(self, sub):
         name = self.source_name.get().strip()

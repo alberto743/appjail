@@ -3,6 +3,7 @@
 
 """Form state to argv lists for the CLI. No tkinter here: the parser stays the one place that validates options."""
 
+from ..catalog import INSTALLABLE
 from ..permargs import PERMISSION_FLAGS
 
 
@@ -92,13 +93,12 @@ def perms_argv(name, old, new):
     return argv
 
 
-def search_argv(keywords, limit=None, show_all=False):
-    argv = ["search", *keywords.split()]
-    if show_all:
-        argv.append("--all")
-    elif limit:
-        argv += ["--limit", str(limit)]
-    return argv
+def add_target(source):
+    """(kind, target) for the Add form from a catalog `kind:target` source, or None when `add` cannot install it."""
+    kind, _, target = source.partition(":")
+    if kind not in INSTALLABLE or not target:
+        return None
+    return kind, target
 
 
 def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=None, sha256=None, verify=False):
