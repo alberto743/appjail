@@ -6,7 +6,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from ..manifest import DISPLAYS
+from ..manifest import DEFAULT_DISPLAY_SIZE, DISPLAYS
 from ..permargs import PERMISSION_FLAGS
 
 
@@ -259,7 +259,7 @@ def permissions_editor(parent, name, state):
     display = tk.StringVar(value=state.get("display", "wayland"))
     ttk.Label(box, text="display").pack(anchor="w", pady=(6, 0))
     ttk.Combobox(box, textvariable=display, values=DISPLAYS, state="readonly", width=16).pack(anchor="w")
-    size = tk.StringVar(value=state.get("display_size", "1280x800"))
+    size = tk.StringVar(value=state.get("display_size", DEFAULT_DISPLAY_SIZE))
     ttk.Label(box, text="window size (xwayland-rootful)").pack(anchor="w", pady=(6, 0))
     ttk.Entry(box, textvariable=size, width=12).pack(anchor="w")
     lists = ttk.Frame(frame)
