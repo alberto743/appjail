@@ -11,6 +11,8 @@ class ManifestError(ValueError):
 
 
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
+DISPLAY_SIZE_RE = re.compile(r"([1-9]\d{2,3})x([1-9]\d{2,3})")
+DISPLAY_SIZE_RANGE = (320, 8192)
 
 
 def string(value, what, max_len=256):
@@ -38,3 +40,12 @@ def str_list(value, what):
     if not isinstance(value, list):
         raise ManifestError(f"{what} must be a list of strings")
     return [string(v, f"{what} entry") for v in value]
+
+
+def display_size(value, what="permissions.display_size"):
+    """WxH in pixels, each side between 320 and 8192."""
+    m = DISPLAY_SIZE_RE.fullmatch(value) if isinstance(value, str) else None
+    low, high = DISPLAY_SIZE_RANGE
+    if not m or not all(low <= int(side) <= high for side in m.groups()):
+        raise ManifestError(f"{what} must be WIDTHxHEIGHT, each between {low} and {high}")
+    return value

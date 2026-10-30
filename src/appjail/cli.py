@@ -78,6 +78,8 @@ def build_parser():
     add.add_argument("--no-audio", action="store_true", help="do not grant audio")
     add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")
     add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland")
+    add.add_argument("--display-size", default=manifest.DEFAULT_DISPLAY_SIZE, metavar="WxH",
+                     help="with --display xwayland-rootful: the size of its window (default %(default)s)")
     add.add_argument("--desktop", action="store_true", help="also create a menu entry that starts the app through appjail")
     add.add_argument("--mime", action="append", default=[], metavar="TYPE",
                      help="with --desktop: offer the app for this file type (must be declared by the app); repeatable")
@@ -147,6 +149,7 @@ def build_parser():
     perms.add_argument("--allow", action="append", default=[], choices=PERMISSION_FLAGS)
     perms.add_argument("--deny", action="append", default=[], choices=PERMISSION_FLAGS)
     perms.add_argument("--display", choices=manifest.DISPLAYS)
+    perms.add_argument("--display-size", metavar="WxH")
     perms.add_argument("--add-dir", action="append", default=[], metavar="PATH[:ro|:rw]")
     perms.add_argument("--rm-dir", action="append", default=[], metavar="PATH")
     perms.add_argument("--add-dbus", action="append", default=[], metavar="NAME", help="allow talking to this session-bus name")

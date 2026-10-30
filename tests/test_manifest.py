@@ -167,6 +167,10 @@ def test_fingerprint_table_is_strict():
     Permissions(network="yes"),
     Permissions(network_host=True),
     Permissions(display="x11"),
+    Permissions(display="xwayland-rootful", display_size="100x100"),
+    Permissions(display_size="1280*800"),
+    Permissions(display_size="99999x800"),
+    Permissions(display_size=""),
     Permissions(dbus_filter=("notaname",)),
     Permissions(dirs=("relative/path",)),
     Permissions(dirs=("/",)),
@@ -207,6 +211,12 @@ def test_permission_types_from_toml():
 def test_round_trip():
     m = manifest.loads(GOOD)
     assert manifest.loads(manifest.dumps(m)) == m
+
+
+def test_rootful_display_size_round_trips_and_default_is_not_written():
+    m = make(permissions=Permissions(display="xwayland-rootful", display_size="1024x768"))
+    assert manifest.loads(manifest.dumps(m)) == m
+    assert "display_size" in manifest.dumps(m) and "display_size" not in manifest.dumps(make())
 
 
 def test_dumps_is_deterministic():

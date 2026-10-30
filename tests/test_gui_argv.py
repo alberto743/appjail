@@ -100,3 +100,14 @@ def test_add_followup_offers_the_declared_types():
     assert argv.add_followup(["a"], ["a", "b"], rw=True) == ["desktop", "b", "--rw"]
     args = parses(argv.add_argv({"source": "o/App", "desktop": True, "mime": ["text/plain"], "rw": True}))
     assert args.rw and args.mime == ["text/plain"]
+
+
+def test_rootful_display_size_reaches_the_argv():
+    command = argv.add_argv({"kind": "github", "source": "o/App", "allow": ["audio", "gpu"],
+                             "display": "xwayland-rootful", "display_size": "1024x768"})
+    assert command[-4:] == ["--display", "xwayland-rootful", "--display-size", "1024x768"]
+    assert parses(command).display_size == "1024x768"
+    command = argv.perms_argv("app", STATE, dict(STATE, display="xwayland-rootful", display_size="1024x768"))
+    assert command[-4:] == ["--display", "xwayland-rootful", "--display-size", "1024x768"]
+    assert parses(command).display_size == "1024x768"
+    assert "--display-size" not in argv.perms_argv("app", STATE, dict(STATE, display_size="1024x768"))

@@ -56,6 +56,12 @@ def test_permission_flags(h):
     assert (p.network, p.audio, p.gpu, p.display) == (True, False, True, "xwayland")
 
 
+def test_rootful_display_and_its_size(h):
+    h.add(extra=["--display", "xwayland-rootful", "--display-size", "1024x768"])
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert (p.display, p.display_size) == ("xwayland-rootful", "1024x768")
+
+
 @pytest.mark.parametrize("flag", [f for f in cli.PERMISSION_FLAGS if f not in ("audio", "gpu")])
 def test_every_allow_choice_reaches_the_permissions(flag):
     args = cli.build_parser().parse_args(["add", "o/r", "--allow", flag])

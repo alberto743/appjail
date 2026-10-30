@@ -60,7 +60,7 @@ Tier 1 means a Sigstore build attestation covers the exact downloaded bytes and 
 - Only GitHub is supported. A second forge would sit behind the same interface (`repo_info`, `latest_release`, assets with size and optional digest) and could reach tier 4 at best.
 
 ### `add owner/repo` (`cmd_add.py`, `jail.py`, `fetcher.py`)
-`add owner/repo [--name N] [--prerelease] [--tag TAG] [--dir PATH[:ro|:rw]] [--dbus NAME] [--dbus-own NAME] [--allow network|network_host|portals|userns|linger] [--portal NAME] [--no-audio] [--no-gpu] [--display wayland|xwayland] [--desktop [--mime TYPE] [--rw]]`. `--tag` pins a release: the manifest records the version and the channel `pinned`, so `update` leaves it alone.
+`add owner/repo [--name N] [--prerelease] [--tag TAG] [--dir PATH[:ro|:rw]] [--dbus NAME] [--dbus-own NAME] [--allow network|network_host|portals|userns|linger] [--portal NAME] [--no-audio] [--no-gpu] [--display wayland|xwayland|xwayland-rootful [--display-size WxH]] [--desktop [--mime TYPE] [--rw]]`. `--tag` pins a release: the manifest records the version and the channel `pinned`, so `update` leaves it alone.
 1. Refuse early if the name exists. Show the review: owner, id, account age, stars, fork/archived/renamed warnings.
 2. Resolve the release and select the AppImage. Show the digest and whether an attestation exists.
 3. Ask before downloading. `fetcher.py` runs in the network-only jail (below). It follows only https redirects within github.com / *.githubusercontent.com and stops at the announced size.
@@ -119,7 +119,7 @@ TOML, schema 1, one file per app at `~/.config/appjail/apps/<name>.toml`. Strict
 - Top level: `schema = 1`, `name` (`[a-z0-9][a-z0-9._-]{0,63}`), `source` (kind-prefixed), `channel`, `asset_pattern` (`github:` only; fnmatch, no `/`), `fingerprint` (`url:` only), `owner_id` (`github:` only), `version`, `sha256` (64 lowercase hex), `evidence_tier` (1-5), `published_at` (UTC `YYYY-MM-DDTHH:MM:SSZ`).
 - `[permissions]` is optional and everything defaults to denied:
   - booleans: `network`, `network_host` (needs `network`), `audio`, `gpu`, `portals`, `userns`, `linger` (written only when true; `add` writes `audio` and `gpu` as true unless `--no-audio` / `--no-gpu`);
-  - `display`: `wayland` (default) or `xwayland`;
+  - `display`: `wayland` (default), `xwayland` or `xwayland-rootful`; `display_size` (`WxH`, 320 to 8192 each, default `1280x800`, written only when it differs) is the window of the latter;
   - `dbus_filter`: session-bus names the app may talk to (optional `.*` suffix); `dbus_own`: names it may own;
   - `portal_interfaces`: opt-in portal interfaces, only with `portals = true`;
   - `dirs`: absolute or `~/` paths, optional `:ro` / `:rw` (default read-only).
@@ -169,7 +169,9 @@ Files are isolated by default. The app sees the host system directories read-onl
 `display = "xwayland"` is for X11-only apps. The host X11 socket is never bound (it would expose every other X client's keystrokes and screen). The app command is wrapped by a short `sh` script that starts a rootless `Xwayland` inside the jail as a client of the restricted Wayland socket, with `-nolisten tcp` and `-displayfd`, then sets `DISPLAY` and execs the app.
 - The X socket lives in the jail's private `/tmp` and abstract namespace, so no other app and no host X server is reachable. With `network_host` the abstract namespace is the host's: Landlock then refuses connections to sockets created outside the jail, including the host X server's, while the private Xwayland, started inside the jail, stays reachable. The environment has no `WAYLAND_DISPLAY` and selects X11 toolkits (`GDK_BACKEND=x11`, `QT_QPA_PLATFORM=xcb`, `SDL_VIDEODRIVER=x11`, ...). Xwayland dies with the jail.
 - The script waits up to 20 s for Xwayland to report its display and gives up at once, with a message, if Xwayland exits. Needs `/usr/bin/Xwayland` (package `xwayland`); `run` stops with a clear message when it is missing. With no window manager, windows map as plain toplevels.
-- Not verified: GPU acceleration through Xwayland (glamor).
+- `display = "xwayland-rootful"` runs Xwayland without `-rootless`, with `-geometry display_size -decorate`: it makes one `xdg_toplevel` of its own that holds the X screen, so the compositor needs no X window management. Rootless needs the compositor to be the X window manager, which mutter is only for the Xwayland it starts itself; there the rootless windows are mapped in the X server and never shown. Inside the jail `openbox` (`/usr/bin/openbox`, package `openbox`; `run` stops with a message when it is missing) is started on that display for stacking, focus, decorations and the cursor. Same isolation as the rootless mode; no root is involved. The mode is chosen with `--display`, never automatically. Its trade-off: the app's windows (dialogs, menus) live inside one host window.
+- Xwayland's output is kept and shown only when it fails to start.
+- Not verified: GPU acceleration through Xwayland (glamor); the rootful mode on a desktop compositor (GNOME: openbox with `-decorate`; headless weston and sway never get openbox going with it, so the test runs without it); clipboard and drag-and-drop through the rootful window.
 
 ### D-Bus (`dbusproxy.py`)
 `dbus_filter` lists the session-bus names the app may talk to, such as `org.freedesktop.Notifications` or `org.mpris.MediaPlayer2.*`. `add --dbus NAME` (repeatable), `perms --add-dbus / --rm-dbus`.

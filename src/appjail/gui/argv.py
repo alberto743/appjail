@@ -43,6 +43,8 @@ def add_argv(form):
         argv.append("--no-gpu")
     if form.get("display") and form["display"] != "wayland":
         argv += ["--display", form["display"]]
+    if form.get("display") == "xwayland-rootful" and form.get("display_size"):
+        argv += ["--display-size", form["display_size"]]
     if form.get("desktop"):
         argv.append("--desktop")
         if form.get("mime_all"):
@@ -70,7 +72,7 @@ def add_followup(before, after, rw=False):
 def perms_argv(name, old, new):
     """`appjail perms NAME ...` for the difference between two permission states.
 
-    A state is a dict: the boolean flags by name, "display", and the tuples "dirs", "dbus_filter", "dbus_own",
+    A state is a dict: the boolean flags by name, "display", "display_size", and the tuples "dirs", "dbus_filter", "dbus_own",
     "portal_interfaces". The command shows the before/after review and asks; the option that skips the question is never added here.
     """
     argv = ["perms", name]
@@ -81,6 +83,8 @@ def perms_argv(name, old, new):
             argv += ["--deny", flag]
     if new.get("display") != old.get("display"):
         argv += ["--display", new["display"]]
+    if new.get("display_size") != old.get("display_size") and new.get("display") == "xwayland-rootful":
+        argv += ["--display-size", new["display_size"]]
     for key, add, rm in (("dirs", "--add-dir", "--rm-dir"), ("dbus_filter", "--add-dbus", "--rm-dbus"),
                          ("dbus_own", "--add-dbus-own", "--rm-dbus-own"),
                          ("portal_interfaces", "--add-portal", "--rm-portal")):

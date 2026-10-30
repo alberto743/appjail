@@ -16,7 +16,7 @@ from ..permargs import PERMISSION_FLAGS
 def permission_state(p):
     """A Permissions as the dict argv.perms_argv compares."""
     state = {k: getattr(p, k) for k in PERMISSION_FLAGS}
-    state.update(display=p.display, dirs=tuple(p.dirs), dbus_filter=tuple(p.dbus_filter), dbus_own=tuple(p.dbus_own),
+    state.update(display=p.display, display_size=p.display_size, dirs=tuple(p.dirs), dbus_filter=tuple(p.dbus_filter), dbus_own=tuple(p.dbus_own),
                  portal_interfaces=tuple(p.portal_interfaces))
     return state
 

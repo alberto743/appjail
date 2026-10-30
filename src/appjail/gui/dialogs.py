@@ -258,7 +258,10 @@ def permissions_editor(parent, name, state):
         ttk.Checkbutton(box, text=flag, variable=flags[flag]).pack(anchor="w")
     display = tk.StringVar(value=state.get("display", "wayland"))
     ttk.Label(box, text="display").pack(anchor="w", pady=(6, 0))
-    ttk.Combobox(box, textvariable=display, values=DISPLAYS, state="readonly", width=12).pack(anchor="w")
+    ttk.Combobox(box, textvariable=display, values=DISPLAYS, state="readonly", width=16).pack(anchor="w")
+    size = tk.StringVar(value=state.get("display_size", "1280x800"))
+    ttk.Label(box, text="window size (xwayland-rootful)").pack(anchor="w", pady=(6, 0))
+    ttk.Entry(box, textvariable=size, width=12).pack(anchor="w")
     lists = ttk.Frame(frame)
     lists.grid(row=0, column=1, sticky="nsew")
     editors = {
@@ -276,6 +279,7 @@ def permissions_editor(parent, name, state):
     def apply():
         new = {k: v.get() for k, v in flags.items()}
         new["display"] = display.get()
+        new["display_size"] = size.get().strip()
         new.update({k: ed.values() for k, ed in editors.items()})
         result["value"] = new
         top.destroy()

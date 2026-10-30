@@ -21,7 +21,7 @@ from .grants import (
     check_dir,
     check_portal_interface,
 )
-from .valid import ManifestError, boolean, match, str_list, string
+from .valid import ManifestError, boolean, display_size, match, str_list, string
 
 SCHEMA_VERSION = 1
 
@@ -35,7 +35,8 @@ SHA256_RE = re.compile(r"[0-9a-f]{64}")
 PUBLISHED_RE = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 
 TIERS = (1, 2, 3, 4, 5)
-DISPLAYS = ("wayland", "xwayland")
+DISPLAYS = ("wayland", "xwayland", "xwayland-rootful")
+DEFAULT_DISPLAY_SIZE = "1280x800"
 
 TOP_KEYS = {
     "schema", "name", "source", "asset_pattern", "version", "sha256",
@@ -44,7 +45,7 @@ TOP_KEYS = {
 FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
 BOOL_PERMS = ("network", "network_host", "audio", "gpu", "portals", "userns", "linger")
-PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
+PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class Permissions:
     audio: bool = False
     gpu: bool = False
     display: str = "wayland"
+    display_size: str = DEFAULT_DISPLAY_SIZE  # xwayland-rootful only: the size of its window, WxH
     dbus_filter: tuple = ()  # session-bus names the app may talk to
     dbus_own: tuple = ()  # session-bus names the app may own (and talk to): MPRIS players, single-instance names
     portals: bool = False
@@ -122,7 +124,7 @@ def _permissions(table):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
     # Only the shape is settled here (lists of strings); validate() checks every value.
-    perms = {key: table[key] for key in (*BOOL_PERMS, "display") if key in table}
+    perms = {key: table[key] for key in (*BOOL_PERMS, "display", "display_size") if key in table}
     for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs"):
         if key in table:
             perms[key] = tuple(str_list(table[key], f"permissions.{key}"))
@@ -220,6 +222,7 @@ def validate(m):
         boolean(getattr(p, key), f"permissions.{key}")
     if p.display not in DISPLAYS:
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
+    display_size(p.display_size)
     for n in p.dbus_filter:
         check_dbus_name(n)
     for n in p.dbus_own:
@@ -308,6 +311,7 @@ def dumps(m):
         f"audio = {str(p.audio).lower()}",
         f"gpu = {str(p.gpu).lower()}",
         f"display = {_quote(p.display)}",
+        *([f"display_size = {_quote(p.display_size)}"] if p.display_size != DEFAULT_DISPLAY_SIZE else []),
         f"dbus_filter = {_array(p.dbus_filter)}",
         f"dbus_own = {_array(p.dbus_own)}",
         f"portals = {str(p.portals).lower()}",

@@ -259,6 +259,16 @@ def test_perms_change_and_confirm(h):
     assert manifest.load(path).sha256 == SHA
 
 
+def test_perms_display_size(h):
+    path = installed(h)
+    c = perms(h, "--display", "xwayland-rootful", "--display-size", "1600x900")
+    p = manifest.load(path).permissions
+    assert (p.display, p.display_size) == ("xwayland-rootful", "1600x900")
+    assert "display_size=1600x900" in c.text
+    with pytest.raises(manifest.ManifestError):
+        perms(h, "--display-size", "10x10")
+
+
 def test_perms_declined_or_invalid_changes_nothing(h, tmp_path):
     path = installed(h)
     before = path.read_text()

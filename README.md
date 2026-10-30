@@ -46,7 +46,8 @@ is built around the opposite assumptions:
   - `passt` (the `pasta` command): apps with the `network` permission, which are refused without it. Also gives
     the download jails a private network namespace; without it they use the host network and print a warning.
   - `xdg-dbus-proxy`: D-Bus filtering and portals.
-  - `xwayland`: X11-only apps.
+  - `xwayland`: X11-only apps, through a private rootless Xwayland. Compositors that manage the X windows themselves (sway, KDE) show them; GNOME's mutter does not.
+  - `xwayland-rootful`: X11-only apps in one window that holds the whole X screen, with a small window manager (`openbox`) inside the jail; for GNOME. `--display-size WxH` sets the window size (default 1280x800).
   - `git`: the manifest history.
   - `librsvg2-bin` (`rsvg-convert`): the menu icon of an app that ships only an SVG; without it the entry has no icon
     (`appjail desktop APP --show` says so). `libgtk-3-bin` (`gtk-update-icon-cache`) makes new icons appear in the
@@ -60,7 +61,7 @@ is built around the opposite assumptions:
 On Debian or Ubuntu:
 
 ```sh
-sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland git librsvg2-bin libgtk-3-bin desktop-file-utils
+sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland openbox git librsvg2-bin libgtk-3-bin desktop-file-utils
 ```
 
 ## Install
@@ -171,7 +172,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
 | `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access where code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
-| `display` | `wayland` (default) or `xwayland`. |
+| `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window). |
 
 **Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:rw]` grant access for that run only and
 are never saved. `--file` makes just that one file visible, not the rest of its directory, and appends its path inside
@@ -326,7 +327,7 @@ owner change.
 |---|---|
 | bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
 | An app exits after a few seconds with code 0 and no window | Its launcher starts the real app detached and exits, and the jail ends with it (VSCodium does this). `appjail perms APP --allow linger` keeps the jail until every process in it has exited; or pass the app's own wait option, e.g. `appjail run vscodium -- --wait`. |
-| `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`). |
+| `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`), or `xwayland-rootful` (needs `xwayland` and `openbox`) when no window appears, as on GNOME. |
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |

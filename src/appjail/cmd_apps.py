@@ -135,7 +135,7 @@ def without(names, remove, what):
 
 
 def flag_changes(args):
-    """The boolean permissions and the display mode that --allow, --deny and --display change."""
+    """The boolean permissions and the display mode and size that --allow, --deny, --display and --display-size change."""
     changes = {}
     for flag in sorted(set(args.allow) & set(args.deny)):
         raise Abort(f"{flag} cannot be both allowed and denied")
@@ -149,6 +149,8 @@ def flag_changes(args):
         changes["network_host"] = False
     if args.display:
         changes["display"] = args.display
+    if args.display_size:
+        changes["display_size"] = args.display_size
     return changes
 
 

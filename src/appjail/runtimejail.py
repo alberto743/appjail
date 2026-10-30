@@ -7,7 +7,7 @@ import os
 import stat
 from pathlib import Path
 
-from . import grants, linger, store
+from . import grants, linger, manifest, store
 from .jail import RunError, etc_args, system_args
 
 APP_HOME = "/home/app"
@@ -83,22 +83,38 @@ def file_binds(files, home):
 
 
 XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
-# Runs inside the jail: a rootless Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket
-# lives in the jail's private /tmp and abstract namespace, so no other app and no host X server is involved.
+OPENBOX_PATHS = ("/usr/bin/openbox",)
+# Runs inside the jail: an Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket lives in
+# the jail's private /tmp and abstract namespace, so no other app and no host X server is involved. Arguments: the
+# Xwayland binary, the mode (rootless, or rootful with a window of the size in $3 and openbox $4 as its window
+# manager), then the command. Rootless needs the compositor to manage the X windows, which mutter does only for the
+# Xwayland it starts itself.
 XWAYLAND_SCRIPT = (
-    'f=/tmp/.appjail-display; x="$1"; shift\n'
-    'WAYLAND_DISPLAY=wayland-0 "$x" -rootless -nolisten tcp -displayfd 3 3>"$f" >/dev/null 2>&1 &\n'
+    'f=/tmp/.appjail-display; l=/tmp/.appjail-xwayland.log; x="$1"; m="$2"; g="$3"; w="$4"; shift 4\n'
+    'if [ "$m" = rootful ]; then\n'
+    '  WAYLAND_DISPLAY=wayland-0 "$x" -geometry "$g" -decorate -nolisten tcp -displayfd 3 3>"$f" >"$l" 2>&1 &\n'
+    'else\n'
+    '  WAYLAND_DISPLAY=wayland-0 "$x" -rootless -nolisten tcp -displayfd 3 3>"$f" >"$l" 2>&1 &\n'
+    'fi\n'
     'p=$!; i=0; while [ ! -s "$f" ] && kill -0 "$p" 2>/dev/null && [ "$i" -lt 400 ]; do sleep 0.05; i=$((i+1)); done\n'
-    'n=$(cat "$f"); [ -n "$n" ] || { echo "appjail: Xwayland did not start (it exited, or took more than 20 s)" >&2; exit 1; }\n'
+    'n=$(cat "$f"); [ -n "$n" ] || { cat "$l" >&2; echo "appjail: Xwayland did not start (it exited, or took more than 20 s)" >&2; exit 1; }\n'
+    '[ "$m" = rootful ] && DISPLAY=":$n" "$w" >/dev/null 2>&1 &\n'
     'DISPLAY=":$n" exec "$@"')
 
 
-def xwayland_command(command):
-    """Wrap the app command so a private Xwayland is running before it starts."""
-    for path in XWAYLAND_PATHS:
-        if os.access(path, os.X_OK):
-            return ["/bin/sh", "-c", XWAYLAND_SCRIPT, "sh", path, *command]
-    raise RunError("display = xwayland needs the Xwayland binary in /usr/bin (package xwayland)")
+def _executable(paths):
+    return next((p for p in paths if os.access(p, os.X_OK)), None)
+
+
+def xwayland_command(command, rootful=False, size=manifest.DEFAULT_DISPLAY_SIZE):
+    """Wrap the app command so a private Xwayland (rootful: with a window manager) is running before it starts."""
+    xwayland = _executable(XWAYLAND_PATHS)
+    if not xwayland:
+        raise RunError("display = xwayland needs the Xwayland binary in /usr/bin (package xwayland)")
+    openbox = _executable(OPENBOX_PATHS) if rootful else ""
+    if rootful and not openbox:
+        raise RunError("display = xwayland-rootful needs openbox in /usr/bin (package openbox)")
+    return ["/bin/sh", "-c", XWAYLAND_SCRIPT, "sh", xwayland, "rootful" if rootful else "rootless", size, openbox, *command]
 
 
 def _wayland_args(host_env, wayland_socket, rt):
@@ -209,11 +225,11 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     Pure function of its inputs: nothing is read from the process environment. Anything the
     manifest asks for but appjail cannot enforce yet is refused instead of ignored.
     """
-    xwayland = perms.display == "xwayland"
+    xwayland = perms.display in ("xwayland", "xwayland-rootful")
     if perms.linger:
         command = linger.wrap(command)
     if xwayland:
-        command = xwayland_command(command)
+        command = xwayland_command(command, perms.display == "xwayland-rootful", perms.display_size)
     if (perms.dbus_filter or perms.dbus_own or perms.portals) and not dbus_socket:
         raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from appjail.dbusproxy")
     if perms.portals and not portal_docs:

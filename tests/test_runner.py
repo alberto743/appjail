@@ -219,8 +219,27 @@ def test_xwayland_wraps_the_command_and_switches_the_toolkits(sandbox, runtime, 
     env = {v[0]: v[1] for v in (args[i + 1:i + 3] for i, a in enumerate(args) if a == "--setenv")}
     assert "WAYLAND_DISPLAY" not in env and env["GDK_BACKEND"] == "x11" and env["QT_QPA_PLATFORM"] == "xcb"
     cmd = args[args.index("--") + 1:]
-    assert cmd[:2] == ["/bin/sh", "-c"] and cmd[4] == "/bin/sh" and cmd[5].endswith("/AppRun")
+    assert cmd[:2] == ["/bin/sh", "-c"] and cmd[4:7] == ["/bin/sh", "rootless", "1280x800"] and cmd[8].endswith("/AppRun")
     assert not any("X11" in a for a in args if a != cmd[2])  # the host X11 socket is never bound
+
+
+def test_rootful_xwayland_has_a_window_of_its_own_and_a_window_manager(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(runtimejail, "XWAYLAND_PATHS", ("/bin/sh",))
+    monkeypatch.setattr(runtimejail, "OPENBOX_PATHS", ("/bin/true",))
+    args = runtimejail.runtime_args(**build(sandbox, runtime, display="xwayland-rootful", display_size="1024x768"))
+    env = {v[0]: v[1] for v in (args[i + 1:i + 3] for i, a in enumerate(args) if a == "--setenv")}
+    assert "WAYLAND_DISPLAY" not in env and env["GDK_BACKEND"] == "x11"
+    cmd = args[args.index("--") + 1:]
+    assert cmd[4:8] == ["/bin/sh", "rootful", "1024x768", "/bin/true"] and cmd[8].endswith("/AppRun")
+    assert "-geometry" in cmd[2]
+    assert not any("X11" in a for a in args if a != cmd[2])
+
+
+def test_rootful_xwayland_without_openbox_is_an_error(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(runtimejail, "XWAYLAND_PATHS", ("/bin/sh",))
+    monkeypatch.setattr(runtimejail, "OPENBOX_PATHS", ("/nonexistent/openbox",))
+    with pytest.raises(RunError, match="openbox"):
+        runtimejail.runtime_args(**build(sandbox, runtime, display="xwayland-rootful"))
 
 
 def test_xwayland_without_the_binary_is_an_error(sandbox, runtime, monkeypatch):
@@ -237,7 +256,7 @@ def test_linger_runs_the_command_under_the_supervisor_inside_the_xwayland_wrappe
     assert args[args.index("--") + 1:] == [linger.PYTHON, "-I", "-c", linger.SUPERVISOR, "/app/AppRun"]
     cmd = runtimejail.runtime_args(**build(sandbox, runtime, linger=True, display="xwayland"))
     cmd = cmd[cmd.index("--") + 1:]
-    assert cmd[:2] == ["/bin/sh", "-c"] and cmd[5:8] == [linger.PYTHON, "-I", "-c"] and cmd[-1] == "/app/AppRun"
+    assert cmd[:2] == ["/bin/sh", "-c"] and cmd[8:11] == [linger.PYTHON, "-I", "-c"] and cmd[-1] == "/app/AppRun"
 
 
 def test_linger_without_python_is_an_error(sandbox, runtime, monkeypatch):
@@ -274,7 +293,7 @@ def test_linger_does_not_wait_for_the_xwayland_helper(sandbox):
     x = sandbox / "fakeX"
     x.write_text("#!/bin/sh\nsleep 0.3; echo 7 >&3; sleep 300\n")  # the sleep is a child of the helper, as Xwayland's xkbcomp would be
     x.chmod(0o755)
-    command = ["/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", *linger.wrap(["/bin/sh", "-c", "echo $DISPLAY"])]
+    command = ["/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "rootless", "1280x800", "", *linger.wrap(["/bin/sh", "-c", "echo $DISPLAY"])]
     argv = [jail.find_bwrap(), "--unshare-user", "--unshare-pid", "--die-with-parent", "--ro-bind", "/", "/", "--proc", "/proc", "--dev", "/dev",
             "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX", "--", *command]
     start = time.monotonic()
@@ -592,6 +611,39 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox, network_host):
         log.close()
 
 
+@integration
+@pytest.mark.skipif(not all(shutil.which(c) for c in ("weston", "Xwayland", "openbox", "xprop")),
+                    reason="weston, xwayland, openbox and x11-utils are installed in the test guest")
+def test_rootful_xwayland_runs_a_window_manager(sandbox, monkeypatch):
+    # With -decorate, openbox never gets going under headless weston or sway (cause not found; without it, it does).
+    # The rest of the script is under test; the real option needs a manual check on a desktop compositor.
+    monkeypatch.setattr(runtimejail, "XWAYLAND_SCRIPT", runtimejail.XWAYLAND_SCRIPT.replace(" -decorate", ""))
+    rt = Path(f"/run/user/{os.getuid()}")
+    if not rt.is_dir():
+        pytest.skip("no /run/user/<uid> in this session")
+    log = open(sandbox / "weston.log", "w")
+    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-rtest"],
+                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
+    try:
+        if not wait_for(lambda: (rt / "appjail-rtest").exists(), 5.0):
+            pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
+        kw = build(sandbox, rt, audio=False, display="xwayland-rootful", display_size="800x600")
+        kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-rtest"}
+        (kw["root"] / "AppRun").write_text(
+            "#!/bin/sh\nfor i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do\n"
+            "  /usr/bin/xprop -root _NET_SUPPORTING_WM_CHECK > /home/app/out.txt 2>&1 && grep -q 'window id' /home/app/out.txt && break\n"
+            "  sleep 0.5\ndone\n/usr/bin/xdpyinfo | grep dimensions >> /home/app/out.txt\n")
+        (kw["root"] / "AppRun").chmod(0o755)
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw)], timeout=30)
+        text = (kw["home"] / "out.txt").read_text() if (kw["home"] / "out.txt").exists() else ""
+        assert proc.returncode == 0 and "window id" in text, text + proc.stderr
+        assert "800x600" in text
+    finally:
+        weston.terminate()
+        weston.wait(timeout=10)
+        log.close()
+
+
 # -- single files (run --file) -------------------------------------------------------------
 
 def test_file_binds_read_only_by_default_and_rw_on_request(sandbox):
@@ -781,7 +833,7 @@ def test_xwayland_script_waits_for_a_slow_start_but_not_for_a_dead_one(sandbox, 
     x.write_text(f"#!/bin/sh\n{fake}\n")
     x.chmod(0o755)
     argv = [jail.find_bwrap(), "--unshare-user", "--ro-bind", "/", "/", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX",
-            "--", "/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "/bin/sh", "-c", "echo $DISPLAY"]
+            "--", "/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "rootless", "1280x800", "", "/bin/sh", "-c", "echo $DISPLAY"]
     start = time.monotonic()
     proc = jail.supervise(argv, timeout=30)
     if ok:

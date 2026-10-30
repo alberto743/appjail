@@ -342,7 +342,9 @@ class App:
             self.flag[flag] = tk.BooleanVar(value=flag in ("audio", "gpu"))
             ttk.Checkbutton(grants, text=flag, variable=self.flag[flag]).pack(side="left", padx=4)
         self.display = tk.StringVar(value="wayland")
-        ttk.Combobox(grants, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=10).pack(side="left", padx=8)
+        ttk.Combobox(grants, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=16).pack(side="left", padx=8)
+        self.display_size = tk.StringVar(value=manifest.DEFAULT_DISPLAY_SIZE)
+        ttk.Entry(grants, textvariable=self.display_size, width=10).pack(side="left")
         extra = ttk.Frame(tab)
         extra.pack(fill="both", expand=True)
         self.editors = {}
@@ -384,7 +386,7 @@ class App:
     def _add(self):
         form = {k: v.get() for k, v in self.text.items()}
         form.update(kind=self.kind.get(), source=self.source.get(), prerelease=self.prerelease.get(),
-                    allow=[f for f, v in self.flag.items() if v.get()], display=self.display.get(),
+                    allow=[f for f, v in self.flag.items() if v.get()], display=self.display.get(), display_size=self.display_size.get().strip(),
                     desktop=self.desktop.get(), mime_all=self.mime_all.get(),
                     mime=self.mime.get().replace(",", " ").split(), rw=self.rw.get())
         form.update({k: ed.values() for k, ed in self.editors.items()})

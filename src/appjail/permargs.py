@@ -106,15 +106,19 @@ def permissions_from_args(args):
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
         portals="portals" in allowed, userns="userns" in allowed, linger="linger" in allowed,
         audio=not args.no_audio, gpu=not args.no_gpu,
-        display=args.display,
+        display=args.display, display_size=args.display_size,
     )
+
+
+def rootful(p):
+    return p.display == "xwayland-rootful"
 
 
 def granted_summary(p):
     """`key=value` for every permission that is granted, comma-separated (empty when nothing is)."""
-    return ", ".join(f"{k}={v}" for k, v in vars(p).items() if v not in ((), False))
+    return ", ".join(f"{k}={v}" for k, v in vars(p).items() if v not in ((), False) and (k != "display_size" or rootful(p)))
 
 
 def describe_permissions(p):
     return ", ".join([f"{k}={getattr(p, k)}" for k in PERMISSION_FLAGS] + [f"display={p.display}"]
-                     + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter] + [f"dbus-own={n}" for n in p.dbus_own] + [f"portal={n}" for n in p.portal_interfaces]) or "none"
+                     + ([f"display_size={p.display_size}"] if rootful(p) else []) + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter] + [f"dbus-own={n}" for n in p.dbus_own] + [f"portal={n}" for n in p.portal_interfaces]) or "none"
