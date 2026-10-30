@@ -7,7 +7,7 @@ A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinn
 
 ## Open items
 Planned code work is marked as such; everything else needs a decision or an app/session the user approves.
-- Manual checks on the user's machine: the GNOME and KDE portal backends; IPv6 on a real internet route; `display = xwayland-rootful` on GNOME (window shown, `-decorate` titlebar and moving, openbox stacking of dialogs, cursor, resize, clipboard).
+- Manual checks on the user's machine: the GNOME and KDE portal backends; IPv6 on a real internet route; `display = xwayland-rootful` on GNOME beyond "it works" (clipboard, drag-and-drop).
 - Decision pending: arm64 support (`DECISIONS.md`).
 - Deferred by the user (`DECISIONS.md`): the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN.
 - Planned (code): the `camera` device permission (`/dev/video*`, `/dev/media*`); the remaining low audit findings: a symlinked tree root in the `--appimage-extract` fallback, more D-Bus names to refuse (dconf, gvfs, terminals), symlinks in files being opened, unbounded output buffering in `jail.supervise`, app-name validation in `run` and `update`, the `:rw` suffix in `--file` names.
