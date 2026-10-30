@@ -3,6 +3,7 @@
 
 """Form state to argv lists for the CLI. No tkinter here: the parser stays the one place that validates options."""
 
+from .. import manifest
 from ..catalog import INSTALLABLE
 from ..permargs import PERMISSION_FLAGS
 
@@ -43,7 +44,7 @@ def add_argv(form):
         argv.append("--no-gpu")
     if form.get("display") and form["display"] != "wayland":
         argv += ["--display", form["display"]]
-    if form.get("display") == "xwayland-rootful" and form.get("display_size"):
+    if form.get("display") == manifest.ROOTFUL and form.get("display_size"):
         argv += ["--display-size", form["display_size"]]
     if form.get("desktop"):
         argv.append("--desktop")
@@ -83,7 +84,7 @@ def perms_argv(name, old, new):
             argv += ["--deny", flag]
     if new.get("display") != old.get("display"):
         argv += ["--display", new["display"]]
-    if new.get("display_size") != old.get("display_size") and new.get("display") == "xwayland-rootful":
+    if new.get("display_size") != old.get("display_size") and new.get("display") == manifest.ROOTFUL:
         argv += ["--display-size", new["display_size"]]
     for key, add, rm in (("dirs", "--add-dir", "--rm-dir"), ("dbus_filter", "--add-dbus", "--rm-dbus"),
                          ("dbus_own", "--add-dbus-own", "--rm-dbus-own"),

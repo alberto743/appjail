@@ -225,11 +225,11 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     Pure function of its inputs: nothing is read from the process environment. Anything the
     manifest asks for but appjail cannot enforce yet is refused instead of ignored.
     """
-    xwayland = perms.display in ("xwayland", "xwayland-rootful")
+    xwayland = perms.xwayland
     if perms.linger:
         command = linger.wrap(command)
     if xwayland:
-        command = xwayland_command(command, perms.display == "xwayland-rootful", perms.display_size)
+        command = xwayland_command(command, perms.rootful, perms.display_size)
     if (perms.dbus_filter or perms.dbus_own or perms.portals) and not dbus_socket:
         raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from appjail.dbusproxy")
     if perms.portals and not portal_docs:

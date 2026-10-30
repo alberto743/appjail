@@ -257,6 +257,10 @@ def test_linger_runs_the_command_under_the_supervisor_inside_the_xwayland_wrappe
     cmd = runtimejail.runtime_args(**build(sandbox, runtime, linger=True, display="xwayland"))
     cmd = cmd[cmd.index("--") + 1:]
     assert cmd[:2] == ["/bin/sh", "-c"] and cmd[8:11] == [linger.PYTHON, "-I", "-c"] and cmd[-1] == "/app/AppRun"
+    monkeypatch.setattr(runtimejail, "OPENBOX_PATHS", ("/bin/true",))
+    cmd = runtimejail.runtime_args(**build(sandbox, runtime, linger=True, display="xwayland-rootful"))
+    cmd = cmd[cmd.index("--") + 1:]
+    assert cmd[5:8] == ["rootful", "1280x800", "/bin/true"] and cmd[8:11] == [linger.PYTHON, "-I", "-c"]
 
 
 def test_linger_without_python_is_an_error(sandbox, runtime, monkeypatch):
@@ -289,13 +293,18 @@ def test_linger_keeps_the_jail_for_a_detached_child(sandbox, runtime, keep):
 
 
 @integration
-def test_linger_does_not_wait_for_the_xwayland_helper(sandbox):
+@pytest.mark.parametrize("mode", ["rootless", "rootful"])
+def test_linger_does_not_wait_for_the_xwayland_helper(sandbox, mode):
     x = sandbox / "fakeX"
     x.write_text("#!/bin/sh\nsleep 0.3; echo 7 >&3; sleep 300\n")  # the sleep is a child of the helper, as Xwayland's xkbcomp would be
     x.chmod(0o755)
-    command = ["/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", "rootless", "1280x800", "", *linger.wrap(["/bin/sh", "-c", "echo $DISPLAY"])]
+    wm = sandbox / "fakeWM"  # the window manager of the rootful mode is one more helper
+    wm.write_text("#!/bin/sh\nsleep 300\n")
+    wm.chmod(0o755)
+    command = ["/bin/sh", "-c", runtimejail.XWAYLAND_SCRIPT, "sh", "/run/fakeX", mode, "1280x800", "/run/fakeWM" if mode == "rootful" else "",
+               *linger.wrap(["/bin/sh", "-c", "echo $DISPLAY"])]
     argv = [jail.find_bwrap(), "--unshare-user", "--unshare-pid", "--die-with-parent", "--ro-bind", "/", "/", "--proc", "/proc", "--dev", "/dev",
-            "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX", "--", *command]
+            "--tmpfs", "/tmp", "--tmpfs", "/run", "--ro-bind", str(x), "/run/fakeX", "--ro-bind", str(wm), "/run/fakeWM", "--", *command]
     start = time.monotonic()
     proc = jail.supervise(argv, timeout=30)
     assert proc.returncode == 0 and proc.stdout.split() == [":7"], proc.stderr

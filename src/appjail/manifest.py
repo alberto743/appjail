@@ -35,7 +35,8 @@ SHA256_RE = re.compile(r"[0-9a-f]{64}")
 PUBLISHED_RE = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 
 TIERS = (1, 2, 3, 4, 5)
-DISPLAYS = ("wayland", "xwayland", "xwayland-rootful")
+ROOTFUL = "xwayland-rootful"
+DISPLAYS = ("wayland", "xwayland", ROOTFUL)
 DEFAULT_DISPLAY_SIZE = "1280x800"
 
 TOP_KEYS = {
@@ -64,6 +65,14 @@ class Permissions:
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
     linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
+
+    @property
+    def xwayland(self):
+        return self.display in ("xwayland", ROOTFUL)
+
+    @property
+    def rootful(self):
+        return self.display == ROOTFUL
 
 
 @dataclass(frozen=True)
