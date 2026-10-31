@@ -19,6 +19,9 @@ on Wayland (and X11-only apps through a private Xwayland), and treats the softwa
 
 *appjail is young software: read the [limits](#limits) before relying on it.*
 
+*Not affiliated with the FreeBSD [AppJail](https://github.com/DtxdF/AppJail) project. This appjail is for Linux
+AppImages and uses bubblewrap.*
+
 ## Why
 
 Package managers for AppImages typically download a release and run it with your full privileges. appjail
