@@ -146,7 +146,7 @@ def test_owner_change_is_a_loud_warning_and_the_old_catalog_is_kept_for_rollback
     update_db(BASE)
     changed = cat(("cura", "slicer", "github:Ultimaker/Cura"), ("gh", "GitHub CLI", "github:evil/cli"), ("old", "going away", "github:a/old"), revision=C2)
     console, _ = update_db(changed, C2)
-    assert "! warning: OWNER CHANGE for gh: github:cli/cli -> github:evil/cli" in console.text and "1 owner changes" in console.text
+    assert "! warning: OWNER CHANGE for gh: github:cli/cli → github:evil/cli" in console.text and "1 owner changes" in console.text
     assert f"Changes since {C1[:12]}" in console.text
     assert (indexstore.current(DB)["commit"], indexstore.previous(DB)["commit"]) == (C2, C1)
 
@@ -157,7 +157,7 @@ def test_diff_lists_added_removed_and_source_changes():
     console, _ = update_db(new, C2)
     assert "1 apps added, 1 removed, 0 owner changes, 1 other source changes" in console.text
     assert "added: fresh" in console.text and "removed: old" in console.text
-    assert "source changed: cura: github:Ultimaker/Cura -> github:Ultimaker/Cura2" in console.text
+    assert "source changed: cura: github:Ultimaker/Cura → github:Ultimaker/Cura2" in console.text
 
 
 def test_a_download_failure_leaves_the_index_unchanged():
@@ -279,7 +279,7 @@ def test_updating_a_file_source_rereads_the_file_and_shows_the_diff(tmp_path):
     run_index("add", "mine", "--file", str(path))
     path.write_text(catalog.dumps(cat(("tool", "A tool", "github:evil/tool"), ("fresh", "New", "github:f/f"), revision="r2")))
     console, status = run_index("update", "mine")
-    assert status == 0 and "OWNER CHANGE for tool: github:me/tool -> github:evil/tool" in console.text and "added: fresh" in console.text
+    assert status == 0 and "OWNER CHANGE for tool: github:me/tool → github:evil/tool" in console.text and "added: fresh" in console.text
     assert indexstore.current("mine")["revision"] == "r2" and indexstore.previous("mine")["revision"] == "2026-10-22"
     path.write_text("not json")
     console, status = run_index("update", "mine", answers=())

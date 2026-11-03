@@ -66,7 +66,7 @@ def test_permission_lines_and_changes():
     old = manifest.Permissions(audio=True, dirs=("~/Music",))
     new = manifest.Permissions(audio=True, network=True, dirs=("~/Docs",), display="xwayland")
     assert permission_lines(old) == [("grants", "audio"), ("display", "wayland"), ("dirs", "~/Music")]
-    arrow = console_mod.arrow()
+    arrow = console_mod.ARROW
     assert permission_changes(old, new) == [("network", f"no {arrow} yes"), ("display", f"wayland {arrow} xwayland"),
                                              ("dirs", "+ ~/Docs"), ("dirs", "- ~/Music")]
 
@@ -84,4 +84,20 @@ def test_note_and_item(con):
     c, cap = con
     c.note("x")
     c.item("y")
-    assert cap.readouterr().out.splitlines() == ["note: x", f"  {console_mod.bullet()} y"]
+    assert cap.readouterr().out.splitlines() == ["note: x", f"  {console_mod.BULLET} y"]
+
+
+class FakeTty:
+    def isatty(self):
+        return True
+
+
+def test_wrapped_only_on_a_terminal_and_never_inside_a_word(monkeypatch, capsys):
+    monkeypatch.setattr(console_mod.shutil, "get_terminal_size", lambda: type("S", (), {"columns": 40})())
+    text = "word " * 30 + "https://example.org/" + "x" * 80
+    assert console_mod.wrapped(text, hang=4, stream=object.__new__(type("P", (), {"isatty": lambda s: False}))) == [text]
+    lines = console_mod.wrapped(text, hang=4, stream=FakeTty())
+    assert len(lines) > 3 and all(line.startswith("    ") for line in lines[1:])
+    assert all(len(line) <= 59 for line in lines if "xxxx" not in line)  # the 60-column floor
+    assert any("https://example.org/" + "x" * 80 in line for line in lines)  # a long word stays whole
+    assert " ".join(l.strip() for l in lines).split() == text.split()

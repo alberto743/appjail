@@ -20,7 +20,7 @@ from . import (
     updater,
 )
 from .cmd_desktop import forget
-from .console import Abort
+from .console import Abort, human_size
 from .permargs import (
     PERMISSION_FLAGS,
     dbus_from_args,
@@ -38,12 +38,13 @@ from .permargs import (
 def cmd_tools(args, console, download=jail.download):
     names = sorted(tools.TOOLS)
     if args.tools_command == "status":
-        for n in names:
-            console.out(f"{n}: {tools.status(n)}  ({tools.TOOLS[n].purpose})")
+        console.table(("TOOL", "STATUS", "PURPOSE"), [(n, tools.status(n), tools.TOOLS[n].purpose) for n in names], max_width=70)
         return
     tool = tools.TOOLS[args.tool]
-    console.out(f"{tool.name}: {tool.url}")
-    console.out(f"  size {tool.size} bytes, sha256 {tool.sha256} (pinned in appjail's source)")
+    console.kv("Tool", f"{tool.name} ({tool.purpose})")
+    console.kv("URL", tool.url)
+    console.kv("Size", f"{human_size(tool.size)} ({tool.size} bytes)")
+    console.kv("sha256", f"{tool.sha256} (pinned in appjail's source)")
     if not console.confirm("Download it in a network-only jail and keep it only if it matches?"):
         raise Abort("cancelled")
     try:

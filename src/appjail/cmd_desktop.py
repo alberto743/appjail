@@ -6,7 +6,7 @@
 import shutil
 
 from . import desktop, manifest, store
-from .console import INDENTED_LABEL, Abort, arrow
+from .console import ARROW, INDENTED_LABEL, Abort
 
 
 def _check(name):
@@ -80,7 +80,7 @@ def install_entry(name, console, args, yes=False, ask=True):
     mimes = _select(console, declared, args, current if has_entry else None, yes or not ask)
     rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
     shown = desktop.display_fields(fields, name)
-    console.kv("Menu entry", f"{shown['Name']} (appjail) {arrow()} {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
+    console.kv("Menu entry", f"{shown['Name']} (appjail) {ARROW} {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
     console.kv("File types", ", ".join(mimes) + (" (read-write)" if rw else " (read-only)") if mimes else "none (launcher only)")
     if ignored:
         console.kv("Not offered", ", ".join(ignored))

@@ -64,7 +64,7 @@ Tier 1 means a Sigstore build attestation covers the exact downloaded bytes and 
 - Results go to stdout. Warnings are `! warning: …` on stdout, so they stay beside the step that caused them. Errors are `error: …` on stderr (a plain `cancelled` has no prefix); the exit status is 1.
 - Detail blocks are label/value lines aligned by `Console.kv`, tables are `Console.table` (columns with no content are dropped, cells are cleaned and cut), bullets are `Console.item`. An `update` prints a `== app ==` header per app and, for several apps, ends with an APP/RESULT table.
 - `--json` on `list`, `search` and `index status` prints one JSON document (ASCII only) on stdout and nothing else; `list --json` always includes the permissions, and an unreadable manifest gives an object with `error`. No other command has it yet.
-- Every line goes through `textsafe` first. Colour is added only to the fixed `warning:`/`error:` prefixes, only on a terminal, and not when `NO_COLOR` is set or `TERM=dumb`. The bullet and arrow are Unicode only when stdout is UTF-8, otherwise `-` and `->`.
+- Every line goes through `textsafe` first. Colour is added only to the fixed `warning:`/`error:` prefixes, only on a terminal, and not when `NO_COLOR` is set or `TERM=dumb`. Bullets (`•`) and arrows (`→`) are always Unicode. On a terminal, long warnings, notes and values wrap at the terminal width (at least 60) with a hanging indent, never inside a word; a pipe or a log keeps one line per message.
 
 ## Installing
 ### Resolver (`github.py`, `textsafe.py`)

@@ -58,7 +58,7 @@ def run(*argv, answers=()):
 def test_lists_only_this_apps_grants(h, docs):
     installed(h)
     text = run().text
-    assert "2 document grant(s)" in text and "aaa  [read]" in text and "bbb  [read, write]" in text
+    assert "2 document grant(s)" in text and "aaa  read" in text and "bbb  read, write" in text and "ACCESS" in text
     assert "ccc" not in text
 
 

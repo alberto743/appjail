@@ -5,7 +5,9 @@
 
 import json
 import os
+import shutil
 import sys
+import textwrap
 
 from . import textsafe
 
@@ -22,14 +24,18 @@ def color_enabled(stream):
     return (stream.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM", "") != "dumb")
 
 
-def bullet():
-    """The list marker: a bullet where the terminal can show it, `-` otherwise."""
-    enc = (getattr(sys.stdout, "encoding", None) or "").lower()
-    return "•" if enc.startswith("utf") and os.environ.get("TERM", "") != "dumb" else "-"
+BULLET = "•"
+ARROW = "→"
 
 
-def arrow():
-    return "→" if bullet() == "•" else "->"
+def wrapped(text, hang=0, stream=None):
+    """text as lines that fit a terminal, continuation lines indented by hang. Only on a terminal: a pipe or a log
+    keeps one line per message. Words are never cut (a long URL or path stays whole)."""
+    stream = stream or sys.stdout
+    if not stream.isatty():
+        return [text]
+    width = max(60, shutil.get_terminal_size().columns - 1)
+    return textwrap.wrap(text, width, subsequent_indent=" " * hang, break_long_words=False, break_on_hyphens=False) or [text]
 
 
 def error_text(line):
@@ -49,12 +55,14 @@ class Console:
         print(textsafe.clean(line))
 
     def kv(self, label, value, width=11):
-        """`Label      value`, the label padded to width."""
-        self.out(f"{label:<{width}} {value}")
+        """`Label      value`, the label padded to width; a long value wraps under itself."""
+        for line in wrapped(textsafe.clean(f"{label:<{width}} {value}"), hang=width + 1):
+            self.out(line)
 
     def item(self, text, indent=2):
         """A bullet line."""
-        self.out(f"{' ' * indent}{bullet()} {text}")
+        for line in wrapped(textsafe.clean(f"{' ' * indent}{BULLET} {text}"), hang=indent + 2):
+            self.out(line)
 
     def table(self, headers, rows, max_width=40):
         """Rows aligned under their headers. Cells are cleaned and cut to max_width; a column with no content is dropped."""
@@ -69,13 +77,16 @@ class Console:
         self.out(json.dumps(data, ensure_ascii=True))
 
     def note(self, line):
-        self.out("note: " + line)
+        for text in wrapped(textsafe.clean("note: " + line), hang=2):
+            self.out(text)
 
     def warn(self, line):
         prefix = "! warning:"
         if color_enabled(sys.stdout):
             prefix = f"\x1b[33m{prefix}\x1b[0m"
-        print(f"{prefix} {textsafe.clean(line)}")
+        lines = wrapped("! warning: " + textsafe.clean(line), hang=2)
+        lines[0] = lines[0].replace("! warning:", prefix, 1)
+        print("\n".join(lines))
 
     def error(self, line):
         """Errors go to stderr, so a pipe or a script sees only the results."""

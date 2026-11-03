@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from . import grants, jail, landlock, manifest
-from .console import Abort
+from .console import ARROW, Abort
 
 PERMISSION_FLAGS = manifest.BOOL_PERMS
 
@@ -126,15 +126,14 @@ def permission_lines(p):
 
 
 def permission_changes(old, new):
-    """What differs between two Permissions, as (label, text) lines: `no -> yes` for a value, `+ x` / `- x` for a list."""
-    from .console import arrow
+    """What differs between two Permissions, as (label, text) lines: `no → yes` for a value, `+ x` / `- x` for a list."""
     lines = []
     for k in PERMISSION_FLAGS:
         if getattr(old, k) != getattr(new, k):
-            lines.append((k, f"{'yes' if getattr(old, k) else 'no'} {arrow()} {'yes' if getattr(new, k) else 'no'}"))
+            lines.append((k, f"{'yes' if getattr(old, k) else 'no'} {ARROW} {'yes' if getattr(new, k) else 'no'}"))
     for k in ("display", "display_size"):
         if getattr(old, k) != getattr(new, k):
-            lines.append((k.replace("_", "-"), f"{getattr(old, k)} {arrow()} {getattr(new, k)}"))
+            lines.append((k.replace("_", "-"), f"{getattr(old, k)} {ARROW} {getattr(new, k)}"))
     for label, a, b in (("dirs", old.dirs, new.dirs), ("dbus", old.dbus_filter, new.dbus_filter),
                         ("dbus-own", old.dbus_own, new.dbus_own), ("portals", old.portal_interfaces, new.portal_interfaces)):
         lines += [(label, f"+ {x}") for x in b if x not in a] + [(label, f"- {x}") for x in a if x not in b]

@@ -42,11 +42,11 @@ def blocks(m, info, asset, attested=None):
         out.append(f"OWNER CHANGE: the repository is now owned by {info.owner} (account id {info.owner_id}), "
                    f"not the account pinned when it was added (id {m.owner_id})")
     if m.evidence_tier == 1 and not attested:
-        out.append("EVIDENCE DOWNGRADE: tier 1 -> 3 or 4 (this release has no build attestation on GitHub)")
+        out.append("EVIDENCE DOWNGRADE: tier 1 → 3 or 4 (this release has no build attestation on GitHub)")
         return out
     new_tier = 3 if asset.sha256 else 4
     if m.evidence_tier > 1 and new_tier > m.evidence_tier:
-        out.append(f"EVIDENCE DOWNGRADE: tier {m.evidence_tier} -> {new_tier} "
+        out.append(f"EVIDENCE DOWNGRADE: tier {m.evidence_tier} → {new_tier} "
                    "(GitHub no longer provides a digest for this asset)")
     return out
 
@@ -57,7 +57,7 @@ def cautions(m, info):
     if m.owner_id is None:
         out.append("this app was added before owner pinning: the owner account cannot be checked")
     if info.full_name.lower() != m.target.lower():
-        out.append(f"the repository was renamed or transferred: {m.target} -> {info.full_name}")
+        out.append(f"the repository was renamed or transferred: {m.target} → {info.full_name}")
     if info.archived:
         out.append("the repository is archived")
     return out

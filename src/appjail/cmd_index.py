@@ -138,9 +138,9 @@ def show_diff(console, since, d):
         if names:
             console.out(f"  {label}: " + ", ".join(names[:15]) + (f", … (+{len(names) - 15})" if len(names) > 15 else ""))
     for name, a, b in d.owner_changed:
-        console.warn(f"OWNER CHANGE for {name}: {a} -> {b}. Check this before adding it.")
+        console.warn(f"OWNER CHANGE for {name}: {a} → {b}. Check this before adding it.")
     for name, a, b in d.source_changed[:20]:
-        console.out(f"  source changed: {name}: {a} -> {b}")
+        console.out(f"  source changed: {name}: {a} → {b}")
     if len(d.source_changed) > 20:
         console.out(f"  … and {len(d.source_changed) - 20} more source changes")
 

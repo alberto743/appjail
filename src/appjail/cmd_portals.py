@@ -36,8 +36,10 @@ def cmd_portals(args, console, host_env=None):
             raise Abort(f"{name} has no grant on document '{doc}'")
     if not wanted:
         console.out(f"{app}: {len(granted)} document grant(s)" + (" (--revoke ID or --revoke-all to remove)" if granted else ""))
-        for doc, perms in granted.items():
-            console.out(f"  {doc}  [{', '.join(perms)}]  {', '.join(names_for(doc, app, host_env))}")
+        if granted:
+            console.out()
+            console.table(("ID", "ACCESS", "FILES"), [(doc, ", ".join(perms), ", ".join(names_for(doc, app, host_env)))
+                                                      for doc, perms in granted.items()], max_width=70)
         return
     console.out(f"This removes {name}'s access to {len(wanted)} document(s); the files themselves are not touched.")
     if not args.yes and not console.confirm("Revoke?"):

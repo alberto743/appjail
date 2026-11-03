@@ -58,7 +58,7 @@ def test_update_after_quarantine(h):
     path = installed(h)
     update(h, FakeClient(release_=release2()))
     code, c = update(h, FakeClient(release_=release2()), now=T0 + timedelta(days=7))
-    assert code == 0 and "updated app: v1.0 -> v2.0" in c.text
+    assert code == 0 and "updated app: v1.0 → v2.0" in c.text
     m = manifest.load(path)
     assert (m.version, m.sha256, m.evidence_tier, m.owner_id) == ("v2.0", NEW_SHA, 3, 42)
     assert store.appimage_path("app").read_bytes() == NEW_IMAGE

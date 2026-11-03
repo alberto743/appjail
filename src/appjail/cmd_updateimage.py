@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from . import appimage, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, swap_in
 from .cmd_desktop import refresh_after_update
-from .console import INDENTED_LABEL, Abort, arrow, human_size
+from .console import ARROW, INDENTED_LABEL, Abort, human_size
 from .imagesrc import (
     DEFAULT_MAX_MIB,
     check_appimage,
@@ -30,7 +30,7 @@ from .imagesrc import (
 )
 from .permargs import granted_summary
 
-DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 -> 5 (this app was added with a matching --sha256, the new content has none). "
+DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 → 5 (this app was added with a matching --sha256, the new content has none). "
              "Pass --sha256 HEX with the hash the publisher gives for the new file to keep tier 4.")
 
 
@@ -50,7 +50,7 @@ def confirm_installed_hash(run, expected):
     if m.evidence_tier == 5:
         manifest.dump(store.manifest_path(run.name), replace(m, evidence_tier=4))
         history.record(f"tier {run.name} 5 -> 4 (--sha256 matches the installed file)")
-        run.console.out("  --sha256 matches the installed file: evidence tier 5 -> 4")
+        run.console.out("  --sha256 matches the installed file: evidence tier 5 → 4")
     else:
         run.console.out("  --sha256 matches the installed file")
     return True
@@ -58,8 +58,8 @@ def confirm_installed_hash(run, expected):
 
 def show_diff(console, m, digest, tier, size=None):
     console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{arrow()} {digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
-    console.kv("  evidence", f"tier {m.evidence_tier} {arrow()} {tier}", INDENTED_LABEL)
+    console.kv("", f"{ARROW} {digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
+    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {tier}", INDENTED_LABEL)
     console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 
 
@@ -71,7 +71,7 @@ def install(run, staged, stage, record):
     entries, size = swap_in(name, staged, stage, record, run.svc.extract, False)
     updater.clear_pending(name)
     history.record(f"update {name} {m.version} -> {record.version} (tier {record.evidence_tier})")
-    run.console.out(f"  updated {name}: {m.version} -> {record.version}, sha256 {record.sha256}, {entries} entries, {human_size(size)}")
+    run.console.out(f"  updated {name}: {m.version} → {record.version}, sha256 {record.sha256}, {entries} entries, {human_size(size)}")
     refresh_after_update(name, run.console)
     return "updated"
 

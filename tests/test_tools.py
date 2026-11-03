@@ -75,7 +75,7 @@ def test_tools_command(sandbox, fake_tool):
     assert "Installed dwarfs" in c.text
     c = Script()
     cli.cmd_tools(cli.build_parser().parse_args(["tools", "status"]), c)
-    assert "dwarfs: ok" in c.text
+    assert any(l.startswith("dwarfs") and "ok" in l.split() for l in c.lines) and c.lines[0].split()[:3] == ["TOOL", "STATUS", "PURPOSE"]
     with pytest.raises(cli.Abort):
         cli.cmd_tools(cli.build_parser().parse_args(["tools", "install", "dwarfs"]), Script(["n"]))
 
