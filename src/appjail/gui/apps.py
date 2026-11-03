@@ -6,7 +6,7 @@
 import os
 
 from .. import index, manifest, portal, store, textsafe, updater
-from ..cmd_apps import list_line
+from ..cmd_apps import list_details, list_row
 from ..cmd_desktop import file_type_state
 from ..cmd_portals import names_for
 from ..jail import RunError
@@ -26,9 +26,12 @@ def load_permissions(name):
 
 
 def detail(name):
-    """The full `list` line of an app (directories, D-Bus names, portals, channel), for the line under the table."""
+    """What an app is granted (directories, D-Bus names, portals) and its channel, as one line under the table."""
     try:
-        line = list_line(name, manifest.load(store.manifest_path(name)))
+        m = manifest.load(store.manifest_path(name))
+        seen = list_row(name, m)[5]
+        line = "; ".join([f"{name} {m.version} {m.source}", *list_details(m)] + ([f"channel: {m.channel}"] if m.channel != "stable" else [])
+                         + ([f"update seen: {seen}"] if seen else []))
         offered, _ignored, registered, _rw, has_entry = file_types(name)
         if has_entry:
             line += f"; file types: {len(registered)} registered of {len(offered)} offered"

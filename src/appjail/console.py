@@ -24,6 +24,10 @@ def bullet():
     return "•" if enc.startswith("utf") and os.environ.get("TERM", "") != "dumb" else "-"
 
 
+def arrow():
+    return "→" if bullet() == "•" else "->"
+
+
 def error_text(line):
     """`error: ` before a message, except for a plain cancellation, which is not an error."""
     line = textsafe.clean(line)
@@ -47,6 +51,14 @@ class Console:
     def item(self, text, indent=2):
         """A bullet line."""
         self.out(f"{' ' * indent}{bullet()} {text}")
+
+    def table(self, headers, rows, max_width=40):
+        """Rows aligned under their headers. Cells are cleaned and cut to max_width; a column with no content is dropped."""
+        rows = [[textsafe.clean(c, max_width) for c in row] for row in rows]
+        keep = [i for i, h in enumerate(headers) if h and any(r[i] for r in rows)]
+        widths = {i: max(len(headers[i]), *(len(r[i]) for r in rows)) for i in keep}
+        for line in [list(headers), *rows]:
+            self.out("  ".join(line[i].ljust(widths[i]) for i in keep).rstrip())
 
     def note(self, line):
         self.out("note: " + line)

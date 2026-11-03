@@ -115,6 +115,27 @@ def granted_summary(p):
     return ", ".join(f"{k}={v}" for k, v in vars(p).items() if v not in ((), False) and (k != "display_size" or p.rootful))
 
 
-def describe_permissions(p):
-    return ", ".join([f"{k}={getattr(p, k)}" for k in PERMISSION_FLAGS] + [f"display={p.display}"]
-                     + ([f"display_size={p.display_size}"] if p.rootful else []) + [f"dir={d}" for d in p.dirs] + [f"dbus={n}" for n in p.dbus_filter] + [f"dbus-own={n}" for n in p.dbus_own] + [f"portal={n}" for n in p.portal_interfaces]) or "none"
+def permission_lines(p):
+    """What an app is granted, one (label, text) per line: the flags and the display always, the lists when not empty."""
+    display = p.display + (f" {p.display_size}" if p.rootful else "")
+    lines = [("grants", ", ".join(k for k in PERMISSION_FLAGS if getattr(p, k)) or "none"), ("display", display)]
+    for label, values in (("dirs", p.dirs), ("dbus", p.dbus_filter), ("dbus-own", p.dbus_own), ("portals", p.portal_interfaces)):
+        if values:
+            lines.append((label, ", ".join(values)))
+    return lines
+
+
+def permission_changes(old, new):
+    """What differs between two Permissions, as (label, text) lines: `no -> yes` for a value, `+ x` / `- x` for a list."""
+    from .console import arrow
+    lines = []
+    for k in PERMISSION_FLAGS:
+        if getattr(old, k) != getattr(new, k):
+            lines.append((k, f"{'yes' if getattr(old, k) else 'no'} {arrow()} {'yes' if getattr(new, k) else 'no'}"))
+    for k in ("display", "display_size"):
+        if getattr(old, k) != getattr(new, k):
+            lines.append((k.replace("_", "-"), f"{getattr(old, k)} {arrow()} {getattr(new, k)}"))
+    for label, a, b in (("dirs", old.dirs, new.dirs), ("dbus", old.dbus_filter, new.dbus_filter),
+                        ("dbus-own", old.dbus_own, new.dbus_own), ("portals", old.portal_interfaces, new.portal_interfaces)):
+        lines += [(label, f"+ {x}") for x in b if x not in a] + [(label, f"- {x}") for x in a if x not in b]
+    return lines

@@ -216,7 +216,13 @@ def test_list(h):
     update(h, FakeClient(release_=release2()))
     c = Script()
     cli.cmd_list(c)
-    assert "app  v1.0  github:o/App  tier 3" in c.text and "network" in c.text and "update seen: v2.0" in c.text
+    header, row = c.lines[:2]
+    assert header.split() == ["NAME", "VERSION", "SOURCE", "TIER", "UPDATE"]
+    assert row.split() == ["app", "v1.0", "github:o/App", "3", "v2.0"]
+    assert row.index("v1.0") == header.index("VERSION") and row.index("v2.0") == header.index("UPDATE")
+    c = Script()
+    cli.cmd_list(c, long=True)
+    assert "grants: network" in c.text and "display: wayland" in c.text
 
 
 def test_remove_deletes_everything_after_confirmation(h):
@@ -244,7 +250,7 @@ def perms(h, *argv, answers=("y",)):
 
 def test_perms_show(h):
     installed(h)
-    assert "network=False" in perms(h).text
+    assert "grants" in perms(h).text and "display" in perms(h).text and "network" not in perms(h).text
 
 
 def test_perms_change_and_confirm(h):
@@ -264,7 +270,7 @@ def test_perms_display_size(h):
     c = perms(h, "--display", "xwayland-rootful", "--display-size", "1600x900")
     p = manifest.load(path).permissions
     assert (p.display, p.display_size) == ("xwayland-rootful", "1600x900")
-    assert "display_size=1600x900" in c.text
+    assert "display-size" in c.text and "1600x900" in c.text
     with pytest.raises(manifest.ManifestError):
         perms(h, "--display-size", "10x10")
 
@@ -286,7 +292,7 @@ def test_perms_declined_or_invalid_changes_nothing(h, tmp_path):
 def test_main_dispatch(h, capsys):
     installed(h)
     assert cli.main(["list"]) == 0
-    assert "app  v1.0" in capsys.readouterr().out
+    assert "app   v1.0" in capsys.readouterr().out
     assert cli.main(["perms", "nope"]) == 1
 
 
@@ -314,7 +320,7 @@ def test_add_warns_about_secret_service(h):
 def test_perms_add_and_remove_dbus(h):
     path = installed(h)
     c = perms(h, "--add-dbus", "org.freedesktop.Notifications", "--add-dbus", "org.freedesktop.secrets")
-    assert "stored secrets" in c.text and "dbus=org.freedesktop.Notifications" in c.text
+    assert "stored secrets" in c.text and "+ org.freedesktop.Notifications" in c.text
     assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications", "org.freedesktop.secrets")
     perms(h, "--rm-dbus", "org.freedesktop.secrets")
     assert manifest.load(path).permissions.dbus_filter == ("org.freedesktop.Notifications",)
@@ -333,7 +339,7 @@ def test_add_and_perms_dbus_own(h):
     path = installed(h, extra=("--dbus-own", "org.mpris.MediaPlayer2.*"))
     assert manifest.load(path).permissions.dbus_own == ("org.mpris.MediaPlayer2.*",)
     c = perms(h, "--add-dbus-own", "org.example.App")
-    assert "may own this session-bus name" in c.text and "dbus-own=org.example.App" in c.text
+    assert "may own this session-bus name" in c.text and "dbus-own" in c.text and "+ org.example.App" in c.text
     assert manifest.load(path).permissions.dbus_own == ("org.mpris.MediaPlayer2.*", "org.example.App")
     perms(h, "--rm-dbus-own", "org.mpris.MediaPlayer2.*")
     assert manifest.load(path).permissions.dbus_own == ("org.example.App",)
@@ -342,14 +348,14 @@ def test_add_and_perms_dbus_own(h):
     with pytest.raises(Abort):
         perms(h, "--add-dbus-own", "org.gnome.Shell")
     c = Script()
-    cli.cmd_list(c)
+    cli.cmd_list(c, long=True)
     assert "dbus-own: org.example.App" in c.text
 
 
 def test_list_shows_dbus(h):
     installed(h, extra=("--dbus", "org.freedesktop.Notifications"))
     c = Script()
-    cli.cmd_list(c)
+    cli.cmd_list(c, long=True)
     assert "dbus: org.freedesktop.Notifications" in c.text
 
 

@@ -22,10 +22,10 @@ from . import (
 from .cmd_desktop import forget
 from .console import Abort
 from .permargs import (
-    PERMISSION_FLAGS,
     dbus_from_args,
-    describe_permissions,
     dirs_from_args,
+    permission_changes,
+    permission_lines,
     portals_from_args,
     require_network_isolation,
     warn_owned_dbus,
@@ -62,33 +62,41 @@ def cmd_history(args, console):
         console.out(line)
 
 
-def list_line(name, m):
-    """The one line `list` prints for an app."""
-    p = m.permissions
-    granted = [k for k in PERMISSION_FLAGS if getattr(p, k)] + [f"display={p.display}"]
+def list_row(name, m):
+    """The table row `list` prints for an app: name, version, source, tier, channel (blank when stable), update seen."""
     pending = updater.load_pending(name)
-    return (f"{name}  {m.version}  {m.source}  tier {m.evidence_tier}  [{', '.join(granted)}]"
-            + (f"  dirs: {', '.join(p.dirs)}" if p.dirs else "")
-            + (f"  dbus: {', '.join(p.dbus_filter)}" if p.dbus_filter else "")
-            + (f"  dbus-own: {', '.join(p.dbus_own)}" if p.dbus_own else "")
-            + (f"  portals: {', '.join(p.portal_interfaces)}" if p.portal_interfaces else "")
-            + (f"  channel: {m.channel}" if m.channel != "stable" else "")
-            + (f"  (update seen: {pending['tag']})" if pending else ""))
+    return (name, m.version, m.source, str(m.evidence_tier), "" if m.channel == "stable" else m.channel,
+            pending["tag"] if pending else "")
 
 
-def cmd_list(console):
+def list_details(m):
+    """The lines `list --long` prints under an app: what it is granted."""
+    return [f"{label}: {text}" for label, text in permission_lines(m.permissions)]
+
+
+def cmd_list(console, long=False):
     names = updater.installed()
     if not names:
         console.out("No apps installed.")
-    for app, path in desktop.dangling():
-        console.out(f"note: menu entry of the missing app '{app}': {path} (`appjail desktop --prune` deletes it)")
+    rows, details = [], {}
     for name in names:
         try:
             m = manifest.load(store.manifest_path(name))
         except (manifest.ManifestError, OSError) as e:
-            console.out(f"{name}: unreadable manifest ({e})")
+            rows.append((name, "", f"(unreadable manifest: {e})", "", "", ""))
             continue
-        console.out(list_line(name, m))
+        rows.append(list_row(name, m))
+        details[name] = list_details(m)
+    if rows:
+        console.table(("NAME", "VERSION", "SOURCE", "TIER", "CHANNEL", "UPDATE"), rows, max_width=60)
+    if long:
+        for name, lines in details.items():
+            console.out()
+            console.out(name)
+            for line in lines:
+                console.item(line)
+    for app, path in desktop.dangling():
+        console.note(f"menu entry of the missing app '{app}': {path} (`appjail desktop --prune` deletes it)")
 
 
 def revoke_portal_grants(name, mpath, console):
@@ -217,14 +225,17 @@ def cmd_perms(args, console):
         changes["dirs"] = dirs
     bus_and_portal_changes(args, p, changes)
     if not changes:
-        console.out(f"{name}: {describe_permissions(p)}")
+        console.out(f"{name} permissions")
+        for label, text in permission_lines(p):
+            console.kv("  " + label, text, width=10)
         return
     new = replace(m, permissions=replace(p, **changes))
     manifest.validate(new)
     if new.permissions.network != p.network or new.permissions.network_host != p.network_host:
         require_network_isolation(new.permissions)
-    console.out(f"{name} before: {describe_permissions(p)}")
-    console.out(f"{name} after : {describe_permissions(new.permissions)}")
+    console.out(f"{name} permissions")
+    for label, text in permission_changes(p, new.permissions):
+        console.kv("  " + label, text, width=10)
     warn_new_grants(console, p, new.permissions)
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")

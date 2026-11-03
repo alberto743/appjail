@@ -113,7 +113,8 @@ def build_parser():
     upd_app.add_argument("--file", metavar="PATH", help="an app installed from a file: replace it with this AppImage")
     upd_app.add_argument("--sha256", metavar="HEX", help="url/file apps: the hash the publisher gives for the new content (keeps or earns tier 4)")
     upd_app.add_argument("--verify", action="store_true", help="url apps: at the end of the quarantine download the file again and compare it with the candidate")
-    sub.add_parser("list", help="list installed apps")
+    lst = sub.add_parser("list", help="list installed apps")
+    lst.add_argument("-l", "--long", action="store_true", help="also show what each app is granted")
     dsk = sub.add_parser("desktop", help="create, refresh or remove the menu entry of an app")
     dsk.add_argument("app", nargs="?")
     dsk.add_argument("--mime", action="append", default=[], metavar="TYPE", help="offer the app for this file type (repeatable)")
@@ -200,7 +201,7 @@ COMMANDS = {
     "index": _index,
     "search": lambda args, client, console, app_args: cmd_search(args, console),
     "update": lambda args, client, console, app_args: cmd_update(args, client or github.Client(), console),
-    "list": lambda args, client, console, app_args: cmd_list(console),
+    "list": lambda args, client, console, app_args: cmd_list(console, args.long),
     "version": lambda args, client, console, app_args: console.out(f"appjail {version_string()}"),
     "desktop": lambda args, client, console, app_args: cmd_desktop(args, console),
     "open": lambda args, client, console, app_args: cmd_open(args, [*args.files, *app_args], console),
