@@ -71,7 +71,7 @@ Analysis done for appjail-db, which now converts AM; appjail itself no longer re
 - **Cost:** appjail-db becomes a dependency of `search` (not of installs); the catalog is unsigned, so its integrity rests on HTTPS and on who can write to appjail-db.
 - **Revisit when:** appjail-db is unmaintained (any other catalog works with `index add`), or catalog signing becomes worthwhile (a signature by a key pinned in appjail).
 
-## arm64 (aarch64): evaluated, not implemented, decision pending
+## arm64 (aarch64): evaluated, not implemented, paused
 Feasible and moderate in code, expensive in verification. Scope if done: aarch64 only (armhf, riscv64 and i386 stay out; the ELF parsers accept 64-bit little-endian only).
 - **Where x86-64 is hard-wired:**
   - `seccomp.py`: `AUDIT_ARCH_X86_64`, the `SYSCALLS` numbers, the x32 guard and the `platform.machine()` refusal. aarch64 uses the generic syscall table (different numbers; no `_sysctl`, `uselib`, `create_module`, `get_kernel_syms`, `query_module`, `nfsservctl`, `ioperm`, `iopl`), `AUDIT_ARCH_AARCH64 = 0xC00000B7`, no x32. The table becomes per architecture, skipping names the architecture lacks, still refusing unknown architectures. `clone` flags stay argument 0. A wrong number either leaves a hole or denies a needed call, so every name must be cross-checked against the kernel header table and probed natively.
@@ -86,6 +86,6 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
 
 ## Platform and CI
 - Minimum supported systems: Debian 13 and Ubuntu 26.04. On Ubuntu 24.04 the real-portal tests fail (xdg-desktop-portal 1.18 does not export `FileChooser` with the tests' fake backend; cause not investigated) and its `reuse` cannot read `REUSE.toml`. No workarounds for older systems.
-- The CI runner label is `ubuntu-26.04`, not `ubuntu-latest` (still Ubuntu 24.04 when tried). GitHub's changelog (2026-09-17) schedules the move of `ubuntu-latest` to 26.04 between 2026-10-19 and 2026-11-19; once it is complete, switch the workflows to `ubuntu-latest` and check CI is green.
+- The CI runner label is `ubuntu-26.04`, not `ubuntu-latest` (still Ubuntu 24.04 when tried). GitHub's changelog (2026-09-17) schedules the move of `ubuntu-latest` to 26.04 between 2026-10-19 and 2026-11-19; once it is complete (planned for December 2026), switch the workflows to `ubuntu-latest` and check CI is green.
 - Actions are pinned to the full commit SHA with a trailing `# vX.Y.Z` comment: a tag can be moved, a SHA cannot. Dependabot's github-actions ecosystem reads the comment and updates SHA and comment together. For an annotated tag, pin the commit it points to (`git ls-remote ... tag^{}`).
 - Known CI-only behaviour: on the runner (Xwayland 24.1.10) a bare Xwayland segfaults on ImageMagick's `display` under headless weston, with no jail involved; the real-X11-app test skips on that signature (the "Caught signal 11" message, or the client's "X connection to :0 broken" when the message does not reach stderr). Re-check when the runner's Xwayland changes.
