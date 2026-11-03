@@ -19,8 +19,7 @@ on Wayland (and X11-only apps through a private Xwayland), and treats the softwa
 
 *appjail is young software: read the [limits](#limits) before relying on it.*
 
-*Not affiliated with the FreeBSD [AppJail](https://github.com/DtxdF/AppJail) project. This appjail is for Linux
-AppImages and uses bubblewrap.*
+*How appjail compares with similar tools: see [Alternatives and related projects](#alternatives-and-related-projects).*
 
 ## Why
 
@@ -37,6 +36,72 @@ is built around the opposite assumptions:
   GPU. Network, directories, D-Bus names, portals and the rest are explicit grants you can inspect and change.
 - **Updates are reviewed.** A new release waits in quarantine (7 days by default), is shown to you as a diff, and
   is blocked outright if its evidence gets weaker or the repository changes owner.
+
+## Alternatives and related projects
+
+appjail covers one niche: AppImages from GitHub (or a file or URL you name), pinned by hash, each in its own
+bubblewrap jail, with updates held in quarantine. Other tools cover other parts of this; if one fits you better, use it.
+[DECISIONS.md](DECISIONS.md) says why some were not used as a base. Facts are as found on each project's page; check
+them before relying on them.
+
+**Managing AppImages**
+
+- [AM / AppMan](https://github.com/ivan-hc/AM): shell (GPL-3.0); thousands of install scripts for AppImages and other
+  portable programs. It updates itself and fetches its scripts from `main`; sandboxing is an optional extra (`aisap`,
+  `sas`). appjail's search catalog is derived from AM's list through [appjail-db](https://github.com/alberto743/appjail-db),
+  but appjail never runs AM's scripts. AppMan is the same code installed without root.
+- [Soar](https://github.com/pkgforge/soar): Rust (MIT); package manager for static binaries and AppImages from its own
+  repositories, and for GitHub, GitLab, Codeberg and Forgejo releases; verifies checksums and signatures; delta updates;
+  x86-64, aarch64, riscv64. Has some Landlock sandboxing; no update delay found.
+- [AppManager](https://github.com/kem-a/AppManager) (kem-a): Vala/GTK (GPL-3.0); installs and manages AppImages and
+  gives each app a private home and a bubblewrap sandbox with a D-Bus proxy. The closest in spirit; it is a desktop app,
+  built around files you already have rather than pinned releases.
+- [Gear Lever](https://github.com/mijorus/gearlever): Python/GTK (GPL-3.0, Flatpak); adds AppImages to the menu and
+  updates them; a CLI since 3.0. No sandbox of its own that I found.
+- [Zap](https://github.com/srevinsaju/zap): Go (MIT); installs from GitHub releases and URLs, delta-updates through the
+  update information embedded in the AppImage. Last updated mid-2024.
+- [Bread](https://github.com/pegvin/bread) and [appimage-cli-tool](https://github.com/AppImageCrafters/appimage-cli-tool):
+  small CLIs to install, update and remove AppImages (Bread: from GitHub; optional sandbox, off by default). Light
+  activity.
+- [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) and
+  [appimaged](https://github.com/probonopd/go-appimage): desktop integration for AppImages you already have, no
+  sandbox.
+- [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate): the AppImage project's delta updater, driven by
+  the update information inside the AppImage. appjail ignores that information: you name the source.
+- [awesome-appimage](https://github.com/AppImageCommunity/awesome-appimage) lists more tools;
+  [Portable-Linux-Apps](https://github.com/Portable-Linux-Apps/Portable-Linux-Apps.github.io) is a browsable catalog of
+  AppImages.
+
+**Sandboxing**
+
+- [Flatpak](https://flatpak.org/) and [Flathub](https://flathub.org/): the mature route when the app is on Flathub:
+  runtimes, portals, signed remotes. appjail is for what is only released as an AppImage, and writes a `.flatpak-info`
+  solely so xdg-desktop-portal recognises its sandbox.
+- [simple-appimage-sandbox (sas)](https://github.com/Samueru-sama/simple-appimage-sandbox) (POSIX shell, GPL-3.0) and
+  [aisap](https://github.com/mgord9518/aisap) (Go, MIT; early development): bubblewrap wrappers for AppImages you
+  already have. Neither fetches, pins or updates; sas leaves audio, D-Bus, network and display sockets on by default.
+- [FlatImage](https://github.com/flatimage/flatimage) (Apache-2.0): a different format, a portable image sandboxed by
+  default, not a manager of AppImages.
+- [Bubblejail](https://github.com/igo95862/bubblejail) (Python, GPL-3.0-or-later): bubblewrap sandboxes for any desktop
+  application, with profiles and a configuration GUI.
+- [Firejail](https://github.com/netblue30/firejail) (C, GPL-2.0): SUID sandbox with 900+ profiles. appjail uses
+  unprivileged bubblewrap instead.
+- Building blocks: [bubblewrap](https://github.com/containers/bubblewrap) (LGPL-2.1; what appjail drives),
+  [nsjail](https://github.com/google/nsjail) (Apache-2.0; process isolation for servers and untrusted code),
+  [Landrun](https://github.com/Zouuup/landrun) (MIT; runs a command under Landlock). appjail uses one Landlock feature
+  only.
+
+**Installing release binaries (not AppImage-specific)**
+
+- [eget](https://github.com/zyedidia/eget) (Go, MIT; checks a `.sha256` published next to the asset),
+  [bin](https://github.com/marcosnils/bin) (Go, MIT), [ubi](https://github.com/houseabsolute/ubi) (Rust;
+  `--min-age-days` skips very new releases) and [dra](https://github.com/devmatteini/dra) (Rust, MIT; can install
+  AppImages): download the right asset of a release. No sandbox.
+
+**Same name, unrelated**
+
+- [AppJail](https://github.com/DtxdF/AppJail) (BSD-3-Clause; sh and C): a framework for FreeBSD jails. This project is
+  not affiliated with it; it targets Linux AppImages and uses bubblewrap.
 
 ## Requirements
 
