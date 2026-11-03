@@ -13,6 +13,7 @@ import os
 import pytest
 
 from appjail import cli, index, indexstore
+from appjail.console import error_text
 
 pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1", reason="set APPJAIL_E2E=1 in the test guest (network)")
 
@@ -28,7 +29,10 @@ class Yes(cli.Console):
         self.lines.append(line)
 
     def warn(self, line):
-        self.lines.append("WARNING: " + line)
+        self.lines.append("! warning: " + line)
+
+    def error(self, line):
+        self.lines.append(error_text(line))
 
     def ask(self, prompt):
         return "y"

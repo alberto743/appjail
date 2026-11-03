@@ -3,6 +3,9 @@
 
 """Terminal I/O shared by the commands."""
 
+import os
+import sys
+
 from . import textsafe
 
 
@@ -10,14 +13,56 @@ class Abort(Exception):
     """The user declined, or the operation cannot continue; message is shown as is."""
 
 
+def color_enabled(stream):
+    """Colour only on a terminal, and never when NO_COLOR is set or the terminal is dumb."""
+    return (stream.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM", "") != "dumb")
+
+
+def bullet():
+    """The list marker: a bullet where the terminal can show it, `-` otherwise."""
+    enc = (getattr(sys.stdout, "encoding", None) or "").lower()
+    return "•" if enc.startswith("utf") and os.environ.get("TERM", "") != "dumb" else "-"
+
+
+def error_text(line):
+    """`error: ` before a message, except for a plain cancellation, which is not an error."""
+    line = textsafe.clean(line)
+    return line if line.startswith("cancelled") else "error: " + line
+
+
 class Console:
-    """Terminal I/O. Every line goes through textsafe, so callers cannot leak escapes."""
+    """Terminal I/O. Every line goes through textsafe, so callers cannot leak escapes.
+
+    Layout helpers (kv, item, note) are built on out(), so a console that replaces out() keeps working. Colour is
+    added after cleaning, only for the fixed prefixes, never for text that came from outside.
+    """
 
     def out(self, line=""):
         print(textsafe.clean(line))
 
+    def kv(self, label, value, width=11):
+        """`Label      value`, the label padded to width."""
+        self.out(f"{label:<{width}} {value}")
+
+    def item(self, text, indent=2):
+        """A bullet line."""
+        self.out(f"{' ' * indent}{bullet()} {text}")
+
+    def note(self, line):
+        self.out("note: " + line)
+
     def warn(self, line):
-        print("WARNING: " + textsafe.clean(line))
+        prefix = "! warning:"
+        if color_enabled(sys.stdout):
+            prefix = f"\x1b[33m{prefix}\x1b[0m"
+        print(f"{prefix} {textsafe.clean(line)}")
+
+    def error(self, line):
+        """Errors go to stderr, so a pipe or a script sees only the results."""
+        text = error_text(line)
+        if text.startswith("error: ") and color_enabled(sys.stderr):
+            text = "\x1b[31merror:\x1b[0m" + text[len("error:"):]
+        print(text, file=sys.stderr)
 
     def ask(self, prompt):
         try:

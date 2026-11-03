@@ -31,7 +31,7 @@ def test_out_is_cleaned_and_queued():
     c = GuiConsole(events)
     c.out("hi \x1b[31mred\x1b[0m")
     c.warn("careful")
-    assert [events.get_nowait() for _ in range(2)] == [("out", "hi red"), ("out", "WARNING: careful")]
+    assert [events.get_nowait() for _ in range(2)] == [("out", "hi red"), ("out", "! warning: careful")]
 
 
 def test_confirm_default_no_and_review():

@@ -26,6 +26,7 @@ from appjail import (
     store,
 )
 from appjail.cli import Abort
+from appjail.console import error_text
 from appjail.manifest import Manifest, Permissions
 
 
@@ -121,7 +122,10 @@ class Script(cli.Console):
         self.lines.append(line)
 
     def warn(self, line):
-        self.lines.append("WARNING: " + line)
+        self.lines.append("! warning: " + line)
+
+    def error(self, line):
+        self.lines.append(error_text(line))
 
     def ask(self, prompt):
         self.lines.append("? " + prompt)

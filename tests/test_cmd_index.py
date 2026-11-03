@@ -146,7 +146,7 @@ def test_owner_change_is_a_loud_warning_and_the_old_catalog_is_kept_for_rollback
     update_db(BASE)
     changed = cat(("cura", "slicer", "github:Ultimaker/Cura"), ("gh", "GitHub CLI", "github:evil/cli"), ("old", "going away", "github:a/old"), revision=C2)
     console, _ = update_db(changed, C2)
-    assert "WARNING: OWNER CHANGE for gh: github:cli/cli -> github:evil/cli" in console.text and "1 owner changes" in console.text
+    assert "! warning: OWNER CHANGE for gh: github:cli/cli -> github:evil/cli" in console.text and "1 owner changes" in console.text
     assert f"Changes since {C1[:12]}" in console.text
     assert (indexstore.current(DB)["commit"], indexstore.previous(DB)["commit"]) == (C2, C1)
 

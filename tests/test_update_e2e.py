@@ -14,6 +14,7 @@ from dataclasses import replace
 import pytest
 
 from appjail import appimage, cli, manifest, runner, store, updater
+from appjail.console import error_text
 
 pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1",
                                 reason="set APPJAIL_E2E=1 in the test guest (downloads an AppImage)")
@@ -27,7 +28,10 @@ class Answers(cli.Console):
         self.lines.append(line)
 
     def warn(self, line):
-        self.lines.append("WARNING: " + line)
+        self.lines.append("! warning: " + line)
+
+    def error(self, line):
+        self.lines.append(error_text(line))
 
     def ask(self, prompt):
         return self.answers.pop(0)

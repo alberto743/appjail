@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from appjail import cli, jail, manifest, runner, runtimejail, store
+from appjail.console import error_text
 
 from .helpers import wait_for
 
@@ -39,7 +40,10 @@ class Answers(cli.Console):
         self.lines.append(line)
 
     def warn(self, line):
-        self.lines.append("WARNING: " + line)
+        self.lines.append("! warning: " + line)
+
+    def error(self, line):
+        self.lines.append(error_text(line))
 
     def ask(self, prompt):
         return self.answers.pop(0)

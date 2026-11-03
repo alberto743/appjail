@@ -214,7 +214,7 @@ def test_terminal_escapes_in_api_text_are_neutralised():
     with mock.patch("builtins.print", side_effect=lambda *a, **k: out.append(" ".join(a))):
         console.out("evil \x1b]0;pwn\x07 text")
         console.warn("a\x1b[2Jb")
-    assert out == ["evil  text", "WARNING: ab"]
+    assert out == ["evil  text", "! warning: ab"]
 
 
 @pytest.mark.parametrize("repo,name", [("My_App.v2", "my_app.v2"), ("App Name!", "app-name-"), ("___", "")])

@@ -10,7 +10,7 @@ dialog (or a closing window) answers None, which aborts the command. Confirmatio
 import queue
 
 from .. import textsafe
-from ..console import Abort, Console
+from ..console import Abort, Console, error_text
 
 
 class Request:
@@ -40,7 +40,10 @@ class GuiConsole(Console):
         self._say(textsafe.clean(line))
 
     def warn(self, line):
-        self._say("WARNING: " + textsafe.clean(line))
+        self._say("! warning: " + textsafe.clean(line))
+
+    def error(self, line):
+        self._say(error_text(line))
 
     def _request(self, kind, prompt, **kw):
         req = Request(kind, textsafe.clean(prompt), **kw)
