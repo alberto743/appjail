@@ -11,10 +11,10 @@ Planned code work is marked as such; everything else needs a decision or an app/
 - Decision pending: arm64 support (`DECISIONS.md`).
 - Deferred by the user (`DECISIONS.md`): the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN.
 - Planned (code): the `camera` device permission (`/dev/video*`, `/dev/media*`); the remaining low audit findings: a symlinked tree root in the `--appimage-extract` fallback, more D-Bus names to refuse (dconf, gvfs, terminals), symlinks in files being opened, unbounded output buffering in `jail.supervise`, app-name validation in `run` and `update`, the `:rw` suffix in `--file` names.
-- When GitHub moves `ubuntu-latest` to 26.04 (November 2026): switch the workflows and check CI.
+- After GitHub finishes moving `ubuntu-latest` to 26.04 (window 2026-10-19 to 2026-11-19): switch the workflows and check CI (`DECISIONS.md`, Platform and CI).
 
 ## Docs
-- `README.md`: user-facing entry point (what it is, requirements, usage, trust model, limits). Keep it short and in step with the CLI, the permission table and the limits, in the same commit.
+- `README.md`: user-facing entry point (what it is, requirements, usage, trust model, limits). Keep it short and in step with the CLI, the permission table and the limits, in the same commit. Its "Alternatives and related projects" section states facts about other projects as of the month it names: re-check it (and its date) at each minor release, and record sources in `DECISIONS.md`.
 - `DESIGN.md`: current behaviour, present tense, no dates, no development history. `DECISIONS.md`: why, and what is deferred.
 - When code, decisions or the environment change, update the affected documents and the tests/scripts in the same commit.
 
