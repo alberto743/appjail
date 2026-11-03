@@ -358,7 +358,7 @@ owner change.
 - x86-64 only. The GNOME and KDE portal backends have not been tested (the GTK backend and a real X11-only AppImage
   have, under headless weston; the portal dialogs themselves are not driven). Real internet IPv6 under `pasta` is
   untested; IPv6 forwarding is tested in a fake network.
-- `display = xwayland-rootful` shows the app in one window and works on GNOME; clipboard and drag-and-drop through
+- `display = xwayland-rootful` shows the app in one window and worked on GNOME in a brief test; clipboard and drag-and-drop through
   that window, and GPU acceleration through Xwayland, have not been verified. Real desktop D-Bus services (notification
   daemon, MPRIS players) and tray icons that need a `-<pid>` bus name are untested too.
 - Stopping `appjail run` with SIGINT, SIGTERM or SIGHUP stops the whole jail, including `pasta`. If appjail is killed
