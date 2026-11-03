@@ -10,7 +10,7 @@ from . import appimage, github, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
 from .cmd_desktop import refresh_after_update
 from .cmd_updateimage import update_file, update_url
-from .console import Abort, human_size
+from .console import Abort, arrow, human_size
 from .permargs import granted_summary
 from .services import Services, UpdateRun
 
@@ -40,19 +40,19 @@ def is_current(m, release, asset):
 
 
 def describe_candidate(console, m, release, asset):
-    console.out(f"  candidate  : {release.tag}, published {release.published_at}"
-                + ("  (pre-release)" if release.prerelease else ""))
-    console.out(f"               {release.html_url}")
-    console.out(f"  asset      : {asset.name} ({human_size(asset.size)})")
-    console.out(f"  sha256     : {m.sha256}\n            -> {asset.sha256 or 'unknown until downloaded (no GitHub digest)'}")
-    console.out(f"  evidence   : tier {m.evidence_tier} -> {3 if asset.sha256 else 4}")
-    console.out(f"  permissions: unchanged ({granted_summary(m.permissions) or 'none'})")
+    console.kv("  candidate", f"{release.tag}, published {release.published_at}" + ("  (pre-release)" if release.prerelease else ""), 13)
+    console.kv("", release.html_url, 13)
+    console.kv("  asset", f"{asset.name} ({human_size(asset.size)})", 13)
+    console.kv("  sha256", m.sha256, 13)
+    console.kv("", f"{arrow()} {asset.sha256 or 'unknown until downloaded (no GitHub digest)'}", 13)
+    console.kv("  evidence", f"tier {m.evidence_tier} {arrow()} {3 if asset.sha256 else 4}", 13)
+    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", 13)
 
 
 def wait_in_quarantine(run, asset, key, first, due):
     name, console = run.name, run.console
-    console.out(f"  quarantine : first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
-                f"({run.args.quarantine} days; --quarantine DAYS to change)")
+    console.kv("  quarantine", f"first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
+               f"({run.args.quarantine} days; --quarantine DAYS to change)", 13)
     pending = updater.load_pending(name)
     if not asset.sha256 and not (pending and pending.get("sha256")):
         # no GitHub digest to catch a swapped asset: fix its hash now, compare it when installing
@@ -110,7 +110,9 @@ def install_release(run, client, info, release, asset, key):
 
 def update_github(name, m, args, client, console, svc, now):
     info = client.repo_info(m.target)
-    console.out(f"{name}: {info.full_name}, installed {m.version} (published {m.published_at}, tier {m.evidence_tier})")
+    console.out(f"== {name} ==")
+    console.kv("  repository", info.full_name, 13)
+    console.kv("  installed", f"{m.version} (published {m.published_at}, tier {m.evidence_tier})", 13)
     m = apply_channel(name, m, args, console)
     if m.channel == "pinned":
         console.out(f"  pinned to {m.version}: not checked (use --channel stable or prerelease to follow releases)")
@@ -179,14 +181,16 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
         try:
             results[name] = update_app(name, args, client, console, svc, now)
         except github.RateLimited as e:
-            console.out(f"  {name}: {e}")
+            console.out(f"== {name} ==")
+            console.out(f"  {e}")
             results[name] = "failed"
             for rest in names[i + 1:]:
                 results[rest] = "not checked (rate limited)"
             break
         except (Abort, github.GitHubError, jail.JailError, manifest.ManifestError, OSError) as e:
-            console.out(f"  {name}: {e}")
+            console.error(f"{name}: {e}")
             results[name] = "failed"
     if len(names) > 1:
-        console.out("Summary: " + ", ".join(f"{n}: {r}" for n, r in results.items()))
+        console.out()
+        console.table(("APP", "RESULT"), list(results.items()))
     return 1 if any(r in ("blocked", "failed") or r.startswith("not checked") for r in results.values()) else 0

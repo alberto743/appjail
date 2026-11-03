@@ -6,7 +6,7 @@
 import shutil
 
 from . import desktop, manifest, store
-from .console import Abort
+from .console import Abort, arrow
 
 
 def _check(name):
@@ -34,13 +34,13 @@ def show_file_types(name, console):
     if not has_entry:
         console.out(f"{name} has no menu entry.")
     else:
-        console.out("Icon       : " + desktop.icon_status(name, store.root_path(name)))
+        console.kv("Icon", desktop.icon_status(name, store.root_path(name)))
         mode = "read-write" if rw else "read-only"
-        console.out("Registered : " + (f"{', '.join(registered)} ({mode})" if registered else "none (launcher only)"))
-    console.out("Offered    : " + (", ".join(m + (" *" if m in registered else "") for m in offered) or "none"))
+        console.kv("Registered", f"{', '.join(registered)} ({mode})" if registered else "none (launcher only)")
+    console.kv("Offered", ", ".join(m + (" *" if m in registered else "") for m in offered) or "none")
     if registered and offered:
-        console.out("             (* = registered)")
-    console.out("Not offered: " + (", ".join(ignored) or "none"))
+        console.kv("", "(* = registered)")
+    console.kv("Not offered", ", ".join(ignored) or "none")
 
 
 def _select(console, declared, args, current, yes):
@@ -80,10 +80,10 @@ def install_entry(name, console, args, yes=False, ask=True):
     mimes = _select(console, declared, args, current if has_entry else None, yes or not ask)
     rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
     shown = desktop.display_fields(fields, name)
-    console.out(f"Menu entry : {shown['Name']} (appjail) -> {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
-    console.out("File types : " + (", ".join(mimes) + (" (read-write)" if rw else " (read-only)") if mimes else "none (launcher only)"))
+    console.kv("Menu entry", f"{shown['Name']} (appjail) {arrow()} {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
+    console.kv("File types", ", ".join(mimes) + (" (read-write)" if rw else " (read-only)") if mimes else "none (launcher only)")
     if ignored:
-        console.out("Not offered: " + ", ".join(ignored))
+        console.kv("Not offered", ", ".join(ignored))
     if rw and mimes:
         console.warn("read-write: the app may change the opened file, but an app that saves by writing a new file and renaming it will fail")
     if ask and not yes and not console.confirm("Write the menu entry?", default=True):
@@ -92,14 +92,14 @@ def install_entry(name, console, args, yes=False, ask=True):
         path, size, note = desktop.install(name, root, mimes, rw)
     except desktop.DesktopError as e:
         raise Abort(str(e)) from e
-    console.out(f"Entry      : {path}")
-    console.out("Icon       : " + (f"{size} PNG" if size else "none"))
+    console.kv("Entry", path)
+    console.kv("Icon", f"{size} PNG" if size else "none")
     if note:
-        console.out(f"note: {note}")
+        console.note(note)
     if size and not shutil.which(desktop.ICON_CACHE_TOOL):
-        console.out("note: gtk-update-icon-cache (libgtk-3-bin) is not installed; the icon may appear only after the next login")
+        console.note("gtk-update-icon-cache (libgtk-3-bin) is not installed; the icon may appear only after the next login")
     if mimes and not shutil.which(desktop.DESKTOP_DB_TOOL):
-        console.out("note: update-desktop-database (desktop-file-utils) is not installed; the file types may appear after the next login")
+        console.note("update-desktop-database (desktop-file-utils) is not installed; the file types may appear after the next login")
 
 
 def cmd_desktop(args, console):

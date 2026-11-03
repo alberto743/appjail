@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
+import re
 from datetime import timedelta
 
 import pytest
@@ -231,7 +232,7 @@ def test_tier5_app_earns_tier4_with_the_candidates_hash(h):
     server.content, server.etag = NEW_IMAGE, '"e2"'
     run(h, server)
     _code, c = run(h, server, now=T0 + timedelta(days=7), extra=("--sha256", NEW_SHA))
-    assert mf().evidence_tier == 4 and "tier 5 -> 4" in c.text
+    assert mf().evidence_tier == 4 and re.search(r"tier 5 (→|->) 4", c.text)
 
 
 def test_tier5_app_earns_tier4_when_the_hash_matches_the_installed_file(h):
@@ -349,7 +350,7 @@ def test_all_apps_run_checks_mixed_kinds(h, tmp_path):
     cmd_addimage.cmd_add_file(cli.build_parser().parse_args(["add", "--file", str(old), "--name", "other"]), Script(["y"]),
                               extract=h.extract, extract_ok=lambda: True, now=NOW)
     code, c = update(h, None, app=None, **server.kw)
-    assert code == 0 and "app: current" in c.text and "other: current" in c.text
+    assert code == 0 and "app    current" in c.text and "other  current" in c.text
 
 
 def test_update_cap_follows_the_installed_size():

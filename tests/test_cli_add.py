@@ -32,7 +32,7 @@ def test_success_with_digest(h):
     assert store.appimage_path("app").stat().st_mode & 0o777 == 0o600
     assert h.downloads[0][0] == asset().url
     assert list(store.staging_root().iterdir()) == []
-    assert "attestation: present, cannot be verified" in console.text
+    assert "present, cannot be verified" in console.text
 
 
 def test_extraction_runs_on_the_staged_file_and_marks_source_hash(h):

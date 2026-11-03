@@ -155,11 +155,11 @@ def test_undeclared_or_refused_types_are_rejected(h, xdg):
 def test_show_lists_registered_offered_and_refused_types(h, xdg):
     added(h)
     before = run(["desktop", "app", "--show"]).text
-    assert "app has no menu entry." in before and "Offered    : image/png, image/jpeg, text/plain" in before
-    assert "Not offered: x-scheme-handler/http, application/x-shellscript" in before
+    assert "app has no menu entry." in before and "Offered     image/png, image/jpeg, text/plain" in before
+    assert "Not offered x-scheme-handler/http, application/x-shellscript" in before
     run(["desktop", "app", "--mime", "image/png", "--rw", "--yes"])
     after = run(["desktop", "app", "--show"]).text
-    assert "Registered : image/png (read-write)" in after and "image/png *, image/jpeg, text/plain" in after
+    assert "Registered  image/png (read-write)" in after and "image/png *, image/jpeg, text/plain" in after
     assert desktop.installed_state("app") == (["image/png"], True)  # nothing was written
 
 
@@ -276,7 +276,7 @@ def test_svg_without_converter_is_explained_by_show_and_fixed_by_update(h, xdg, 
 def test_show_reports_the_installed_icon(h, xdg):
     added(h)
     run(["desktop", "app", "--yes"])
-    assert "Icon       : 64x64 PNG" in run(["desktop", "app", "--show"]).text
+    assert "Icon        64x64 PNG" in run(["desktop", "app", "--show"]).text
 
 
 def test_the_icon_cache_is_refreshed_with_the_gtk_tool(h, xdg, tmp_path, monkeypatch):

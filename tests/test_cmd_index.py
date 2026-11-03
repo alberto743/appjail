@@ -188,10 +188,10 @@ def test_search_hints_depend_on_what_add_can_install():
         ("lab", "d", "gitlab:gitlab.example.org/g/lab"), ("berg", "d", "codeberg:u/berg"))), NOW)
     out = Script()
     assert cli.main(["search", "--all", "d"], console=out) == 0
-    assert "->  appjail add o/hub" in out.text
-    assert "->  appjail add --url https://example.org/web.AppImage" in out.text
-    assert "source gitlab:gitlab.example.org/g/lab   (no resolver for this forge yet" in out.text
-    assert "source forgejo:codeberg.org/u/berg   (no resolver" in out.text
+    assert "add     appjail add o/hub" in out.text
+    assert "add     appjail add --url https://example.org/web.AppImage" in out.text
+    assert "source  gitlab:gitlab.example.org/g/lab" in out.text
+    assert "source  forgejo:codeberg.org/u/berg" in out.text
 
 
 MINE = catalog.dumps(cat(("tool", "A tool", "github:me/tool"), ("other", "Another", ""), revision="2026-10-22", origin="https://example.org"))
@@ -208,7 +208,7 @@ def test_add_a_file_source_registers_it_and_search_covers_both(tmp_path):
     assert [(h.name, h.catalog, h.source) for h in hits] == [("tool", "mine", "github:me/tool")] and searched == [DB, "mine"]
     out = Script()
     assert cli.main(["search", "tool"], console=out) == 0
-    assert "tool: A tool   [mine]" in out.text and "appjail add me/tool" in out.text
+    assert "tool  -  A tool   [mine]" in out.text and "appjail add me/tool" in out.text
 
 
 def test_add_a_url_source_downloads_it_in_the_jail():

@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from . import appimage, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, swap_in
 from .cmd_desktop import refresh_after_update
-from .console import Abort, human_size
+from .console import Abort, arrow, human_size
 from .imagesrc import (
     DEFAULT_MAX_MIB,
     check_appimage,
@@ -36,7 +36,9 @@ DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 -> 5 (this app was added with a matchin
 
 def header(run):
     m = run.m
-    run.console.out(f"{run.name}: {m.target}, installed {m.version} (installed {m.published_at}, tier {m.evidence_tier})")
+    run.console.out(f"== {run.name} ==")
+    run.console.kv("  source", m.target, 13)
+    run.console.kv("  installed", f"{m.version} (installed {m.published_at}, tier {m.evidence_tier})", 13)
 
 
 def confirm_installed_hash(run, expected):
@@ -55,9 +57,10 @@ def confirm_installed_hash(run, expected):
 
 
 def show_diff(console, m, digest, tier, size=None):
-    console.out(f"  sha256     : {m.sha256}\n            -> {digest}" + (f"  ({human_size(size)})" if size else ""))
-    console.out(f"  evidence   : tier {m.evidence_tier} -> {tier}")
-    console.out(f"  permissions: unchanged ({granted_summary(m.permissions) or 'none'})")
+    console.kv("  sha256", m.sha256, 13)
+    console.kv("", f"{arrow()} {digest}" + (f"  ({human_size(size)})" if size else ""), 13)
+    console.kv("  evidence", f"tier {m.evidence_tier} {arrow()} {tier}", 13)
+    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", 13)
 
 
 def install(run, staged, stage, record):
@@ -104,7 +107,7 @@ def update_file(run):
             console.warn(DOWNGRADE)
             return "blocked"
         tier = check_expected(digest, expected)
-        console.out(f"  file       : {real}")
+        console.kv("  file", real, 13)
         show_diff(console, m, digest, tier, st.st_size)
         if not console.confirm(f"Replace {name} with this file?"):
             return "declined"
@@ -191,8 +194,8 @@ def fetch_candidate(run, expected):
 
 
 def report_waiting(console, pending, due, why):
-    console.out(f"  candidate  : {pending['tag']}, first seen {pending['first_seen']}; {why}")
-    console.out(f"  quarantine : can be installed from {updater.stamp(due)}")
+    console.kv("  candidate", f"{pending['tag']}, first seen {pending['first_seen']}; {why}", 13)
+    console.kv("  quarantine", f"can be installed from {updater.stamp(due)}", 13)
     return "waiting"
 
 
@@ -268,8 +271,8 @@ def start_quarantine(run, stage, staged, digest, info, expected):
     days = run.args.quarantine
     if days > 0:
         due = updater.quarantine_ends(run.now.replace(microsecond=0), days)
-        run.console.out(f"  quarantine : first seen {updater.stamp(run.now)}; can be installed from {updater.stamp(due)} "
-                        f"({days} days; --quarantine DAYS to change)")
+        run.console.kv("  quarantine", f"first seen {updater.stamp(run.now)}; can be installed from {updater.stamp(due)} "
+                       f"({days} days; --quarantine DAYS to change)", 13)
         return "waiting"
     return conclude(run, stage, staged, digest, info, expected)
 

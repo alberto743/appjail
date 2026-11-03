@@ -29,12 +29,12 @@ def default_name(repo):
 def show_review(console, info, now=None):
     """Typosquat check: who owns this repo, how old and how popular is it."""
     days = github.age_days(info.owner_created_at, now)
-    console.out(f"Repository : {info.full_name}  {info.html_url}")
+    console.kv("Repository", f"{info.full_name}  {info.html_url}")
     if info.description:
-        console.out(f"About      : {info.description}")
-    console.out(f"Owner      : {info.owner} ({info.owner_type}, id {info.owner_id}), account created "
-                f"{info.owner_created_at[:10]} ({days} days ago)")
-    console.out(f"Stars      : {info.stars}")
+        console.kv("About", info.description)
+    console.kv("Owner", f"{info.owner} ({info.owner_type}, id {info.owner_id}), account created "
+               f"{info.owner_created_at[:10]} ({days} days ago)")
+    console.kv("Stars", info.stars)
     if info.renamed:
         console.warn(f"GitHub reports this repository as {info.full_name}: it was renamed or transferred")
     if info.fork:
@@ -87,9 +87,8 @@ def choose_release_asset(client, console, source, args):
     """The release (latest, or --tag) and the AppImage asset in it; the user chooses when several match."""
     release = (client.release_by_tag(source, args.tag) if args.tag
                else client.latest_release(source, args.prerelease))
-    console.out(f"Release    : {release.tag}, published {release.published_at}"
-                + ("  (pre-release)" if release.prerelease else ""))
-    console.out(f"             {release.html_url}")
+    console.kv("Release", f"{release.tag}, published {release.published_at}" + ("  (pre-release)" if release.prerelease else ""))
+    console.kv("", release.html_url)
     candidates = github.appimage_candidates(release)
     if not candidates:
         names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
@@ -116,8 +115,9 @@ def show_asset_evidence(client, console, source, asset):
                 attestation = "none found"
         except github.GitHubError:
             attestation = "lookup failed"
-    console.out(f"Asset      : {asset.name} ({human_size(asset.size)})")
-    console.out(f"GitHub sha256 digest: {asset.sha256 or 'none'}   attestation: {attestation}")
+    console.kv("Asset", f"{asset.name} ({human_size(asset.size)})")
+    console.kv("Digest", f"{asset.sha256 or 'none'} (sha256, from GitHub)")
+    console.kv("Attestation", attestation)
     if not asset.sha256:
         console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
     return 3 if asset.sha256 else 4
@@ -151,7 +151,9 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
 
     stage = store.new_staging_dir()
     try:
+        console.out(f"Downloading {asset.name} ...")
         staged, digest = download_verified(download, asset, stage)
+        console.out("Verifying and extracting ...")
         tier, why = gather_evidence(client, info, staged, digest, tier, console, verify)
         if why:
             console.warn(f"attestation not counted: {why}")
@@ -180,10 +182,10 @@ def ask_extractor(console, extract_ok):
 def finish_add(console, args, record, entries, size):
     """The report after an install, the history entry and the optional menu entry."""
     name = record.name
-    console.out(f"Extracted  : {entries} entries, {human_size(size)}")
+    console.kv("Extracted", f"{entries} entries, {human_size(size)}")
     history.record(f"add {name} {record.version} (tier {record.evidence_tier})")
     console.out(f"Added '{name}' {record.version}: sha256 {record.sha256}, evidence tier {record.evidence_tier}")
-    console.out(f"Manifest   : {store.manifest_path(name)}")
+    console.kv("Manifest", store.manifest_path(name))
     if getattr(args, "desktop", False):
         args.rw = bool(getattr(args, "rw", False))
         try:

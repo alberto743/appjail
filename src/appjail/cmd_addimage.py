@@ -53,9 +53,9 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
     perms = permissions_from_args(args)  # validates --dir before anything is copied
     require_network_isolation(perms)
 
-    console.out(f"File       : {real}")
-    console.out(f"Size       : {human_size(st.st_size)}, modified "
-                f"{datetime.fromtimestamp(st.st_mtime, UTC).strftime('%Y-%m-%d %H:%M')} UTC")
+    console.kv("File", real)
+    console.kv("Size", f"{human_size(st.st_size)}, modified "
+               f"{datetime.fromtimestamp(st.st_mtime, UTC).strftime('%Y-%m-%d %H:%M')} UTC")
     console.warn(NO_ORIGIN)
     show_permissions(console, perms)
     fallback = ask_extractor(console, extract_ok)
@@ -71,7 +71,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
         digest = appimage.sha256_file(staged)
         tier = check_expected(digest, expected)
         check_appimage(staged)
-        console.out(f"sha256     : {digest}" + ("  (matches --sha256)" if tier == 4 else ""))
+        console.kv("sha256", digest + ("  (matches --sha256)" if tier == 4 else ""))
         record = manifest.Manifest(
             name=name, source=f"file:{real.name}", version=version_of(digest), sha256=digest, evidence_tier=tier,
             published_at=timestamp(now), permissions=perms)
@@ -104,8 +104,8 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
     perms = permissions_from_args(args)
     require_network_isolation(perms)
 
-    console.out(f"URL        : {url}")
-    console.out(f"Limit      : {human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http")
+    console.kv("URL", url)
+    console.kv("Limit", f"{human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http")
     console.warn(NO_ORIGIN)
     show_permissions(console, perms)
     fallback = ask_extractor(console, extract_ok)
@@ -121,7 +121,7 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
         digest = appimage.sha256_file(staged)
         tier = check_expected(digest, expected)
         check_appimage(staged)
-        console.out(f"Downloaded : {human_size(info['size'])}, sha256 {digest}" + ("  (matches --sha256)" if tier == 4 else ""))
+        console.kv("Downloaded", f"{human_size(info['size'])}, sha256 {digest}" + ("  (matches --sha256)" if tier == 4 else ""))
         check_download_info(console, url, info, tier)
         record = manifest.Manifest(
             name=name, source=f"url:{url}", version=version_of(digest), sha256=digest, evidence_tier=tier,

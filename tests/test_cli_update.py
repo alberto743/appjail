@@ -197,7 +197,7 @@ def test_update_all_reports_each_app_and_fails_if_one_does(h):
 
     code = cli.cmd_update(args, Flaky(release_=release2()), console, download=h.download(NEW_IMAGE), now=T0,
                           extract=h.extract, extract_ok=lambda: True)
-    assert code == 1 and "app: updated" in console.text and "other: failed" in console.text
+    assert code == 1 and "app    updated" in console.text and "other  failed" in console.text
 
 
 def test_unknown_app(h):
@@ -413,7 +413,7 @@ def test_rate_limit_stops_the_run_instead_of_hammering_the_api(h):
     code = cli.cmd_update(args, client, console, download=h.download(NEW_IMAGE), now=T0, extract=h.extract,
                           extract_ok=lambda: True)
     assert code == 1 and len(client.calls) == 1
-    assert "other: not checked (rate limited)" in console.text and "third: not checked (rate limited)" in console.text
+    assert "other  not checked (rate limited)" in console.text and "third  not checked (rate limited)" in console.text
 
 
 def test_add_records_portals_and_opt_ins(h):
