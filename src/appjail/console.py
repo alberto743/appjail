@@ -3,6 +3,7 @@
 
 """Terminal I/O shared by the commands."""
 
+import json
 import os
 import sys
 
@@ -59,6 +60,10 @@ class Console:
         widths = {i: max(len(headers[i]), *(len(r[i]) for r in rows)) for i in keep}
         for line in [list(headers), *rows]:
             self.out("  ".join(line[i].ljust(widths[i]) for i in keep).rstrip())
+
+    def json(self, data):
+        """One JSON document on stdout. ASCII only (non-ASCII is escaped), so no terminal control can pass through."""
+        self.out(json.dumps(data, ensure_ascii=True))
 
     def note(self, line):
         self.out("note: " + line)

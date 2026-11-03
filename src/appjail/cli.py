@@ -89,6 +89,7 @@ def build_parser():
     search.add_argument("keywords", nargs="+")
     search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
     search.add_argument("--all", action="store_true", help="show every match")
+    search.add_argument("--json", action="store_true", help="print the result as JSON")
     idx = sub.add_parser("index", help="manage the catalogs `search` reads (the built-in appjail-db list and any you add)")
     isub = idx.add_subparsers(dest="index_command", required=True)
     upd = isub.add_parser("update", help="refresh the catalogs, review the changes, then accept them")
@@ -103,7 +104,8 @@ def build_parser():
     irm.add_argument("name")
     irb = isub.add_parser("rollback", help="go back to the previous catalog of a source")
     irb.add_argument("name", nargs="?", help="default: appjail-db")
-    isub.add_parser("status", help="list the sources and their catalogs")
+    ist = isub.add_parser("status", help="list the sources and their catalogs")
+    ist.add_argument("--json", action="store_true", help="print the sources as JSON")
     upd_app = sub.add_parser("update", help="check for a newer release and install it after review and quarantine")
     upd_app.add_argument("app", nargs="?", help="app name (default: every installed app)")
     upd_app.add_argument("--prerelease", action="store_true", help="follow pre-releases for this run (see --channel to make it permanent)")
@@ -115,6 +117,7 @@ def build_parser():
     upd_app.add_argument("--verify", action="store_true", help="url apps: at the end of the quarantine download the file again and compare it with the candidate")
     lst = sub.add_parser("list", help="list installed apps")
     lst.add_argument("-l", "--long", action="store_true", help="also show what each app is granted")
+    lst.add_argument("--json", action="store_true", help="print the apps, with their permissions, as JSON")
     dsk = sub.add_parser("desktop", help="create, refresh or remove the menu entry of an app")
     dsk.add_argument("app", nargs="?")
     dsk.add_argument("--mime", action="append", default=[], metavar="TYPE", help="offer the app for this file type (repeatable)")
@@ -187,7 +190,7 @@ def _index(args, client, console, app_args):
             "add": lambda: cmd_index_add(args, console),
             "remove": lambda: cmd_index_remove(args, console),
             "rollback": lambda: cmd_index_rollback(args, console),
-            "status": lambda: cmd_index_status(console)}[args.index_command]()
+            "status": lambda: cmd_index_status(console, args.json)}[args.index_command]()
 
 
 def _run(args, client, console, app_args):
@@ -201,7 +204,7 @@ COMMANDS = {
     "index": _index,
     "search": lambda args, client, console, app_args: cmd_search(args, console),
     "update": lambda args, client, console, app_args: cmd_update(args, client or github.Client(), console),
-    "list": lambda args, client, console, app_args: cmd_list(console, args.long),
+    "list": lambda args, client, console, app_args: cmd_list(console, args.long, args.json),
     "version": lambda args, client, console, app_args: console.out(f"appjail {version_string()}"),
     "desktop": lambda args, client, console, app_args: cmd_desktop(args, console),
     "open": lambda args, client, console, app_args: cmd_open(args, [*args.files, *app_args], console),

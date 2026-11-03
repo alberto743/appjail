@@ -19,15 +19,15 @@ Linux on x86-64 only. Minimum supported systems: Debian 13 and Ubuntu 26.04. Old
 ## Commands
 | Command | Purpose |
 |---|---|
-| `search KW... [--limit N] [--all]` | Lookup in the local catalogs; suggestions only, never installs. |
+| `search KW... [--limit N] [--all] [--json]` | Lookup in the local catalogs; suggestions only, never installs. |
 | `add owner/repo` / `add --file PATH` / `add --url URL` | Resolve (or take), review, download, verify, pin, write the manifest. |
 | `run APP [--dir PATH[:ro\|:rw]] [--file PATH[:rw]] [-- args]` | Start an app; the grants are for that run only. |
 | `update [APP] [--prerelease] [--channel C] [--quarantine DAYS] [--file PATH] [--sha256 HEX] [--verify]` | Re-resolve, verify, show the diff, quarantine, install. |
-| `list [-l]`, `remove APP`, `perms APP`, `history [APP]` | Inspect, delete, edit permissions, list recorded manifest changes. |
+| `list [-l] [--json]`, `remove APP`, `perms APP`, `history [APP]` | Inspect, delete, edit permissions, list recorded manifest changes. |
 | `portals APP` | List and revoke document-portal grants. |
 | `desktop APP`, `open APP -- FILE...` | Menu entry; open files in the jail. |
 | `tools status\|install NAME` | Pinned helper binaries (`gh`, `dwarfs`). |
-| `index add\|remove\|update\|rollback\|status` | Manage the catalogs `search` reads. |
+| `index add\|remove\|update\|rollback\|status [--json]` | Manage the catalogs `search` reads. |
 | `version` | The installed version (from the git tag at build time). |
 
 ## Manifest (`manifest.py`, `grants.py`, `valid.py`)
@@ -63,6 +63,7 @@ Tier 1 means a Sigstore build attestation covers the exact downloaded bytes and 
 ## Output conventions (`console.py`)
 - Results go to stdout. Warnings are `! warning: …` on stdout, so they stay beside the step that caused them. Errors are `error: …` on stderr (a plain `cancelled` has no prefix); the exit status is 1.
 - Detail blocks are label/value lines aligned by `Console.kv`, tables are `Console.table` (columns with no content are dropped, cells are cleaned and cut), bullets are `Console.item`. An `update` prints a `== app ==` header per app and, for several apps, ends with an APP/RESULT table.
+- `--json` on `list`, `search` and `index status` prints one JSON document (ASCII only) on stdout and nothing else; `list --json` always includes the permissions, and an unreadable manifest gives an object with `error`. No other command has it yet.
 - Every line goes through `textsafe` first. Colour is added only to the fixed `warning:`/`error:` prefixes, only on a terminal, and not when `NO_COLOR` is set or `TERM=dumb`. The bullet and arrow are Unicode only when stdout is UTF-8, otherwise `-` and `->`.
 
 ## Installing

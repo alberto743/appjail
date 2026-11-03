@@ -22,6 +22,7 @@ from . import (
 from .cmd_desktop import forget
 from .console import Abort
 from .permargs import (
+    PERMISSION_FLAGS,
     dbus_from_args,
     dirs_from_args,
     permission_changes,
@@ -74,8 +75,30 @@ def list_details(m):
     return [f"{label}: {text}" for label, text in permission_lines(m.permissions)]
 
 
-def cmd_list(console, long=False):
+def list_json(name, m):
+    """One app as plain data: the pins and what it is granted."""
+    p = m.permissions
+    perms = {k: getattr(p, k) for k in PERMISSION_FLAGS}
+    perms.update(display=p.display, dirs=list(p.dirs), dbus=list(p.dbus_filter), dbus_own=list(p.dbus_own),
+                 portals=list(p.portal_interfaces))
+    if p.rootful:
+        perms["display_size"] = p.display_size
+    pending = updater.load_pending(name)
+    return {"name": name, "version": m.version, "source": m.source, "tier": m.evidence_tier, "channel": m.channel,
+            "update_seen": pending["tag"] if pending else None, "permissions": perms}
+
+
+def cmd_list(console, long=False, as_json=False):
     names = updater.installed()
+    if as_json:
+        apps = []
+        for name in names:
+            try:
+                apps.append(list_json(name, manifest.load(store.manifest_path(name))))
+            except (manifest.ManifestError, OSError) as e:
+                apps.append({"name": name, "error": f"unreadable manifest ({e})"})
+        console.json(apps)
+        return
     if not names:
         console.out("No apps installed.")
     rows, details = [], {}

@@ -182,6 +182,19 @@ def test_a_move_to_another_forge_or_host_is_an_owner_change():
     assert not same_owner.owner_changed and len(same_owner.source_changed) == 1
 
 
+def test_search_and_status_as_json():
+    indexstore.install(DB, catalog.dumps(cat(("hub", "d", "github:o/hub"), ("lab", "d", "gitlab:gitlab.example.org/g/lab"))), NOW)
+    out = Script()
+    assert cli.main(["search", "d", "--json"], console=out) == 0
+    data = json.loads(out.text)
+    assert data["total"] == 2 and data["searched"] == [DB]
+    assert {h["name"]: h["add"] for h in data["hits"]}["hub"] == "appjail add o/hub"
+    out = Script()
+    assert cli.main(["index", "status", "--json"], console=out) == 0
+    (src,) = json.loads(out.text)
+    assert src["name"] == DB and src["current"]["sha256"] and src["previous"] is None
+
+
 def test_search_hints_depend_on_what_add_can_install():
     indexstore.install(DB, catalog.dumps(cat(
         ("hub", "d", "github:o/hub"), ("web", "d", "url:https://example.org/web.AppImage"),

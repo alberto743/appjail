@@ -69,3 +69,12 @@ def test_permission_lines_and_changes():
     arrow = console_mod.arrow()
     assert permission_changes(old, new) == [("network", f"no {arrow} yes"), ("display", f"wayland {arrow} xwayland"),
                                              ("dirs", "+ ~/Docs"), ("dirs", "- ~/Music")]
+
+
+def test_json_is_one_ascii_line(con):
+    c, cap = con
+    c.json({"a": "x\x1b[2Jé", "b": [1, None]})
+    out = cap.readouterr().out
+    assert out.count("\n") == 1 and out.isascii() and "\x1b" not in out
+    import json
+    assert json.loads(out) == {"a": "x\x1b[2Jé", "b": [1, None]}

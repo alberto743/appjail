@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import hashlib
+import json
 from datetime import timedelta
 
 import pytest
@@ -223,6 +224,16 @@ def test_list(h):
     c = Script()
     cli.cmd_list(c, long=True)
     assert "grants: network" in c.text and "display: wayland" in c.text
+
+
+def test_list_json(h, capsys):
+    installed(h, extra=("--allow", "network", "--dbus", "org.freedesktop.Notifications"))
+    update(h, FakeClient(release_=release2()))
+    capsys.readouterr()
+    assert cli.main(["list", "--json"]) == 0
+    (app,) = json.loads(capsys.readouterr().out)
+    assert (app["name"], app["version"], app["tier"], app["update_seen"]) == ("app", "v1.0", 3, "v2.0")
+    assert app["permissions"]["network"] is True and app["permissions"]["dbus"] == ["org.freedesktop.Notifications"]
 
 
 def test_remove_deletes_everything_after_confirmation(h):

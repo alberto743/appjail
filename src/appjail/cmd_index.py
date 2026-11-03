@@ -25,6 +25,11 @@ def add_hint(source):
 def cmd_search(args, console):
     hits, total, searched = index.search(args.keywords, limit=args.limit if not args.all else 10 ** 9)
     many = len(searched) > 1
+    if args.json:
+        console.json({"total": total, "searched": list(searched), "hits": [
+            {"name": h.name, "description": h.description, "source": h.source, "note": h.note, "catalog": h.catalog,
+             "add": add_hint(h.source) if h.source else None} for h in hits]})
+        return
     console.out(f"{total} match(es) in {', '.join(searched)}" + (f", showing {len(hits)}" if len(hits) < total else ""))
     for h in hits:
         console.out()
@@ -219,7 +224,12 @@ def cmd_index_rollback(args, console):
     console.out(f"Index source '{name}' rolled back from {a['sha256'][:12]} to {b['sha256'][:12]}.")
 
 
-def cmd_index_status(console):
+def cmd_index_status(console, as_json=False):
+    if as_json:
+        console.json([{"name": s.name, "kind": s.kind, "location": s.location,
+                       "current": indexstore.current(s.name), "previous": indexstore.previous(s.name)}
+                      for s in indexstore.sources().values()])
+        return
     for source in indexstore.sources().values():
         cur, prev = indexstore.current(source.name), indexstore.previous(source.name)
         where = f"github:{source.location}" if source.kind == "repo" else source.location

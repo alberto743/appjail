@@ -101,7 +101,7 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 
 - **Decided:** one small vocabulary in `Console` (`kv`, `table`, `item`, `note`, `warn`, `error`) instead of hand-padded strings in each command; errors on stderr, everything else on stdout; `list` is a table and the permissions move to `list -l`.
 - **Why:** `list` put every field of an app on one line, and four label styles made the other commands hard to scan. stderr for errors lets a pipe or script see only results. The permissions moved out of the default view because they are what made the line long; `perms APP` and `list -l` show them.
-- **Rejected:** a third-party formatting library (stdlib-only rule); `list --json` (not asked for; revisit when a script needs it); always-on colour (breaks pipes and log files).
+- **Rejected:** a third-party formatting library (stdlib-only rule); `--json` on the commands that change something (their output is a conversation with prompts; a script has `--yes` where it is allowed); always-on colour (breaks pipes and log files).
 - **Cost:** tests and any script that matched the old text (`WARNING:`, `Label : value`, `Summary:`) had to change; the GUI shows the same text in its output pane.
 
 ### Waiting for every process in the jail, by default
