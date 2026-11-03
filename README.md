@@ -98,7 +98,7 @@ Data lives in `~/.local/share/appjail` (images, extracted trees, private homes, 
 ```sh
 appjail add skyjake/lagrange     # review the repository, pick the asset, download, pin, extract
 appjail run lagrange             # run it in its sandbox
-appjail list                     # installed apps, tiers and permissions
+appjail list                     # installed apps and tiers (-l: what each is granted)
 appjail update                   # check every app for a newer release
 appjail remove lagrange          # delete the app and its private home
 ```

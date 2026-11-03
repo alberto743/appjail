@@ -97,6 +97,13 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 
 `appjail-gui` is a tkinter window over the CLI, shipped in the same package. tkinter is in the standard library, so `dependencies` stays empty, but Debian and Ubuntu split it into `python3-tk`; the GUI is therefore optional and imported lazily, and the CLI never needs it. A toolkit from PyPI (Qt, GTK bindings) would break the stdlib-only rule. The GUI does not reimplement any command: it builds an argv, runs `cli.main` with a console that shows prompts as dialogs, and so keeps one parser, one set of checks and the same reviews. The one exception is read-only data for lists: the Apps tab reads the manifests and the Search tab reads the catalogs directly (`gui/apps.py`), so rows can be selected; installing still goes through `add`. It never passes `--yes` for the user; `perms`, `remove`, `update` and the rest ask through a dialog that defaults to No. Revisit when a command needs progress or cancellation that a worker thread cannot give (downloads run in a jail subprocess with no incremental output).
 
+### Output layout and the error stream
+
+- **Decided:** one small vocabulary in `Console` (`kv`, `table`, `item`, `note`, `warn`, `error`) instead of hand-padded strings in each command; errors on stderr, everything else on stdout; `list` is a table and the permissions move to `list -l`.
+- **Why:** `list` put every field of an app on one line, and four label styles made the other commands hard to scan. stderr for errors lets a pipe or script see only results. The permissions moved out of the default view because they are what made the line long; `perms APP` and `list -l` show them.
+- **Rejected:** a third-party formatting library (stdlib-only rule); `list --json` (not asked for; revisit when a script needs it); always-on colour (breaks pipes and log files).
+- **Cost:** tests and any script that matched the old text (`WARNING:`, `Label : value`, `Summary:`) had to change; the GUI shows the same text in its output pane.
+
 ### Waiting for every process in the jail, by default
 
 The jail ends with its main command; the `linger` permission (opt-in per app) waits for all processes instead. Waiting always was rejected: an app that leaves a crash handler, `dbus-daemon` or an agent behind would keep `appjail run` from ever returning, and "closing the app closes everything" would no longer hold. Found with VSCodium, whose launcher hook runs `cli.js`, which starts the editor detached and exits. **Revisit when:** most catalog apps need `linger`, or a reliable way to tell the app's own processes from helpers exists.

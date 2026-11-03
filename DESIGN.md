@@ -23,7 +23,7 @@ Linux on x86-64 only. Minimum supported systems: Debian 13 and Ubuntu 26.04. Old
 | `add owner/repo` / `add --file PATH` / `add --url URL` | Resolve (or take), review, download, verify, pin, write the manifest. |
 | `run APP [--dir PATH[:ro\|:rw]] [--file PATH[:rw]] [-- args]` | Start an app; the grants are for that run only. |
 | `update [APP] [--prerelease] [--channel C] [--quarantine DAYS] [--file PATH] [--sha256 HEX] [--verify]` | Re-resolve, verify, show the diff, quarantine, install. |
-| `list`, `remove APP`, `perms APP`, `history [APP]` | Inspect, delete, edit permissions, list recorded manifest changes. |
+| `list [-l]`, `remove APP`, `perms APP`, `history [APP]` | Inspect, delete, edit permissions, list recorded manifest changes. |
 | `portals APP` | List and revoke document-portal grants. |
 | `desktop APP`, `open APP -- FILE...` | Menu entry; open files in the jail. |
 | `tools status\|install NAME` | Pinned helper binaries (`gh`, `dwarfs`). |
@@ -59,6 +59,11 @@ Tier 1 means a Sigstore build attestation covers the exact downloaded bytes and 
 - appjail then re-reads the certificate: the issuer must be GitHub Actions, `sourceRepositoryURI` must equal the repository, and `sourceRepositoryOwnerIdentifier` must equal the pinned owner account id.
 - Verification runs after the download, on the real bytes, so tier 1 is possible even without a GitHub digest. A failed verification never aborts an `add` (tier 3/4 with the reason shown). For an app already at tier 1 it blocks the update: no attestation on GitHub blocks before downloading; a bundle that does not verify aborts after it; nothing is installed.
 - Limit: the identity is the repository and owner account, not a workflow or branch, so a compromised repository still gets tier 1. That is what the quarantine is for.
+
+## Output conventions (`console.py`)
+- Results go to stdout. Warnings are `! warning: …` on stdout, so they stay beside the step that caused them. Errors are `error: …` on stderr (a plain `cancelled` has no prefix); the exit status is 1.
+- Detail blocks are label/value lines aligned by `Console.kv`, tables are `Console.table` (columns with no content are dropped, cells are cleaned and cut), bullets are `Console.item`. An `update` prints a `== app ==` header per app and, for several apps, ends with an APP/RESULT table.
+- Every line goes through `textsafe` first. Colour is added only to the fixed `warning:`/`error:` prefixes, only on a terminal, and not when `NO_COLOR` is set or `TERM=dumb`. The bullet and arrow are Unicode only when stdout is UTF-8, otherwise `-` and `->`.
 
 ## Installing
 ### Resolver (`github.py`, `textsafe.py`)
@@ -118,7 +123,7 @@ fingerprint = { size = 48211968, etag = "\"abc123\"", last_modified = "Tue, 20 O
 - **`url:` apps**, cheapest test first; each step ends the check or forces the full download: (1) conditional request with the stored `ETag` / `Last-Modified` (`304` = unchanged); (2) `Content-Length` from a `HEAD` (different size = changed); (3) ranged requests (`206`) for fixed windows: the SquashFS superblock, the middle 64 KiB and the last 64 KiB, hashed together and compared with `fingerprint.chunks` (about 200 KB; the first chunk alone is useless since every AppImage with the same runtime starts alike). All equal means unchanged; anything different, or no `206`, means one full jailed download after asking. The fingerprint detects a new version; it is not an integrity check, and a change confined to unsampled bytes is missed. A changed hash is a candidate keyed by its sha256 and goes through the quarantine; the candidate stays in `apps/<name>/pending.AppImage` and, at the end, a conditional request with its validators installs the stored copy on `304` without a second download. `--verify` forces a full re-download and comparison.
 - **Tier rules for url/file:** a tier 4 app stays tier 4 only with `update APP --sha256 HEX` matching the new bytes; a plain `update` of a tier 4 app is refused with that hint. A tier 5 app given a matching `--sha256` becomes tier 4; without it, it stays tier 5.
 - **`file:` apps:** a plain `update` says there is no source. `update APP --file PATH [--sha256 HEX]` replaces the image: hash diff, confirmation, jailed extraction, rollback on failure, no quarantine (the user holds the bytes). It exists because `remove` plus `add` would delete the private home.
-- `list` shows name, version, source, tier, granted permissions, directories, dangling menu entries and any update seen. `remove APP [--yes]` deletes the manifest and the app directory including the private home, the menu entry, the document-portal grants and the portal decisions remembered for the app (see Portals); it asks first.
+- `list` prints a table of name, version, source, tier, update channel (when not stable) and update seen; `list -l` adds, under each app, what it is granted (flags, display, directories, D-Bus names, portals). Dangling menu entries follow as notes. `remove APP [--yes]` deletes the manifest and the app directory including the private home, the menu entry, the document-portal grants and the portal decisions remembered for the app (see Portals); it asks first.
 
 ### Manifest history (`history.py`)
 Every change `add`, `update` (install and `--channel`), `perms` and `remove` make to `~/.config/appjail` is committed to a local git repository there (author `appjail`). Manifests hold the pins and sit where any process of the user can write, so this is tamper evidence: `run` warns when a manifest differs from the last commit, and `history [APP] [--limit N]` lists the changes.
