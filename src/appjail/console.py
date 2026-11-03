@@ -26,6 +26,7 @@ def color_enabled(stream):
 
 BULLET = "•"
 ARROW = "→"
+ARROW_NB = ARROW + "\u00a0"  # arrow glued to the value after it: wrapping never leaves it alone at a line end
 
 
 def wrapped(text, hang=0, stream=None):
@@ -35,7 +36,9 @@ def wrapped(text, hang=0, stream=None):
     if not stream.isatty():
         return [text]
     width = max(60, shutil.get_terminal_size().columns - 1)
-    return textwrap.wrap(text, width, subsequent_indent=" " * hang, break_long_words=False, break_on_hyphens=False) or [text]
+    body = text.lstrip(" ")  # the indent is passed on its own: textwrap drops it when the first word alone is too long
+    return textwrap.wrap(body, width, initial_indent=text[:len(text) - len(body)], subsequent_indent=" " * hang,
+                         break_long_words=False, break_on_hyphens=False) or [text]
 
 
 def error_text(line):

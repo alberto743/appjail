@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from . import appimage, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, swap_in
 from .cmd_desktop import refresh_after_update
-from .console import ARROW, INDENTED_LABEL, Abort, human_size
+from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .imagesrc import (
     DEFAULT_MAX_MIB,
     check_appimage,
@@ -58,7 +58,7 @@ def confirm_installed_hash(run, expected):
 
 def show_diff(console, m, digest, tier, size=None):
     console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{ARROW} {digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
+    console.kv("", f"{ARROW_NB}{digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
     console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {tier}", INDENTED_LABEL)
     console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 

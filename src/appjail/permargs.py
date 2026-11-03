@@ -111,8 +111,8 @@ def permissions_from_args(args):
 
 
 def granted_summary(p):
-    """`key=value` for every permission that is granted, comma-separated (empty when nothing is)."""
-    return ", ".join(f"{k}={v}" for k, v in vars(p).items() if v not in ((), False) and (k != "display_size" or p.rootful))
+    """What an app is granted on one line: `grants: audio, gpu; display: wayland; dirs: ...`."""
+    return "; ".join(f"{label}: {text}" for label, text in permission_lines(p))
 
 
 def permission_lines(p):

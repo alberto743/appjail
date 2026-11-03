@@ -101,3 +101,10 @@ def test_wrapped_only_on_a_terminal_and_never_inside_a_word(monkeypatch, capsys)
     assert all(len(line) <= 59 for line in lines if "xxxx" not in line)  # the 60-column floor
     assert any("https://example.org/" + "x" * 80 in line for line in lines)  # a long word stays whole
     assert " ".join(l.strip() for l in lines).split() == text.split()
+
+
+def test_wrapped_keeps_the_indent_of_a_line_whose_first_word_is_too_long(monkeypatch):
+    monkeypatch.setattr(console_mod.shutil, "get_terminal_size", lambda: type("S", (), {"columns": 80})())
+    value = console_mod.ARROW_NB + "9" * 64
+    assert console_mod.wrapped(" " * 14 + value, hang=14, stream=FakeTty()) == [" " * 14 + value]
+    assert console_mod.wrapped("  sha256      " + "a" * 64, hang=14, stream=FakeTty()) == ["  sha256      " + "a" * 64]

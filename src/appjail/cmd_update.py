@@ -10,7 +10,7 @@ from . import appimage, github, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
 from .cmd_desktop import refresh_after_update
 from .cmd_updateimage import update_file, update_url
-from .console import ARROW, INDENTED_LABEL, Abort, human_size
+from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .permargs import granted_summary
 from .services import Services, UpdateRun
 
@@ -44,7 +44,7 @@ def describe_candidate(console, m, release, asset):
     console.kv("", release.html_url, INDENTED_LABEL)
     console.kv("  asset", f"{asset.name} ({human_size(asset.size)})", INDENTED_LABEL)
     console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{ARROW} {asset.sha256 or 'unknown until downloaded (no GitHub digest)'}", INDENTED_LABEL)
+    console.kv("", f"{ARROW_NB}{asset.sha256 or 'unknown until downloaded (no GitHub digest)'}", INDENTED_LABEL)
     console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {3 if asset.sha256 else 4}", INDENTED_LABEL)
     console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 
