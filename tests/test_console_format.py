@@ -78,3 +78,10 @@ def test_json_is_one_ascii_line(con):
     assert out.count("\n") == 1 and out.isascii() and "\x1b" not in out
     import json
     assert json.loads(out) == {"a": "x\x1b[2Jé", "b": [1, None]}
+
+
+def test_note_and_item(con):
+    c, cap = con
+    c.note("x")
+    c.item("y")
+    assert cap.readouterr().out.splitlines() == ["note: x", f"  {console_mod.bullet()} y"]

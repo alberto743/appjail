@@ -136,7 +136,7 @@ def revoke_portal_grants(name, mpath, console):
         except (manifest.ManifestError, OSError):
             had_portals = False
         if had_portals:
-            console.out(f"note: document-portal grants were not revoked ({e}); see `appjail portals`")
+            console.note(f"document-portal grants were not revoked ({e}); see `appjail portals`")
 
 
 def cmd_remove(args, console):

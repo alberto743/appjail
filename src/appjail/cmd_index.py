@@ -35,10 +35,10 @@ def cmd_search(args, console):
         console.out()
         console.out(f"{h.name}  -  {h.description}" + (f"   [{h.catalog}]" if many else ""))
         if h.source:
-            console.kv("    source", h.source, 11)
-            console.kv("    add", add_hint(h.source), 11)
+            console.kv("    source", h.source)
+            console.kv("    add", add_hint(h.source))
         if h.note:
-            console.kv("    note", h.note, 11)
+            console.kv("    note", h.note)
     if hits:
         console.out("A hit is only a suggestion: check the owner and repository yourself before `appjail add`.")
 
@@ -181,11 +181,11 @@ def cmd_index_add(args, console, download_url=jail.download_url, now=None):
         except manifest.ManifestError as e:
             raise Abort(f"--url: {e}") from e
         source = indexstore.Source(name, "url", url)
-        console.out(f"Catalog URL: {url} (host {urlsplit(url).hostname})")
+        console.kv("Catalog URL", f"{url} (host {urlsplit(url).hostname})")
     else:
         real, _ = regular_file(args.file)
         source = indexstore.Source(name, "file", str(real))
-        console.out(f"Catalog file: {real}")
+        console.kv("Catalog file", real)
     console.warn("a catalog only suggests repositories; nothing in it is trusted or run")
     text, _ = fetch_text(source, args, console, None, download_url)
     review_and_install_new(source, text, console, now)
@@ -236,8 +236,8 @@ def cmd_index_status(console, as_json=False):
         console.out(f"{source.name} ({source.kind}: {where})")
         if cur:
             console.kv("    current", f"{cur['sha256'][:12]}, revision {cur['revision'][:72] or '-'}, updated {cur['updated']}"
-                       + (f", commit {cur['commit'][:12]}" if cur.get("commit") else ""), 11)
+                       + (f", commit {cur['commit'][:12]}" if cur.get("commit") else ""))
             if prev:
-                console.kv("    previous", prev["sha256"][:12], 11)
+                console.kv("    previous", prev["sha256"][:12])
         else:
-            console.kv("    current", "no catalog yet; run `appjail index update " + source.name + "`", 11)
+            console.kv("    current", "no catalog yet; run `appjail index update " + source.name + "`")

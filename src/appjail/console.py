@@ -14,6 +14,9 @@ class Abort(Exception):
     """The user declined, or the operation cannot continue; message is shown as is."""
 
 
+INDENTED_LABEL = 13  # label width of the indented blocks of update and desktop (two spaces, then up to 11)
+
+
 def color_enabled(stream):
     """Colour only on a terminal, and never when NO_COLOR is set or the terminal is dumb."""
     return (stream.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM", "") != "dumb")

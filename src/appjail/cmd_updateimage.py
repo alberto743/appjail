@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from . import appimage, history, jail, manifest, store, updater
 from .cmd_add import MAX_ASSET, swap_in
 from .cmd_desktop import refresh_after_update
-from .console import Abort, arrow, human_size
+from .console import INDENTED_LABEL, Abort, arrow, human_size
 from .imagesrc import (
     DEFAULT_MAX_MIB,
     check_appimage,
@@ -37,8 +37,8 @@ DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 -> 5 (this app was added with a matchin
 def header(run):
     m = run.m
     run.console.out(f"== {run.name} ==")
-    run.console.kv("  source", m.target, 13)
-    run.console.kv("  installed", f"{m.version} (installed {m.published_at}, tier {m.evidence_tier})", 13)
+    run.console.kv("  source", m.target, INDENTED_LABEL)
+    run.console.kv("  installed", f"{m.version} (installed {m.published_at}, tier {m.evidence_tier})", INDENTED_LABEL)
 
 
 def confirm_installed_hash(run, expected):
@@ -57,10 +57,10 @@ def confirm_installed_hash(run, expected):
 
 
 def show_diff(console, m, digest, tier, size=None):
-    console.kv("  sha256", m.sha256, 13)
-    console.kv("", f"{arrow()} {digest}" + (f"  ({human_size(size)})" if size else ""), 13)
-    console.kv("  evidence", f"tier {m.evidence_tier} {arrow()} {tier}", 13)
-    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", 13)
+    console.kv("  sha256", m.sha256, INDENTED_LABEL)
+    console.kv("", f"{arrow()} {digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
+    console.kv("  evidence", f"tier {m.evidence_tier} {arrow()} {tier}", INDENTED_LABEL)
+    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 
 
 def install(run, staged, stage, record):
@@ -107,7 +107,7 @@ def update_file(run):
             console.warn(DOWNGRADE)
             return "blocked"
         tier = check_expected(digest, expected)
-        console.kv("  file", real, 13)
+        console.kv("  file", real, INDENTED_LABEL)
         show_diff(console, m, digest, tier, st.st_size)
         if not console.confirm(f"Replace {name} with this file?"):
             return "declined"
@@ -182,7 +182,7 @@ def fetch_candidate(run, expected):
         raise Abort(str(e)) from e
     try:
         digest = appimage.sha256_file(staged)
-        console.out(f"  downloaded : {human_size(info['size'])}, sha256 {digest}")
+        console.kv("  downloaded", f"{human_size(info['size'])}, sha256 {digest}", INDENTED_LABEL)
         if expected is not None and digest != expected:
             raise Abort(f"sha256 mismatch: the download is {digest}, --sha256 says {expected}")
         check_appimage(staged)
@@ -194,8 +194,8 @@ def fetch_candidate(run, expected):
 
 
 def report_waiting(console, pending, due, why):
-    console.kv("  candidate", f"{pending['tag']}, first seen {pending['first_seen']}; {why}", 13)
-    console.kv("  quarantine", f"can be installed from {updater.stamp(due)}", 13)
+    console.kv("  candidate", f"{pending['tag']}, first seen {pending['first_seen']}; {why}", INDENTED_LABEL)
+    console.kv("  quarantine", f"can be installed from {updater.stamp(due)}", INDENTED_LABEL)
     return "waiting"
 
 
@@ -272,7 +272,7 @@ def start_quarantine(run, stage, staged, digest, info, expected):
     if days > 0:
         due = updater.quarantine_ends(run.now.replace(microsecond=0), days)
         run.console.kv("  quarantine", f"first seen {updater.stamp(run.now)}; can be installed from {updater.stamp(due)} "
-                       f"({days} days; --quarantine DAYS to change)", 13)
+                       f"({days} days; --quarantine DAYS to change)", INDENTED_LABEL)
         return "waiting"
     return conclude(run, stage, staged, digest, info, expected)
 

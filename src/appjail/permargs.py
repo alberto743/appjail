@@ -14,7 +14,7 @@ PERMISSION_FLAGS = manifest.BOOL_PERMS
 
 def show_permissions(console, perms):
     """The permission summary of an install, with the warnings for grants that deserve one."""
-    console.out("Permissions: " + granted_summary(perms))
+    console.kv("Permissions", granted_summary(perms))
     warn_sensitive_dbus(console, perms.dbus_filter)
     warn_owned_dbus(console, perms.dbus_own)
     warn_privileged_portals(console, perms.portal_interfaces)

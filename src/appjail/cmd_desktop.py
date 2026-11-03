@@ -6,7 +6,7 @@
 import shutil
 
 from . import desktop, manifest, store
-from .console import Abort, arrow
+from .console import INDENTED_LABEL, Abort, arrow
 
 
 def _check(name):
@@ -139,14 +139,14 @@ def refresh_after_update(name, console):
     try:
         _, _, note = desktop.install(name, store.root_path(name), kept, rw)
     except desktop.DesktopError as e:
-        console.out(f"  menu entry not refreshed: {e}")
+        console.kv("  menu entry", f"not refreshed: {e}", INDENTED_LABEL)
         return
     if note:
-        console.out(f"  menu entry: {note}")
+        console.kv("  menu entry", note, INDENTED_LABEL)
     if dropped := [m for m in mimes if m not in declared]:
-        console.out(f"  menu entry: no longer offered by the app: {', '.join(dropped)}")
+        console.kv("  menu entry", f"no longer offered by the app: {', '.join(dropped)}", INDENTED_LABEL)
     if new := [m for m in declared if m not in mimes]:
-        console.out(f"  menu entry: new file types offered: {', '.join(new)} (`appjail desktop {name} --mime TYPE` to register)")
+        console.kv("  menu entry", f"new file types offered: {', '.join(new)} (`appjail desktop {name} --mime TYPE` to register)", INDENTED_LABEL)
 
 
 def forget(name, console):
@@ -154,5 +154,5 @@ def forget(name, console):
     if desktop.remove(name):
         console.out("Removed the menu entry.")
         if desktop.mimeapps_mentions(name):
-            console.out(f"note: your mimeapps.list still names appjail-{name}.desktop; desktops ignore a missing entry, "
-                        "you can delete the line")
+            console.note(f"your mimeapps.list still names appjail-{name}.desktop; desktops ignore a missing entry, "
+                         "you can delete the line")
