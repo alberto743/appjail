@@ -104,7 +104,7 @@ def build_parser():
     upd = isub.add_parser("update", help="refresh the catalogs, review the changes, then accept them")
     upd.add_argument("name", nargs="?", help="one source (default: every source)")
     upd.add_argument("--commit", default="HEAD", help="appjail-db only: fetch this appjail-db commit (40 hex digits) instead of the latest")
-    iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (see the README, Search)")
+    iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (see the README, Searching)")
     iadd.add_argument("name", help="a short name for the source")
     where = iadd.add_mutually_exclusive_group(required=True)
     where.add_argument("--url", help="an https URL serving the catalog")
@@ -183,14 +183,21 @@ def build_parser():
 
 
 def _add(args, client, console, app_args):
+    """An option that does not apply to the chosen source is refused, never ignored."""
+    if not args.desktop and (args.mime or args.mime_all or args.rw):
+        raise Abort("--mime, --mime-all and --rw need --desktop")
     if args.file or args.url:
         if args.source or (args.file and args.url):
             raise Abort("give either a GitHub owner/repo, --file PATH or --url URL")
+        if args.tag or args.prerelease:
+            raise Abort("--tag and --prerelease apply to a GitHub release only")
+        if args.file and args.max_size is not None:
+            raise Abort("--max-size applies to --url only")
         (cmd_add_file if args.file else cmd_add_url)(args, console)
         return
     if not args.source or not manifest.REPO_RE.fullmatch(args.source):
         raise Abort("source must be a GitHub owner/repo (or use --file / --url)")
-    if args.sha256 or args.max_size:
+    if args.sha256 or args.max_size is not None:
         raise Abort("--sha256 and --max-size apply to --file / --url only")
     cmd_add(args, client or github.Client(), console)
 

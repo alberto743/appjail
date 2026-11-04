@@ -25,6 +25,21 @@ def add_file(h, path, *extra, answers=("y",), extract_ok=lambda: True):
     return console
 
 
+@pytest.mark.parametrize("argv, message", [
+    (["--file", "x", "--tag", "v1"], "--tag and --prerelease apply to a GitHub release only"),
+    (["--url", "https://example.org/x", "--prerelease"], "--tag and --prerelease apply to a GitHub release only"),
+    (["--file", "x", "--max-size", "5"], "--max-size applies to --url only"),
+    (["o/r", "--max-size", "0"], "--sha256 and --max-size apply to --file / --url only"),
+    (["o/r", "--mime", "text/plain"], "need --desktop"),
+    (["o/r", "--mime-all"], "need --desktop"),
+    (["--file", "x", "--rw"], "need --desktop"),
+])
+def test_options_that_do_not_apply_are_refused_not_ignored(h, argv, message):
+    console = Script()
+    assert cli.main(["add", *argv], console=console) == 1
+    assert message in console.text and not any(line.startswith("? ") for line in console.lines)
+
+
 def test_file_install_is_tier5_without_a_hash(h, image):
     console = add_file(h, image)
     m = manifest.load(store.manifest_path("my-app-1.0-x86_64"))
