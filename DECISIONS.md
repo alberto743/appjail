@@ -33,7 +33,7 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
 
 ## Planned code work
 
-Seven items are planned. They come from an audit and a later code read; the table records what the code does now, not a design. The read was static (nothing was run), so confirm each gap with a failing test before fixing it. Order is by value for size. Each fix includes its tests and the doc lines named, in the same commit.
+The table records what the code does now, not a design. The read was static (nothing was run), so confirm each gap with a failing test before fixing it. Order is by value for size. Each fix includes its tests and the doc lines named, in the same commit.
 
 | # | Item | Where | Gap | Smallest fix | Tests to add | Docs | Size |
 |---|---|---|---|---|---|---|---|
@@ -47,7 +47,7 @@ Seven items are planned. They come from an audit and a later code read; the tabl
 
 Open questions for item 7: whether `/dev/media*` (the media controller, many ioctls, a larger kernel surface than capture nodes) belongs in the same permission or needs its own; whether sysfs (`/sys/class/video4linux`) is needed for enumeration; whether seccomp lets the V4L2 ioctls through (not checked); and a check with a real device in the guest. A manifest with `camera = true` is refused by older appjail versions (strict keys), which is acceptable.
 
-Item 1 is stronger than the "low" label it carried: the image's code, running in the jail, controls where a host-side chmod lands. Do it first.
+Do item 1 first: the image's code, running in the jail, controls where a host-side chmod lands.
 
 ## Rejected alternatives
 
@@ -143,6 +143,17 @@ Analysis done for appjail-db, which now converts AM; appjail itself no longer re
 - `programs/x86_64-appimages` has lines `◆ name : description` (U+25C6); `programs/x86_64/<app>` holds the scripts. 8,247 scripts have `SITE="owner/repo"`, about 224 point elsewhere, a few use `SITE2=` for a repackager. `SITE=` may appear more than once in a script: the first assignment counts, matched by regex, never sourced.
 - Commit signatures (last 200 commits at the analysed state): 139 carry a PGP signature (GitHub web-flow key), 2 SSH, 59 unsigned; the maintainer's own commits are unsigned. They cannot prove maintainer authenticity. Not to be redone.
 - Reference clone for reading: a blobless no-checkout clone, read with `git show <commit>:<path>` as text. Existing sandbox flags are in `modules/install.am`.
+
+## What the tests cover
+
+- Verified against real software: `add` and `run` of real AppImages (SquashFS and DwarFS), tier 3 and tier 4 downloads and the quarantine hash, Sigstore verification with the real `gh`, the private Xwayland with an X11-only app, a GUI app with `network` behind pasta, the real xdg-desktop-portal frontend with a fake backend and with the GTK backend (non-interactive calls), the real `xdg-dbus-proxy`, the menu entry through `gio`, the real appjail-db catalog, a real PipeWire and pipewire-pulse (`tests/test_audio.py`: Pulse reachable, the camera not), the real permission store (an app's entries forgotten on `remove`), and Landlock ABI 6 on Linux 6.12 (an outside abstract socket refused, the private Xwayland still reachable).
+- Tamper tests: modifying the pinned hash, the stored AppImage or the extracted tree makes `run` refuse; a changed digest on `update` is a new candidate under the quarantine.
+
+**Not verified**
+- Portals: the GNOME, KDE and wlr backends and interactive dialogs. Desktops differ in which interfaces they implement; each privileged interface depends on its backend asking the user.
+- Xwayland: GPU acceleration (glamor). `xwayland-rootful` works on GNOME in a brief test only; clipboard and drag-and-drop through its window are unchecked. `openbox` with `-decorate` never gets going under headless weston and sway, so the test runs without it.
+- D-Bus: real desktop services (notification daemon, MPRIS players) and tray icons with `-<pid>` bus names.
+- Network: IPv6 on a real internet route (covered only by a fake network).
 
 ## Platform and CI
 

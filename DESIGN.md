@@ -9,7 +9,7 @@ appjail installs and runs AppImages in user mode: no sudo, one bubblewrap jail p
 4. Containment is the backstop: downloads run in a network-only jail, extraction in a jail without network, apps in a minimal-permission jail. Every permission the schema accepts is enforced; what cannot be enforced is refused, never ignored.
 5. Evidence is explicit and never silently downgraded (trust tiers). An update is a reviewed diff, delayed by a quarantine.
 
-Motivation: AM (ivan-hc/AM) self-updates and runs install scripts from `main` outside any sandbox, and almost none of its install scripts check a checksum or signature (6 of 8,735 at the commit analysed; see DECISIONS.md). About 95% of its apps are GitHub releases, which is what appjail targets.
+Motivation: AM (ivan-hc/AM) self-updates and runs install scripts from `main` outside any sandbox, and almost none of its install scripts check a checksum or signature (see DECISIONS.md). About 95% of its apps are GitHub releases, which is what appjail targets.
 
 Python 3, stdlib only (`tomllib`, `urllib`, `hashlib`, `subprocess`); the helpers it uses (bubblewrap, `unsquashfs`, `xdg-dbus-proxy`, `pasta`, `Xwayland`, `openbox`, `git`, `rsvg-convert`, `gtk-update-icon-cache`, `update-desktop-database`, `dbus-send`, `notify-send`) are system packages; `/usr/bin/python3` also runs the `linger` supervisor inside the jail.
 
@@ -23,11 +23,11 @@ Linux on x86-64 only. Minimum supported systems: Debian 13 and Ubuntu 26.04. Old
 | `add owner/repo` / `add --file PATH` / `add --url URL` | Resolve (or take), review, download, verify, pin, write the manifest. |
 | `run APP [--dir PATH[:ro\|:rw]] [--file PATH[:rw]] [-- args]` | Start an app; the grants are for that run only. |
 | `update [APP] [--prerelease] [--channel C] [--quarantine DAYS] [--file PATH] [--sha256 HEX] [--verify]` | Re-resolve, verify, show the diff, quarantine, install. |
-| `list [-l] [--json]`, `remove APP`, `perms APP`, `history [APP]` | Inspect, delete, edit permissions, list recorded manifest changes. |
+| `list [-l] [--json]`, `remove APP`, `perms APP`, `history [APP] [--limit N]` | Inspect, delete, edit permissions, list recorded manifest changes. |
 | `portals APP` | List and revoke document-portal grants. |
 | `desktop APP`, `open APP -- FILE...` | Menu entry; open files in the jail. |
 | `tools status\|install NAME` | Pinned helper binaries (`gh`, `dwarfs`). |
-| `index add\|remove\|update\|rollback\|status [--json]` | Manage the catalogs `search` reads. |
+| `index add NAME --url URL\|--file PATH`, `index remove NAME`, `index update [NAME] [--commit SHA]`, `index rollback [NAME]`, `index status [--json]` | Manage the catalogs `search` reads. |
 | `version` | The installed version (from the git tag at build time). |
 
 ## Manifest (`manifest.py`, `grants.py`, `valid.py`)
@@ -39,7 +39,7 @@ TOML, schema 1, one file per app at `~/.config/appjail/apps/<name>.toml`. Strict
   - `dbus_filter`: session-bus names the app may talk to (optional `.*` suffix); `dbus_own`: names it may own;
   - `portal_interfaces`: opt-in portal interfaces, only with `portals = true`;
   - `dirs`: absolute or `~/` paths, optional `:ro` / `:rw` (default read-only).
-- `perms APP [--allow|--deny network|network_host|audio|gpu|portals|userns|linger] [--add-portal N] [--rm-portal N] [--display D] [--add-dir PATH[:ro|:rw]] [--rm-dir PATH] [--add-dbus N] [--rm-dbus N] [--add-dbus-own N] [--rm-dbus-own N] [--yes]` shows the permissions, or shows before/after and asks before saving. `--add-dir` validates like `add --dir`.
+- `perms APP [--allow|--deny network|network_host|audio|gpu|portals|userns|linger] [--add-portal N] [--rm-portal N] [--display D] [--display-size WxH] [--add-dir PATH[:ro|:rw]] [--rm-dir PATH] [--add-dbus N] [--rm-dbus N] [--add-dbus-own N] [--rm-dbus-own N] [--yes]` shows the permissions, or shows before/after and asks before saving. `--add-dir` validates like `add --dir`.
 
 ## Trust tiers
 Never silently downgraded; an update that would weaken the tier is blocked.
@@ -63,7 +63,7 @@ Tier 1 means a Sigstore build attestation covers the exact downloaded bytes and 
 ## Output conventions (`console.py`)
 - Results go to stdout. Warnings are `! warning: …` on stdout, so they stay beside the step that caused them. Errors are `error: …` on stderr (a plain `cancelled` has no prefix); the exit status is 1.
 - Detail blocks are label/value lines aligned by `Console.kv`, tables are `Console.table` (columns with no content are dropped, cells are cleaned and cut), bullets are `Console.item`. An `update` prints a `== app ==` header per app and, for several apps, ends with an APP/RESULT table.
-- `--json` on `list`, `search` and `index status` prints one JSON document (ASCII only) on stdout and nothing else; `list --json` always includes the permissions, and an unreadable manifest gives an object with `error`. No other command has it yet.
+- `--json` on `list`, `search` and `index status` prints one JSON document (ASCII only) on stdout and nothing else; `list --json` always includes the permissions, and an unreadable manifest gives an object with `error`. Only these three commands have `--json`.
 - Every line goes through `textsafe` first. Colour is added only to the fixed `warning:`/`error:` prefixes, only on a terminal, and not when `NO_COLOR` is set or `TERM=dumb`. Bullets (`•`) and arrows (`→`) are always Unicode. On a terminal, long warnings, notes and values wrap at the terminal width (at least 60) with a hanging indent, never inside a word; a pipe or a log keeps one line per message.
 
 ## Installing
@@ -243,13 +243,5 @@ The index is a derived catalog, not a copy of the AM repository, and further sou
 - **Text:** everything shown passed `textsafe.clean`; network text is never put into a widget directly.
 - **Menu entry of appjail-gui:** `appjail-gui --desktop` writes `${XDG_DATA_HOME:-~/.local/share}/applications/appjail.desktop` (the name cannot collide with an app entry, which is `appjail-<name>.desktop`) and copies the SVG shipped in the package (`gui/appjail.svg`, trusted, so not converted) to `icons/hicolor/scalable/apps/appjail.svg`. The entry carries `X-Appjail-GUI=true`; only a regular file with that marker is replaced or deleted by `--desktop` and `--remove-desktop`, a symlink or foreign file never. `Exec` is the installed `appjail-gui`, or the running interpreter with `-m appjail.gui`. Neither flag needs a display or tkinter (a missing tkinter is a note).
 
-## Verification strategy
+## Verification
 - The ordinary suite (`APPJAIL_INTEGRATION=1`, no downloads) runs in a dedicated qemu-kvm guest and in GitHub Actions on every push. Opt-in suites run on demand and in the manual/weekly `e2e.yml` workflow: `APPJAIL_E2E=1` (real downloads of user-approved repositories), `APPJAIL_LIVE=1` (live API metadata). All execution happens in the guest or on CI runners, never on the developer's host (see CLAUDE.md).
-- Verified against real software: `add` and `run` of real AppImages (SquashFS and DwarFS), tier 3 and tier 4 downloads and the quarantine hash, Sigstore verification with the real `gh`, the private Xwayland with an X11-only app, a GUI app with `network` behind pasta, the real xdg-desktop-portal frontend with a fake backend and with the GTK backend (non-interactive calls), the real `xdg-dbus-proxy`, the menu entry through `gio`, the real appjail-db catalog, a real PipeWire and pipewire-pulse (`tests/test_audio.py`: Pulse reachable, the camera not), the real permission store (an app's entries forgotten on `remove`), and Landlock ABI 6 on Linux 6.12 (an outside abstract socket refused, the private Xwayland still reachable).
-- Tamper tests: modifying the pinned hash, the stored AppImage or the extracted tree makes `run` refuse; a changed digest on `update` is a new candidate under the quarantine.
-
-### Not verified
-- Portals: the GNOME, KDE and wlr backends and interactive dialogs. Desktops differ in which interfaces they implement; each privileged interface depends on its backend asking the user.
-- Xwayland: GPU acceleration (glamor). `xwayland-rootful` works on GNOME in a brief test only; clipboard and drag-and-drop through its window are unchecked. `openbox` with `-decorate` never gets going under headless weston and sway, so the test runs without it.
-- D-Bus: real desktop services (notification daemon, MPRIS players) and tray icons with `-<pid>` bus names.
-- Network: IPv6 on a real internet route (covered only by a fake network).

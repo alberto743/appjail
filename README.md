@@ -51,6 +51,7 @@ is built around the opposite assumptions:
   - `xwayland`: X11-only apps, through a private rootless Xwayland. Compositors that manage the X windows themselves (sway, KDE) show them; GNOME's mutter does not.
   - `openbox`, together with `xwayland`: the `xwayland-rootful` display mode, which shows X11-only apps in one window that holds the whole X screen, with `openbox` as the window manager inside the jail; for GNOME. `--display-size WxH` sets the window size (default 1280x800).
   - `git`: the manifest history.
+  - `dbus-bin` (`dbus-send`): starting the document portal and revoking its grants. `libnotify-bin` (`notify-send`): the error notice when a file opened from the menu fails.
   - `librsvg2-bin` (`rsvg-convert`): the menu icon of an app that ships only an SVG; without it the entry has no icon
     (`appjail desktop APP --show` says so). `libgtk-3-bin` (`gtk-update-icon-cache`) makes new icons appear in the
     menu at once; `desktop-file-utils` registers the file types.
@@ -63,7 +64,7 @@ is built around the opposite assumptions:
 On Debian or Ubuntu:
 
 ```sh
-sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland openbox git librsvg2-bin libgtk-3-bin desktop-file-utils
+sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland openbox git librsvg2-bin libgtk-3-bin desktop-file-utils dbus-bin libnotify-bin
 ```
 
 ## Install
@@ -86,8 +87,8 @@ pipx install .          # or: pip install --user .
 
 To try it without installing, run it from the clone: `PYTHONPATH=src python3 -m appjail --help`. appjail never
 updates itself: upgrade with `pipx upgrade appjail` (or `git pull` and reinstall) after reading what changed.
-`appjail version` (or `--version`) prints the installed version, which comes from the git tag at build time (`0.3.7`
-on a release, `0.3.8.dev4+g1a2b3c4` four commits after it) and is `unknown` when run from a source tree that is not
+`appjail version` (or `--version`) prints the installed version, which comes from the git tag at build time (for example `1.2.3`
+on a release, `1.2.4.dev4+g1a2b3c4` four commits after it) and is `unknown` when run from a source tree that is not
 installed.
 
 Data lives in `~/.local/share/appjail` (images, extracted trees, private homes, staging) and `~/.config/appjail`

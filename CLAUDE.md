@@ -16,7 +16,7 @@ A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinn
 - Licensing: MPL-2.0, REUSE-compliant at every commit. Every code file starts with `SPDX-FileCopyrightText: 2026 Alberto P` and `SPDX-License-Identifier: MPL-2.0` (after a shebang if any); other files (Markdown, config, templates) are covered by `REUSE.toml`. New file types need a header or a `REUSE.toml` entry in the same commit.
 
 ## Open items
-Planned code work is in `DECISIONS.md` (Planned code work: seven items, ordered, with the gap, fix, tests and docs for each). Everything else needs a decision or an app/session the user approves.
+Planned code work is in `DECISIONS.md` (Planned code work: ordered items, with the gap, fix, tests and docs for each). Everything else needs a decision or an app/session the user approves.
 - Manual checks on the user's machine: the GNOME and KDE portal backends; IPv6 on a real internet route; `display = xwayland-rootful` on GNOME, so far only briefly tested (clipboard, drag-and-drop and GPU acceleration still to check).
 - Paused by the user: arm64 support (`DECISIONS.md`).
 - Deferred by the user (`DECISIONS.md`): the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN.
@@ -37,7 +37,7 @@ Planned code work is in `DECISIONS.md` (Planned code work: seven items, ordered,
 | Install and update | `github.py` (release resolver, head commit), `snappy.py` (bounded decompressor of attestation bundles), `attest.py` (attestation check with the pinned `gh`), `appimage.py` (inspection, jailed extraction, tree validation), `fetcher.py` (downloader run inside the network-only jail), `tools.py` (pinned helper binaries), `updater.py` (policy, quarantine clock, pending state), `history.py` (manifest history in a local git repo). |
 | Running | `runner.py` (verify, prepare, launch), `runtimejail.py` (bwrap arguments of the app jail), `linger.py` (the `linger` supervisor), `jail.py` (download, extraction, manifest-history git and pasta jails), `wayland.py`, `seccomp.py`, `landlock.py` (abstract-socket scope), `dbusproxy.py`, `portal.py`, `desktop.py`. |
 | Index | `catalog.py` (format), `indexstore.py` (sources, snapshots; the built-in source is the sister project appjail-db), `index.py` (search). |
-| GUI | `gui/` is the optional tkinter front end (`appjail-gui`): `argv.py` (form state to CLI argv, no tkinter), `console.py` (`GuiConsole`, the prompt bridge, no tkinter), `worker.py` (threads and detached children), `apps.py` (installed apps as data), `dialogs.py`, `app.py` (window). It runs the CLI; it never reimplements a command or adds `--yes`. Tests: `test_gui_*.py` (the smoke test needs `python3-tk` and `xvfb`, otherwise skips). |
+| GUI | `gui/` is the optional tkinter front end (`appjail-gui`): `__init__.py` (the `--desktop` menu entry; `appjail.svg` is its icon), `argv.py` (form state to CLI argv, no tkinter), `console.py` (`GuiConsole`, the prompt bridge, no tkinter), `worker.py` (threads and detached children), `apps.py` (installed apps as data), `dialogs.py`, `app.py` (window). It runs the CLI; it never reimplements a command or adds `--yes`. Tests: `test_gui_*.py` (the smoke test needs `python3-tk` and `xvfb`, otherwise skips). |
 | Entry point | `__main__.py` is the entry point. |
 
 ## Testing environment
@@ -55,7 +55,7 @@ Planned code work is in `DECISIONS.md` (Planned code work: seven items, ordered,
 - GitHub limit: 60 unauthenticated requests per hour, shared by every run from the guest (a full suite with the opt-in suites uses about 45, one `update` about 4). Check `https://api.github.com/rate_limit` (free) before an e2e run and run one group at a time.
 
 ### Running tests (guest only)
-- pytest is a development dependency only; config in `pyproject.toml`. All tests are native pytest (plain `assert`, fixtures, `parametrize`, `skipif`). Shared fixtures (`sandbox`, `runtime`, `h`) are in `tests/conftest.py`, shared helpers (`wait_for`, ...) in `tests/helpers.py`; a test module never imports from another. `tests/test_lint.py` runs `ruff check` over `src` and `tests` (installed by `tests/vm/install-ruff.sh`) and must stay clean. `tests/test_reuse.py` runs `reuse lint`. Guest-only tests skip elsewhere via `APPJAIL_INTEGRATION=1`, which `test.sh` sets.
+- pytest is a development dependency only; config in `pyproject.toml`. All tests are native pytest (plain `assert`, fixtures, `parametrize`, `skipif`). Shared fixtures (`sandbox`, `runtime`, `h`, `data`, and the autouse `no_history` and `no_portal_store`) are in `tests/conftest.py`, shared helpers (`wait_for`, ...) in `tests/helpers.py`; a test module never imports from another. `tests/test_lint.py` runs `ruff check` over `src` and `tests` (installed by `tests/vm/install-ruff.sh`) and must stay clean. `tests/test_reuse.py` runs `reuse lint`. Guest-only tests skip elsewhere via `APPJAIL_INTEGRATION=1`, which `test.sh` sets.
 - Full suite: `tests/vm/test.sh [pytest args]`, e.g. `tests/vm/test.sh -k appimage -x`.
 - Opt-in suites: `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/appjail && <env> python3 -m pytest <file> -v'`.
 
