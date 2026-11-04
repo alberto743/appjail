@@ -30,6 +30,7 @@ from .helpers import (
     FACTS,
     NO_RESTRICTION,
     build,
+    headless_weston,
     install,
     integration,
     needs_pasta,
@@ -538,25 +539,13 @@ def test_app_cannot_see_appjail_data_through_home(sandbox, runtime):
 @integration
 @pytest.mark.skipif(not shutil.which("weston") or not shutil.which("weston-simple-shm"), reason="weston not installed")
 def test_real_wayland_client_runs_against_headless_weston(sandbox):
-    rt = Path(f"/run/user/{os.getuid()}")
-    if not rt.is_dir():
-        pytest.skip("no /run/user/<uid> in this session")
-    log = open(sandbox / "weston.log", "w")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-test"],
-                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
-    try:
-        if not wait_for(lambda: (rt / "appjail-test").exists(), 5.0):
-            pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
+    with headless_weston(sandbox, "appjail-test") as rt:
         kw = build(sandbox, rt, audio=False)
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-test"}
         (kw["root"] / "AppRun").write_text("#!/bin/sh\nexec /usr/bin/timeout 3 /usr/bin/weston-simple-shm\n")
         (kw["root"] / "AppRun").chmod(0o755)
         proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw)], timeout=30)
         assert proc.returncode == 124, proc.stderr  # killed by timeout while running = it connected
-    finally:
-        weston.terminate()
-        weston.wait(timeout=10)
-        log.close()
 
 
 @pytest.mark.parametrize("sub,mode", [(".ssh", ""), (".local/bin", ":rw"), (".config", "")])
@@ -591,17 +580,9 @@ def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):
 def test_x11_client_runs_through_a_private_xwayland(sandbox, network_host):
     """With network_host the jail shares the host's abstract socket namespace, so it runs in its Landlock domain as
     `run` starts it: the private Xwayland's own socket, made inside the domain, must still be reachable."""
-    rt = Path(f"/run/user/{os.getuid()}")
-    if not rt.is_dir():
-        pytest.skip("no /run/user/<uid> in this session")
     if network_host and not landlock.available():
         pytest.skip("needs Landlock ABI 6")
-    log = open(sandbox / "weston.log", "w")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-xtest"],
-                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
-    try:
-        if not wait_for(lambda: (rt / "appjail-xtest").exists(), 5.0):
-            pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
+    with headless_weston(sandbox, "appjail-xtest") as rt:
         net = {"network": True, "network_host": True} if network_host else {}
         kw = build(sandbox, rt, audio=False, display="xwayland", **net)
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-xtest"}
@@ -615,10 +596,6 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox, network_host):
         text = (kw["home"] / "out.txt").read_text()
         assert proc.returncode == 0 and "name of display" in text, text + proc.stderr
         assert "wl=\n" in text + "\n" and "display=:" in text
-    finally:
-        weston.terminate()
-        weston.wait(timeout=10)
-        log.close()
 
 
 @integration
@@ -628,15 +605,7 @@ def test_rootful_xwayland_runs_a_window_manager(sandbox, monkeypatch):
     # With -decorate, openbox never gets going under headless weston or sway (cause not found; without it, it does).
     # The rest of the script is under test; the real option needs a manual check on a desktop compositor.
     monkeypatch.setattr(runtimejail, "XWAYLAND_SCRIPT", runtimejail.XWAYLAND_SCRIPT.replace(" -decorate", ""))
-    rt = Path(f"/run/user/{os.getuid()}")
-    if not rt.is_dir():
-        pytest.skip("no /run/user/<uid> in this session")
-    log = open(sandbox / "weston.log", "w")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-rtest"],
-                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
-    try:
-        if not wait_for(lambda: (rt / "appjail-rtest").exists(), 5.0):
-            pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
+    with headless_weston(sandbox, "appjail-rtest") as rt:
         kw = build(sandbox, rt, audio=False, display="xwayland-rootful", display_size="800x600")
         kw["host_env"] = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-rtest"}
         (kw["root"] / "AppRun").write_text(
@@ -648,10 +617,6 @@ def test_rootful_xwayland_runs_a_window_manager(sandbox, monkeypatch):
         text = (kw["home"] / "out.txt").read_text() if (kw["home"] / "out.txt").exists() else ""
         assert proc.returncode == 0 and "window id" in text, text + proc.stderr
         assert "800x600" in text
-    finally:
-        weston.terminate()
-        weston.wait(timeout=10)
-        log.close()
 
 
 # -- single files (run --file) -------------------------------------------------------------

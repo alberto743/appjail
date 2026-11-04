@@ -8,6 +8,7 @@ import hashlib
 import os
 import shutil
 import struct
+import subprocess
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -373,3 +374,22 @@ def wait_for(condition, timeout, interval=0.1):
             return False
         time.sleep(interval)
     return True
+
+
+@contextlib.contextmanager
+def headless_weston(sandbox, socket):
+    """Run a headless weston with Wayland socket `socket` in the user's runtime directory; yields that directory.
+    Skips the test when there is no runtime directory or weston does not come up."""
+    rt = Path(f"/run/user/{os.getuid()}")
+    if not rt.is_dir():
+        pytest.skip("no /run/user/<uid> in this session")
+    with open(sandbox / "weston.log", "w") as log:
+        weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", f"--socket={socket}"],
+                                  env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)}, stdout=log, stderr=log)
+        try:
+            if not wait_for(lambda: (rt / socket).exists(), 5.0):
+                pytest.skip("weston headless did not start: " + (sandbox / "weston.log").read_text()[-300:])
+            yield rt
+        finally:
+            weston.terminate()
+            weston.wait(timeout=10)
