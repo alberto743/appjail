@@ -7,10 +7,9 @@ import hashlib
 import os
 import shutil
 import stat
-import struct
 from pathlib import Path
 
-from . import jail, tools
+from . import fetcher, jail, tools
 from .textsafe import clean
 
 ELF_MAGIC = b"\x7fELF"
@@ -88,13 +87,10 @@ def locate_fs(path):
     """(kind, offset) of the embedded filesystem: "squashfs" or "dwarfs", right after the ELF runtime."""
     size = os.path.getsize(path)
     with open(path, "rb") as f:
-        head = f.read(64)
-        if len(head) < 64 or head[:4] != ELF_MAGIC or head[4] != 2 or head[5] != 1:
+        offset = fetcher.elf_offset(f.read(fetcher.HEAD))
+        if offset is None:
             raise UnsupportedImage("only 64-bit little-endian ELF runtimes are supported")
-        shoff, = struct.unpack_from("<Q", head, 0x28)
-        shentsize, shnum = struct.unpack_from("<HH", head, 0x3A)
-        offset = shoff + shentsize * shnum
-        if not 64 <= offset < size:
+        if not fetcher.HEAD <= offset < size:
             raise UnsupportedImage("cannot locate the embedded filesystem")
         f.seek(offset)
         magic = f.read(8)
