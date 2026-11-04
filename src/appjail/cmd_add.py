@@ -25,6 +25,16 @@ def default_name(repo):
     return name if manifest.NAME_RE.fullmatch(name or "!") else ""
 
 
+def new_app_name(given, derive_from):
+    """The name of an app about to be added: --name, or one made from `derive_from`. It must be free."""
+    name = given or default_name(derive_from)
+    if not manifest.NAME_RE.fullmatch(name or "!"):
+        raise Abort("cannot derive a valid app name; pass --name")
+    if store.manifest_path(name).exists() or store.app_dir(name).exists():
+        raise Abort(f"'{name}' is already added")
+    return name
+
+
 def show_review(console, info, now=None):
     """Typosquat check: who owns this repo, how old and how popular is it."""
     days = github.age_days(info.owner_created_at, now)
@@ -131,11 +141,7 @@ def show_asset_evidence(client, console, source, asset):
 
 def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,
             extract_ok=appimage.have_unsquashfs, verify=attest.verify):
-    name = args.name or default_name(args.source.partition("/")[2])
-    if not manifest.NAME_RE.fullmatch(name or "!"):
-        raise Abort("cannot derive a valid app name; pass --name")
-    if store.manifest_path(name).exists() or store.app_dir(name).exists():
-        raise Abort(f"'{name}' is already added")
+    name = new_app_name(args.name, args.source.partition("/")[2])
 
     perms = permissions_from_args(args)  # validates every option before any network access
     require_network_isolation(perms)
@@ -192,10 +198,9 @@ def finish_add(console, args, record, entries, size):
     history.record(f"add {name} {record.version} (tier {record.evidence_tier})")
     console.out(f"Added '{name}' {record.version}: sha256 {record.sha256}, evidence tier {record.evidence_tier}")
     console.kv("Manifest", store.manifest_path(name))
-    if getattr(args, "desktop", False):
-        args.rw = bool(getattr(args, "rw", False))
+    if args.desktop:
         try:
-            install_entry(name, console, args, yes=True, ask=False)
+            install_entry(name, console, args, yes=True)
         except Abort as e:
             console.out(f"menu entry not created: {e} (`appjail desktop {name}` retries)")
 

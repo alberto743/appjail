@@ -14,7 +14,7 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 from . import appimage, jail, manifest, store
-from .cmd_add import MAX_ASSET, ask_extractor, default_name, finish_add, swap_in
+from .cmd_add import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
 from .console import Abort, human_size
 from .imagesrc import (
     DEFAULT_MAX_MIB,
@@ -36,12 +36,7 @@ from .permargs import (
 
 
 def app_name(args, basename):
-    name = args.name or default_name(re.sub(r"\.appimage$", "", basename, flags=re.IGNORECASE))
-    if not manifest.NAME_RE.fullmatch(name or "!"):
-        raise Abort("cannot derive a valid app name; pass --name")
-    if store.manifest_path(name).exists() or store.app_dir(name).exists():
-        raise Abort(f"'{name}' is already added")
-    return name
+    return new_app_name(args.name, re.sub(r"\.appimage$", "", basename, flags=re.IGNORECASE))
 
 
 def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.have_unsquashfs, now=None):

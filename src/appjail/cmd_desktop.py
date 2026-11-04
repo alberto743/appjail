@@ -69,15 +69,15 @@ def _select(console, declared, args, current, yes):
     return [declared[int(p) - 1] for p in dict.fromkeys(picks)]
 
 
-def install_entry(name, console, args, yes=False, ask=True):
-    """Show what the entry will say, ask, then write it. `args` carries mime, mime_all and rw."""
+def install_entry(name, console, args, yes=False):
+    """Show what the entry will say, ask unless `yes`, then write it. `args` carries mime, mime_all and rw."""
     _check(name)
     if not manifest.load(store.manifest_path(name)).permissions.windowed:
         raise Abort(f"{name} has display = none: it has no window, so a menu entry would start it invisibly")
     root = store.root_path(name)
     fields = desktop.read_app_desktop(root)
     declared, ignored, current, was_rw, has_entry = file_type_state(name, fields)
-    mimes = _select(console, declared, args, current if has_entry else None, yes or not ask)
+    mimes = _select(console, declared, args, current if has_entry else None, yes)
     rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
     shown = desktop.display_fields(fields, name)
     console.kv("Menu entry", f"{shown['Name']} (appjail) {ARROW} {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
@@ -86,7 +86,7 @@ def install_entry(name, console, args, yes=False, ask=True):
         console.kv("Not offered", ", ".join(ignored))
     if rw and mimes:
         console.warn("read-write: the app may change the opened file, but an app that saves by writing a new file and renaming it will fail")
-    if ask and not yes and not console.confirm("Write the menu entry?", default=True):
+    if not yes and not console.confirm("Write the menu entry?", default=True):
         raise Abort("cancelled")
     try:
         path, size, note = desktop.install(name, root, mimes, rw)
