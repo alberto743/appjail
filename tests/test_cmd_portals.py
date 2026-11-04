@@ -3,7 +3,7 @@
 
 import pytest
 
-from appjail import cli, portal, store
+from appjail import cli, manifest, portal, store
 from appjail.cli import Abort
 
 from .helpers import Script, installed
@@ -81,6 +81,11 @@ def test_revoking_a_document_without_a_grant_is_refused(h, docs):
     installed(h)
     with pytest.raises(Abort, match="no grant on document 'ccc'"):
         run("--revoke", "ccc", "--yes")
+
+
+def test_an_invalid_app_name_is_refused(h):
+    with pytest.raises(manifest.ManifestError, match="invalid app name"):
+        cli.cmd_portals(cli.build_parser().parse_args(["portals", "../x"]), Script(), host_env={})
 
 
 def test_unknown_app_and_unreachable_store(h):

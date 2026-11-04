@@ -22,8 +22,8 @@ def names_for(doc, app, host_env):
 
 def cmd_portals(args, console, host_env=None):
     host_env = dict(os.environ if host_env is None else host_env)
-    name = args.app
-    if not manifest.NAME_RE.fullmatch(name) or not store.manifest_path(name).is_file():
+    name = manifest.check_name(args.app)
+    if not store.manifest_path(name).is_file():
         raise Abort(f"unknown app '{name}'")
     app = portal.app_id(name)
     try:
