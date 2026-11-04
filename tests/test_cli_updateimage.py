@@ -37,6 +37,16 @@ def mf():
 # -- url: nothing changed ---------------------------------------------------------------------
 
 
+def test_an_incomplete_pending_candidate_starts_over(h):
+    server = UrlServer()
+    install_url(h, server)
+    updater.note_seen("app", "k", "t", NOW)  # a well-formed pending file that holds no URL candidate
+    updater.pending_image("app").write_bytes(b"x")
+    code, c = run(h, server)
+    assert code == 0 and "up to date" in c.text
+    assert updater.load_pending("app") is None and not updater.pending_image("app").exists()
+
+
 def test_unchanged_url_is_a_304_and_downloads_nothing(h):
     server = UrlServer()
     install_url(h, server)
@@ -365,7 +375,6 @@ def test_update_cap_follows_the_installed_size():
 def mf_args():
     return {"name": "app", "source": "url:https://example.org/a.AppImage", "version": "v", "sha256": SHA,
             "evidence_tier": 5, "published_at": "2026-01-01T00:00:00Z"}
-
 
 
 def test_update_file_without_an_app_name_is_refused_before_any_output(file_app):

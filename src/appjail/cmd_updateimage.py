@@ -135,10 +135,8 @@ def update_file(run):
 
 def reference(m, pending):
     """What the server is compared with: the waiting candidate if there is one, else the installed file."""
-    if pending and "chunks" in pending:
-        return "pending", pending.get("etag"), pending.get("last_modified")
     if pending:
-        return "pending", None, None
+        return "pending", pending.get("etag"), pending.get("last_modified")
     return "installed", m.fingerprint.etag, m.fingerprint.last_modified
 
 
@@ -157,7 +155,7 @@ def probe(run, pending):
     now = (res["size"], res["chunks"])
     if now == (m.fingerprint.size, m.fingerprint.chunks):
         return "installed", res
-    if pending and "chunks" in pending and now == (pending["size"], pending["chunks"]):
+    if pending and now == (pending["size"], pending["chunks"]):
         return "pending", res
     return "new", res
 
@@ -214,8 +212,8 @@ def update_url(run):
     if confirm_installed_hash(run, expected):
         return "current"
     pending = updater.load_pending(name)
-    if pending and not updater.pending_image(name).is_file():
-        pending = None
+    if pending and not ({"sha256", "chunks"} <= set(pending) and updater.pending_image(name).is_file()):
+        pending = None  # not a complete URL candidate: it starts over
         updater.clear_pending(name)
     where, res = probe(run, pending)
     if where == "installed":

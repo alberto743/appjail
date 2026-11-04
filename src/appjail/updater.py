@@ -122,12 +122,11 @@ def pending_image(name):
     return store.app_dir(name) / "pending.AppImage"
 
 
-def record_url_candidate(name, tag, now, digest, fingerprint=None, etag=None, last_modified=None):
+def record_url_candidate(name, tag, now, digest, fingerprint, etag=None, last_modified=None):
     """Start the quarantine of a downloaded `url:` candidate, keyed by its sha256, and remember what the server said
     about it (so a later check can ask whether it still serves the same file)."""
-    data = {"key": digest, "tag": tag, "first_seen": stamp(now), "sha256": digest}
-    if fingerprint is not None:
-        data |= {"size": fingerprint.size, "chunks": fingerprint.chunks}
+    data = {"key": digest, "tag": tag, "first_seen": stamp(now), "sha256": digest,
+            "size": fingerprint.size, "chunks": fingerprint.chunks}
     data |= {k: v for k, v in (("etag", etag), ("last_modified", last_modified)) if v}
     _write_pending(name, data)
 
