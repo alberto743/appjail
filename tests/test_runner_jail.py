@@ -14,7 +14,7 @@ from appjail import (
     landlock,
     runtimejail,
 )
-from appjail.jail import RunError
+from appjail.errors import RunError
 
 from .helpers import (
     FACTS,

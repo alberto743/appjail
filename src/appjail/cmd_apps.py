@@ -21,6 +21,7 @@ from . import (
 )
 from .cmd_desktop import forget
 from .console import Abort, human_size
+from .errors import RunError
 from .permargs import (
     PERMISSION_FLAGS,
     dbus_from_args,
@@ -130,7 +131,7 @@ def revoke_portal_grants(name, mpath, console):
     try:
         portal.revoke_documents(app, os.environ, portal.granted_documents(app, os.environ))
         portal.forget_permissions(app, os.environ)
-    except jail.RunError as e:
+    except RunError as e:
         try:
             had_portals = manifest.load(mpath).permissions.portals
         except (manifest.ManifestError, OSError):
@@ -235,8 +236,8 @@ def warn_new_grants(console, old, new):
 
 
 def cmd_perms(args, console):
-    name = args.app
-    if not manifest.NAME_RE.fullmatch(name) or not store.manifest_path(name).is_file():
+    name = manifest.check_name(args.app)
+    if not store.manifest_path(name).is_file():
         raise Abort(f"unknown app '{name}'")
     m = manifest.load(store.manifest_path(name))
     p = m.permissions

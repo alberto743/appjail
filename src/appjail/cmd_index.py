@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from . import catalog, github, index, indexstore, jail, manifest, store
 from .catalog import IndexProblem
 from .console import Abort, human_size
+from .errors import JailError
 from .imagesrc import regular_file
 
 
@@ -73,7 +74,7 @@ def download_catalog(url, download_url, console):
             return path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
             raise IndexProblem(f"cannot read the downloaded catalog as UTF-8 text: {e}") from e
-    except jail.JailError as e:
+    except JailError as e:
         raise IndexProblem(str(e)) from e
     finally:
         shutil.rmtree(stage, ignore_errors=True)

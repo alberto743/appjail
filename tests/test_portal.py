@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from appjail import dbusproxy, grants, manifest, portal, runner, runtimejail
-from appjail.jail import RunError
+from appjail.errors import RunError
 from appjail.manifest import Manifest, ManifestError, Permissions
 from appjail.portal import bus_call as real_bus_call
 

@@ -16,6 +16,7 @@ from urllib.parse import unquote, urlsplit
 from . import appimage, jail, manifest, store
 from .cmd_add import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
 from .console import Abort, human_size
+from .errors import JailError
 from .imagesrc import (
     DEFAULT_MAX_MIB,
     NO_ORIGIN,
@@ -111,7 +112,7 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
     try:
         try:
             staged, info = download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
-        except jail.JailError as e:
+        except JailError as e:
             raise Abort(str(e)) from e
         digest = store.sha256_file(staged)
         tier = check_expected(digest, expected)

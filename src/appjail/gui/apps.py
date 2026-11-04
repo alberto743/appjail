@@ -9,7 +9,7 @@ from .. import index, manifest, portal, store, textsafe, updater
 from ..cmd_apps import list_details, list_row
 from ..cmd_desktop import file_type_state
 from ..cmd_portals import names_for
-from ..jail import RunError
+from ..errors import RunError
 from ..permargs import PERMISSION_FLAGS
 
 

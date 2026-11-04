@@ -12,7 +12,7 @@ from appjail import (
     runner,
     store,
 )
-from appjail.jail import RunError
+from appjail.errors import RunError
 
 from .helpers import (
     NO_RESTRICTION,

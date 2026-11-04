@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from appjail import dbusproxy, grants, jail, manifest, runner, runtimejail
-from appjail.jail import RunError
+from appjail.errors import RunError
 from appjail.manifest import ManifestError, Permissions
 
 from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs

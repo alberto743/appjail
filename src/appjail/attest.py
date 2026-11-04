@@ -18,6 +18,7 @@ import shutil
 from dataclasses import dataclass
 
 from . import jail, store, tools
+from .errors import JailError
 from .textsafe import clean
 
 ISSUER = "https://token.actions.githubusercontent.com"
@@ -83,7 +84,7 @@ def verify(subject, full_name, bundles, owner_id=None, run=jail.run):
                "--format", "json"]
         try:
             proc = run(_args(gh, subject, bundle_file, scratch) + cmd, timeout=TIMEOUT)
-        except jail.JailError as e:
+        except JailError as e:
             raise AttestError(str(e)) from e
         if proc.returncode != 0:
             raise AttestError("verification failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 300))

@@ -28,6 +28,7 @@ from .cmd_open import cmd_open
 from .cmd_portals import cmd_portals
 from .cmd_update import cmd_update
 from .console import Abort, Console
+from .errors import JailError, RunError
 from .permargs import PERMISSION_FLAGS, dirs_from_args, files_from_args
 
 
@@ -251,7 +252,7 @@ def main(argv=None, client=None, console=None):
     except KeyboardInterrupt:
         console.out("interrupted")
         return 130
-    except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, IndexProblem, OSError) as e:
+    except (github.GitHubError, JailError, RunError, manifest.ManifestError, IndexProblem, OSError) as e:
         console.error(str(e))
         return 1
     finally:

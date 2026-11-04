@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from appjail import jail, runtimejail, wayland
-from appjail.jail import RunError
+from appjail.errors import RunError
 
 from .helpers import build, integration
 

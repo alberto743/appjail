@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from appjail import appimage, history, portal
-from appjail.jail import RunError
+from appjail.errors import RunError
 
 from .helpers import Harness
 

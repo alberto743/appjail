@@ -13,10 +13,11 @@ import shutil
 from dataclasses import replace
 from urllib.parse import urlsplit
 
-from . import appimage, history, jail, manifest, store, updater
+from . import appimage, history, manifest, store, updater
 from .cmd_add import MAX_ASSET, NEED_SQUASHFS, swap_in
 from .cmd_desktop import refresh_after_update
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
+from .errors import JailError
 from .imagesrc import (
     DEFAULT_MAX_MIB,
     check_appimage,
@@ -182,7 +183,7 @@ def fetch_candidate(run, expected):
     stage = store.new_staging_dir()
     try:
         staged, info = run.svc.download_url(m.target, stage, "download.AppImage", download_cap(m))
-    except jail.JailError as e:
+    except JailError as e:
         appimage.remove_tree(stage)
         raise Abort(str(e)) from e
     try:

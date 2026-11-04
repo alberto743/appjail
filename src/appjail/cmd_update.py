@@ -17,6 +17,7 @@ from .cmd_add import (
 )
 from .cmd_updateimage import finish_update, update_file, update_url
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
+from .errors import JailError
 from .permargs import granted_summary
 from .services import Services, UpdateRun
 
@@ -195,7 +196,7 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
             for rest in names[i + 1:]:
                 results[rest] = "not checked (rate limited)"
             break
-        except (Abort, github.GitHubError, jail.JailError, manifest.ManifestError, OSError) as e:
+        except (Abort, github.GitHubError, JailError, manifest.ManifestError, OSError) as e:
             console.error(f"{name}: {e}")
             results[name] = "failed"
     if len(names) > 1:

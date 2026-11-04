@@ -16,7 +16,7 @@ import pytest
 
 from appjail import jail, landlock, manifest, runner, runtimejail, seccomp
 from appjail.cli import Abort
-from appjail.jail import RunError
+from appjail.errors import RunError
 from appjail.permargs import require_network_isolation
 
 from .helpers import NO_RESTRICTION, build, install, integration
