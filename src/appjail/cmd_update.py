@@ -6,7 +6,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from . import appimage, github, history, jail, manifest, store, updater
+from . import appimage, attest, github, history, jail, manifest, store, updater
 from .cmd_add import (
     MAX_ASSET,
     NEED_SQUASHFS,
@@ -168,10 +168,10 @@ def update_app(name, args, client, console, svc, now):
 
 
 def cmd_update(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-               extract_ok=appimage.have_unsquashfs, verify=None, download_url=jail.download_url,
+               extract_ok=appimage.have_unsquashfs, verify=attest.verify, download_url=jail.download_url,
                check_url=jail.check_url):
     svc = Services(download=download, download_url=download_url, check_url=check_url, extract=extract,
-                   extract_ok=extract_ok, **({"verify": verify} if verify else {}))
+                   extract_ok=extract_ok, verify=verify)
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
