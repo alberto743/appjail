@@ -32,10 +32,7 @@ class AttestError(Exception):
 class Verified:
     repo: str  # https://github.com/owner/repo
     workflow: str  # signing workflow with ref, from the certificate
-    ref: str
     run_url: str
-    owner_id: str
-    repo_id: str
 
 
 def _args(gh, subject, bundles, scratch):
@@ -62,9 +59,7 @@ def check_results(results, full_name, owner_id=None):
             elif owner_id is not None and str(cert.get("sourceRepositoryOwnerIdentifier")) != str(owner_id):
                 problems.append("the signing repository's owner account differs from the pinned owner")
             else:
-                return Verified(repo, str(cert.get("buildSignerURI", "")), str(cert.get("sourceRepositoryRef", "")),
-                                str(cert.get("runInvocationURI", "")), str(cert.get("sourceRepositoryOwnerIdentifier", "")),
-                                str(cert.get("sourceRepositoryIdentifier", "")))
+                return Verified(repo, str(cert.get("buildSignerURI", "")), str(cert.get("runInvocationURI", "")))
         except (KeyError, TypeError):
             problems.append("unreadable verification result")
     raise AttestError("no attestation matches this repository: " + ("; ".join(sorted(set(problems))) or "none verified"))

@@ -128,7 +128,7 @@ def result(repo="https://github.com/o/App", issuer=attest.ISSUER, owner="42"):
 
 def test_matching_result_is_accepted():
     v = attest.check_results([result()], "o/App", 42)
-    assert v.workflow.endswith("r.yml@refs/heads/main") and v.owner_id == "42" and v.repo_id == "7"
+    assert v.workflow.endswith("r.yml@refs/heads/main")
     assert attest.check_results([result(repo="https://github.com/O/APP")], "o/App")  # case-insensitive names
 
 

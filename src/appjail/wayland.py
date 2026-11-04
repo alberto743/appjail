@@ -99,13 +99,6 @@ def host_socket_path(host_env):
     return path
 
 
-def advertised(host_env):
-    """Interface names the compositor offers (a connection that only reads the registry)."""
-    sock, _, found = _connect(host_env)
-    sock.close()
-    return set(found)
-
-
 def _collect(obj, opcode, payload, found):
     if obj == REGISTRY_ID and opcode == 0:
         (name,) = struct.unpack_from("I", payload)

@@ -91,9 +91,16 @@ def compositor(sandbox):
     return start
 
 
+def advertised(host_env):
+    """Interface names the compositor offers (a connection that only reads the registry)."""
+    sock, _, found = wayland._connect(host_env)
+    sock.close()
+    return set(found)
+
+
 def test_globals_are_listed(compositor):
     _c, env = compositor(["wl_compositor", "zwlr_screencopy_manager_v1"])
-    assert wayland.advertised(env) == {"wl_compositor", "zwlr_screencopy_manager_v1"}
+    assert advertised(env) == {"wl_compositor", "zwlr_screencopy_manager_v1"}
 
 
 def test_no_protocol_means_no_restricted_socket(compositor):
@@ -121,7 +128,7 @@ def test_protocol_error_is_reported_and_leaves_nothing(compositor):
 
 def test_missing_host_socket_is_an_error(sandbox):
     with pytest.raises(RunError, match="not found"):
-        wayland.advertised({"XDG_RUNTIME_DIR": str(sandbox), "WAYLAND_DISPLAY": "nope"})
+        advertised({"XDG_RUNTIME_DIR": str(sandbox), "WAYLAND_DISPLAY": "nope"})
 
 
 @integration
@@ -148,10 +155,10 @@ def test_real_compositor_hides_privileged_protocols(sandbox):
             pytest.skip("sway headless did not start: " + (sandbox / "sway.log").read_text()[-300:])
         time.sleep(0.5)
         env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": name}
-        host_globals = wayland.advertised(env)
+        host_globals = advertised(env)
         assert wayland.MANAGER in host_globals
         with wayland.RestrictedSocket(env, app_id="test") as path:
-            restricted = wayland.advertised({"XDG_RUNTIME_DIR": str(Path(path).parent), "WAYLAND_DISPLAY": "wayland-0"})
+            restricted = advertised({"XDG_RUNTIME_DIR": str(Path(path).parent), "WAYLAND_DISPLAY": "wayland-0"})
             hidden = host_globals - restricted
             assert "wl_compositor" in restricted and wayland.MANAGER not in restricted
             assert "zwlr_screencopy_manager_v1" in host_globals and "zwlr_screencopy_manager_v1" in hidden
