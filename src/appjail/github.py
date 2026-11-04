@@ -11,6 +11,7 @@ refused when they leave that host).
 
 import fnmatch
 import functools
+import http.client
 import json
 import os
 import re
@@ -122,6 +123,13 @@ class Client:
         self._token = token if token is not None else os.environ.get("GITHUB_TOKEN", "")
         self._fetch = fetch
 
+    def _request(self, url, headers, max_bytes):
+        """One transport call: a network failure is a GitHubError like any other answer GitHub did not give."""
+        try:
+            return self._fetch(url, headers, TIMEOUT, max_bytes)
+        except (OSError, http.client.HTTPException) as e:
+            raise GitHubError(f"cannot reach GitHub: {e}") from e
+
     def _get(self, path, ok=(200,)):
         url = API + path
         headers = {
@@ -132,7 +140,7 @@ class Client:
         if self._token:
             headers["Authorization"] = "Bearer " + self._token
         for _ in range(MAX_REDIRECTS + 1):
-            status, hdrs, body = self._fetch(url, headers, TIMEOUT, MAX_BODY)
+            status, hdrs, body = self._request(url, headers, MAX_BODY)
             if status in (301, 302, 307, 308):
                 url = urllib.parse.urljoin(url, hdrs.get("location", ""))
                 if not url.startswith(API + "/"):
@@ -239,7 +247,7 @@ class Client:
                 host = urllib.parse.urlsplit(url)
                 if host.scheme != "https" or not (host.hostname or "").endswith(".blob.core.windows.net"):
                     raise GitHubError("attestation bundle URL is not on the expected storage host")
-                status, _, body = self._fetch(url, {"User-Agent": "appjail"}, TIMEOUT, MAX_BUNDLE)
+                status, _, body = self._request(url, {"User-Agent": "appjail"}, MAX_BUNDLE)
                 if status != 200:
                     raise GitHubError(f"attestation bundle download failed (HTTP {status})")
                 try:

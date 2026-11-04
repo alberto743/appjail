@@ -255,6 +255,19 @@ def test_audio_and_gpu_are_granted_only_when_asked(h):
     assert (p.audio, p.gpu) == (True, True)
 
 
+def test_a_failed_attestation_lookup_keeps_the_download_at_its_base_tier(h):
+    class Unreachable(FakeClient):
+        def has_attestation(self, source, sha):
+            raise github.GitHubError("cannot reach GitHub: timed out")
+
+        def attestation_bundles(self, source, sha):
+            raise github.GitHubError("cannot reach GitHub: timed out")
+
+    console = h.add(client=Unreachable())
+    assert manifest.load(store.manifest_path("app")).evidence_tier == 3
+    assert "lookup failed" in console.text and "attestation not counted" in console.text
+
+
 def test_a_bad_display_size_is_refused_before_any_download(h):
     with pytest.raises(Abort, match="--display-size must be WIDTHxHEIGHT"):
         h.add(extra=["--display", "xwayland-rootful", "--display-size", "foo"])

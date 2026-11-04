@@ -1,8 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
+import http.client
 import json
 import os
+import urllib.error
 from datetime import UTC, datetime
 
 import pytest
@@ -124,6 +126,16 @@ def test_other_http_error():
     c, _ = client({"/repos/o/r": (500, {}, {})})
     with pytest.raises(GitHubError, match="HTTP 500"):
         c.repo_info("o/r")
+
+
+@pytest.mark.parametrize("failure", [urllib.error.URLError("timed out"), TimeoutError("timed out"),
+                                     http.client.IncompleteRead(b"")])
+def test_a_network_failure_is_a_github_error(failure):
+    def fetch(url, headers, timeout, max_bytes):
+        raise failure
+
+    with pytest.raises(GitHubError, match="cannot reach GitHub"):
+        Client(token="", fetch=fetch).repo_info("o/r")
 
 
 # -- transport ---------------------------------------------------------------------------
