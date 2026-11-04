@@ -90,7 +90,7 @@ Rolling tags (such as `continuous`) exist, so `update` compares hashes and publi
 
 ### The network-only jail and pasta
 The download and attestation jails (`jail.net_wrap`, run by `jail.run`) are bwrap jails with `--unshare-all --share-net --cap-drop ALL --clearenv --new-session --die-with-parent`, system directories and `/etc/ssl` read-only, the root remounted read-only and only a staging directory writable.
-- The command runs inside a private network namespace made by `pasta` (package `passt`): `--config-net --no-map-gw`, no port forwarding either way, `--dns-forward 169.254.1.53`. `--share-net` then shares that namespace: outbound TCP/UDP works, the host's loopback and own addresses are unreachable. The jail gets a `resolv.conf` naming only the forwarder (the host's stub resolver is invisible there). Without pasta these jails fall back to the host network with a one-time warning.
+- The command runs inside a private network namespace made by `pasta` (package `passt`): `--config-net --no-map-gw`, no port forwarding either way, `--dns-forward 169.254.1.53`. `--share-net` then shares that namespace: outbound TCP/UDP works, the host's loopback and own addresses are unreachable. The jail gets a `resolv.conf` naming only the forwarder (the host's stub resolver is invisible there). Without pasta these jails fall back to the host network, with one warning per command through its console (`jail.warn_with`).
 - Not covered: other hosts on the LAN stay reachable. Attacks from an app against LAN hosts are outside the threat model; the goal is to keep apps off the user's own host services.
 - The app jail's `network` permission uses the same mechanism (see Permissions).
 - Extraction jails use `--unshare-net`.
@@ -128,7 +128,7 @@ fingerprint = { size = 48211968, etag = "\"abc123\"", last_modified = "Tue, 20 O
 - `list` prints a table of name, version, source, tier, update channel (when not stable) and update seen; `list -l` adds, under each app, what it is granted (flags, display, directories, D-Bus names, portals). Dangling menu entries follow as notes. `remove APP [--yes]` deletes the manifest and the app directory including the private home, the menu entry, the document-portal grants and the portal decisions remembered for the app (see Portals); it asks first.
 
 ### Manifest history (`history.py`)
-Every change `add`, `update` (install and `--channel`), `perms` and `remove` make to `~/.config/appjail` is committed to a local git repository there (author `appjail`). Manifests hold the pins and sit where any process of the user can write, so this is tamper evidence: `run` warns when a manifest differs from the last commit, and `history [APP] [--limit N]` lists the changes.
+Every change `add`, `update` (install, `--channel`, a tier earned with `--sha256`, new validators of a URL app), `perms` and `remove` make to `~/.config/appjail` is committed to a local git repository there (author `appjail`). Manifests hold the pins and sit where any process of the user can write, so this is tamper evidence: `run` warns when a manifest differs from the last commit, and `history [APP] [--limit N]` lists the changes.
 - git runs inside a no-network jail that sees only the config directory (`jail.local_git_args`), with user and system git configuration ignored and hooks, fsmonitor and signing disabled.
 - Best effort: no git, or a config directory already inside another repository (a dotfiles repo), means no history and no error. Nothing is ever pushed. It detects edits made outside appjail, not an attacker who also rewrites `.git`.
 
