@@ -8,7 +8,7 @@ import pytest
 
 from appjail import cli, history, store
 
-from .helpers import Script
+from .helpers import Script, UrlServer, install_url, update
 
 needs_git = pytest.mark.skipif(not (os.environ.get("APPJAIL_INTEGRATION") == "1" and shutil.which("git")),
                                reason="real bwrap and git: run in the test guest")
@@ -36,6 +36,17 @@ def test_outside_edit_is_detected(h, on):
     path = store.manifest_path("app")
     path.write_text(path.read_text().replace("network = false", "network = true"))
     assert history.modified("app") is True
+
+
+@needs_git
+def test_new_validators_of_a_url_app_are_not_an_outside_edit(h, on):
+    server = UrlServer()
+    install_url(h, server)
+    server.etag = '"e2"'  # same content, new validators: `update` rewrites the manifest
+    code, c = update(h, None, **server.kw)
+    assert code == 0 and "up to date" in c.text
+    assert history.modified("app") is False
+    assert history.log("app")[0].endswith("validators app")
 
 
 @needs_git

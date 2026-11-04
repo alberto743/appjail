@@ -167,6 +167,7 @@ def refresh_validators(run, res):
     f = run.m.fingerprint
     if (etag or modified) and (etag, modified) != (f.etag, f.last_modified):
         manifest.dump(store.manifest_path(run.name), replace(run.m, fingerprint=replace(f, etag=etag, last_modified=modified)))
+        history.record(f"validators {run.name}")  # otherwise `run` would report this as an edit made outside appjail
 
 
 def download_cap(m):
