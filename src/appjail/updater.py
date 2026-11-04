@@ -52,7 +52,7 @@ def blocks(m, info, asset, attested=None):
 
 
 def cautions(m, info):
-    """Things the user must see and confirm, which do not block."""
+    """Things the user must see, which do not block."""
     out = []
     if m.owner_id is None:
         out.append("this app was added before owner pinning: the owner account cannot be checked")

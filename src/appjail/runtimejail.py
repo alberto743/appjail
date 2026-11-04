@@ -51,7 +51,7 @@ def dir_binds(dirs, home):
 
 
 def file_binds(files, home):
-    """(bwrap arguments, in-jail paths) for single files granted for one run: PATH or PATH:rw, absolute.
+    """(bwrap arguments, in-jail paths) for single files granted for one run: PATH, PATH:ro or PATH:rw, absolute.
 
     Only the file itself is bound, read-only unless :rw. The same policy as for directories applies to the
     resolved path, and only regular files are accepted. Files below the real home appear under the app's home.
@@ -221,8 +221,9 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
                  portal_docs=None, status_fd=None, block_fd=None, files=()):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
-    Pure function of its inputs: nothing is read from the process environment. Anything the
-    manifest asks for but appjail cannot enforce yet is refused instead of ignored.
+    Nothing is read from the process environment, only from host_env; the host's files decide what can be bound (which
+    system directories, GPU nodes and helper binaries exist). Anything the manifest asks for but appjail cannot enforce
+    yet is refused instead of ignored.
     """
     xwayland = perms.xwayland
     if perms.linger:
