@@ -4,7 +4,6 @@
 """Run a CLI command off the Tk thread, either in-process (commands that prompt) or as a detached child (run, open)."""
 
 import os
-import queue
 import subprocess
 import sys
 import threading
@@ -47,7 +46,3 @@ def spawn_detached(argv, events):
 
     threading.Thread(target=pump, daemon=True).start()
     return proc
-
-
-def new_events():
-    return queue.Queue()

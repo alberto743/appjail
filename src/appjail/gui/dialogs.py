@@ -80,15 +80,7 @@ def answer(parent, request):
         for button in (yes, no):  # Return presses the focused button, as in any dialog
             button.bind("<Return>", lambda e: e.widget.invoke())
     else:  # choose
-        holder = ttk.Frame(frame)
-        holder.pack(fill="both", expand=True)
-        box = tk.Listbox(holder, height=min(len(request.options), 12), width=80, exportselection=False)
-        scroll = ttk.Scrollbar(holder, command=box.yview)
-        box.configure(yscrollcommand=scroll.set)
-        for o in request.options:
-            box.insert("end", o)
-        scroll.pack(side="right", fill="y")
-        box.pack(side="left", fill="both", expand=True)
+        box = _scrolled_listbox(frame, request.options, height=min(len(request.options), 12), width=80)
         first = box
 
         def pick(_e=None):
@@ -104,6 +96,20 @@ def answer(parent, request):
     top.bind("<Escape>", lambda _e: done(None))
     _wait(top, first)
     request.reply(result["value"])
+
+
+def _scrolled_listbox(parent, items, **options):
+    """A Listbox of strings with a vertical scrollbar, packed into its own frame in `parent`."""
+    holder = ttk.Frame(parent)
+    holder.pack(fill="both", expand=True)
+    box = tk.Listbox(holder, exportselection=False, **options)
+    scroll = ttk.Scrollbar(holder, command=box.yview)
+    box.configure(yscrollcommand=scroll.set)
+    for item in items:
+        box.insert("end", item)
+    scroll.pack(side="right", fill="y")
+    box.pack(side="left", fill="both", expand=True)
+    return box
 
 
 class ListEditor(ttk.LabelFrame):
@@ -174,17 +180,10 @@ class ChoiceList(ttk.LabelFrame):
 
     def __init__(self, parent, title, items=(), selected=(), hint="", width=16):
         super().__init__(parent, text=title, padding=6)
-        holder = ttk.Frame(self)
-        holder.pack(fill="both", expand=True)
-        self.box = tk.Listbox(holder, height=max(2, min(len(items), 8)), width=width, exportselection=False, selectmode="multiple")
-        bar = ttk.Scrollbar(holder, command=self.box.yview)
-        self.box.configure(yscrollcommand=bar.set)
+        self.box = _scrolled_listbox(self, items, height=max(2, min(len(items), 8)), width=width, selectmode="multiple")
         for i, item in enumerate(items):
-            self.box.insert("end", item)
             if item in selected:
                 self.box.selection_set(i)
-        bar.pack(side="right", fill="y")
-        self.box.pack(side="left", fill="both", expand=True)
         if hint:
             ttk.Label(self, text=hint, foreground="gray40", wraplength=480, justify="left").pack(anchor="w", pady=(4, 0))
 

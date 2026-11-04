@@ -26,7 +26,7 @@ class App:
         font = tkfont.nametofont("TkDefaultFont")
         # ttk keeps a fixed row height: on a larger font the rows would overlap and cut the text
         ttk.Style().configure("Treeview", rowheight=font.metrics("linespace") + 6)
-        self.events = worker.new_events()
+        self.events = queue.Queue()
         self.background = []  # event queues of detached children (run, open)
         self.busy = False
         self.names_before_add = None  # (names, rw) while an add waits for its file-types follow-up
@@ -86,7 +86,7 @@ class App:
 
     def launch(self, command):
         """Start an app (run, open) as a detached process; it may run alongside other commands."""
-        events = worker.new_events()
+        events = queue.Queue()
         self.background.append(events)
         self.say(f"$ appjail {' '.join(command)}")
         worker.spawn_detached(command, events)
@@ -202,12 +202,12 @@ class App:
             return lambda: self._for_app(action)
 
         for i, (text, action) in enumerate((
-                ("Refresh", self.refresh), ("Run", on(lambda a: self.launch(argv.run_argv(a)))), ("Run with…", self._run_with),
-                ("Open file…", self._open_file), ("Permissions…", self._permissions),
-                ("Update", on(lambda a: self.run(argv.update_argv(a)))), ("Update…", self._update_options),
-                ("Update all", lambda: self.run(argv.update_argv())), ("Portals…", self._portals),
+                ("Refresh", self.refresh), ("Run", on(lambda a: self.launch(argv.run_argv(a)))), ("Run with…", on(self._run_with)),
+                ("Open file…", on(self._open_file)), ("Permissions…", on(self._permissions)),
+                ("Update", on(lambda a: self.run(argv.update_argv(a)))), ("Update…", on(self._update_options)),
+                ("Update all", lambda: self.run(argv.update_argv())), ("Portals…", on(self._portals)),
                 ("History", on(lambda a: self.run(argv.history_argv(a)))),
-                ("Menu entry…", self._menu_entry), ("File types", on(lambda a: self.run(argv.desktop_argv(a, show=True)))),
+                ("Menu entry…", on(self._menu_entry)), ("File types", on(lambda a: self.run(argv.desktop_argv(a, show=True)))),
                 ("Remove menu entry", on(lambda a: self.run(argv.desktop_argv(a, remove=True)))),
                 ("Remove app", on(lambda a: self.run(["remove", a]))))):
             ttk.Button(buttons, text=text, command=action).grid(row=i // 5, column=i % 5, sticky="ew", padx=2, pady=2)
@@ -219,10 +219,7 @@ class App:
         if app:
             action(app)
 
-    def _run_with(self):
-        app = self.selected()
-        if not app:
-            return
+    def _run_with(self, app):
         got = dialogs.options_dialog(
             self.root, f"Run {app} with extra access", (
                 ("list", "dirs", "Directories for this run", {"hint": "read-only unless writable; the manifest is unchanged", "browse": "dir"}),
@@ -231,10 +228,7 @@ class App:
         if got:
             self.launch(argv.run_argv(app, got["dirs"], got["files"]))
 
-    def _update_options(self):
-        app = self.selected()
-        if not app:
-            return
+    def _update_options(self, app):
         got = dialogs.options_dialog(
             self.root, f"Update {app}", (
                 ("check", "prerelease", "Follow pre-releases for this run"),
@@ -247,10 +241,7 @@ class App:
         if got:
             self.run(argv.update_argv(app, got["prerelease"], None if got["channel"] == KEEP else got["channel"], got["quarantine"], got["file"], got["sha256"], got["verify"]))
 
-    def _portals(self):
-        app = self.selected()
-        if not app:
-            return
+    def _portals(self, app):
         header, grants = apps.portal_grants(app)
         ids = {line: doc for doc, line in grants}
         fields = [("choice", "revoke", "Document grants to revoke",
@@ -261,10 +252,7 @@ class App:
         if got:
             self.run(argv.portals_argv(app, [ids[line] for line in got.get("revoke", ())], got["all"]))
 
-    def _menu_entry(self):
-        app = self.selected()
-        if not app:
-            return
+    def _menu_entry(self, app):
         offered, ignored, registered, _rw, _has_entry = apps.file_types(app)
         hint = "highlighted: registered now; click to select or deselect" if registered else "select the types to register; none selected: the command asks"
         if ignored:
@@ -286,18 +274,12 @@ class App:
         if got:
             self.run(argv.desktop_argv(app, got["mime"], got["mime_all"], got["rw"]))
 
-    def _open_file(self):
-        app = self.selected()
-        if not app:
-            return
+    def _open_file(self, app):
         path = filedialog.askopenfilename(parent=self.root, title=f"Open with {app}")
         if path:  # choosing the file is the consent; it is bound read-only, like the menu entry
             self.launch(["open", app, "--", path])
 
-    def _permissions(self):
-        app = self.selected()
-        if not app:
-            return
+    def _permissions(self, app):
         try:
             old = apps.load_permissions(app)
         except (manifest.ManifestError, OSError) as e:
