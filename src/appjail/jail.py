@@ -15,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -30,7 +31,7 @@ SAFE_ENV = {"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C.UTF-8", "PYTHOND
 
 
 class OutputTooLarge(JailError):
-    """The watched output directory outgrew its limits and the jailed command was killed."""
+    """The watched output directory or an output stream outgrew its limits and the jailed command was killed."""
 
 
 # pasta answers DNS sent to PASTA_DNS inside the namespace by asking the host's resolver, so the jail never needs the
@@ -195,25 +196,57 @@ def tree_usage(path):
     return total, count
 
 
-def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
-    """Run argv; kill it when the timeout passes or the watched tree outgrows its limits.
+OUTPUT_KEEP = 16 * 1024  # bytes kept from the start and from the end of each output stream
+OUTPUT_CAP = 64 * 1024 * 1024  # a stream longer than this kills the jailed command
 
-    watch is (directory, max_bytes, max_entries). Returns CompletedProcess (text, captured).
+
+class _Capture(threading.Thread):
+    """Drains a pipe, keeping only its first and last `keep` bytes, and counts the rest."""
+
+    def __init__(self, pipe, keep):
+        super().__init__(daemon=True)
+        self.pipe, self.keep, self.head, self.tail, self.total = pipe, keep, b"", b"", 0
+
+    def run(self):
+        with self.pipe:
+            while chunk := self.pipe.read1(65536):
+                self.total += len(chunk)
+                room = self.keep - len(self.head)
+                if room > 0:
+                    self.head += chunk[:room]
+                    chunk = chunk[room:]
+                self.tail = (self.tail + chunk)[-self.keep:]
+
+    def text(self):
+        omitted = self.total - len(self.head) - len(self.tail)
+        mid = f"\n[... {omitted} bytes omitted ...]\n".encode() if omitted > 0 else b""
+        return (self.head + mid + self.tail).decode("utf-8", errors="replace")
+
+
+def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=(), max_output=OUTPUT_CAP, keep=OUTPUT_KEEP):
+    """Run argv; kill it when the timeout passes, the watched tree outgrows its limits or an output stream passes max_output.
+
+    watch is (directory, max_bytes, max_entries). Returns CompletedProcess (text, captured: the first and last
+    keep bytes of each stream, decoded with replacement characters).
     """
     proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True, env=env or {"PATH": "/usr/bin:/bin"}, start_new_session=True,
-                            pass_fds=pass_fds)
+                            env=env or {"PATH": "/usr/bin:/bin"}, start_new_session=True, pass_fds=pass_fds)
+    captures = (_Capture(proc.stdout, keep), _Capture(proc.stderr, keep))
+    for c in captures:
+        c.start()
     deadline = time.monotonic() + timeout
     reason = None
     try:
         while reason is None:
             try:
-                out, err = proc.communicate(timeout=0.25)
+                proc.wait(timeout=0.25)
                 break
             except subprocess.TimeoutExpired:
                 pass
             if time.monotonic() > deadline:
                 reason = "timed out"
+            elif any(c.total > max_output for c in captures):
+                reason = "output too large"
             elif watch:
                 used, entries = tree_usage(watch[0])
                 if used > watch[1] or entries > watch[2]:
@@ -225,10 +258,14 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
         if reason:
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(proc.pid, signal.SIGKILL)
-            proc.communicate()
+            proc.wait()
+        for c in captures:
+            c.join(timeout=5)
+    if reason is None and any(c.total > max_output for c in captures):
+        reason = "output too large"
     if reason:
         raise (OutputTooLarge if reason == "output too large" else JailError)(f"jailed command aborted: {reason}")
-    return subprocess.CompletedProcess(argv, proc.returncode, out, err)
+    return subprocess.CompletedProcess(argv, proc.returncode, captures[0].text(), captures[1].text())
 
 
 PASTA_SECCOMP_FD = 9  # behind pasta the filter is opened inside its namespace (see net_wrap: one digit only)

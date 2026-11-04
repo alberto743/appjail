@@ -80,7 +80,7 @@ def in_audio_jail(sandbox, rt, command, extra_binds=()):
         args = runtimejail.runtime_args(**kw, seccomp_fd=fd)
         i = args.index("--remount-ro")
         args[i:i] = list(extra_binds)
-        return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd,))
+        return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd,), keep=1 << 20)  # pw-dump prints JSON that must stay whole
     finally:
         os.close(fd)
 

@@ -175,6 +175,24 @@ def test_watchdog_entry_limit(tmp_path):
         jail.supervise(cmd, timeout=20, watch=(tmp_path, 10 ** 9, 50))
 
 
+def test_supervise_kills_runaway_output():
+    cmd = ["/bin/sh", "-c", "yes | head -c 50000000; sleep 30"]
+    with pytest.raises(jail.OutputTooLarge, match="too large"):
+        jail.supervise(cmd, timeout=20, max_output=1_000_000)
+
+
+def test_supervise_keeps_head_and_tail_of_long_output():
+    cmd = ["/bin/sh", "-c", "echo START; head -c 200000 /dev/zero | tr '\\0' x; echo END"]
+    proc = jail.supervise(cmd, timeout=20, max_output=10_000_000)
+    assert proc.stdout.startswith("START\n") and proc.stdout.endswith("END\n")
+    assert "omitted" in proc.stdout and len(proc.stdout) < 2 * jail.OUTPUT_KEEP + 200
+
+
+def test_supervise_survives_invalid_utf8():
+    proc = jail.supervise(["/bin/sh", "-c", "printf '\\377\\376ok'; printf '\\377' >&2"])
+    assert proc.stdout.endswith("ok") and "\ufffd" in proc.stdout and "\ufffd" in proc.stderr
+
+
 # -- real extraction (guest only) ---------------------------------------------------------------
 
 
