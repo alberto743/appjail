@@ -37,7 +37,7 @@ PUBLISHED_RE = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 TIERS = (1, 2, 3, 4, 5)
 ROOTFUL = "xwayland-rootful"
 NO_DISPLAY = "none"  # a headless app: no Wayland socket, no X server
-DISPLAYS = ("wayland", "xwayland", ROOTFUL, NO_DISPLAY)
+DISPLAYS = tuple(sorted(("wayland", "xwayland", ROOTFUL, NO_DISPLAY)))
 DEFAULT_DISPLAY_SIZE = "1280x800"
 
 TOP_KEYS = {
