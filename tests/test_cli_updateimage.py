@@ -373,3 +373,26 @@ def test_update_file_without_an_app_name_is_refused_before_any_output(file_app):
     install_file(h, old)
     with pytest.raises(Abort, match="--file needs an app name"):
         update(h, None, app=None, extra=("--file", str(new)))
+
+
+def test_channel_is_refused_for_a_url_app(h):
+    server = UrlServer()
+    install_url(h, server)
+    code, c = run(h, server, extra=("--channel", "pinned"))
+    assert code == 1 and "--channel applies to apps installed from a GitHub release" in c.text
+    assert mf().channel == "stable" and server.checks == []
+
+
+def test_channel_is_refused_for_a_file_app(file_app):
+    h, old, _new = file_app
+    install_file(h, old)
+    code, c = update(h, None, extra=("--channel", "stable"))
+    assert code == 1 and "--channel applies to apps installed from a GitHub release" in c.text
+
+
+@pytest.mark.parametrize("extra, flag", [(("--channel", "pinned"), "--channel"), (("--sha256", "a" * 64), "--sha256")])
+def test_options_about_one_app_need_its_name(h, extra, flag):
+    installed(h)
+    with pytest.raises(Abort, match=f"{flag} needs an app name"):
+        update(h, FakeClient(), app=None, extra=extra)
+    assert mf().channel == "stable"

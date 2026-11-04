@@ -222,7 +222,8 @@ matches, and a tier 4 URL or file app refuses new content that comes without one
 the version, the hashes, the tier and the release link. A release must be seen for the quarantine period before it can
 be installed (`--quarantine DAYS`). For tier 4 apps appjail records the candidate's hash when it is first seen and refuses
 the install if the content changed in the meantime. A change of repository owner or a drop in tier blocks the update.
-`--channel stable|prerelease|pinned` chooses which releases an app follows.
+`update APP --channel stable|prerelease|pinned` chooses which releases a GitHub app follows; a file or URL app has no
+releases, so it is refused there.
 
 What `update` prints per app:
 

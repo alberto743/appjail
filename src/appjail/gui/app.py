@@ -232,7 +232,7 @@ class App:
         got = dialogs.options_dialog(
             self.root, f"Update {app}", (
                 ("check", "prerelease", "Follow pre-releases for this run"),
-                ("combo", "channel", "Channel from now on", (KEEP, *manifest.CHANNELS)),
+                ("combo", "channel", "Channel from now on (GitHub apps)", (KEEP, *manifest.CHANNELS)),
                 ("text", "quarantine", "Quarantine days (default 7)"),
                 ("text", "file", "New AppImage (file apps)"),
                 ("text", "sha256", "sha256 of the new content"),

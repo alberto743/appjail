@@ -157,6 +157,8 @@ def update_app(name, args, client, console, svc, now):
     """Update one app. Returns 'updated', 'current', 'pinned', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
     if m.kind in ("file", "url"):
+        if args.channel:
+            raise Abort("--channel applies to apps installed from a GitHub release: a file or a URL has no releases to follow")
         run = UpdateRun(name, m, args, console, svc, now)
         return (update_file if m.kind == "file" else update_url)(run)
     if args.file or args.sha256:
@@ -172,8 +174,9 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
-    if args.file and not args.app:
-        raise Abort("--file needs an app name")
+    for flag, value in (("--file", args.file), ("--sha256", args.sha256), ("--channel", args.channel)):
+        if value and not args.app:
+            raise Abort(f"{flag} needs an app name")
     if args.app:
         manifest.check_name(args.app)
     names = [args.app] if args.app else updater.installed()

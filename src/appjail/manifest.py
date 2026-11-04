@@ -237,6 +237,8 @@ def validate(m):
         raise ManifestError("owner_id applies to a github source only")
     if m.channel not in CHANNELS:
         raise ManifestError(f"channel must be one of {', '.join(CHANNELS)}")
+    if m.channel != "stable" and m.kind != "github":
+        raise ManifestError("channel applies to a github source only")
     p = m.permissions
     for key in BOOL_PERMS:
         boolean(getattr(p, key), f"permissions.{key}")

@@ -118,7 +118,7 @@ def build_parser():
     upd_app = sub.add_parser("update", help="check for a newer release and install it after review and quarantine")
     upd_app.add_argument("app", nargs="?", help="app name (default: every installed app)")
     upd_app.add_argument("--prerelease", action="store_true", help="follow pre-releases for this run (see --channel to make it permanent)")
-    upd_app.add_argument("--channel", choices=manifest.CHANNELS, help="set which releases this app follows from now on: stable, prerelease, or pinned (never updated)")
+    upd_app.add_argument("--channel", choices=manifest.CHANNELS, help="GitHub apps: set which releases this app follows from now on: stable, prerelease, or pinned (never updated)")
     upd_app.add_argument("--quarantine", type=int, default=updater.DEFAULT_QUARANTINE_DAYS, metavar="DAYS",
                          help="days a new release must wait after it was first seen (default %(default)s; 0 = none)")
     upd_app.add_argument("--file", metavar="PATH", help="an app installed from a file: replace it with this AppImage")

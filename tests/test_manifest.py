@@ -355,6 +355,13 @@ def test_channel_defaults_to_stable_and_round_trips():
         manifest.validate(make(channel="nightly"))
 
 
+@pytest.mark.parametrize("build", [make_url, make_file])
+def test_a_url_or_file_app_has_no_channel_to_choose(build):
+    assert build().channel == "stable"
+    with pytest.raises(ManifestError, match="channel applies to a github source only"):
+        manifest.validate(build(channel="pinned"))
+
+
 def test_url_source_needs_a_fingerprint():
     with pytest.raises(ManifestError, match="needs a fingerprint"):
         manifest.validate(make_url(fingerprint=None))
