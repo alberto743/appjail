@@ -25,6 +25,7 @@ from .textsafe import clean
 MARKER = "X-Appjail-App"
 MAX_DESKTOP_BYTES = 64 * 1024
 MAX_PNG_BYTES = 1024 * 1024
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 MAX_SVG_BYTES = 2 * 1024 * 1024
 ICON_SIZE_RANGE = (16, 1024)
 SVG_SIZE = 256
@@ -228,9 +229,13 @@ def write_entry(name, text):
 
 # -- icons ---------------------------------------------------------------------------
 
+def _is_svg(data):
+    return b"<svg" in data[:4096].lower()
+
+
 def png_size(data):
     """(width, height) of a PNG after checking the signature and the first (IHDR) chunk, else None."""
-    if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+    if len(data) < 33 or data[:8] != PNG_MAGIC or data[12:16] != b"IHDR":
         return None
     width, height = struct.unpack(">II", data[16:24])
     lo, hi = ICON_SIZE_RANGE
@@ -280,8 +285,8 @@ def install_icon(name, root, fields, convert=None):
     data = find_icon(root, fields)
     if data is None:
         return None
-    if data[:8] != b"\x89PNG\r\n\x1a\n":
-        if b"<svg" not in data[:4096].lower():
+    if data[:8] != PNG_MAGIC:
+        if not _is_svg(data):
             return None
         data = svg_to_png(data, convert)
     if len(data) > MAX_PNG_BYTES or (size := png_size(data)) is None:
@@ -298,7 +303,7 @@ def icon_status(name, root):
     if files := icon_files(name):
         return f"{files[-1].parent.parent.name} PNG"
     data = find_icon(root, read_app_desktop(root))
-    if data and data[:8] != b"\x89PNG\r\n\x1a\n" and b"<svg" in data[:4096].lower() and not os.access(RSVG, os.X_OK):
+    if data and data[:8] != PNG_MAGIC and _is_svg(data) and not os.access(RSVG, os.X_OK):
         return "none (SVG icon, rsvg-convert missing: apt install librsvg2-bin, then `appjail desktop` again)"
     return "none"
 
@@ -394,7 +399,7 @@ def install_gui(icon_svg, argv=None):
     path = gui_entry_path()
     if os.path.lexists(path) and not gui_entry_is_ours(path):
         raise DesktopError(f"{path} exists and was not created by appjail-gui; not touching it")
-    if len(icon_svg) > MAX_SVG_BYTES or b"<svg" not in icon_svg[:4096].lower():
+    if len(icon_svg) > MAX_SVG_BYTES or not _is_svg(icon_svg):
         raise DesktopError("the packaged icon is missing or damaged; not creating the entry")
     icon = gui_icon_path()
     icon.parent.mkdir(parents=True, exist_ok=True)

@@ -84,17 +84,27 @@ def proxy_rules(perms):
     return rules
 
 
-def activate_documents(host_env, timeout=5.0):
-    """Ask the session bus to start the document portal (it is D-Bus activated, so it may not run yet)."""
+DBUS_SEND = "/usr/bin/dbus-send"
+
+
+def _dbus_send_env(host_env):
+    """The environment `dbus-send` needs to reach the user's session bus, or None when it cannot run."""
     rt = host_env.get("XDG_RUNTIME_DIR", "")
-    dbus_send = "/usr/bin/dbus-send"
-    if not rt or not os.access(dbus_send, os.X_OK):
-        return
+    if not rt or not os.access(DBUS_SEND, os.X_OK):
+        return None
     env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": rt}
     if host_env.get("DBUS_SESSION_BUS_ADDRESS"):
         env["DBUS_SESSION_BUS_ADDRESS"] = host_env["DBUS_SESSION_BUS_ADDRESS"]
+    return env
+
+
+def activate_documents(host_env, timeout=5.0):
+    """Ask the session bus to start the document portal (it is D-Bus activated, so it may not run yet)."""
+    env = _dbus_send_env(host_env)
+    if env is None:
+        return
     with contextlib.suppress(OSError, subprocess.SubprocessError):
-        subprocess.run([dbus_send, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
+        subprocess.run([DBUS_SEND, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
                         f"--dest={DOCUMENTS_NAME}", "/org/freedesktop/portal/documents",
                         "org.freedesktop.portal.Documents.GetMountPoint"],
                        env=env, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout + 2)
@@ -125,15 +135,11 @@ STORE_ID_RE = re.compile(r'[^"\\\x00-\x1f\x7f]{1,255}')
 
 def bus_call(host_env, dest, path, member, *args, timeout=10.0):
     """Call a method on the host session bus (`dbus-send`, the same way as `activate_documents`)."""
-    rt = host_env.get("XDG_RUNTIME_DIR", "")
-    dbus_send = "/usr/bin/dbus-send"
-    if not rt or not os.access(dbus_send, os.X_OK):
+    env = _dbus_send_env(host_env)
+    if env is None:
         raise RunError("dbus-send is needed to reach the portals (package dbus-bin)")
-    env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": rt}
-    if host_env.get("DBUS_SESSION_BUS_ADDRESS"):
-        env["DBUS_SESSION_BUS_ADDRESS"] = host_env["DBUS_SESSION_BUS_ADDRESS"]
     try:
-        r = subprocess.run([dbus_send, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
+        r = subprocess.run([DBUS_SEND, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
                             f"--dest={dest}", path, member, *args],
                            env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout + 2)
     except (OSError, subprocess.SubprocessError) as e:
