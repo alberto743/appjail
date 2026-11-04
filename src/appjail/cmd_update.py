@@ -7,9 +7,15 @@ from dataclasses import replace
 from datetime import UTC, datetime
 
 from . import appimage, github, history, jail, manifest, store, updater
-from .cmd_add import MAX_ASSET, download_verified, gather_evidence, pick_asset, swap_in
-from .cmd_desktop import refresh_after_update
-from .cmd_updateimage import update_file, update_url
+from .cmd_add import (
+    MAX_ASSET,
+    NEED_SQUASHFS,
+    download_verified,
+    gather_evidence,
+    pick_asset,
+    swap_in,
+)
+from .cmd_updateimage import finish_update, update_file, update_url
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .permargs import granted_summary
 from .services import Services, UpdateRun
@@ -71,7 +77,7 @@ def install_release(run, client, info, release, asset, key):
     if args.quarantine < updater.DEFAULT_QUARANTINE_DAYS:
         console.warn(f"quarantine shortened to {args.quarantine} days")
     if not svc.extract_ok():
-        raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
+        raise Abort(NEED_SQUASHFS)
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail and install {release.tag}?"):
         return "declined"
 
@@ -101,11 +107,7 @@ def install_release(run, client, info, release, asset, key):
         entries, size = swap_in(name, staged, stage, record, svc.extract, False)
     finally:
         appimage.remove_tree(stage)
-    updater.clear_pending(name)
-    history.record(f"update {name} {m.version} -> {release.tag} (tier {record.evidence_tier})")
-    console.out(f"  updated {name}: {m.version} → {release.tag}, sha256 {digest}, {entries} entries, {human_size(size)}")
-    refresh_after_update(name, console)
-    return "updated"
+    return finish_update(run, record, entries, size)
 
 
 def update_github(name, m, args, client, console, svc, now):

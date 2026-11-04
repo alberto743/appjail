@@ -83,6 +83,17 @@ def gather_evidence(client, info, staged, digest, base_tier, console, verify=att
     return 1, None
 
 
+NEED_SQUASHFS = "install squashfs-tools (apt install squashfs-tools) and retry"
+
+
+def choose_asset(console, assets, prompt):
+    """The only asset, or the one the user picks from several."""
+    if len(assets) == 1:
+        return assets[0]
+    console.out(prompt)
+    return assets[console.choose("Asset", [f"{a.name} ({human_size(a.size)})" for a in assets])]
+
+
 def choose_release_asset(client, console, source, args):
     """The release (latest, or --tag) and the AppImage asset in it; the user chooses when several match."""
     release = (client.release_by_tag(source, args.tag) if args.tag
@@ -93,11 +104,7 @@ def choose_release_asset(client, console, source, args):
     if not candidates:
         names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
         raise Abort(f"no x86_64 AppImage asset in this release ({names})")
-    if len(candidates) == 1:
-        asset = candidates[0]
-    else:
-        console.out("Several AppImage assets match; choose one:")
-        asset = candidates[console.choose("Asset", [f"{a.name} ({human_size(a.size)})" for a in candidates])]
+    asset = choose_asset(console, candidates, "Several AppImage assets match; choose one:")
     if not 0 < asset.size <= MAX_ASSET:
         raise Abort(f"unexpected asset size ({asset.size} bytes)")
     return release, asset
@@ -175,7 +182,7 @@ def ask_extractor(console, extract_ok):
         return False
     if not console.confirm("unsquashfs is not installed. Run the AppImage's own extractor "
                            "(--appimage-extract) inside a jail with no network instead?"):
-        raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
+        raise Abort(NEED_SQUASHFS)
     return True
 
 
@@ -200,10 +207,7 @@ def pick_asset(console, release, pattern):
     if not found:
         names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
         raise Abort(f"no asset in {release.tag} matches '{pattern}' ({names})")
-    if len(found) == 1:
-        return found[0]
-    console.out("Several assets match the pattern; choose one:")
-    return found[console.choose("Asset", [f"{a.name} ({human_size(a.size)})" for a in found])]
+    return choose_asset(console, found, "Several assets match the pattern; choose one:")
 
 
 def swap_in(name, staged, stage, record, extract, fallback):

@@ -14,7 +14,7 @@ from dataclasses import replace
 from urllib.parse import urlsplit
 
 from . import appimage, history, jail, manifest, store, updater
-from .cmd_add import MAX_ASSET, swap_in
+from .cmd_add import MAX_ASSET, NEED_SQUASHFS, swap_in
 from .cmd_desktop import refresh_after_update
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .imagesrc import (
@@ -63,17 +63,23 @@ def show_diff(console, m, digest, tier, size=None):
     console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 
 
-def install(run, staged, stage, record):
-    """Extract and swap in `staged`; the previous version is restored if anything fails."""
+def finish_update(run, record, entries, size):
+    """After the new version is in place: forget the pending candidate, record the change, report, refresh the menu entry."""
     name, m = run.name, run.m
-    if not run.svc.extract_ok():
-        raise Abort("install squashfs-tools (apt install squashfs-tools) and retry")
-    entries, size = swap_in(name, staged, stage, record, run.svc.extract, False)
     updater.clear_pending(name)
     history.record(f"update {name} {m.version} -> {record.version} (tier {record.evidence_tier})")
     run.console.out(f"  updated {name}: {m.version} → {record.version}, sha256 {record.sha256}, {entries} entries, {human_size(size)}")
     refresh_after_update(name, run.console)
     return "updated"
+
+
+def install(run, staged, stage, record):
+    """Extract and swap in `staged`; the previous version is restored if anything fails."""
+    name = run.name
+    if not run.svc.extract_ok():
+        raise Abort(NEED_SQUASHFS)
+    entries, size = swap_in(name, staged, stage, record, run.svc.extract, False)
+    return finish_update(run, record, entries, size)
 
 
 # -- file: ---------------------------------------------------------------------------------------
