@@ -84,7 +84,7 @@ def load_pending(name):
         data = json.loads(pending_path(name).read_text(encoding="utf-8"))
         if (isinstance(data, dict) and {"key", "tag", "first_seen"} <= set(data) <= PENDING_KEYS
                 and all(isinstance(v, int) if k == "size" else isinstance(v, str) for k, v in data.items())
-                and not isinstance(data.get("size"), bool)):
+                and not isinstance(data.get("size"), bool) and ("size" in data) == ("chunks" in data)):
             parse_stamp(data["first_seen"])
             if any(k in data and not manifest.SHA256_RE.fullmatch(data[k]) for k in ("sha256", "chunks")):
                 return None

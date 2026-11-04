@@ -361,3 +361,9 @@ def test_url_source_needs_a_fingerprint():
     text = manifest.dumps(make_url()).replace(manifest._fingerprint_line(FP) + "\n", "")
     with pytest.raises(ManifestError, match="needs a fingerprint"):
         manifest.loads(text)
+
+
+@pytest.mark.parametrize("entry", ["~/./.ssh", "~//.ssh", "/srv/./data", "/srv//data:rw"])
+def test_dirs_entries_must_be_normalised(entry):
+    with pytest.raises(manifest.ManifestError, match="not normalised"):
+        grants.check_dir(entry)

@@ -52,6 +52,16 @@ def version_string():
         return "unknown"
 
 
+def positive_int(text):
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a positive number")
+    return value
+
+
 def build_parser():
     p = _HelpOnErrorParser(prog="appjail", description="Sandboxed AppImage manager")
     p.add_argument("--version", action="version", version=f"appjail {version_string()}")
@@ -86,7 +96,7 @@ def build_parser():
     add.add_argument("--rw", action="store_true", help="with --desktop: opened files are writable (default: read-only)")
     search = sub.add_parser("search", help="search the local index (suggestions only, never installs)")
     search.add_argument("keywords", nargs="+")
-    search.add_argument("--limit", type=int, default=20, help="maximum results (default 20)")
+    search.add_argument("--limit", type=positive_int, default=20, help="maximum results (default 20)")
     search.add_argument("--all", action="store_true", help="show every match")
     search.add_argument("--json", action="store_true", help="print the result as JSON")
     idx = sub.add_parser("index", help="manage the catalogs `search` reads (the built-in appjail-db list and any you add)")
@@ -138,7 +148,7 @@ def build_parser():
     tinst.add_argument("tool", choices=sorted(tools.TOOLS))
     hist = sub.add_parser("history", help="show the recorded changes to the manifests")
     hist.add_argument("app", nargs="?")
-    hist.add_argument("--limit", type=int, default=20)
+    hist.add_argument("--limit", type=positive_int, default=20)
     rm = sub.add_parser("remove", help="delete an app, including its private home")
     rm.add_argument("app")
     rm.add_argument("--yes", action="store_true", help="do not ask for confirmation")

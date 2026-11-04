@@ -122,13 +122,16 @@ def check_tree(root):
     """
     root = Path(root)
     count = total = 0
+    os.chmod(root, (os.lstat(root).st_mode & 0o777) | 0o700)
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-        os.chmod(dirpath, (os.lstat(dirpath).st_mode & 0o777) | 0o700)
         for name in dirnames + filenames:
             p = os.path.join(dirpath, name)
             st = os.lstat(p)
             count += 1
-            if stat.S_ISLNK(st.st_mode) or stat.S_ISDIR(st.st_mode):
+            if stat.S_ISDIR(st.st_mode):
+                os.chmod(p, (st.st_mode & 0o777) | 0o700)  # before os.walk descends into it
+                continue
+            if stat.S_ISLNK(st.st_mode):
                 continue
             if not stat.S_ISREG(st.st_mode):
                 raise UnsafeTree(f"special file in image: {clean(os.path.relpath(p, root), 200)}")
@@ -162,7 +165,7 @@ def resolve_entry(root, rel="AppRun", executable=True):
         candidate = os.path.join(root, *resolved, part)
         try:
             st = os.lstat(candidate)
-        except FileNotFoundError:
+        except OSError:
             raise UnsafeTree(f"{rel} not found in the image") from None
         if stat.S_ISLNK(st.st_mode):
             hops += 1

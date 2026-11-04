@@ -295,3 +295,15 @@ def test_extraction_jail_has_no_network_and_cannot_see_home(lab):
     assert proc.returncode == 0, proc.stderr
     assert "NONET" in proc.stdout
     assert "home" not in proc.stdout
+
+
+def test_check_tree_walks_into_an_unreadable_directory(tree):
+    hidden = tree / "hidden"
+    hidden.mkdir()
+    secret = hidden / "f"
+    secret.write_text("x")
+    secret.chmod(0o4755)
+    hidden.chmod(0)
+    entries, _ = appimage.check_tree(tree)
+    assert secret.stat().st_mode & 0o7000 == 0
+    assert entries == 5  # usr, usr/bin, app, hidden, hidden/f

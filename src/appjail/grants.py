@@ -153,6 +153,8 @@ def check_dir(entry):
         raise ManifestError(f"dirs entry {entry!r}: path must be absolute or start with ~/")
     if path in ("/", "~/") or ".." in path.split("/"):
         raise ManifestError(f"dirs entry {entry!r}: path is too broad or contains '..'")
+    if os.path.normpath(path) != path.rstrip("/"):
+        raise ManifestError(f"dirs entry {entry!r}: path is not normalised (no '.', empty or repeated components)")
     reason = directory_reason(path.rstrip("/") or path, mode)
     if reason:
         raise ManifestError(f"dirs entry {entry!r} is refused: {reason}")
