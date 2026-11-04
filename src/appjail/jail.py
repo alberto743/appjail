@@ -39,7 +39,16 @@ class OutputTooLarge(JailError):
 PASTA_DNS = "169.254.1.53"
 PASTA_ARGS = ("--config-net", "--quiet", "--no-map-gw", "--dns-forward", PASTA_DNS,
               "-t", "none", "-u", "none", "-T", "none", "-U", "none")
+NO_PASTA = "pasta (package passt) is not installed: network jails share the host network, including services on localhost"
 _warned_no_pasta = False
+_warn = None  # the running command's console.warn (see warn_with)
+
+
+def warn_with(warn):
+    """Send this module's warnings to `warn`, the console of the command that starts now (None: to stderr), which is
+    told again even if an earlier command in this process was told already: the jails run too deep to be handed one."""
+    global _warn, _warned_no_pasta
+    _warn, _warned_no_pasta = warn, False
 
 
 def find_pasta():
@@ -67,8 +76,10 @@ def net_wrap(argv, required=False, fd_files=None, lifeline=None):
     if pasta is None:
         if not _warned_no_pasta:
             _warned_no_pasta = True
-            print("Warning: pasta (package passt) is not installed: network jails share the host network, "
-                  "including services on localhost.", file=sys.stderr)
+            if _warn:
+                _warn(NO_PASTA)
+            else:
+                print(f"! warning: {NO_PASTA}", file=sys.stderr)
         return argv
     if not fd_files and not lifeline:
         return [pasta, *PASTA_ARGS, "--", *argv]

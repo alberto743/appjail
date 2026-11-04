@@ -40,7 +40,12 @@ def _passwd(uid, gid):
             f"root:x:0:\napp:x:{gid}:\n")
 
 
-def prepare(name, extract=appimage.extract, say=print):
+def _warner(say, warn):
+    """How to warn: the console's `warn`, or through `say` with the same prefix when the caller has no console."""
+    return warn or (lambda text: say(f"! warning: {text}"))
+
+
+def prepare(name, extract=appimage.extract, say=print, warn=None):
     """Return (manifest, root, home, etc_dir) ready for launch.
 
     Refuses to run when the stored AppImage no longer matches the pinned sha256. Re-extracts
@@ -66,7 +71,7 @@ def prepare(name, extract=appimage.extract, say=print):
         except OSError:
             valid = False
         if not valid:
-            say(f"Warning: the extracted tree of {name} is missing its record or was modified; extracting it again from the verified image.")
+            _warner(say, warn)(f"the extracted tree of {name} is missing its record or was modified; extracting it again from the verified image")
     if not valid:
         say(f"Extracting {name} (no valid extracted tree)…")
         appimage.remove_tree(root)
@@ -227,13 +232,14 @@ def _status_pipes(stack, instance, env, in_pasta):
     return pipes
 
 
-def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, runner=None,
+def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, warn=None, runner=None,
            extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
     """Start the app in its jail and return its exit status."""
-    m, root, home, etc = prepare(name, extract, say)
+    warn = _warner(say, warn)
+    m, root, home, etc = prepare(name, extract, say, warn)
     if history.modified(name):
-        say(f"Warning: the manifest of {name} was changed outside appjail since its last recorded change "
-            f"(see `appjail history {name}` and the config directory's git log).")
+        warn(f"the manifest of {name} was changed outside appjail since its last recorded change "
+             f"(see `appjail history {name}` and the config directory's git log)")
     perms, extra_args = _temporary_grants(m.permissions, extra_dirs, extra_files, extra_args, say)
     scoped = landlock.available()
     if perms.network_host and not scoped:
@@ -245,8 +251,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
         if perms.windowed and wl_sock is None:
-            say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
-                "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
+            warn("the compositor does not offer wp_security_context_v1, so this app gets the full "
+                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it)")
         pipes = _status_pipes(stack, instance, env, in_pasta)
         args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,

@@ -47,7 +47,7 @@ def cmd_open(args, files, console):
             if not Path(f).is_file():
                 raise Abort(f"not a regular file: {clean(f, 100)}")
             specs.append(file_spec(f, args.rw))
-        return runner.launch(name, [], say=console.out, extra_files=tuple(specs))
+        return runner.launch(name, [], say=console.out, warn=console.warn, extra_files=tuple(specs))
     except (Abort, JailError, RunError, manifest.ManifestError) as e:
         notify(str(e))
         raise

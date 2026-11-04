@@ -30,7 +30,8 @@ def test_files_are_bound_read_only_by_default(h, launched, tmp_path):
     f = tmp_path / "doc.txt"
     f.write_text("x")
     assert open_(["open", "app", "--", str(f)]) == 0
-    assert calls == [("app", [], {"say": calls[0][2]["say"], "extra_files": (f"{f}:ro",)})]
+    (name, args, kw), = calls
+    assert (name, args, kw["extra_files"]) == ("app", [], (f"{f}:ro",))
 
 
 def test_rw_is_explicit(h, launched, tmp_path):

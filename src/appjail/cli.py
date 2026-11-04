@@ -204,7 +204,7 @@ def _index(args, client, console, app_args):
 
 
 def _run(args, client, console, app_args):
-    return runner.launch(args.name, app_args, say=console.out, extra_dirs=dirs_from_args(args.dir),
+    return runner.launch(args.name, app_args, say=console.out, warn=console.warn, extra_dirs=dirs_from_args(args.dir),
                          extra_files=files_from_args(args.file))
 
 
@@ -235,6 +235,7 @@ def main(argv=None, client=None, console=None):
         argv, app_args = argv[:i], argv[i + 1:]
     args = build_parser().parse_args(argv)
     console = console or Console()
+    jail.warn_with(console.warn)
     try:
         status = COMMANDS[args.command](args, client, console, app_args)
     except Abort as e:
@@ -246,4 +247,6 @@ def main(argv=None, client=None, console=None):
     except (github.GitHubError, jail.JailError, jail.RunError, manifest.ManifestError, IndexProblem, OSError) as e:
         console.error(str(e))
         return 1
+    finally:
+        jail.warn_with(None)
     return status or 0

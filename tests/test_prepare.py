@@ -69,7 +69,11 @@ def test_modified_tree_is_extracted_again(sandbox):
     (store.root_path("app") / "usr" / "evil").write_text("x")
     runner.prepare("app", extract=ex, say=said.append)
     assert ex.calls == 2 and not (store.root_path("app") / "usr" / "evil").exists()
-    assert any("modified" in m for m in said)
+    assert any("modified" in m and m.startswith("! warning: ") for m in said)
+    warned = []
+    (store.root_path("app") / "usr" / "evil").write_text("x")
+    runner.prepare("app", extract=ex, say=lambda *_: None, warn=warned.append)  # the console's warn gets the bare text
+    assert len(warned) == 1 and warned[0].startswith("the extracted tree")
 
 
 def test_tree_digest_sees_content_mode_and_links(tmp_path):

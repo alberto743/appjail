@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from appjail import fetcher, jail
+from appjail import cli, fetcher, jail
 
-from .helpers import integration, needs_pasta, pairs
+from .helpers import Script, integration, needs_pasta, pairs
 
 
 @pytest.fixture
@@ -154,6 +154,16 @@ def test_net_wrap_without_pasta_keeps_the_command_and_warns_once(monkeypatch, ca
     argv = ["bwrap", "--share-net"]
     assert jail.net_wrap(argv) == argv and jail.net_wrap(argv) == argv
     assert capsys.readouterr().err.count("pasta") == 1
+
+
+def test_the_no_pasta_warning_reaches_the_console_of_each_command(monkeypatch):
+    """A window has no terminal: a warning printed to stderr would never be seen there."""
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setitem(cli.COMMANDS, "list", lambda *a: jail.net_wrap(["bwrap"]) and jail.net_wrap(["bwrap"]) and 0)
+    for _ in range(2):
+        console = Script()
+        assert cli.main(["list"], console=console) == 0
+        assert [line for line in console.lines if "pasta" in line] == [f"! warning: {jail.NO_PASTA}"]
 
 
 def test_run_wraps_only_jails_with_a_network(monkeypatch):
