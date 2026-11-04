@@ -161,7 +161,7 @@ NEW_IMAGE = FAKE_APPIMAGE + b"-v2"
 NEW_SHA = hashlib.sha256(NEW_IMAGE).hexdigest()
 
 
-T0 = datetime(2026, 10, 17, tzinfo=UTC)
+T0 = NOW
 
 
 def release2(sha=NEW_SHA, tag="v2.0", published="2026-10-10T00:00:00Z", name="App-2.0-x86_64.AppImage", size=None):
@@ -245,6 +245,7 @@ needs_proxy = pytest.mark.skipif(not os.access(dbusproxy.PROXY, os.X_OK) or not 
 
 integration = pytest.mark.skipif(os.environ.get("APPJAIL_INTEGRATION") != "1",
                                  reason="real bwrap: run in the test guest (APPJAIL_INTEGRATION=1)")
+needs_pasta = pytest.mark.skipif(not jail.find_pasta(), reason="needs pasta (package passt)")
 
 
 @contextlib.contextmanager

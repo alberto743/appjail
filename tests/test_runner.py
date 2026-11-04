@@ -32,6 +32,7 @@ from .helpers import (
     build,
     install,
     integration,
+    needs_pasta,
     outside_dir,
     pairs,
     run_in_jail,
@@ -745,7 +746,7 @@ print(reach("127.0.0.1", port), reach(own, port), os.getuid() == int(sys.argv[3]
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 @pytest.mark.parametrize("host_net, expected", [(False, ["False", "False", "True"]), (True, ["True", "True", "True"])])
 def test_networked_app_cannot_reach_host_services_unless_network_host(sandbox, runtime, host_net, expected):
     srv = socket.socket()
@@ -884,7 +885,7 @@ def _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=(), **perms):
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 @pytest.mark.parametrize("userns", [False, True])
 def test_network_with_userns_under_pasta(sandbox, runtime, monkeypatch, capfd, userns):
     """Connectivity works in both cases; nested user namespaces are denied (EPERM=1) unless `userns` is granted."""
@@ -893,7 +894,7 @@ def test_network_with_userns_under_pasta(sandbox, runtime, monkeypatch, capfd, u
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 def test_linger_under_pasta_waits_for_the_detached_child(sandbox, runtime, monkeypatch):
     kw = build(sandbox, runtime, network=True, linger=True)
     (kw["root"] / "AppRun").write_text(DETACHING_APP)
@@ -908,7 +909,7 @@ def test_linger_under_pasta_waits_for_the_detached_child(sandbox, runtime, monke
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 def test_ipv6_under_pasta_matches_the_hosts_reachability(sandbox, runtime, monkeypatch, capfd):
     try:
         ai = socket.getaddrinfo("api.github.com", 443, socket.AF_INET6, socket.SOCK_STREAM)
@@ -948,7 +949,7 @@ else:
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 @pytest.mark.skipif(not os.environ.get("APPJAIL_FAKE_V6"), reason="runs inside the namespace made by the test below")
 def test_ipv6_forwarding_inside_the_fake_namespace(sandbox, runtime, monkeypatch, capfd):
     srv = socket.socket(socket.AF_INET6)
@@ -972,7 +973,7 @@ def test_ipv6_forwarding_inside_the_fake_namespace(sandbox, runtime, monkeypatch
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 @pytest.mark.skipif(bool(os.environ.get("APPJAIL_FAKE_V6")), reason="already inside the fake namespace")
 @pytest.mark.skipif(not shutil.which("unshare") or not shutil.which("ip"), reason="needs unshare and ip (iproute2)")
 def test_ipv6_is_brought_up_and_forwarded_by_pasta_in_a_fake_network(tmp_path):

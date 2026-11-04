@@ -12,8 +12,7 @@ import pytest
 
 from appjail import fetcher, jail
 
-integration = pytest.mark.skipif(os.environ.get("APPJAIL_INTEGRATION") != "1",
-                                 reason="real bwrap: run in the test guest (APPJAIL_INTEGRATION=1)")
+from .helpers import integration, needs_pasta, pairs
 
 
 @pytest.fixture
@@ -25,10 +24,6 @@ def stage():
 @pytest.fixture
 def args(stage):
     return jail.download_args(stage, ["/usr/bin/python3", "-I", "/fetcher.py", "u", "o", "1"])
-
-
-def pairs(argv, flag):
-    return [tuple(argv[i + 1:i + 3]) for i, x in enumerate(argv) if x == flag]
 
 
 # -- download jail arguments -------------------------------------------------------------
@@ -185,7 +180,7 @@ print(reach("127.0.0.1", int(sys.argv[1])), reach(sys.argv[2], int(sys.argv[1]))
 
 
 @integration
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 def test_network_jail_cannot_reach_host_loopback_or_host_addresses(stage):
     import socket
     srv = socket.socket()

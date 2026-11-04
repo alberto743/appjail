@@ -10,12 +10,20 @@ from pathlib import Path
 
 import pytest
 
-from appjail import dbusproxy, grants, jail, manifest, portal, runner, runtimejail
+from appjail import dbusproxy, grants, manifest, portal, runner, runtimejail
 from appjail.jail import RunError
 from appjail.manifest import Manifest, ManifestError, Permissions
 from appjail.portal import bus_call as real_bus_call
 
-from .helpers import NO_RESTRICTION, build, integration, needs_proxy, pairs, wait_for
+from .helpers import (
+    NO_RESTRICTION,
+    build,
+    integration,
+    needs_pasta,
+    needs_proxy,
+    pairs,
+    wait_for,
+)
 
 HERE = Path(__file__).parent / "portal"
 
@@ -275,7 +283,7 @@ def test_opt_in_interface_reaches_the_portal(sandbox, runtime, portal_stack, mon
 @integration
 @needs_proxy
 @needs_portal
-@pytest.mark.skipif(not jail.find_pasta(), reason="pasta not installed (package passt)")
+@needs_pasta
 @pytest.mark.parametrize("host_net", [False, True])
 def test_portals_work_for_an_app_in_the_pasta_namespace(sandbox, runtime, portal_stack, monkeypatch, capfd, host_net):
     env, log = portal_stack
