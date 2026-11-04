@@ -3,14 +3,10 @@
 
 """Seccomp filter for the app jail and the helper jails, as a classic BPF program that bubblewrap loads (`--seccomp FD`).
 
-Default allow, deny list: the calls below fail with EPERM. The list is what Flatpak blocks for
-applications plus extra hardening (kernel modules, kexec, bpf, perf, keyrings, userfaultfd, mount API, NUMA policy,
-cross-process memory access, handle-based opens, socket families beyond unix/inet/netlink, personality
-switches) plus the terminal-injection ioctls and io_uring (ENOSYS). Unless the
-manifest grants `userns`, creating namespaces and mounting are denied too (`clone` with any
-CLONE_NEW* flag, `unshare`, `setns`, `mount` and friends; `clone3` answers ENOSYS so libc falls back
-to `clone`, whose flags can be inspected). x86_64 only; other architectures are refused rather than
-left unfiltered. Written by hand to stay stdlib-only.
+Default allow, deny list (what Flatpak blocks plus extra hardening; the lists are below). Unless the manifest grants
+`userns`, creating namespaces and mounting are denied too; `clone3` answers ENOSYS so libc falls back to `clone`, whose
+flags can be inspected. x86_64 only: other architectures are refused rather than left unfiltered. Written by hand to
+stay stdlib-only.
 """
 
 import errno
