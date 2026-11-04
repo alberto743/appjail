@@ -109,7 +109,7 @@ def install(name, download=jail.download):
             staged = _unpack(tool, staged, stage)
         os.chmod(staged, 0o700)
         dest = path(name)
-        dest.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+        store.make_private(dest.parent)
         os.replace(staged, dest)
     finally:
         shutil.rmtree(stage, ignore_errors=True)

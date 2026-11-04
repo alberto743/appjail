@@ -7,6 +7,7 @@ from datetime import timedelta
 import pytest
 
 from appjail import appimage, cli, cmd_addimage, manifest, store, updater
+from appjail.console import Abort
 
 from .helpers import (
     FAKE_APPIMAGE,
@@ -364,3 +365,11 @@ def test_update_cap_follows_the_installed_size():
 def mf_args():
     return {"name": "app", "source": "url:https://example.org/a.AppImage", "version": "v", "sha256": SHA,
             "evidence_tier": 5, "published_at": "2026-01-01T00:00:00Z"}
+
+
+
+def test_update_file_without_an_app_name_is_refused_before_any_output(file_app):
+    h, old, new = file_app
+    install_file(h, old)
+    with pytest.raises(Abort, match="--file needs an app name"):
+        update(h, None, app=None, extra=("--file", str(new)))

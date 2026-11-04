@@ -172,6 +172,8 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
+    if args.file and not args.app:
+        raise Abort("--file needs an app name")
     names = [args.app] if args.app else updater.installed()
     if args.app and not store.manifest_path(args.app).is_file():
         raise Abort(f"unknown app '{args.app}'")

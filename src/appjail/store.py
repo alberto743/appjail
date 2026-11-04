@@ -58,10 +58,22 @@ def atomic_write(path, data, mode=0o666):
         raise
 
 
+def make_private(path):
+    """Create `path` and any missing parent with mode 0700 (`mkdir(parents=True, mode=...)` applies the mode to the
+    last directory only)."""
+    missing = []
+    for d in (path, *path.parents):
+        if d.exists():
+            break
+        missing.append(d)
+    for d in reversed(missing):
+        d.mkdir(mode=0o700)
+
+
 def new_staging_dir(prefix=""):
     """A new private directory under the staging root (the caller removes it)."""
     stage = staging_root() / (prefix + secrets.token_hex(8))
-    stage.mkdir(parents=True, mode=0o700)
+    make_private(stage)
     return stage
 
 

@@ -227,7 +227,7 @@ def swap_in(name, staged, stage, record, extract, fallback):
     placed, backups = [], []  # new things in place, and (original path, where the original went)
     try:
         if fresh:
-            app.mkdir(parents=True, mode=0o700)
+            store.make_private(app)
         else:
             if root.exists():
                 os.replace(root, old_root)

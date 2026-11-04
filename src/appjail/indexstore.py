@@ -51,7 +51,7 @@ def base():
 
 
 def _write(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    store.make_private(path.parent)
     store.atomic_write(path, text, 0o600)
 
 
@@ -183,7 +183,7 @@ def install(name, text, now=None, digest=None, cat=None, commit=""):
         return False
     cat = cat or catalog.parse(text)
     directory = base() / name
-    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    store.make_private(directory)
     if state["current"]:
         _write(directory / "previous.json", (directory / "current.json").read_text(encoding="utf-8"))
     _write(directory / "current.json", text)

@@ -438,6 +438,9 @@ class App:
         if not words:
             return
         limit = self.limit.get().strip()
+        if limit and not (limit.isdigit() and int(limit) > 0):
+            messagebox.showerror("appjail", "The limit must be a positive number (or empty for every match).", parent=self.root)
+            return
         self.hit_tree.delete(*self.hit_tree.get_children())
         self.hits = []
         self._hit_selected()

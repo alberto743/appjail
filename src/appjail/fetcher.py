@@ -198,23 +198,28 @@ def download_any(url, out, cap, opener=None):
 
 
 def main(argv):
-    mode = argv[1] if len(argv) > 1 and argv[1].startswith("--") else None
+    """Exit status: 0 done, 2 refused or bad usage, 3 the download failed (the reason is on stderr)."""
     try:
-        if mode == "--any" and len(argv) == 5:
-            if not allowed_any(argv[2], first=True):
-                print("refusing URL", file=sys.stderr)
-                return 2
-            print(json.dumps(download_any(argv[2], argv[3], int(argv[4]))))
-            return 0
-        if mode == "--check" and 3 <= len(argv) <= 5:
-            if not allowed_any(argv[2], first=True):
-                print("refusing URL", file=sys.stderr)
-                return 2
-            print(json.dumps(check(argv[2], *argv[3:])))
-            return 0
-    except ValueError as e:
+        return _run(argv)
+    except (ValueError, OSError) as e:  # OSError covers URLError, HTTPError and the output file
         print(e, file=sys.stderr)
         return 3
+
+
+def _run(argv):
+    mode = argv[1] if len(argv) > 1 and argv[1].startswith("--") else None
+    if mode == "--any" and len(argv) == 5:
+        if not allowed_any(argv[2], first=True):
+            print("refusing URL", file=sys.stderr)
+            return 2
+        print(json.dumps(download_any(argv[2], argv[3], int(argv[4]))))
+        return 0
+    if mode == "--check" and 3 <= len(argv) <= 5:
+        if not allowed_any(argv[2], first=True):
+            print("refusing URL", file=sys.stderr)
+            return 2
+        print(json.dumps(check(argv[2], *argv[3:])))
+        return 0
     if mode or len(argv) != 4:
         print("usage: fetcher.py URL OUTFILE EXPECTED_SIZE | --any URL OUTFILE MAX_SIZE | --check URL [ETAG [LAST_MODIFIED]]",
               file=sys.stderr)

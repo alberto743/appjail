@@ -152,6 +152,15 @@ def test_main_any_refuses_plain_http_start():
         assert fetcher.main(["f", "--bogus"]) == 2
 
 
+def test_main_reports_a_connection_failure_with_status_3(tmp_path):
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err):
+        assert fetcher.main(["f", "--any", "https://127.0.0.1:1/a", str(tmp_path / "out"), "5"]) == 3
+        assert fetcher.main(["f", "--check", "https://127.0.0.1:1/a"]) == 3
+        assert fetcher.main(["f", "--any", "https://127.0.0.1:1/a", str(tmp_path / "out"), "five"]) == 3
+    assert err.getvalue().count("\n") == 3
+
+
 # -- the fingerprint ----------------------------------------------------------------------
 
 

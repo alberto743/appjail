@@ -94,8 +94,6 @@ def update_file(run):
             console.out("  installed from a file: there is no source to check; "
                         f"`appjail update {name} --file PATH` replaces it")
         return "current"
-    if not args.app:
-        raise Abort("--file needs an app name")
     real, st = regular_file(args.file)
     if not 0 < st.st_size <= MAX_ASSET:
         raise Abort(f"unexpected file size ({st.st_size} bytes)")

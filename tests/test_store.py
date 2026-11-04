@@ -27,3 +27,12 @@ def test_atomic_write_leaves_the_old_file_and_no_temp_on_failure(tmp_path, monke
     with pytest.raises(OSError):
         store.atomic_write(path, "new")
     assert path.read_text() == "old" and [p.name for p in tmp_path.iterdir()] == ["f"]
+
+
+def test_make_private_gives_every_new_directory_mode_0700(tmp_path):
+    (tmp_path / "keep").mkdir(mode=0o755)
+    store.make_private(tmp_path / "keep" / "a" / "b")
+    store.make_private(tmp_path / "keep" / "a" / "b")  # already there: nothing to do
+    assert oct((tmp_path / "keep").stat().st_mode & 0o777) == "0o755"
+    for d in ("a", "a/b"):
+        assert oct((tmp_path / "keep" / d).stat().st_mode & 0o777) == "0o700"

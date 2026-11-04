@@ -78,7 +78,7 @@ def prepare(name, extract=appimage.extract, say=print):
         tree_mark.write_text(appimage.tree_digest(root) + "\n")
     home, etc = store.home_path(name), store.etc_path(name)
     for d in (home, etc):
-        d.mkdir(mode=0o700, parents=True, exist_ok=True)
+        store.make_private(d)
     passwd, group = _passwd(os.getuid(), os.getgid())
     (etc / "passwd").write_text(passwd)
     (etc / "group").write_text(group)
