@@ -1027,3 +1027,42 @@ def test_terminating_the_launcher_stops_the_whole_jail(tmp_path, mode, sig):
     finally:
         proc.kill()
         subprocess.run(["pkill", "-f", f"sleep {marker}$"], capture_output=True)
+
+
+def test_display_none_has_no_wayland_socket_and_no_toolkit_hints(sandbox, runtime):
+    args = runtimejail.runtime_args(**build(sandbox, runtime, display="none"), wayland_socket=None)
+    env = {k: v for k, v in pairs(args, "--setenv")}
+    assert not any("/wayland-0" in a for a in args)
+    assert not any(k in env for k in ("WAYLAND_DISPLAY", "DISPLAY", "GDK_BACKEND", "QT_QPA_PLATFORM", "SDL_VIDEODRIVER",
+                                      "MOZ_ENABLE_WAYLAND", "ELECTRON_OZONE_PLATFORM_HINT"))
+    assert env["HOME"] == "/home/app" and args[args.index("--") + 1:] == ["/app/AppRun"]
+
+
+def test_display_none_does_not_ask_the_compositor_for_a_socket(sandbox, runtime):
+    install(sandbox, display="none")
+    asked = []
+
+    def restricted(env, app_id=None):
+        asked.append(app_id)
+        return NO_RESTRICTION(env, app_id)
+
+    says = []
+    runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime)}, extract=Extractor(), say=says.append,
+                  runner=lambda argv: 0, restricted=restricted)
+    assert asked == [] and not any("Wayland" in s for s in says)
+
+
+@integration
+def test_display_none_jail_really_has_no_wayland_socket(sandbox, runtime):
+    """The host socket exists in the runtime directory; a headless app must not find it, or any display variable."""
+    kw = build(sandbox, runtime, display="none")
+    (kw["root"] / "AppRun").write_text('#!/bin/sh\nls "$XDG_RUNTIME_DIR" > /home/app/ls.txt\nenv > /home/app/env.txt\n')
+    (kw["root"] / "AppRun").chmod(0o755)
+    fd = seccomp.open_fd(kw["perms"].userns)
+    try:
+        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=fd)], timeout=60, pass_fds=(fd,))
+    finally:
+        os.close(fd)
+    assert proc.returncode == 0, proc.stderr
+    assert "wayland" not in (kw["home"] / "ls.txt").read_text()
+    assert "WAYLAND_DISPLAY" not in (kw["home"] / "env.txt").read_text()

@@ -15,7 +15,7 @@ def parses(command):
 
 
 def test_add_github_defaults():
-    command = argv.add_argv({"kind": "github", "source": " o/App ", "allow": ["audio", "gpu"]})
+    command = argv.add_argv({"kind": "github", "source": " o/App "})
     assert command == ["add", "o/App"]
     parses(command)
 
@@ -24,15 +24,14 @@ def test_add_all_options_parse():
     form = {"kind": "github", "source": "o/App", "tag": "v1", "prerelease": True, "name": "app", "allow": ["audio", "network"],
             "display": "xwayland", "dirs": ["~/x:rw"], "dbus": ["org.a.B"], "desktop": True, "mime_all": True}
     command = argv.add_argv(form)
-    assert "--no-gpu" in command and "--no-audio" not in command
-    assert command[command.index("--allow") + 1] == "network"
+    assert [command[i + 1] for i, a in enumerate(command) if a == "--allow"] == ["audio", "network"]
     args = parses(command)
     assert (args.tag, args.display, args.dir, args.desktop, args.mime_all) == ("v1", "xwayland", ["~/x:rw"], True, True)
 
 
 @pytest.mark.parametrize("kind,flag", [("url", "--url"), ("file", "--file")])
 def test_add_image_sources(kind, flag):
-    command = argv.add_argv({"kind": kind, "source": "X", "sha256": "ab", "max_size": "5", "tag": "ignored", "allow": ["audio", "gpu"]})
+    command = argv.add_argv({"kind": kind, "source": "X", "sha256": "ab", "max_size": "5", "tag": "ignored", "allow": ["audio"]})
     assert command[:3] == ["add", flag, "X"]
     assert "--tag" not in command and ("--max-size" in command) == (kind == "url")
     parses(command)

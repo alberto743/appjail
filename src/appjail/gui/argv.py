@@ -37,11 +37,7 @@ def add_argv(form):
     argv += _repeat("--dbus", form.get("dbus", ()))
     argv += _repeat("--dbus-own", form.get("dbus_own", ()))
     argv += _repeat("--portal", form.get("portals", ()))
-    argv += _repeat("--allow", [f for f in form.get("allow", ()) if f not in ("audio", "gpu")])
-    if "audio" not in form.get("allow", ("audio",)):
-        argv.append("--no-audio")
-    if "gpu" not in form.get("allow", ("gpu",)):
-        argv.append("--no-gpu")
+    argv += _repeat("--allow", form.get("allow", ()))
     if form.get("display") and form["display"] != "wayland":
         argv += ["--display", form["display"]]
     if form.get("display") == manifest.ROOTFUL and form.get("display_size"):

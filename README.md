@@ -32,8 +32,8 @@ is built around the opposite assumptions:
   app is fetched from, whatever an AppImage's embedded update information says.
 - **Downloads are jailed.** The download, the extraction and the verification tools run in throwaway sandboxes
   with only the access they need (a private network namespace for downloads, none for extraction).
-- **Everything is denied by default.** An app starts with a private home, a restricted Wayland socket, audio and the
-  GPU. Network, directories, D-Bus names, portals and the rest are explicit grants you can inspect and change.
+- **Everything is denied by default.** An app starts with a private home and a restricted Wayland socket, nothing else.
+  Audio, GPU, network, directories, D-Bus names, portals and the rest are explicit grants you can inspect and change.
 - **Updates are reviewed.** A new release waits in quarantine (7 days by default), is shown to you as a diff, and
   is blocked outright if its evidence gets weaker or the repository changes owner.
 
@@ -121,15 +121,16 @@ out again. Only a menu entry created that way is ever replaced or deleted.
 ## Installing apps
 
 **From a GitHub release.** `appjail add owner/repo` shows the repository owner, account age, stars and fork or archive
-status before it downloads anything, and asks if several release assets match. By default an app gets audio and GPU
-access and nothing else.
+status before it downloads anything, and asks if several release assets match. By default an app gets a window
+(a restricted Wayland socket) and nothing else: pass `--allow audio` or `--allow gpu` for those, and `--display none`
+for an app that needs no window.
 
 | Option | Effect |
 |---|---|
 | `--tag TAG` | A specific release instead of the latest; the app is then *pinned* and `update` leaves it alone. |
 | `--prerelease` | Follow pre-releases. |
 | `--name NAME` | The app's name (default: from the project). |
-| `--allow`, `--dir`, `--dbus`, `--dbus-own`, `--portal`, `--display`, `--no-audio`, `--no-gpu` | Permissions at install time (see [Permissions](#permissions)). |
+| `--allow`, `--dir`, `--dbus`, `--dbus-own`, `--portal`, `--display` | Permissions at install time (see [Permissions](#permissions)). |
 | `--desktop [--mime TYPE] [--rw]` | Also create a menu entry (see [Menu entry](#menu-entry-and-opening-files)). |
 
 `run` passes everything after `--` to the app (`appjail run lagrange -- --help`).
@@ -168,13 +169,14 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 |---|---|
 | `network` | Outbound internet through a private network namespace made by `pasta`. The app cannot reach services on your machine's localhost or its own addresses. Needs `passt`; without it the app is refused rather than put on the host network. |
 | `network_host` | The host's own network, including localhost services (`--allow network_host`, which implies `network`). For apps that really need them. Landlock (Linux 6.12 or later) keeps the app off the host's abstract unix sockets, such as the X server's; without it the permission is refused. |
-| `audio`, `gpu` | On by default; `--no-audio` and `--no-gpu` at `add` time, or `--deny` later. Audio (the Pulse socket) includes the microphone. |
+| `audio` | The Pulse socket (`--allow audio`; `--deny` later). Includes the microphone and the sound other apps play, which the server cannot separate. Off by default. |
+| `gpu` | The render nodes, `/dev/nvidia*` and read-only `/sys` (`--allow gpu`). Needed for hardware-accelerated apps (Electron, Qt Quick, games); without it most apps fall back to slower software rendering. Off by default. |
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
 | `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access where code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
-| `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window). |
+| `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window), or `none`: no Wayland socket and no display variables, for command-line apps (no menu entry either). |
 
 **Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:rw]` grant access for that run only and
 are never saved. `--file` makes just that one file visible, not the rest of its directory, and appends its path inside
@@ -329,7 +331,7 @@ owner change.
 |---|---|
 | bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
 | An app exits after a few seconds with code 0 and no window | Its launcher starts the real app detached and exits, and the jail ends with it (VSCodium does this). `appjail perms APP --allow linger` keeps the jail until every process in it has exited; or pass the app's own wait option, e.g. `appjail run vscodium -- --wait`. |
-| `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`), or `xwayland-rootful` (needs `xwayland` and `openbox`) when no window appears, as on GNOME. |
+| `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Command-line apps need no window: `perms APP --display none` runs them without a Wayland session at all. Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`), or `xwayland-rootful` (needs `xwayland` and `openbox`) when no window appears, as on GNOME. |
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |

@@ -70,10 +70,10 @@ def test_update_after_quarantine(h):
 
 
 def test_permissions_and_name_survive_an_update(h):
-    path = installed(h, extra=("--allow", "network", "--no-audio"))
+    path = installed(h, extra=("--allow", "network", "--allow", "gpu"))
     update(h, FakeClient(release_=release2()), days=0)
     m = manifest.load(path)
-    assert m.permissions.network and not m.permissions.audio and m.name == "app"
+    assert m.permissions.network and m.permissions.gpu and not m.permissions.audio and m.name == "app"
 
 
 def test_quarantine_zero_installs_at_once_with_a_warning(h):

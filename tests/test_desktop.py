@@ -13,6 +13,7 @@ import pytest
 
 from appjail import cli, desktop, store
 from appjail.cmd_desktop import refresh_after_update
+from appjail.console import Abort
 
 from .helpers import Script
 
@@ -339,3 +340,10 @@ def test_svg_icon_is_rendered_to_png_inside_a_jail(h, xdg):
     out = run(["desktop", "app", "--yes"]).text
     icon = xdg / "icons/hicolor/256x256/apps/appjail-app.png"
     assert desktop.png_size(icon.read_bytes()) == (256, 256), out
+
+
+def test_a_menu_entry_is_refused_for_an_app_without_a_window(h, xdg):
+    h.add(extract=extractor(DESKTOP, png()), extra=["--display", "none"])
+    with pytest.raises(Abort, match="display = none"):
+        run(["desktop", "app", "--yes"])
+    assert not desktop.entry_path("app").exists()

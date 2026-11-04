@@ -36,7 +36,8 @@ PUBLISHED_RE = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 
 TIERS = (1, 2, 3, 4, 5)
 ROOTFUL = "xwayland-rootful"
-DISPLAYS = ("wayland", "xwayland", ROOTFUL)
+NO_DISPLAY = "none"  # a headless app: no Wayland socket, no X server
+DISPLAYS = ("wayland", "xwayland", ROOTFUL, NO_DISPLAY)
 DEFAULT_DISPLAY_SIZE = "1280x800"
 
 TOP_KEYS = {
@@ -65,6 +66,10 @@ class Permissions:
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
     linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
+
+    @property
+    def windowed(self):
+        return self.display != NO_DISPLAY
 
     @property
     def xwayland(self):

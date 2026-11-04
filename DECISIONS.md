@@ -104,6 +104,14 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 - **Rejected:** a third-party formatting library (stdlib-only rule); `--json` on the commands that change something (their output is a conversation with prompts; a script has `--yes` where it is allowed); always-on colour (breaks pipes and log files).
 - **Cost:** tests and any script that matched the old text (`WARNING:`, `Label : value`, `Summary:`) had to change; the GUI shows the same text in its output pane.
 
+### Nothing is granted by default, display `none`
+
+- **Decided:** `add` grants nothing beyond the window: `audio` and `gpu` are `--allow` like the rest (`--no-audio` and `--no-gpu` are gone), and `display = none` is a fourth display value for apps with no window. `wayland` stays the default, since most AppImages are graphical.
+- **Why:** audio is the one grant appjail cannot scope (the Pulse server cannot restrict a client by device, so it includes the microphone and the sound other apps play), and the GPU is a large driver attack surface plus hardware information in `/sys`. Most command-line tools, converters and editors need neither. An app that needs them fails visibly (no sound, slow rendering) and `perms APP --allow audio` fixes it, which is the cheaper mistake than a silent microphone grant. The docs said "everything is denied by default" while `Permissions()` denied and `add` granted; both now agree.
+- **Cost:** installing a media app or an Electron app takes one more flag (the GUI Add form has the checkboxes unticked). Apps already installed keep their manifests, which record `audio` and `gpu` explicitly.
+- **Rejected:** lowering the defaults from the AppImage's own `.desktop` (`Terminal=true`): possible later, since untrusted data may only reduce permissions, but not needed now; a headless `display` inferred automatically (the mode is always chosen by the user, like Xwayland).
+- **Revisit when:** a safe way to scope the microphone exists (a portal-based audio path, see Native PipeWire audio).
+
 ### Waiting for every process in the jail, by default
 
 The jail ends with its main command; the `linger` permission (opt-in per app) waits for all processes instead. Waiting always was rejected: an app that leaves a crash handler, `dbus-daemon` or an agent behind would keep `appjail run` from ever returning, and "closing the app closes everything" would no longer hold. Found with VSCodium, whose launcher hook runs `cli.js`, which starts the editor detached and exits. **Revisit when:** most catalog apps need `linger`, or a reliable way to tell the app's own processes from helpers exists.

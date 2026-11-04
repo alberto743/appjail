@@ -130,13 +130,15 @@ def _wayland_args(host_env, wayland_socket, rt):
     return ["--ro-bind", str(sock), f"{rt}/wayland-0"]
 
 
-def _app_env(host_env, rt, xwayland):
+def _app_env(host_env, rt, xwayland, windowed=True):
     env = {
         "PATH": f"{APP_DIR}/usr/bin:/usr/local/bin:/usr/bin:/bin", "HOME": APP_HOME, "USER": "app",
         "LOGNAME": "app", "SHELL": "/bin/sh", "LANG": host_env.get("LANG") or "C.UTF-8",
         "XDG_RUNTIME_DIR": rt, "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
     }
-    if xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
+    if not windowed:  # no display at all: nothing tells a toolkit to look for one
+        pass
+    elif xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
         env.update({"XDG_SESSION_TYPE": "x11", "GDK_BACKEND": "x11", "QT_QPA_PLATFORM": "xcb",
                     "ELECTRON_OZONE_PLATFORM_HINT": "x11", "SDL_VIDEODRIVER": "x11"})
     else:
@@ -239,9 +241,10 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
     args = _namespace_args(perms, uid, seccomp_fd)
     args += _base_filesystem_args(etc_dir, rt, perms)
     args += ["--ro-bind", str(root), APP_DIR, "--bind", str(home), APP_HOME]
-    args += _wayland_args(host_env, wayland_socket, rt)
+    if perms.windowed:
+        args += _wayland_args(host_env, wayland_socket, rt)
 
-    env = _app_env(host_env, rt, xwayland)
+    env = _app_env(host_env, rt, xwayland, perms.windowed)
     args += _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env)
     if perms.audio:
         args += _audio_args(host_rt, rt, env)

@@ -68,7 +68,7 @@ def test_declining_copies_nothing(h, image):
 
 
 def test_permission_options_apply(h, image):
-    add_file(h, image, "--name", "x", "--allow", "network", "--no-gpu", "--display", "xwayland")
+    add_file(h, image, "--name", "x", "--allow", "network", "--allow", "audio", "--display", "xwayland")
     p = manifest.load(store.manifest_path("x")).permissions
     assert (p.network, p.audio, p.gpu, p.display) == (True, True, False, "xwayland")
 

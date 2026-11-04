@@ -241,8 +241,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     with contextlib.ExitStack() as stack:
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
-        wl_sock = stack.enter_context(restricted(env, app_id=name))
-        if wl_sock is None:
+        wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
+        if perms.windowed and wl_sock is None:
             say("Warning: the compositor does not offer wp_security_context_v1, so this app gets the full "
                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it).")
         pipes = _status_pipes(stack, instance, env, in_pasta)

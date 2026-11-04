@@ -74,6 +74,8 @@ def _select(console, declared, args, current, yes):
 def install_entry(name, console, args, yes=False, ask=True):
     """Show what the entry will say, ask, then write it. `args` carries mime, mime_all and rw."""
     _check(name)
+    if not manifest.load(store.manifest_path(name)).permissions.windowed:
+        raise Abort(f"{name} has display = none: it has no window, so a menu entry would start it invisibly")
     root = store.root_path(name)
     fields = desktop.read_app_desktop(root)
     declared, ignored, current, was_rw, has_entry = file_type_state(name, fields)

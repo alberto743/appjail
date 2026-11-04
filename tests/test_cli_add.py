@@ -47,11 +47,11 @@ def test_extraction_runs_on_the_staged_file_and_marks_source_hash(h):
 def test_default_permissions_are_minimal(h):
     h.add()
     p = manifest.load(store.manifest_path("app")).permissions
-    assert (p.network, p.audio, p.gpu, p.portals, p.display, p.dirs) == (False, True, True, False, "wayland", ())
+    assert (p.network, p.audio, p.gpu, p.portals, p.display, p.dirs) == (False, False, False, False, "wayland", ())
 
 
 def test_permission_flags(h):
-    h.add(extra=["--allow", "network", "--no-audio", "--display", "xwayland"])
+    h.add(extra=["--allow", "network", "--allow", "gpu", "--display", "xwayland"])
     p = manifest.load(store.manifest_path("app")).permissions
     assert (p.network, p.audio, p.gpu, p.display) == (True, False, True, "xwayland")
 
@@ -238,3 +238,20 @@ def test_files_from_args_makes_absolute_paths_and_keeps_the_mode(tmp_path):
 def test_files_from_args_rejects_non_files(tmp_path, spec):
     with pytest.raises(cli.Abort, match="not a regular file"):
         cli.files_from_args([spec], cwd=tmp_path)
+
+
+def test_audio_and_gpu_are_granted_only_when_asked(h):
+    h.add(extra=["--allow", "audio", "--allow", "gpu"])
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert (p.audio, p.gpu) == (True, True)
+
+
+def test_no_audio_and_no_gpu_options_are_gone(h):
+    with pytest.raises(SystemExit):
+        h.add(extra=["--no-audio"])
+
+
+def test_display_none_is_accepted_and_has_no_window(h):
+    h.add(extra=["--display", "none"])
+    p = manifest.load(store.manifest_path("app")).permissions
+    assert p.display == "none" and not p.windowed and not p.xwayland

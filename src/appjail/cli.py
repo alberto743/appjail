@@ -73,11 +73,10 @@ def build_parser():
                      help="let the app own this session-bus name (MPRIS player, single-instance name); repeatable")
     add.add_argument("--portal", action="append", default=[], metavar="NAME",
                      help="also allow this privileged portal interface (needs --allow portals); repeatable")
-    add.add_argument("--allow", action="append", default=[], choices=[f for f in PERMISSION_FLAGS if f not in ("audio", "gpu")],
-                     help="grant a permission (repeatable); audio and gpu are on by default")
-    add.add_argument("--no-audio", action="store_true", help="do not grant audio")
-    add.add_argument("--no-gpu", action="store_true", help="do not grant GPU access")
-    add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland")
+    add.add_argument("--allow", action="append", default=[], choices=PERMISSION_FLAGS,
+                     help="grant a permission (repeatable); everything is denied unless granted")
+    add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland",
+                     help="wayland (default), xwayland or xwayland-rootful for X11-only apps, none for an app with no window")
     add.add_argument("--display-size", default=manifest.DEFAULT_DISPLAY_SIZE, metavar="WxH",
                      help="with --display xwayland-rootful: the size of its window (default %(default)s)")
     add.add_argument("--desktop", action="store_true", help="also create a menu entry that starts the app through appjail")
