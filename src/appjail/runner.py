@@ -52,7 +52,7 @@ def prepare(name, extract=appimage.extract, say=print):
     image = store.appimage_path(name)
     if not image.is_file():
         raise RunError(f"{image} is missing")
-    digest = appimage.sha256_file(image)
+    digest = store.sha256_file(image)
     if digest != m.sha256:
         raise RunError(f"{name}: the stored AppImage does not match the pinned sha256 "
                        f"(pinned {m.sha256[:16]}…, found {digest[:16]}…); refusing to run")

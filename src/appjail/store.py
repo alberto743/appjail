@@ -3,6 +3,7 @@
 
 """Where appjail keeps its files. Nothing is written outside these two trees."""
 
+import hashlib
 import os
 import secrets
 from pathlib import Path
@@ -87,3 +88,11 @@ def home_path(name):
 def etc_path(name):
     """Generated /etc/passwd and /etc/group for the app."""
     return app_dir(name) / "etc"
+
+
+def sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()

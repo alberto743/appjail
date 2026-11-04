@@ -53,7 +53,7 @@ def download_verified(download, asset, stage):
     staged = download(asset.url, stage, "download.AppImage", asset.size)
     if staged.stat().st_size != asset.size:
         raise Abort("downloaded size differs from the size GitHub announced")
-    digest = appimage.sha256_file(staged)
+    digest = store.sha256_file(staged)
     if asset.sha256 and digest != asset.sha256:
         raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
     try:

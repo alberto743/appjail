@@ -13,7 +13,7 @@ from dataclasses import replace
 
 import pytest
 
-from appjail import appimage, cli, manifest, runner, store, updater
+from appjail import cli, manifest, runner, store, updater
 from appjail.console import error_text
 
 pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1",
@@ -62,7 +62,7 @@ def test_real_update_from_an_older_pin(tmp_path, monkeypatch):
     c = Answers(["y"])
     assert cli.main(["update", "tool", "--quarantine", "0"], console=c) == 0, c.lines
     now = manifest.load(path)
-    assert now.sha256 == appimage.sha256_file(store.appimage_path("tool")) != "0" * 64
+    assert now.sha256 == store.sha256_file(store.appimage_path("tool")) != "0" * 64
     assert now.published_at != "2020-01-01T00:00:00Z" and now.owner_id == real.owner_id
     runner.prepare("tool", say=lambda *_: None)  # pin matches, tree matches
 
@@ -104,7 +104,7 @@ def test_real_tier4_hash_is_recorded_in_quarantine_and_compared_at_install(tmp_p
     c = Answers(["y", "y"])
     assert cli.main(["update", "kit", "--quarantine", "0"], console=c) == 0, c.lines
     now = manifest.load(path)
-    assert now.sha256 == real.sha256 == appimage.sha256_file(store.appimage_path("kit"))
+    assert now.sha256 == real.sha256 == store.sha256_file(store.appimage_path("kit"))
     assert now.version == real.version and now.evidence_tier == 4
     assert updater.load_pending("kit") is None
     runner.prepare("kit", say=lambda *_: None)  # pin matches, tree matches
@@ -125,7 +125,7 @@ def test_real_url_app_is_added_checked_cheaply_and_updated_from_the_stored_candi
     path = store.manifest_path("kit")
     real = manifest.load(path)
     assert real.kind == "url" and real.evidence_tier == 5 and real.fingerprint.size == store.appimage_path("kit").stat().st_size
-    assert real.sha256 == appimage.sha256_file(store.appimage_path("kit"))
+    assert real.sha256 == store.sha256_file(store.appimage_path("kit"))
 
     c = Answers([])  # a prompt would pop from an empty list: the cheap check must be enough
     assert cli.main(["update", "kit"], console=c) == 0, c.lines
@@ -145,6 +145,6 @@ def test_real_url_app_is_added_checked_cheaply_and_updated_from_the_stored_candi
     assert cli.main(["update", "kit", "--quarantine", "0"], console=c) == 0, c.lines
     assert not any("downloaded" in line for line in c.lines), c.lines
     now = manifest.load(path)
-    assert now.sha256 == real.sha256 == appimage.sha256_file(store.appimage_path("kit")) and now.evidence_tier == 5
+    assert now.sha256 == real.sha256 == store.sha256_file(store.appimage_path("kit")) and now.evidence_tier == 5
     assert updater.load_pending("kit") is None
     runner.prepare("kit", say=lambda *_: None)

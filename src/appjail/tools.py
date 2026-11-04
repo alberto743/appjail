@@ -15,7 +15,7 @@ import tarfile
 from dataclasses import dataclass
 
 from . import jail, store
-from .appimage import sha256_file
+from .store import sha256_file
 
 
 class ToolError(Exception):

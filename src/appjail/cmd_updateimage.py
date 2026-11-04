@@ -103,7 +103,7 @@ def update_file(run):
     try:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
-        digest = appimage.sha256_file(staged)
+        digest = store.sha256_file(staged)
         if digest == m.sha256:
             if not confirm_installed_hash(run, expected):
                 console.out("  this is the installed file already")
@@ -187,7 +187,7 @@ def fetch_candidate(run, expected):
         appimage.remove_tree(stage)
         raise Abort(str(e)) from e
     try:
-        digest = appimage.sha256_file(staged)
+        digest = store.sha256_file(staged)
         console.kv("  downloaded", f"{human_size(info['size'])}, sha256 {digest}", INDENTED_LABEL)
         if expected is not None and digest != expected:
             raise Abort(f"sha256 mismatch: the download is {digest}, --sha256 says {expected}")
@@ -286,7 +286,7 @@ def start_quarantine(run, stage, staged, digest, info, expected):
 def install_pending(run, pending, expected):
     """The quarantine is over and the server still serves the waiting candidate: install the file kept on disk."""
     image = updater.pending_image(run.name)
-    if appimage.sha256_file(image) != pending["sha256"]:
+    if store.sha256_file(image) != pending["sha256"]:
         updater.clear_pending(run.name)
         raise Abort("the stored candidate does not match its recorded hash; it was dropped, run update again")
     if not run.console.confirm(f"Install {pending['tag']} (kept since {pending['first_seen']})?"):

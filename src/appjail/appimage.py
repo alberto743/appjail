@@ -10,7 +10,7 @@ import stat
 import struct
 from pathlib import Path
 
-from . import jail
+from . import jail, tools
 from .textsafe import clean
 
 ELF_MAGIC = b"\x7fELF"
@@ -38,14 +38,6 @@ class ExtractError(Exception):
 
 # What a caller of extract() or locate_fs() has to handle (jail failures are JailError and are separate).
 EXTRACT_ERRORS = (UnsupportedImage, ExtractError, UnsafeTree)
-
-
-def sha256_file(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def tree_digest(root):
@@ -198,7 +190,6 @@ def remove_tree(path):
 
 def extract_dwarfs(appimage, dest, offset):
     """DwarFS image: extract with the pinned, hash-checked dwarfs-universal tool, inside the jail."""
-    from . import tools
     try:
         tool = tools.require("dwarfs")
     except tools.ToolError as e:

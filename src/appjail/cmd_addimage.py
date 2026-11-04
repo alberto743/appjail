@@ -68,7 +68,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
         shutil.copyfile(real, staged)
         if staged.stat().st_size != st.st_size:
             raise Abort("the file changed while it was copied")
-        digest = appimage.sha256_file(staged)
+        digest = store.sha256_file(staged)
         tier = check_expected(digest, expected)
         check_appimage(staged)
         console.kv("sha256", digest + ("  (matches --sha256)" if tier == 4 else ""))
@@ -118,7 +118,7 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
             staged, info = download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
         except jail.JailError as e:
             raise Abort(str(e)) from e
-        digest = appimage.sha256_file(staged)
+        digest = store.sha256_file(staged)
         tier = check_expected(digest, expected)
         check_appimage(staged)
         console.kv("Downloaded", f"{human_size(info['size'])}, sha256 {digest}" + ("  (matches --sha256)" if tier == 4 else ""))
