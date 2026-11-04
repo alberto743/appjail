@@ -1,0 +1,31 @@
+name: Bump pinned tools
+
+# Once a week (and by hand): for each new stable release of cli/cli and mhx/dwarfs, open a PR that moves the
+# pin in src/appjail/tools.py. The script only measures the download (size, sha256), never runs it.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 6 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: bump-tools
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Open a PR for each new release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 .github/scripts/bump_tools.py
