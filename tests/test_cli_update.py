@@ -236,6 +236,14 @@ def test_list_json(h, capsys):
     assert app["permissions"]["network"] is True and app["permissions"]["dbus"] == ["org.freedesktop.Notifications"]
 
 
+def test_list_json_keeps_the_portals_flag_apart_from_the_interfaces(h, capsys):
+    installed(h, extra=("--allow", "portals", "--portal", "OpenURI"))
+    capsys.readouterr()
+    assert cli.main(["list", "--json"]) == 0
+    perms = json.loads(capsys.readouterr().out)[0]["permissions"]
+    assert perms["portals"] is True and perms["portal_interfaces"] == ["OpenURI"]
+
+
 def test_remove_deletes_everything_after_confirmation(h):
     installed(h)
     (store.home_path("app")).mkdir(parents=True)

@@ -81,7 +81,7 @@ def list_json(name, m):
     p = m.permissions
     perms = {k: getattr(p, k) for k in PERMISSION_FLAGS}
     perms.update(display=p.display, dirs=list(p.dirs), dbus=list(p.dbus_filter), dbus_own=list(p.dbus_own),
-                 portals=list(p.portal_interfaces))
+                 portal_interfaces=list(p.portal_interfaces))
     if p.rootful:
         perms["display_size"] = p.display_size
     pending = updater.load_pending(name)
