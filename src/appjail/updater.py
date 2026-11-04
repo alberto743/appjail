@@ -71,9 +71,6 @@ def quarantine_ends(first_seen, days):
     return first_seen + timedelta(days=days)
 
 
-# -- pending state ----------------------------------------------------------------------
-
-
 def pending_path(name):
     return store.app_dir(name) / "pending.json"
 

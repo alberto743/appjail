@@ -124,9 +124,8 @@ def cmd_list(console, long=False, as_json=False):
 
 
 def revoke_portal_grants(name, mpath, console):
-    """Drop the app's document-portal grants and its other remembered portal decisions (camera, location, ...), so a
-    later app with the same name starts with none; only worth a note when the app had portals and the store is
-    unreachable."""
+    """Drop the app's document-portal grants and other remembered portal decisions, so a later app with the same name
+    starts with none. Only noted when the app had portals and the store is unreachable."""
     app = portal.app_id(name)
     try:
         portal.revoke_documents(app, os.environ, portal.granted_documents(app, os.environ))

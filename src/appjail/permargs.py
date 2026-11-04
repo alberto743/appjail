@@ -85,8 +85,7 @@ def warn_owned_dbus(console, names):
 
 
 def require_network_isolation(perms):
-    """What keeps a networked app off the host's own services, checked when the permission is granted rather than at
-    the first launch: pasta for `network`, Landlock (abstract unix sockets) for `network_host`."""
+    """Refuse a network grant that cannot be isolated, at grant time: pasta for `network`, Landlock for `network_host`."""
     if perms.network_host and not landlock.available():
         raise Abort(landlock.NEEDED_FOR_NETWORK_HOST)
     if perms.pasta and not jail.find_pasta():

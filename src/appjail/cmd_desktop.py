@@ -19,9 +19,8 @@ def _check(name):
 
 
 def file_type_state(name, fields=None):
-    """(offered, ignored, registered, rw, has_entry) of an app: what it declares and passes the filter, what it declares
-    and does not, and what its installed entry registers (empty, read-only, when there is no entry). `fields`: the app's
-    own .desktop fields when the caller has read them already."""
+    """(offered, ignored, registered, rw, has_entry): the types the app declares that pass the filter and that do not, and
+    what its installed entry registers. `fields`: the app's .desktop fields, if the caller has them already."""
     fields = desktop.read_app_desktop(store.root_path(name)) if fields is None else fields
     offered, ignored = desktop.split_mimes(fields.get("MimeType"))
     state = desktop.installed_state(name)
