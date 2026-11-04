@@ -14,27 +14,11 @@ from dataclasses import replace
 import pytest
 
 from appjail import cli, manifest, runner, store, updater
-from appjail.console import error_text
+
+from .helpers import Answers
 
 pytestmark = pytest.mark.skipif(os.environ.get("APPJAIL_E2E") != "1",
                                 reason="set APPJAIL_E2E=1 in the test guest (downloads an AppImage)")
-
-
-class Answers(cli.Console):
-    def __init__(self, answers):
-        self.answers, self.lines = list(answers), []
-
-    def out(self, line=""):
-        self.lines.append(line)
-
-    def warn(self, line):
-        self.lines.append("! warning: " + line)
-
-    def error(self, line):
-        self.lines.append(error_text(line))
-
-    def ask(self, prompt):
-        return self.answers.pop(0)
 
 
 def test_real_update_from_an_older_pin(tmp_path, monkeypatch):

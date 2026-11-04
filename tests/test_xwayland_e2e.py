@@ -16,9 +16,8 @@ from pathlib import Path
 import pytest
 
 from appjail import cli, jail, manifest, runner, runtimejail, store
-from appjail.console import error_text
 
-from .helpers import wait_for
+from .helpers import Answers, wait_for
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston") or not shutil.which("Xwayland")
@@ -30,23 +29,6 @@ TAG = "7.1.2-34"
 # AppRun runs `magick "$@"`, and `magick display` is the legacy `display` tool. It draws the built-in logo: image,
 # stays open until timeout stops it, and xwininfo lists the windows the app's X server holds.
 SCRIPT = 'timeout 10 /app/AppRun display logo: & sleep 4; xwininfo -root -tree; wait'
-
-
-class Answers(cli.Console):
-    def __init__(self, answers):
-        self.answers, self.lines = list(answers), []
-
-    def out(self, line=""):
-        self.lines.append(line)
-
-    def warn(self, line):
-        self.lines.append("! warning: " + line)
-
-    def error(self, line):
-        self.lines.append(error_text(line))
-
-    def ask(self, prompt):
-        return self.answers.pop(0)
 
 
 @pytest.fixture(scope="module")

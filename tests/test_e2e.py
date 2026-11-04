@@ -16,30 +16,12 @@ from pathlib import Path
 import pytest
 
 from appjail import cli, manifest, runner, runtimejail, store
-from appjail.console import error_text
 
-from .helpers import wait_for
+from .helpers import Answers, wait_for
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston"),
     reason="set APPJAIL_E2E=1 in the test guest (downloads an AppImage)")
-
-
-class Answers(cli.Console):
-    def __init__(self, answers):
-        self.answers, self.lines = list(answers), []
-
-    def out(self, line=""):
-        self.lines.append(line)
-
-    def warn(self, line):
-        self.lines.append("! warning: " + line)
-
-    def error(self, line):
-        self.lines.append(error_text(line))
-
-    def ask(self, prompt):
-        return self.answers.pop(0)
 
 
 @pytest.fixture(scope="module")

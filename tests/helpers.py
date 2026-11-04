@@ -111,6 +111,25 @@ class Harness:
         assert not store.staging_root().exists() or list(store.staging_root().iterdir()) == []
 
 
+class Answers(cli.Console):
+    """Console with scripted answers for the e2e tests: no recording of the prompts, and an empty list is an IndexError."""
+
+    def __init__(self, answers):
+        self.answers, self.lines = list(answers), []
+
+    def out(self, line=""):
+        self.lines.append(line)
+
+    def warn(self, line):
+        self.lines.append("! warning: " + line)
+
+    def error(self, line):
+        self.lines.append(error_text(line))
+
+    def ask(self, prompt):
+        return self.answers.pop(0)
+
+
 class Script(cli.Console):
     """Console with scripted answers; records output instead of printing."""
 
