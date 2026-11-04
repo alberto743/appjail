@@ -393,3 +393,16 @@ def headless_weston(sandbox, socket):
         finally:
             weston.terminate()
             weston.wait(timeout=10)
+
+
+class Extractor:
+    """An extractor that makes a minimal tree and counts how often it ran."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self, image, dest, fallback=False):
+        self.calls += 1
+        (Path(dest) / "usr").mkdir(parents=True)
+        (Path(dest) / "AppRun").write_text("#!/bin/sh\n")
+        return 1, 1
