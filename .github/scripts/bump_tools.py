@@ -184,7 +184,8 @@ def bump(name):
     run("git", "switch", "-c", branch)
     run("git", "commit", "-am", f"tools: bump {name} to {new}")
     run("git", "push", "origin", branch)
-    run("gh", "pr", "create", "--base", "main", "--head", branch, "--title", f"tools: bump {name} to {new}",
+    run("gh", "label", "create", "tools", "--description", "Pinned helper tools", "--force")
+    run("gh", "pr", "create", "--label", "tools", "--base", "main", "--head", branch, "--title", f"tools: bump {name} to {new}",
         "--body", body(name, spec, old, new, rel, size, sha, exe_size, exe_sha))
     run("git", "switch", "-")
 

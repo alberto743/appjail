@@ -1,0 +1,17 @@
+## SPDX-FileCopyrightText: 2026 Alberto P
+## SPDX-License-Identifier: MPL-2.0
+#
+# Categories of GitHub's generated notes (pull requests only; direct commits are grouped by
+# .github/scripts/release_notes.py, which appends these notes).
+changelog:
+  categories:
+    - title: Security
+      labels: [security]
+    - title: Pinned tools
+      labels: [tools]
+    - title: Dependencies
+      labels: [dependencies]
+    - title: Documentation
+      labels: [documentation]
+    - title: Other changes
+      labels: ["*"]
