@@ -155,8 +155,7 @@ def etc_args(private_net=False):
             args += ["--ro-bind", d, d]
     if private_net and find_pasta():
         args += ["--ro-bind", str(_pasta_resolv_conf()), "/etc/resolv.conf"]
-    # resolv.conf is usually a symlink into /run; bind its content, not the link.
-    elif os.path.exists("/etc/resolv.conf"):
+    elif os.path.exists("/etc/resolv.conf"):  # usually a symlink into /run: bind its content, not the link
         args += ["--ro-bind", os.path.realpath("/etc/resolv.conf"), "/etc/resolv.conf"]
     return args
 

@@ -132,7 +132,7 @@ def program(userns=False):
         for name in NAMESPACE:
             prog += _block(SYSCALLS[name])
         prog += _block(SYSCALLS["clone"], [(0, "set", CLONE_NEW_MASK)])
-    prog += _block(SYSCALLS["clone3"], action=_ret(SECCOMP_RET_ERRNO | errno.ENOSYS)) if not userns else []
+        prog += _block(SYSCALLS["clone3"], action=_ret(SECCOMP_RET_ERRNO | errno.ENOSYS))
     prog.append(_ret(SECCOMP_RET_ALLOW))
     if len(prog) > 4096:
         raise RunError("seccomp program too long")

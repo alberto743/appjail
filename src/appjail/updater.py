@@ -3,7 +3,7 @@
 
 """Update policy: what blocks an update, the quarantine clock, and the pending-candidate state.
 
-No network and no downloads here; `cmd_update` drives the I/O. The pending file records when
+No network and no downloads here; `cmd_update` and `cmd_updateimage` drive the I/O. The pending file records when
 a given candidate was first seen, so the delay cannot be shortened by republishing or waiting
 on an old `published_at`: a different candidate starts a new clock.
 """

@@ -134,12 +134,11 @@ def _app_env(host_env, rt, xwayland, windowed=True):
         "LOGNAME": "app", "SHELL": "/bin/sh", "LANG": host_env.get("LANG") or "C.UTF-8",
         "XDG_RUNTIME_DIR": rt, "APPDIR": APP_DIR, "APPIMAGE_EXTRACT_AND_RUN": "1", "TMPDIR": "/tmp",
     }
-    if not windowed:  # no display at all: nothing tells a toolkit to look for one
-        pass
-    elif xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
+    # without a display nothing tells a toolkit to look for one
+    if windowed and xwayland:  # the app only sees X11; WAYLAND_DISPLAY is set for the Xwayland process alone
         env.update({"XDG_SESSION_TYPE": "x11", "GDK_BACKEND": "x11", "QT_QPA_PLATFORM": "xcb",
                     "ELECTRON_OZONE_PLATFORM_HINT": "x11", "SDL_VIDEODRIVER": "x11"})
-    else:
+    elif windowed:
         env.update({"WAYLAND_DISPLAY": "wayland-0", "XDG_SESSION_TYPE": "wayland", "GDK_BACKEND": "wayland",
                     "QT_QPA_PLATFORM": "wayland", "MOZ_ENABLE_WAYLAND": "1",
                     "ELECTRON_OZONE_PLATFORM_HINT": "wayland", "SDL_VIDEODRIVER": "wayland"})
