@@ -16,7 +16,7 @@ that belongs to the user's own dotfiles never stops a command.
 from pathlib import Path
 
 from . import jail, store
-from .jail import JailError
+from .errors import JailError
 
 enabled = True
 GIT = "/usr/bin/git"

@@ -25,7 +25,7 @@ import subprocess
 from pathlib import Path
 
 from . import grants, store
-from .jail import RunError
+from .errors import RunError
 
 ID_PREFIX = "app.appjail."
 APP_ID_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){2,}")

@@ -81,7 +81,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
             raise Abort(f"cannot record this file: {e}") from e
         entries, size = swap_in(name, staged, stage, record, extract, fallback)
     finally:
-        shutil.rmtree(stage, ignore_errors=True)
+        appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)
 
 
@@ -132,5 +132,5 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
             raise Abort(f"cannot record this download: {e}") from e
         entries, size = swap_in(name, staged, stage, record, extract, fallback)
     finally:
-        shutil.rmtree(stage, ignore_errors=True)
+        appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)

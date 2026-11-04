@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import manifest, portal, store
 from .console import Abort
-from .jail import RunError
+from .errors import RunError
 
 
 def names_for(doc, app, host_env):

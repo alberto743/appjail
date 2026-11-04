@@ -5,7 +5,6 @@
 
 import os
 import re
-import shutil
 
 from . import appimage, attest, github, history, jail, manifest, store, tools
 from .cmd_desktop import install_entry
@@ -172,7 +171,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
         manifest.validate(record)
         entries, size = swap_in(name, staged, stage, record, extract, fallback)
     finally:
-        shutil.rmtree(stage, ignore_errors=True)
+        appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)
 
 

@@ -20,7 +20,7 @@ import struct
 import tempfile
 from pathlib import Path
 
-from .jail import RunError
+from .errors import RunError
 
 MANAGER = "wp_security_context_manager_v1"
 SANDBOX_ENGINE = "appjail"

@@ -18,7 +18,7 @@ import os
 import platform
 import struct
 
-from .jail import RunError
+from .errors import RunError
 
 AUDIT_ARCH_X86_64 = 0xC000003E
 X32_BIT = 0x40000000

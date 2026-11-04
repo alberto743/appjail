@@ -18,7 +18,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import manifest, store
+from . import manifest, seccomp, store
+from .errors import JailError, RunError
 from .textsafe import clean
 
 FETCHER = Path(__file__).with_name("fetcher.py")
@@ -26,14 +27,6 @@ SYSTEM_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64")
 ETC_FILES = ("/etc/hosts", "/etc/nsswitch.conf", "/etc/host.conf", "/etc/gai.conf", "/etc/localtime")
 ETC_DIRS = ("/etc/ssl", "/etc/ca-certificates")
 SAFE_ENV = {"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"}
-
-
-class JailError(Exception):
-    pass
-
-
-class RunError(Exception):
-    pass
 
 
 class OutputTooLarge(JailError):
@@ -244,7 +237,6 @@ PASTA_SECCOMP_FD = 9  # behind pasta the filter is opened inside its namespace (
 
 def run(args, timeout=1800, watch=None):
     """Run bwrap with a minimal host environment and the seccomp filter of the app jail (without the userns grant)."""
-    from . import seccomp  # seccomp imports this module for RunError
     if "--share-net" in args and find_pasta():
         # pasta closes inherited descriptors: the filter reaches bwrap through a private file instead
         fd, path = tempfile.mkstemp(prefix="appjail-seccomp-")

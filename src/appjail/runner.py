@@ -28,7 +28,8 @@ from . import (
     store,
     wayland,
 )
-from .jail import PASTA_SECCOMP_FD, RunError
+from .errors import RunError
+from .jail import PASTA_SECCOMP_FD
 
 # More descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).
 PASTA_STATUS_FD, PASTA_BLOCK_FD = 8, 7

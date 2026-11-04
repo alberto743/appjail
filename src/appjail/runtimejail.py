@@ -8,7 +8,8 @@ import stat
 from pathlib import Path
 
 from . import dbusproxy, grants, linger, manifest, store, wayland
-from .jail import RunError, etc_args, system_args
+from .errors import RunError
+from .jail import etc_args, system_args
 
 APP_HOME = "/home/app"
 APP_DIR = "/app"

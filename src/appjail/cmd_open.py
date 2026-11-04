@@ -15,6 +15,7 @@ from pathlib import Path
 
 from . import desktop, manifest, runner, store
 from .console import Abort
+from .errors import JailError, RunError
 from .textsafe import clean
 
 
@@ -48,6 +49,6 @@ def cmd_open(args, files, console):
                 raise Abort(f"not a regular file: {clean(f, 100)}")
             specs.append(file_spec(f, args.rw))
         return runner.launch(name, [], say=console.out, extra_files=tuple(specs))
-    except (Abort, runner.jail.RunError, runner.jail.JailError) as e:
+    except (Abort, JailError, RunError) as e:
         notify(str(e))
         raise

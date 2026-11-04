@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 from . import grants, jail, portal, seccomp
-from .jail import RunError
+from .errors import RunError
 
 PROXY = "/usr/bin/xdg-dbus-proxy"
 READY_TIMEOUT = 5.0

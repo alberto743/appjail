@@ -12,7 +12,7 @@ Xwayland) and their children is left.
 
 import os
 
-from .jail import RunError
+from .errors import RunError
 
 PYTHON = "/usr/bin/python3"
 SUPERVISOR = '''\
