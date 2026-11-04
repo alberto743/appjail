@@ -338,7 +338,7 @@ class App:
         self.flag = {}
         grants = ttk.LabelFrame(tab, text="Permissions", padding=6)
         grants.pack(fill="x", pady=4)
-        for flag in ("audio", "gpu", *[f for f in PERMISSION_FLAGS if f not in ("audio", "gpu")]):
+        for flag in PERMISSION_FLAGS:
             self.flag[flag] = tk.BooleanVar(value=False)
             ttk.Checkbutton(grants, text=flag, variable=self.flag[flag]).pack(side="left", padx=4)
         self.display = tk.StringVar(value="wayland")
