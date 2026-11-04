@@ -255,6 +255,13 @@ def test_audio_and_gpu_are_granted_only_when_asked(h):
     assert (p.audio, p.gpu) == (True, True)
 
 
+def test_a_bad_display_size_is_refused_before_any_download(h):
+    with pytest.raises(Abort, match="--display-size must be WIDTHxHEIGHT"):
+        h.add(extra=["--display", "xwayland-rootful", "--display-size", "foo"])
+    assert h.downloads == []
+    h.assert_nothing_installed()
+
+
 def test_no_audio_and_no_gpu_options_are_gone(h):
     with pytest.raises(SystemExit):
         h.add(extra=["--no-audio"])

@@ -50,7 +50,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
     name = app_name(args, real.name)
     if not 0 < st.st_size <= MAX_ASSET:
         raise Abort(f"unexpected file size ({st.st_size} bytes)")
-    perms = permissions_from_args(args)  # validates --dir before anything is copied
+    perms = permissions_from_args(args)  # validates every option before anything is copied
     require_network_isolation(perms)
 
     console.kv("File", real)

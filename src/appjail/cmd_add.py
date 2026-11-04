@@ -137,7 +137,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     if store.manifest_path(name).exists() or store.app_dir(name).exists():
         raise Abort(f"'{name}' is already added")
 
-    perms = permissions_from_args(args)  # validates --dir before any network access
+    perms = permissions_from_args(args)  # validates every option before any network access
     require_network_isolation(perms)
 
     info = client.repo_info(args.source)

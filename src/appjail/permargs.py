@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import grants, jail, landlock, manifest
 from .console import ARROW, Abort
+from .valid import display_size
 
 PERMISSION_FLAGS = manifest.BOOL_PERMS
 
@@ -99,6 +100,10 @@ def permissions_from_args(args):
     allowed = set(args.allow)
     if args.portal and "portals" not in allowed:
         raise Abort("--portal needs --allow portals")
+    try:
+        display_size(args.display_size, "--display-size")
+    except manifest.ManifestError as e:
+        raise Abort(str(e)) from e
     return manifest.Permissions(
         portal_interfaces=portals_from_args(args.portal),
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
