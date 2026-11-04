@@ -34,8 +34,7 @@ def notify(text):
 def cmd_open(args, files, console):
     name = args.app
     try:
-        if not manifest.NAME_RE.fullmatch(name):
-            raise Abort("invalid app name")
+        manifest.check_name(name)
         if not store.manifest_path(name).is_file():
             if desktop.marker_of(desktop.entry_path(name)) == name:
                 desktop.remove(name)
@@ -49,6 +48,6 @@ def cmd_open(args, files, console):
                 raise Abort(f"not a regular file: {clean(f, 100)}")
             specs.append(file_spec(f, args.rw))
         return runner.launch(name, [], say=console.out, extra_files=tuple(specs))
-    except (Abort, JailError, RunError) as e:
+    except (Abort, JailError, RunError, manifest.ManifestError) as e:
         notify(str(e))
         raise

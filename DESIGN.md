@@ -32,6 +32,7 @@ Linux on x86-64 only. Minimum supported systems: Debian 13 and Ubuntu 26.04. Old
 
 ## Manifest (`manifest.py`, `grants.py`, `valid.py`)
 TOML, schema 1, one file per app at `~/.config/appjail/apps/<name>.toml`. Strict: unknown keys, wrong types, control characters and bad formats are errors. The writer is deterministic and atomic and refuses invalid manifests.
+- App names match `[a-z0-9][a-z0-9._-]{0,63}` and are used as path components, so every command that takes an app name (`run` and `update` included) checks it with `manifest.check_name` before using it.
 - Top level: `schema = 1`, `name` (`[a-z0-9][a-z0-9._-]{0,63}`), `source` (kind-prefixed), `channel`, `asset_pattern` (`github:` only; fnmatch, no `/`), `fingerprint` (`url:` only), `owner_id` (`github:` only), `version`, `sha256` (64 lowercase hex), `evidence_tier` (1-5), `published_at` (UTC `YYYY-MM-DDTHH:MM:SSZ`).
 - `[permissions]` is optional and everything defaults to denied:
   - booleans: `network`, `network_host` (needs `network`), `audio`, `gpu`, `portals`, `userns`, `linger` (`add` writes `network`, `audio`, `gpu`, `portals` and `userns` explicitly, true only when granted with `--allow`; the dataclass defaults are the same, so a key missing from a hand-written manifest means denied);

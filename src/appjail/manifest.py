@@ -256,6 +256,14 @@ def validate(m):
     return m
 
 
+def check_name(name):
+    """The app name if it matches NAME_RE, else ManifestError. Names become path components (`apps/<name>`,
+    `<name>.toml`), so every command checks the one the user typed before using it."""
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise ManifestError("invalid app name")
+    return name
+
+
 def loads(text):
     try:
         data = tomllib.loads(text)

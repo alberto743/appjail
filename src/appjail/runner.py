@@ -46,7 +46,7 @@ def prepare(name, extract=appimage.extract, say=print):
     Refuses to run when the stored AppImage no longer matches the pinned sha256. Re-extracts
     when the tree is missing or was made from a different file.
     """
-    mpath = store.manifest_path(name)
+    mpath = store.manifest_path(manifest.check_name(name))
     if not mpath.exists():
         raise RunError(f"unknown app '{name}'")
     m = manifest.load(mpath)

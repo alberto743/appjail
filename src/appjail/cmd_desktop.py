@@ -10,8 +10,7 @@ from .console import ARROW, INDENTED_LABEL, Abort
 
 
 def _check(name):
-    if not manifest.NAME_RE.fullmatch(name or "!"):
-        raise Abort("invalid app name")
+    manifest.check_name(name)
     if not store.manifest_path(name).is_file():
         raise Abort(f"unknown app '{name}'")
     if not store.root_path(name).is_dir():
@@ -122,8 +121,7 @@ def cmd_desktop(args, console):
         show_file_types(name, console)
         return
     if args.remove:
-        if not manifest.NAME_RE.fullmatch(name):
-            raise Abort("invalid app name")
+        manifest.check_name(name)
         console.out(f"Removed the menu entry of {name}." if desktop.remove(name) else f"{name} has no menu entry.")
         return
     install_entry(name, console, args, yes=args.yes)

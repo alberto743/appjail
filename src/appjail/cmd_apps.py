@@ -55,8 +55,8 @@ def cmd_tools(args, console, download=jail.download):
 
 
 def cmd_history(args, console):
-    if args.app and not manifest.NAME_RE.fullmatch(args.app):
-        raise Abort("invalid app name")
+    if args.app:
+        manifest.check_name(args.app)
     lines = history.log(args.app, args.limit)
     if not lines:
         console.out("No recorded history (git is missing, or the config directory is part of your own repository).")
@@ -140,9 +140,7 @@ def revoke_portal_grants(name, mpath, console):
 
 
 def cmd_remove(args, console):
-    name = args.app
-    if not manifest.NAME_RE.fullmatch(name):
-        raise Abort("invalid app name")
+    name = manifest.check_name(args.app)
     mpath, adir = store.manifest_path(name), store.app_dir(name)
     if not mpath.exists() and not adir.exists():
         raise Abort(f"unknown app '{name}'")

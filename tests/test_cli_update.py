@@ -249,7 +249,7 @@ def test_remove_deletes_everything_after_confirmation(h):
 
 def test_remove_unknown_or_invalid(h):
     for name in ("nope", "../x"):
-        with pytest.raises(Abort):
+        with pytest.raises((Abort, manifest.ManifestError)):
             cli.cmd_remove(cli.build_parser().parse_args(["remove", name, "--yes"]), Script())
 
 
@@ -547,3 +547,15 @@ def test_perms_refuses_to_grant_network_without_pasta_but_not_other_changes(h, n
     perms(h, "--allow", "network_host")
     assert manifest.load(store.manifest_path("app")).permissions.network_host
     perms(h, "--deny", "audio")  # an app already granted network_host is not blocked by other edits
+
+
+@pytest.mark.parametrize("name", ["../x", "x/y", "A", ".hidden/.."])
+def test_update_and_run_refuse_an_invalid_app_name_before_touching_any_path(h, name):
+    from appjail import runner
+    store.manifest_path("app").parent.mkdir(parents=True, exist_ok=True)
+    h.add()
+    (store.config_dir() / "x.toml").write_text(store.manifest_path("app").read_text())  # where ../x would resolve
+    with pytest.raises(manifest.ManifestError, match="invalid app name"):
+        update(h, None, app=name)
+    with pytest.raises(manifest.ManifestError, match="invalid app name"):
+        runner.prepare(name, say=lambda *_: None)
