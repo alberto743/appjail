@@ -17,7 +17,7 @@ import pytest
 
 from appjail import cli, manifest, runner, runtimejail, store
 
-from .helpers import Answers, needs_pasta, wait_for
+from .helpers import Answers, headless_weston, needs_pasta, wait_for
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston"),
@@ -94,7 +94,7 @@ def test_gui_app_runs_through_a_private_xwayland(installed):
 
 
 @needs_pasta
-def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
+def test_gui_app_with_network_reaches_a_server_through_pasta(installed, tmp_path):
     """Lagrange (a Gemini browser) is given a gemini:// URL. Its trust-on-first-use store, written into the private
     home, records the server certificate only if the TLS connection really went through the pasta namespace.
     Depends on one public Gemini server (geminiprotocol.net) being up."""
@@ -102,10 +102,6 @@ def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
 
     from appjail import jail
     assert cli.main(["perms", "lagrange", "--allow", "network", "--yes"], console=Answers([])) == 0
-    rt = Path(f"/run/user/{os.getuid()}")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-e2n"],
-                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     launched = []
 
     def run(argv):
@@ -118,14 +114,10 @@ def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
             proc.wait(timeout=10)
         return proc.returncode
 
-    try:
-        wait_for(lambda: (rt / "appjail-e2n").exists(), 5.0)
+    with headless_weston(tmp_path, "appjail-e2n") as rt:
         env = {"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": "appjail-e2n", "LANG": "C.UTF-8"}
         runner.launch("lagrange", extra_args=["gemini://geminiprotocol.net/"], host_env=env, say=lambda *_: None,
                       runner=run)
-    finally:
-        weston.terminate()
-        weston.wait(timeout=10)
     assert launched[0] == jail.find_pasta()
     trusted = store.home_path("lagrange") / ".config" / "lagrange" / "trusted.2.txt"
     assert "geminiprotocol.net;1965" in trusted.read_text(), "no certificate was stored: the app did not connect"
@@ -181,38 +173,32 @@ def test_a_file_opened_through_the_menu_entry_reaches_the_jail(installed, tmp_pa
     entry = desktop.entry_path("lagrange")
     document = tmp_path / "page.md"
     document.write_text("# hello\n")
-    rt = Path(f"/run/user/{os.getuid()}")
-    weston = subprocess.Popen(["weston", "--backend=headless", "--renderer=pixman", "--socket=appjail-e2o"],
-                              env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(rt)},
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    env = {**os.environ, "XDG_DATA_HOME": str(xdg), "XDG_CONFIG_HOME": str(conf), "XDG_RUNTIME_DIR": str(rt),
-           "WAYLAND_DISPLAY": "appjail-e2o", "PYTHONPATH": str(Path(manifest.__file__).parent.parent)}
-    try:
-        wait_for(lambda: (rt / "appjail-e2o").exists(), 5.0)
-        if how == "launch":
-            argv = ["gio", "launch", str(entry), str(document)]
-        else:
-            if "text/markdown" not in mimes:
-                pytest.skip("the tree does not declare text/markdown")
-            assert subprocess.run(["gio", "mime", "text/markdown", entry.name], env=env, capture_output=True).returncode == 0
-            argv = ["gio", "open", str(document)]
-        proc = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=60)
-        assert proc.returncode == 0, proc.stdout + proc.stderr
-        wanted = f"Temporary file access for this run: {document}"
-        wait_for(lambda: log.exists() and wanted in log.read_text(), 20.0)
-        text = log.read_text() if log.exists() else ""
-        assert f"argv: open lagrange -- {document}" in text, f"{text!r} {proc.args} {proc.stdout!r} {proc.stderr!r} {entry.read_text()} {wrapper.read_text()}"
-        assert wanted in text, text
-        assert f"{document}:rw" not in text and (conf / "mimeapps.list").exists() == (how == "open")
-    finally:
-        for pid in _jail_processes(b"open\0lagrange"):  # the launcher stops its whole jail on SIGTERM
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except OSError:
-                pass
-        weston.terminate()
-        weston.wait(timeout=10)
-
+    with headless_weston(tmp_path, "appjail-e2o") as rt:
+        env = {**os.environ, "XDG_DATA_HOME": str(xdg), "XDG_CONFIG_HOME": str(conf), "XDG_RUNTIME_DIR": str(rt),
+               "WAYLAND_DISPLAY": "appjail-e2o", "PYTHONPATH": str(Path(manifest.__file__).parent.parent)}
+        try:
+            if how == "launch":
+                argv = ["gio", "launch", str(entry), str(document)]
+            else:
+                if "text/markdown" not in mimes:
+                    pytest.skip("the tree does not declare text/markdown")
+                assert subprocess.run(["gio", "mime", "text/markdown", entry.name], env=env, capture_output=True).returncode == 0
+                argv = ["gio", "open", str(document)]
+            proc = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=60)
+            assert proc.returncode == 0, proc.stdout + proc.stderr
+            wanted = f"Temporary file access for this run: {document}"
+            wait_for(lambda: log.exists() and wanted in log.read_text(), 20.0)
+            text = log.read_text() if log.exists() else ""
+            assert f"argv: open lagrange -- {document}" in text, f"{text!r} {proc.args} {proc.stdout!r} {proc.stderr!r} {entry.read_text()} {wrapper.read_text()}"
+            assert wanted in text, text
+            assert f"{document}:rw" not in text and (conf / "mimeapps.list").exists() == (how == "open")
+        finally:
+            for pid in _jail_processes(b"open\0lagrange"):  # the launcher stops its whole jail on SIGTERM
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except OSError:
+                    pass
+    
 
 # keep last: it damages the stored image
 def test_tampered_image_is_refused(installed):
