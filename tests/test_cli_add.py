@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from appjail import appimage, cli, cmd_add, github, manifest, store
+from appjail import appimage, cli, cmd_add, github, manifest, runtimejail, store
 from appjail.cli import Abort
 
 from .helpers import (
@@ -231,7 +231,16 @@ def test_main_rejects_bad_source(h):
 def test_files_from_args_makes_absolute_paths_and_keeps_the_mode(tmp_path):
     (tmp_path / "a.txt").write_text("x")
     assert cli.files_from_args(["a.txt", "a.txt:rw", "a.txt:ro"], cwd=tmp_path) == (
-        str(tmp_path / "a.txt"), f"{tmp_path / 'a.txt'}:rw", str(tmp_path / "a.txt"))
+        f"{tmp_path / 'a.txt'}:ro", f"{tmp_path / 'a.txt'}:rw", f"{tmp_path / 'a.txt'}:ro")
+
+
+def test_a_read_only_file_named_like_a_mode_suffix_stays_that_file_and_read_only(tmp_path):
+    (tmp_path / "x").write_text("plain")
+    (tmp_path / "x:rw").write_text("odd")
+    (entry,) = cli.files_from_args(["x:rw:ro"], cwd=tmp_path)
+    assert entry == f"{tmp_path / 'x:rw'}:ro"
+    args, _ = runtimejail.file_binds([entry], tmp_path / "nohome")
+    assert args[:3] == ["--ro-bind", str((tmp_path / "x:rw").resolve()), str((tmp_path / "x:rw").resolve())]
 
 
 @pytest.mark.parametrize("spec", ["missing.txt", "."])

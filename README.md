@@ -179,10 +179,11 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
 | `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window), or `none`: no Wayland socket and no display variables, for command-line apps (no menu entry either). |
 
-**Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:rw]` grant access for that run only and
+**Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:ro|:rw]` grant access for that run only and
 are never saved. `--file` makes just that one file visible, not the rest of its directory, and appends its path inside
 the sandbox to the app's arguments. Credentials, browser profiles and the like are refused as for directories, and
-shell startup files are never writable. Apps that save by writing a temporary file and renaming it fail on `:rw`. For
+shell startup files are never writable. Apps that save by writing a temporary file and renaming it fail on `:rw`. A file whose own name ends in
+`:rw` or `:ro` needs its mode spelled out (`x:rw:ro`), and a directory with `:` in its name cannot be granted. For
 a standing grant use a directory, or the portal file chooser.
 
 Every sandbox also drops all capabilities, has its own PID, IPC and UTS namespaces, a read-only system, a minimal
@@ -312,7 +313,7 @@ owner change.
 |---|---|
 | `add owner/repo` | Install the latest release (or `--tag`, `--prerelease`) of a GitHub project. |
 | `add --file PATH` / `add --url URL` | Install an AppImage you give yourself; `--sha256 HEX` confirms it (tier 4). |
-| `run APP [-- ARGS]` | Run an app; `--dir PATH[:ro\|:rw]` and `--file PATH[:rw]` grant access for this run only. |
+| `run APP [-- ARGS]` | Run an app; `--dir PATH[:ro\|:rw]` and `--file PATH[:ro\|:rw]` grant access for this run only. |
 | `list` | Installed apps, versions, sources, tiers, permissions and updates seen. |
 | `update [APP]` | Check, quarantine and install new versions (see [Updating](#updating)). |
 | `perms APP` | Show or change an app's permissions. |

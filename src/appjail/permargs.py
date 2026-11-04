@@ -37,7 +37,8 @@ def dirs_from_args(specs, home=None, cwd=None):
 
 
 def files_from_args(specs, cwd=None):
-    """Absolute, existing regular files for --file options (PATH or PATH:rw); symlinks are resolved at launch."""
+    """Absolute, existing regular files for --file options (PATH, PATH:ro or PATH:rw), each with an explicit mode so a
+    file named like a suffix is never re-split later; symlinks are resolved at launch."""
     cwd = Path(cwd or Path.cwd())
     out = []
     for spec in specs:
@@ -45,7 +46,7 @@ def files_from_args(specs, cwd=None):
         full = Path(os.path.normpath(cwd / path))
         if not full.is_file():
             raise Abort(f"--file {spec}: not a regular file")
-        out.append(f"{full}:rw" if mode else str(full))
+        out.append(f"{full}:{'rw' if mode else 'ro'}")
     return tuple(out)
 
 

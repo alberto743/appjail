@@ -176,8 +176,9 @@ def build_parser():
     run.add_argument("name")
     run.add_argument("--dir", action="append", default=[], metavar="PATH[:ro|:rw]",
                      help="grant this directory for this run only (manifest unchanged); repeatable")
-    run.add_argument("--file", action="append", default=[], metavar="PATH[:rw]",
-                     help="bind just this file for this run (read-only unless :rw) and pass its in-jail path to the app; repeatable")
+    run.add_argument("--file", action="append", default=[], metavar="PATH[:ro|:rw]",
+                     help="bind just this file for this run (read-only unless :rw) and pass its in-jail path to the app; "
+                          "repeatable. To name a file that ends in :rw or :ro, add the mode yourself (x:rw:ro)")
     return p
 
 

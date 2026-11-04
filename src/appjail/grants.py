@@ -171,6 +171,8 @@ def normalize_dir(spec, home, cwd):
         path, mode = spec[:-3], spec[-3:]
     if not path:
         raise ManifestError("directory path is empty")
+    if ":" in path:
+        raise ManifestError("a directory path with ':' in it cannot be granted (':' separates the mode)")
     if path.startswith("~/"):
         path = os.path.join(str(home), path[2:])
     path = os.path.normpath(os.path.join(str(cwd), path))

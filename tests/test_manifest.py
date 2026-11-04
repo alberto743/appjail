@@ -367,3 +367,9 @@ def test_url_source_needs_a_fingerprint():
 def test_dirs_entries_must_be_normalised(entry):
     with pytest.raises(manifest.ManifestError, match="not normalised"):
         grants.check_dir(entry)
+
+
+@pytest.mark.parametrize("spec", ["/mnt/a:b", "/mnt/a:rw:ro", "/mnt/a:b:rw", "~/x:y"])
+def test_normalize_dir_refuses_a_colon_in_the_path(spec):
+    with pytest.raises(ManifestError, match="':'"):
+        grants.normalize_dir(spec, "/home/u", "/home/u/work")
