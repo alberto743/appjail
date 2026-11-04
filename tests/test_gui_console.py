@@ -122,7 +122,6 @@ def test_rows_marks_unreadable_manifest(h):
     assert "unreadable" in apps.rows()[0][5]
 
 
-
 def test_rows_shows_granted_portal_interfaces(h):
     h.add(extra=["--allow", "portals", "--portal", "Camera"])
     (row,) = apps.rows()

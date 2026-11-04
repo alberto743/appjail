@@ -27,8 +27,6 @@ SHA = "a" * 64
 # -- prepare: pin verification and re-extraction -----------------------------------------
 
 
-
-
 def test_unknown_app(sandbox):
     with pytest.raises(RunError, match="unknown app"):
         runner.prepare("ghost")

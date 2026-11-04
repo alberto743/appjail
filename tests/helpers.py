@@ -46,11 +46,7 @@ def write_image(path, fs):
 
 
 FAKE_APPIMAGE = b"\x7fELF\x02\x01\x01\x00AI\x02" + b"payload" * 10
-
-
 SHA = hashlib.sha256(FAKE_APPIMAGE).hexdigest()
-
-
 NOW = datetime(2026, 10, 17, tzinfo=UTC)
 
 
@@ -176,11 +172,7 @@ def release(*assets, tag="v1.0"):
 
 
 NEW_IMAGE = FAKE_APPIMAGE + b"-v2"
-
-
 NEW_SHA = hashlib.sha256(NEW_IMAGE).hexdigest()
-
-
 T0 = NOW
 
 

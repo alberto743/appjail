@@ -18,10 +18,6 @@ HAVE_TOOLS = bool(shutil.which("bwrap") and shutil.which("mksquashfs") and appim
 needs_tools = pytest.mark.skipif(not HAVE_TOOLS, reason="needs bwrap, mksquashfs and unsquashfs (run in the test guest)")
 
 
-
-
-
-
 # -- offset detection -----------------------------------------------------------------------
 
 

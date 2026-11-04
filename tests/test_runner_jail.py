@@ -32,9 +32,6 @@ SHA = "a" * 64
 # -- real bwrap (guest only) ---------------------------------------------------------------
 
 
-
-
-
 def facts(sandbox, runtime, **perms):
     proc = run_in_jail(sandbox, runtime, **perms)
     assert proc.returncode == 0, proc.stderr
