@@ -17,7 +17,7 @@ import pytest
 
 from appjail import cli, manifest, runner, runtimejail, store
 
-from .helpers import Answers, wait_for
+from .helpers import Answers, needs_pasta, wait_for
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("APPJAIL_E2E") != "1" or not shutil.which("weston"),
@@ -68,7 +68,7 @@ def test_gui_app_runs_in_jail_against_headless_weston(installed, tmp_path):
     assert not (Path.home() / ".config" / "lagrange").exists(), "nothing may reach the real home"
 
 
-@pytest.mark.skipif(not shutil.which("Xwayland"), reason="xwayland is installed in the test guest (packages.txt)")
+@pytest.mark.skipif(not shutil.which("Xwayland"), reason="needs xwayland (tests/vm/packages.txt)")
 def test_gui_app_runs_through_a_private_xwayland(installed):
     """Same app, forced onto X11 (no WAYLAND_DISPLAY, SDL_VIDEODRIVER=x11): it can only run through the jail's Xwayland."""
     from dataclasses import replace
@@ -93,7 +93,7 @@ def test_gui_app_runs_through_a_private_xwayland(installed):
         weston.wait(timeout=10)
 
 
-@pytest.mark.skipif(not shutil.which("pasta"), reason="pasta is installed in the test guest (packages.txt)")
+@needs_pasta
 def test_gui_app_with_network_reaches_a_server_through_pasta(installed):
     """Lagrange (a Gemini browser) is given a gemini:// URL. Its trust-on-first-use store, written into the private
     home, records the server certificate only if the TLS connection really went through the pasta namespace.
@@ -144,7 +144,7 @@ def _jail_processes(needle):
     return found
 
 
-@pytest.mark.skipif(not shutil.which("gio"), reason="gio (libglib2.0-bin) is installed in the test guest (packages.txt)")
+@pytest.mark.skipif(not shutil.which("gio"), reason="needs gio (libglib2.0-bin) (tests/vm/packages.txt)")
 @pytest.mark.parametrize("how", ["launch", "open"])
 def test_a_file_opened_through_the_menu_entry_reaches_the_jail(installed, tmp_path, monkeypatch, how):
     """The generated entry, driven by GLib the way a file manager does: `gio launch ENTRY FILE`, and `gio open FILE`

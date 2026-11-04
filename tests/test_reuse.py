@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", ".ruff_cache", "*.pyc", ".git", ".claude", "vm")
 
 
-@pytest.mark.skipif(not shutil.which("reuse"), reason="reuse is installed in the test guest (packages.txt)")
+@pytest.mark.skipif(not shutil.which("reuse"), reason="needs reuse (tests/vm/packages.txt)")
 def test_reuse_lint_passes(tmp_path):
     # Lint a clean copy: in the guest there is no git repository whose .gitignore reuse could honour.
     tree = tmp_path / "tree"

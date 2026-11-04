@@ -586,7 +586,7 @@ def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):
 
 @integration
 @pytest.mark.skipif(not all(shutil.which(c) for c in ("weston", "Xwayland", "xdpyinfo")),
-                    reason="weston, xwayland and x11-utils are installed in the test guest")
+                    reason="needs weston, xwayland and x11-utils (tests/vm/packages.txt)")
 @pytest.mark.parametrize("network_host", [False, True])
 def test_x11_client_runs_through_a_private_xwayland(sandbox, network_host):
     """With network_host the jail shares the host's abstract socket namespace, so it runs in its Landlock domain as
@@ -623,7 +623,7 @@ def test_x11_client_runs_through_a_private_xwayland(sandbox, network_host):
 
 @integration
 @pytest.mark.skipif(not all(shutil.which(c) for c in ("weston", "Xwayland", "openbox", "xprop")),
-                    reason="weston, xwayland, openbox and x11-utils are installed in the test guest")
+                    reason="needs weston, xwayland, openbox and x11-utils (tests/vm/packages.txt)")
 def test_rootful_xwayland_runs_a_window_manager(sandbox, monkeypatch):
     # With -decorate, openbox never gets going under headless weston or sway (cause not found; without it, it does).
     # The rest of the script is under test; the real option needs a manual check on a desktop compositor.
