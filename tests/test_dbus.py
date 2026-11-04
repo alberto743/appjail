@@ -21,7 +21,7 @@ NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.S
 # -- name validation ----------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", NAMES + ("org.example.App", "org.example.App.*"))
+@pytest.mark.parametrize("name", NAMES + ("org.example.App", "org.example.App.*", "org.gtkmm.Example", "org.freedesktop.FileManager1"))
 def test_ordinary_names_are_accepted(name):
     assert grants.check_dbus_name(name) == name
 
@@ -30,6 +30,7 @@ def test_ordinary_names_are_accepted(name):
     "org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedesktop.Flatpak", "org.gnome.Shell",
     "org.freedesktop.portal.Desktop", "org.freedesktop.impl.portal.PermissionStore",
     "org.freedesktop.*", "org.gnome.*", "org.*", "org.freedesktop.portal.*",
+    "ca.desrt.dconf", "ca.desrt.*", "org.gtk.vfs.Daemon", "org.gtk.vfs.*",
 ])
 def test_names_that_hand_over_the_host_are_refused(name):
     with pytest.raises(ManifestError):
@@ -43,7 +44,8 @@ def test_blocked_names_are_refused_when_loading_a_manifest():
         manifest.loads(text.replace("org.example.A", "org.freedesktop.systemd1"))
 
 
-OWN = ("org.mpris.MediaPlayer2.myplayer", "org.example.App", "org.example.App.*", "org.kde.StatusNotifierItem.*")
+OWN = ("org.mpris.MediaPlayer2.myplayer", "org.example.App", "org.example.App.*", "org.kde.StatusNotifierItem.*",
+       "org.gtkmm.Example")
 
 
 @pytest.mark.parametrize("name", OWN)
@@ -55,6 +57,7 @@ def test_ordinary_owned_names_are_accepted(name):
     "org.freedesktop.Notifications", "org.freedesktop.secrets", "org.gnome.Mutter.ScreenCast", "org.kde.KWin",
     "org.freedesktop.systemd1", "org.freedesktop.portal.Desktop", "org.kde.plasmashell", "org.freedesktop.*",
     "org.gnome.*", "org.kde.*", "org.freedesktop.DBus", "not a name",
+    "org.gtk.Application", "org.gtk.*", "ca.desrt.dconf", "ca.desrt.Other",
 ])
 def test_owning_desktop_services_is_refused(name):
     with pytest.raises(ManifestError):

@@ -37,7 +37,6 @@ The table records what the code does now, not a design. The read was static (not
 
 | # | Item | Where | Gap | Smallest fix | Tests to add | Docs | Size |
 |---|---|---|---|---|---|---|---|
-| 4 | More D-Bus names refused | `grants.DBUS_BLOCKED`, `DBUS_NO_OWN`, `check_dbus_name` | `ca.desrt.dconf` (settings, custom keybindings that run commands), `org.gtk.vfs*` (mounts, host locations) and terminal or file-manager names are not refused. Candidates are from the read, not verified on a live desktop; each needs a reason before it is added. On the owner side `org.gtk.` and `ca.desrt.` are not in the no-own list. | Append the confirmed names and prefixes; one prefix entry covers a family. | Extend the parametrized tests in `tests/test_dbus.py`. | DESIGN D-Bus (refused names, owner namespaces) | S |
 | 5 | Unbounded output buffering in `jail.supervise` | `jail.supervise` (`communicate` on `PIPE`s, `text=True`) | The full stdout and stderr of a jailed process are held in memory until it ends; only the output directory is size-limited. A hostile image can print gigabytes within the timeout. Callers use a few hundred characters. Strict text decoding can also raise on invalid UTF-8 (not verified). | Drain both pipes with a bounded reader that keeps the first and last few KiB and kills past a cap; decode with `errors="replace"`. | A process that prints more than the cap; invalid UTF-8. | DESIGN Extraction limits (add output cap) | M |
 | 6 | Symlinks in files being opened (TOCTOU) | `runtimejail.file_binds` (called twice per launch), `dir_binds`, `permargs.files_from_args`, `cmd_open` | The path is resolved and checked, then bwrap binds the path, not a file descriptor; a same-user process, or an app with a writable directory grant, can swap a component for a symlink in between. Low severity: the attacker already runs as the user or holds a writable grant. | Compare `(st_dev, st_ino)` just before exec at least; better, open `O_PATH\|O_NOFOLLOW` and bind `/proc/self/fd/N` through `pass_fds`. | A swap between check and launch (needs a controllable hook). | DESIGN sensitive paths, `run --file`, `open` | M |
 | 7 | `camera` device permission | `manifest.BOOL_PERMS`/`PERM_KEYS`/`Permissions`/writer, `permargs.permissions_from_args`, `runtimejail` (new `_camera_args` like `_gpu_args`), `cmd_apps.RISKY_GRANTS`, GUI (automatic via `PERMISSION_FLAGS`) | Not implemented. PipeWire cannot offer cameras safely (see "Native PipeWire audio"), so a device bind is the only workable path. | Boolean `camera`, default off, written only when true, binding `/dev/video*` and `/dev/media*`; a warning like other risky grants. | Manifest round trip, runner bind gated on the grant, `perms --allow/--deny`, `STATE` in `tests/test_gui_argv.py`; `tests/test_audio.py` must still show the camera unreachable over Pulse. | README permission table, DESIGN (`add --allow`, booleans, `perms`, a Camera bullet), CLAUDE open items | L |
@@ -110,6 +109,13 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 ### Waiting for every process in the jail, by default
 
 The jail ends with its main command; the `linger` permission (opt-in per app) waits for all processes instead. Waiting always was rejected: an app that leaves a crash handler, `dbus-daemon` or an agent behind would keep `appjail run` from ever returning, and "closing the app closes everything" would no longer hold. Found with VSCodium, whose launcher hook runs `cli.js`, which starts the editor detached and exits. **Revisit when:** most catalog apps need `linger`, or a reliable way to tell the app's own processes from helpers exists.
+
+### D-Bus names refused beyond the shell and portals
+
+- `ca.desrt.dconf`: the settings database; writing it can set GNOME custom keybindings, which run commands.
+- `org.gtk.vfs*`: GVfs mounts and host locations outside the jail's file grants.
+- `org.gtk.` and `ca.desrt.` are also unownable, like the other desktop namespaces.
+- Not refused: `org.freedesktop.FileManager1`, which is needed to browse files when portals are active. Terminal and other file-manager names vary by desktop and were not verified on a live desktop, so they are not listed.
 
 ### X11-only apps on GNOME: rootful Xwayland with openbox
 

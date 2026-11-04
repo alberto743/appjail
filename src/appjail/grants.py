@@ -14,13 +14,14 @@ DBUS_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)+(
 # the desktop, so a filter that allows them would not be a filter. Refused, never granted.
 DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedesktop.Flatpak",
                 "org.freedesktop.impl", "org.gnome.Shell", "org.gnome.SessionManager", "org.kde.KWin",
-                "org.kde.klauncher5", "org.kde.klauncher6", "org.freedesktop.portal")
+                "org.kde.klauncher5", "org.kde.klauncher6", "org.freedesktop.portal", "ca.desrt.dconf", "org.gtk.vfs")
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
 # Owning a name lets the app be the service behind it. Impersonating a desktop service (notifications, secrets,
 # polkit, the file manager, ...) would let the app intercept what other apps send there, so the desktop
 # namespaces cannot be owned, except the status-notifier names an app registers for its own tray icon.
-DBUS_NO_OWN = ("org.freedesktop.", "org.gnome.", "org.kde.", "org.a11y.", "com.canonical.", "org.ayatana.")
+DBUS_NO_OWN = ("org.freedesktop.", "org.gnome.", "org.kde.", "org.a11y.", "com.canonical.", "org.ayatana.",
+               "org.gtk.", "ca.desrt.")
 DBUS_OWN_OK = ("org.freedesktop.StatusNotifierItem", "org.kde.StatusNotifierItem")
 
 # Portal interfaces (the part after org.freedesktop.portal.). `portals = true` allows the safe set; the
