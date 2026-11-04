@@ -147,7 +147,7 @@ def _pasta_resolv_conf():
     text = f"nameserver {PASTA_DNS}\n"
     if not path.is_file() or path.read_text() != text:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        store.atomic_write(path, text)
     return path
 
 
@@ -213,22 +213,28 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
                             pass_fds=pass_fds)
     deadline = time.monotonic() + timeout
     reason = None
-    while reason is None:
-        try:
-            out, err = proc.communicate(timeout=0.25)
-            break
-        except subprocess.TimeoutExpired:
-            pass
-        if time.monotonic() > deadline:
-            reason = "timed out"
-        elif watch:
-            used, entries = tree_usage(watch[0])
-            if used > watch[1] or entries > watch[2]:
-                reason = "output too large"
+    try:
+        while reason is None:
+            try:
+                out, err = proc.communicate(timeout=0.25)
+                break
+            except subprocess.TimeoutExpired:
+                pass
+            if time.monotonic() > deadline:
+                reason = "timed out"
+            elif watch:
+                used, entries = tree_usage(watch[0])
+                if used > watch[1] or entries > watch[2]:
+                    reason = "output too large"
+    except BaseException:
+        reason = "interrupted"
+        raise
+    finally:
+        if reason:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(proc.pid, signal.SIGKILL)
+            proc.communicate()
     if reason:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(proc.pid, signal.SIGKILL)
-        proc.communicate()
         raise (OutputTooLarge if reason == "output too large" else JailError)(f"jailed command aborted: {reason}")
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 

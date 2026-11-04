@@ -163,7 +163,10 @@ def loaded():
     """[(source, Catalog)] for every source that has a current catalog."""
     out = []
     for source in sources().values():
-        cat = load(source.name)
+        try:
+            cat = load(source.name)
+        except IndexProblem as e:
+            raise IndexProblem(f"index source '{source.name}': {e}") from e
         if cat is not None:
             out.append((source, cat))
     return out
@@ -187,8 +190,12 @@ def install(name, text, now=None, digest=None, cat=None, commit=""):
     entry = {"sha256": digest, "revision": cat.revision, "updated": (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")}
     if commit:
         entry["commit"] = commit
-    _write(directory / "state.json", json.dumps({"current": entry, "previous": state["current"]}, indent=1) + "\n")
+    _write_state(directory, entry, state["current"])
     return True
+
+
+def _write_state(directory, current, previous):
+    _write(directory / "state.json", json.dumps({"current": current, "previous": previous}, indent=1) + "\n")
 
 
 def rollback(name):
@@ -197,11 +204,14 @@ def rollback(name):
     directory = base() / name
     if not state["previous"] or not (directory / "previous.json").is_file():
         raise IndexProblem(f"index source '{name}' has no previous catalog to roll back to")
-    cur = (directory / "current.json").read_text(encoding="utf-8")
-    prev = (directory / "previous.json").read_text(encoding="utf-8")
+    try:
+        cur = (directory / "current.json").read_text(encoding="utf-8")
+        prev = (directory / "previous.json").read_text(encoding="utf-8")
+    except OSError as e:
+        raise IndexProblem(f"cannot roll back '{name}': {e}") from e
     _write(directory / "current.json", prev)
     _write(directory / "previous.json", cur)
-    _write(directory / "state.json", json.dumps({"current": state["previous"], "previous": state["current"]}, indent=1) + "\n")
+    _write_state(directory, state["previous"], state["current"])
     return state["current"], state["previous"]
 
 

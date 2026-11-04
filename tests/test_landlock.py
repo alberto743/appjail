@@ -107,3 +107,9 @@ def test_the_wrapper_restricts_itself_then_runs_the_command():
                           capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0 and proc.stdout.strip() == "ran", proc.stderr
     assert landlock.main(["landlock.py"]) == 2  # no command: usage, nothing run
+
+
+def test_main_reports_a_command_that_cannot_be_run(monkeypatch, capsys):
+    monkeypatch.setattr(landlock, "restrict_self", lambda: None)
+    assert landlock.main(["landlock.py", "/nonexistent/appjail-test"]) == 127
+    assert "cannot run" in capsys.readouterr().err

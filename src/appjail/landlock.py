@@ -80,7 +80,11 @@ def main(argv):
     except OSError as e:
         print(f"appjail: cannot enter the Landlock domain: {e}", file=sys.stderr)
         return 126
-    os.execvp(argv[1], argv[1:])
+    try:
+        os.execvp(argv[1], argv[1:])
+    except OSError as e:
+        print(f"appjail: cannot run {argv[1]}: {e}", file=sys.stderr)
+        return 127
 
 
 if __name__ == "__main__":

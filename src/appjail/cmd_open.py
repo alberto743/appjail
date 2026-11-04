@@ -7,6 +7,7 @@ Each file is bound alone (read-only unless --rw) for that run, like `run --file`
 is also shown as a notification when notify-send exists.
 """
 
+import contextlib
 import os
 import shutil
 import subprocess
@@ -25,7 +26,8 @@ def file_spec(path, rw):
 def notify(text):
     tool = shutil.which("notify-send")
     if tool:
-        subprocess.run([tool, "--app-name=appjail", "appjail", clean(text, 300)], capture_output=True, check=False, timeout=10)
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            subprocess.run([tool, "--app-name=appjail", "appjail", clean(text, 300)], capture_output=True, check=False, timeout=10)
 
 
 def cmd_open(args, files, console):

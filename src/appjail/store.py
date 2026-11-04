@@ -46,8 +46,7 @@ def atomic_write(path, data, mode=0o666):
     """Replace `path` with `data` (str or bytes) through a temp file in the same directory.
     The file is created with `mode` (before the umask), so it is never readable wider than asked."""
     path = Path(path)
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.unlink(missing_ok=True)
+    tmp = path.with_name(f".{path.name}.{secrets.token_hex(4)}.tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
     try:
         with os.fdopen(fd, "wb") as f:

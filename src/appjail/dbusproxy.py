@@ -62,13 +62,16 @@ class Proxy:
 
     def __init__(self, perms, host_env, popen=subprocess.Popen, identity=None):
         self.perms, self.host_env, self._popen, self.identity = perms, host_env, popen, identity
-        self.proc = self.dir = None
+        self.proc = self.dir = self._read_fd = None
 
     def __enter__(self):
         if not os.access(PROXY, os.X_OK):
             raise RunError("dbus_filter, dbus_own and portals need xdg-dbus-proxy (apt install xdg-dbus-proxy)")
         bus = host_bus(self.host_env)
-        self.dir = Path(tempfile.mkdtemp(prefix="appjail-", dir=self.host_env["XDG_RUNTIME_DIR"]))
+        runtime_dir = self.host_env.get("XDG_RUNTIME_DIR")
+        if not runtime_dir:
+            raise RunError("the D-Bus proxy needs XDG_RUNTIME_DIR")
+        self.dir = Path(tempfile.mkdtemp(prefix="appjail-", dir=runtime_dir))
         read_fd, write_fd = os.pipe()
         filter_fd = seccomp.open_fd(False)
         try:
@@ -85,13 +88,15 @@ class Proxy:
                     detail = ": " + self.proc.stderr.read().decode("utf-8", "replace").strip()[:300]
                 raise RunError("the D-Bus proxy did not start" + detail)
         except BaseException:
+            os.close(read_fd)
             self._stop()
             raise
+        else:
+            self._read_fd = read_fd
         finally:
             if write_fd is not None:
                 os.close(write_fd)
             os.close(filter_fd)
-            self._read_fd = read_fd
         return str(self.dir / "bus")
 
     def _stop(self):
@@ -108,7 +113,7 @@ class Proxy:
             shutil.rmtree(self.dir, ignore_errors=True)
 
     def __exit__(self, *exc):
-        if getattr(self, "_read_fd", None) is not None:
+        if self._read_fd is not None:
             os.close(self._read_fd)
             self._read_fd = None
         self._stop()

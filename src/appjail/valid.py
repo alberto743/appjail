@@ -11,7 +11,7 @@ class ManifestError(ValueError):
 
 
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
-DISPLAY_SIZE_RE = re.compile(r"([1-9]\d{2,3})x([1-9]\d{2,3})")
+DISPLAY_SIZE_RE = re.compile(r"([1-9][0-9]{2,3})x([1-9][0-9]{2,3})")
 DISPLAY_SIZE_RANGE = (320, 8192)
 
 

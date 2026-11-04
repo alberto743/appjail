@@ -32,7 +32,7 @@ SOURCE_KINDS = ("github", "url", "file")
 MAX_URL = 2048
 FILE_NAME_RE = re.compile(r"[^/\x00-\x1f\x7f]{1,255}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
-PUBLISHED_RE = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
+PUBLISHED_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
 
 TIERS = (1, 2, 3, 4, 5)
 ROOTFUL = "xwayland-rootful"

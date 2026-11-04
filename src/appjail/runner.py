@@ -157,7 +157,8 @@ def _run_app(argv, filter_fd=None, pipes=None, instance=None):
         ready, _, _ = select.select([pipes["status_r"]], [], [], STATUS_TIMEOUT)
         line = b""
         if ready:
-            line = os.fdopen(os.dup(pipes["status_r"]), "rb").readline()
+            with os.fdopen(os.dup(pipes["status_r"]), "rb") as status:
+                line = status.readline()
         try:
             pid = json.loads(line)["child-pid"]
         except (ValueError, KeyError, TypeError):

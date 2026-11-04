@@ -41,3 +41,7 @@ def test_truncation():
 
 def test_non_string():
     assert textsafe.clean(None) == "None"
+
+
+def test_clean_drops_zero_width_and_bidi_characters():
+    assert textsafe.clean("a\u200bb\u202ec\u2066d\ufeffe\u061cf") == "abcdef"

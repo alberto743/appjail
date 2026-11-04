@@ -8,6 +8,7 @@ few display fields are read from it (and sanitised); the entry itself is generat
 Only files carrying the X-Appjail-App marker are ever touched.
 """
 
+import contextlib
 import os
 import re
 import shutil
@@ -146,7 +147,8 @@ def split_mimes(raw):
 def launcher_argv():
     """How the entry starts appjail: the installed command, or the interpreter running this package."""
     found = shutil.which("appjail")
-    return [os.path.realpath(found)] if found else [os.path.realpath(sys.executable), "-m", "appjail"]
+    # abspath, not realpath: the python of a virtual environment is a symlink to one that does not have appjail
+    return [os.path.realpath(found)] if found else [os.path.abspath(sys.executable), "-m", "appjail"]
 
 
 def _quote_arg(arg):
@@ -189,7 +191,8 @@ def build_entry(name, fields, mimes=(), rw=False, argv=None, icon=False):
 def marker_of(path):
     """The app name in the X-Appjail-App marker of an entry file, or None if it is not ours."""
     try:
-        if os.lstat(path).st_size > MAX_DESKTOP_BYTES or not Path(path).is_file():
+        info = os.lstat(path)  # a symlink is somebody else's file, whatever it points at
+        if info.st_size > MAX_DESKTOP_BYTES or not stat.S_ISREG(info.st_mode):
             return None
         for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
             if line.startswith(MARKER + "="):
@@ -310,12 +313,13 @@ def remove_icons(name):
 def refresh_cache():
     """Tell the desktop about changed entries (desktop-file-utils) and icons (gtk-update-icon-cache; `-t` because the
     user's hicolor has no index.theme); a missing tool is skipped."""
-    if tool := shutil.which(ICON_CACHE_TOOL):
-        theme = data_home() / "icons/hicolor"
-        if theme.is_dir():
-            subprocess.run([tool, "-q", "-t", "-f", str(theme)], capture_output=True, check=False, timeout=60)
-    if tool := shutil.which(DESKTOP_DB_TOOL):
-        subprocess.run([tool, str(applications_dir())], capture_output=True, check=False, timeout=60)
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
+        if tool := shutil.which(ICON_CACHE_TOOL):
+            theme = data_home() / "icons/hicolor"
+            if theme.is_dir():
+                subprocess.run([tool, "-q", "-t", "-f", str(theme)], capture_output=True, check=False, timeout=60)
+        if tool := shutil.which(DESKTOP_DB_TOOL):
+            subprocess.run([tool, str(applications_dir())], capture_output=True, check=False, timeout=60)
 
 
 def install(name, root, mimes=(), rw=False, argv=None, convert=None):
@@ -361,7 +365,6 @@ def gui_icon_path():
 
 def gui_launcher_argv():
     found = shutil.which("appjail-gui")
-    # abspath, not realpath: the python of a virtual environment is a symlink to one that does not have appjail
     return [os.path.realpath(found)] if found else [os.path.abspath(sys.executable), "-m", "appjail.gui"]
 
 
@@ -392,7 +395,7 @@ def install_gui(icon_svg, argv=None):
     if os.path.lexists(path) and not gui_entry_is_ours(path):
         raise DesktopError(f"{path} exists and was not created by appjail-gui; not touching it")
     if len(icon_svg) > MAX_SVG_BYTES or b"<svg" not in icon_svg[:4096].lower():
-        raise DesktopError("the packaged icon is missing or damaged; creating the entry without it")
+        raise DesktopError("the packaged icon is missing or damaged; not creating the entry")
     icon = gui_icon_path()
     icon.parent.mkdir(parents=True, exist_ok=True)
     store.atomic_write(icon, icon_svg)

@@ -108,3 +108,9 @@ def test_wrapped_keeps_the_indent_of_a_line_whose_first_word_is_too_long(monkeyp
     value = console_mod.ARROW_NB + "9" * 64
     assert console_mod.wrapped(" " * 14 + value, hang=14, stream=FakeTty()) == [" " * 14 + value]
     assert console_mod.wrapped("  sha256      " + "a" * 64, hang=14, stream=FakeTty()) == ["  sha256      " + "a" * 64]
+
+
+def test_table_without_rows_prints_nothing(con):
+    c, cap = con
+    c.table(["Name", "Size"], [])
+    assert cap.readouterr().out == "\n"

@@ -138,7 +138,7 @@ def _app(raw, position):
 
 def parse(text):
     """The Catalog in `text` (a JSON document); IndexProblem if it does not follow the format."""
-    if len(text) > MAX_BYTES:
+    if len(text.encode("utf-8")) > MAX_BYTES:
         raise IndexProblem("the catalog is too large")
     try:
         data = json.loads(text)

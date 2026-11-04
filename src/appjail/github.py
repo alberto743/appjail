@@ -10,6 +10,7 @@ refused when they leave that host).
 """
 
 import fnmatch
+import functools
 import json
 import os
 import re
@@ -100,6 +101,17 @@ def _urllib_fetch(url, headers, timeout, max_bytes):
         return resp.status, {k.lower(): v for k, v in resp.headers.items()}, body
 
 
+def _shaped(method):
+    """GitHub's JSON is data from the network: a shape we do not expect is a GitHubError, not a traceback."""
+    @functools.wraps(method)
+    def checked(*args, **kwargs):
+        try:
+            return method(*args, **kwargs)
+        except (KeyError, TypeError, AttributeError, ValueError):
+            raise GitHubError("unexpected response from GitHub") from None
+    return checked
+
+
 class Client:
     def __init__(self, token=None, fetch=_urllib_fetch):
         self._token = token if token is not None else os.environ.get("GITHUB_TOKEN", "")
@@ -130,7 +142,7 @@ class Client:
             except ValueError as e:
                 raise GitHubError("GitHub returned invalid JSON") from e
         if status == 404:
-            raise NotFound(path)
+            raise NotFound(f"not found on GitHub: {path}")
         if status in (403, 429) and hdrs.get("x-ratelimit-remaining") == "0":
             reset = hdrs.get("x-ratelimit-reset", "")
             try:
@@ -142,6 +154,7 @@ class Client:
 
     # -- resolver ---------------------------------------------------------------
 
+    @_shaped
     def repo_info(self, source):
         _check_source(source)
         repo = self._get(f"/repos/{source}")
@@ -163,14 +176,15 @@ class Client:
             renamed=repo["full_name"].lower() != source.lower(),
         )
 
-    def head_commit(self, source, ref="HEAD"):
-        """The full commit SHA that `ref` (default: the default branch) points to in `source`."""
+    def head_commit(self, source):
+        """The full commit SHA of the default branch of `source`."""
         _check_source(source)
-        sha = self._get(f"/repos/{source}/commits/{ref}").get("sha")
+        sha = self._get(f"/repos/{source}/commits/HEAD").get("sha")
         if not isinstance(sha, str) or not COMMIT_RE.fullmatch(sha):
             raise GitHubError("GitHub returned no usable commit")
         return sha
 
+    @_shaped
     def latest_release(self, source, prereleases=False):
         _check_source(source)
         if prereleases:
@@ -182,12 +196,14 @@ class Client:
             data = self._get(f"/repos/{source}/releases/latest")
         return _release(source, data)
 
+    @_shaped
     def release_by_tag(self, source, tag):
         _check_source(source)
         if not TAG_RE.fullmatch(tag or ""):
             raise GitHubError(f"not a valid release tag: {textsafe.clean(tag, 60)!r}")
         return _release(source, self._get(f"/repos/{source}/releases/tags/{urllib.parse.quote(tag)}"))
 
+    @_shaped
     def _attestations(self, source, sha256):
         """The attestation records GitHub lists for this digest (a list; empty when there are none)."""
         _check_source(source)

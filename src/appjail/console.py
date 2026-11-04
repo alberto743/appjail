@@ -71,7 +71,7 @@ class Console:
         """Rows aligned under their headers. Cells are cleaned and cut to max_width; a column with no content is dropped."""
         rows = [[textsafe.clean(c, max_width) for c in row] for row in rows]
         keep = [i for i, h in enumerate(headers) if h and any(r[i] for r in rows)]
-        widths = {i: max(len(headers[i]), *(len(r[i]) for r in rows)) for i in keep}
+        widths = {i: max([len(headers[i]), *(len(r[i]) for r in rows)]) for i in keep}
         for line in [list(headers), *rows]:
             self.out("  ".join(line[i].ljust(widths[i]) for i in keep).rstrip())
 

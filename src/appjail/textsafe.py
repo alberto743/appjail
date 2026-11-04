@@ -14,8 +14,8 @@ _ESC = re.compile(
     r"|\x1b[ -~]?"
     r"|\x9b[0-?]*[ -/]*[@-~]?"
 )
-# C0/C1 controls and DEL, plus bidirectional overrides and isolates (spoofing).
-_CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f‪-‮⁦-⁩]")
+# C0/C1 controls and DEL, plus zero-width and bidirectional characters (spoofing).
+_CTRL = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]")
 _SPACE = re.compile(r"[\t\n\r]+")
 
 

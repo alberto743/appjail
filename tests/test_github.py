@@ -102,6 +102,18 @@ def test_not_found():
         c.repo_info("o/r")
 
 
+@pytest.mark.parametrize("route, call", [
+    ("/repos/o/r", lambda c: c.repo_info("o/r")),
+    ("/repos/o/r/releases/latest", lambda c: c.latest_release("o/r")),
+    ("/repos/o/r/attestations/sha256:" + SHA, lambda c: c.has_attestation("o/r", SHA)),
+])
+@pytest.mark.parametrize("body", [[], "text"])
+def test_an_unexpected_json_shape_is_a_github_error(route, call, body):
+    c, _ = client({route: (200, {}, body)})
+    with pytest.raises(GitHubError, match="unexpected response"):
+        call(c)
+
+
 def test_rate_limit():
     c, _ = client({"/repos/o/r": (403, {"x-ratelimit-remaining": "0", "x-ratelimit-reset": "1790000000"}, {})})
     with pytest.raises(RateLimited, match="GITHUB_TOKEN"):
