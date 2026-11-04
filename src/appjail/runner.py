@@ -238,7 +238,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     if perms.network_host and not scoped:
         raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
     env = dict(os.environ if host_env is None else host_env)
-    in_pasta = perms.network and not perms.network_host
+    in_pasta = perms.pasta
     with contextlib.ExitStack() as stack:
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
@@ -253,7 +253,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
             block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), files=extra_files)
         argv = [jail.find_bwrap(), *args]
-        if perms.network and not perms.network_host:
+        if in_pasta:
             argv = jail.net_wrap(argv, required=True, lifeline=life.path, fd_files={
                 PASTA_SECCOMP_FD: filter_file,
                 **({PASTA_STATUS_FD: (">", pipes.paths["status"]), PASTA_BLOCK_FD: ("<", pipes.paths["block"])} if pipes else {})})

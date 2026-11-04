@@ -7,7 +7,7 @@ import os
 import stat
 from pathlib import Path
 
-from . import grants, linger, manifest, store
+from . import dbusproxy, grants, linger, manifest, store, wayland
 from .jail import RunError, etc_args, system_args
 
 APP_HOME = "/home/app"
@@ -120,13 +120,10 @@ def xwayland_command(command, rootful=False, size=manifest.DEFAULT_DISPLAY_SIZE)
 def _wayland_args(host_env, wayland_socket, rt):
     if wayland_socket:
         sock = Path(wayland_socket)
+        if not sock.is_socket():
+            raise RunError(f"Wayland socket not found: {sock}")
     else:
-        host_rt, wl = host_env.get("XDG_RUNTIME_DIR", ""), host_env.get("WAYLAND_DISPLAY", "wayland-0")
-        if "/" in wl or not wl or not host_rt:
-            raise RunError("no usable Wayland session (XDG_RUNTIME_DIR / WAYLAND_DISPLAY)")
-        sock = Path(host_rt) / wl
-    if not sock.is_socket():
-        raise RunError(f"Wayland socket not found: {sock}")
+        sock = wayland.host_socket_path(host_env)
     return ["--ro-bind", str(sock), f"{rt}/wayland-0"]
 
 
@@ -194,7 +191,7 @@ def _namespace_args(perms, uid, seccomp_fd):
             "--hostname", "appjail"]
     if not perms.userns:
         args += ["--unshare-user", "--disable-userns"]
-    if perms.network and not perms.network_host:
+    if perms.pasta:
         # pasta runs the command as uid 0 of a user namespace that maps to the host user; give the app its own
         # ids back (passwd, D-Bus authentication and file ownership all expect them)
         args += ["--uid", str(uid), "--gid", str(os.getgid())]
@@ -232,7 +229,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
         command = linger.wrap(command)
     if xwayland:
         command = xwayland_command(command, perms.rootful, perms.display_size)
-    if (perms.dbus_filter or perms.dbus_own or perms.portals) and not dbus_socket:
+    if dbusproxy.needed(perms) and not dbus_socket:
         raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from appjail.dbusproxy")
     if perms.portals and not portal_docs:
         raise RunError("portals need the document portal's directory for this app (appjail.portal.doc_dir)")

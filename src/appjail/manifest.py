@@ -69,6 +69,11 @@ class Permissions:
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
     @property
+    def pasta(self):
+        """Outbound network through a private pasta namespace (the host's own namespace is network_host)."""
+        return self.network and not self.network_host
+
+    @property
     def windowed(self):
         return self.display != NO_DISPLAY
 
