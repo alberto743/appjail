@@ -28,10 +28,10 @@ Linux on x86-64 only. Minimum supported systems: Debian 13 and Ubuntu 26.04. Old
 | `desktop APP`, `open APP -- FILE...` | Menu entry; open files in the jail. |
 | `tools status\|install NAME` | Pinned helper binaries (`gh`, `dwarfs`). |
 | `index add NAME --url URL\|--file PATH`, `index remove NAME`, `index update [NAME] [--commit SHA]`, `index rollback [NAME]`, `index status [--json]` | Manage the catalogs `search` reads. |
-| `version` | The installed version (from the git tag at build time). |
+| `version`, `--version` | The installed version (from the git tag at build time). |
 
 ## Manifest (`manifest.py`, `grants.py`, `valid.py`)
-TOML, schema 1, one file per app at `~/.config/appjail/apps/<name>.toml`. Strict: unknown keys, wrong types, control characters and bad formats are errors. The writer is deterministic and atomic and refuses invalid manifests.
+TOML, schema 1, one file per app at `~/.config/appjail/apps/<name>.toml`. Strict: unknown keys, wrong types, control characters and bad formats are errors. The writer is deterministic and atomic and refuses invalid manifests. `name` must match the file name.
 - App names match `[a-z0-9][a-z0-9._-]{0,63}` and are used as path components, so every command that takes an app name (`run` and `update` included) checks it with `manifest.check_name` before using it.
 - Top level: `schema = 1`, `name` (`[a-z0-9][a-z0-9._-]{0,63}`), `source` (kind-prefixed), `channel` (`github:` only), `asset_pattern` (`github:` only; fnmatch, no `/`), `fingerprint` (`url:` only), `owner_id` (`github:` only), `version`, `sha256` (64 lowercase hex), `evidence_tier` (1-5), `published_at` (UTC `YYYY-MM-DDTHH:MM:SSZ`).
 - `[permissions]` is optional and everything defaults to denied:

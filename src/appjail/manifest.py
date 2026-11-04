@@ -289,7 +289,12 @@ def loads(text):
 
 
 def load(path):
-    return loads(Path(path).read_text(encoding="utf-8"))
+    """The manifest at `path`, which must be named after its app: the commands find an app's files by that name."""
+    path = Path(path)
+    m = loads(path.read_text(encoding="utf-8"))
+    if m.name != path.stem:
+        raise ManifestError(f"the manifest of '{m.name}' is in a file named {path.name}")
+    return m
 
 
 def _quote(s):

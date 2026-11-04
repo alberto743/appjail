@@ -355,6 +355,15 @@ def test_channel_defaults_to_stable_and_round_trips():
         manifest.validate(make(channel="nightly"))
 
 
+def test_a_manifest_must_be_named_after_its_app(tmp_path):
+    good, other = tmp_path / "gh.toml", tmp_path / "other.toml"
+    good.write_text(GOOD)
+    other.write_text(GOOD)
+    assert manifest.load(good).name == "gh"
+    with pytest.raises(ManifestError, match="in a file named other.toml"):
+        manifest.load(other)
+
+
 @pytest.mark.parametrize("build", [make_url, make_file])
 def test_a_url_or_file_app_has_no_channel_to_choose(build):
     assert build().channel == "stable"
