@@ -12,7 +12,7 @@ ssh_() { "$here/ssh.sh" "$@"; }
 
 ssh_ "sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $pk"
 ssh_ 'sh -s' < "$here/install-ruff.sh"
-ssh_ 'sudo rm -f /etc/udev/rules.d/70-bjail-dri.rules; sudo usermod -aG video,render tester'
+ssh_ 'sudo usermod -aG video,render tester'
 if ssh_ 'dpkg -l | grep -q "^ii  linux-image-.*cloud"'; then
 	ssh_ 'sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq $(dpkg -l | awk "/^ii  linux-image-.*cloud/{print \$2}") && sudo update-grub'
 fi

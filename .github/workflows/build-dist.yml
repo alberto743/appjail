@@ -1,8 +1,8 @@
 name: Build distributions
 
 # Reusable: builds the sdist and the wheel (the version is derived from the git tag), checks that the built version is the tag,
-# checks their metadata and uploads them as the artifact "dist". pypi.yml publishes that artifact and release.yml attaches the sdist from it, so
-# both ship the same bytes.
+# checks their metadata and uploads them as the artifact "dist". pypi.yml publishes it and release.yml attaches the sdist;
+# each of the two builds its own copy from the same tag.
 
 on:
   workflow_call:
@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # the version is derived from the git tags
+          persist-credentials: false
       - name: Build the sdist and the wheel
         run: |
           python3 -m venv "$RUNNER_TEMP/build"
