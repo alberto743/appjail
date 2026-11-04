@@ -43,7 +43,7 @@ Planned code work is in `DECISIONS.md` (Planned code work: ordered items, with t
 ## Testing environment
 - The host-execution rule is under Hard rules. Everything that runs software runs in the qemu-kvm guest.
 - Host requirements (Debian 13): qemu with KVM, `qemu-img`, `cloud-localds`, `genisoimage`, OVMF, and read-write access to `/dev/kvm`. Install nothing else without asking.
-- The guest needs a headless Wayland compositor (weston), user namespaces, bubblewrap, `unsquashfs`, `xdg-dbus-proxy`, `dbus-bin`, `passt`, `xwayland`, portals, PipeWire with pipewire-pulse and a kernel with DRM drivers; the list is `tests/vm/packages.txt` (one commented line per package). Change requirements there, never ad hoc in the guest.
+- The guest needs a headless Wayland compositor (weston), user namespaces, bubblewrap, `unsquashfs`, `xdg-dbus-proxy`, `dbus-bin`, `passt`, `xwayland`, portals, PipeWire with pipewire-pulse and a kernel with DRM drivers; the list is `tests/vm/packages.txt` (one commented line per package). Change requirements there, never ad hoc in the guest; `tests/vm/packages.sh` prints the names for `create.sh`, `provision.sh` and the CI action.
 - Ask before creating or downloading a guest image (a binary download). The VM is reproducible from tracked files; `vm/` (image, disk, ssh key, console log) is gitignored and may be deleted and rebuilt. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
 - VM scripts (`tests/vm/`):
   1. `create.sh` downloads the Debian 13 genericcloud image (~340 MB, verified against `SHA512SUMS`), creates the overlay disk, ssh key and cloud-init seed (`--force` rebuilds overlay and seed; the seed only runs on a fresh overlay).

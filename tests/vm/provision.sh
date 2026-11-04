@@ -7,7 +7,7 @@
 # and gives the test user the video and render groups (access to /dev/dri). Reboots the guest when the kernel changed.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
-pk=$(sed 's/#.*//' "$here/packages.txt" | tr -s ' \n' ' ')
+pk=$("$here/packages.sh" | tr '\n' ' ')
 ssh_() { "$here/ssh.sh" "$@"; }
 
 ssh_ "sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $pk"

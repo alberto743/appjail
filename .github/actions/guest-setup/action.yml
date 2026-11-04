@@ -19,4 +19,4 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sed 's/#.*//' tests/vm/packages.txt | grep -Ev '^ *linux-image' | xargs sudo apt-get install -y --no-install-recommends
+        tests/vm/packages.sh | grep -v '^linux-image' | xargs sudo apt-get install -y --no-install-recommends

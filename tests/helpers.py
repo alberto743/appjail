@@ -113,10 +113,11 @@ class Harness:
 
 
 class Answers(cli.Console):
-    """Console with scripted answers for the e2e tests: no recording of the prompts, and an empty list is an IndexError."""
+    """Console with scripted answers for the e2e tests: no recording of the prompts. When the answers run out it
+    gives `default`, or raises IndexError if there is none."""
 
-    def __init__(self, answers):
-        self.answers, self.lines = list(answers), []
+    def __init__(self, answers=(), default=None):
+        self.answers, self.default, self.lines = list(answers), default, []
 
     def out(self, line=""):
         self.lines.append(line)
@@ -128,7 +129,7 @@ class Answers(cli.Console):
         self.lines.append(error_text(line))
 
     def ask(self, prompt):
-        return self.answers.pop(0)
+        return self.answers.pop(0) if self.answers or self.default is None else self.default
 
 
 class Script(cli.Console):
