@@ -188,12 +188,10 @@ def remove_tree(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
-def extract_dwarfs(appimage, dest, offset):
-    """DwarFS image: extract with the pinned, hash-checked dwarfs-universal tool, inside the jail."""
-    try:
-        tool = tools.require("dwarfs")
-    except tools.ToolError as e:
-        raise ExtractError(str(e)) from e
+def _extract_to(dest, build):
+    """Extract into a private work directory next to `dest` (which must not exist), validate, then move into place.
+
+    build(work) returns the jail arguments and the path of the extracted tree inside work. On failure nothing stays."""
     dest = Path(dest)
     if dest.exists():
         raise ExtractError(f"{dest} already exists")
@@ -201,19 +199,34 @@ def extract_dwarfs(appimage, dest, offset):
     remove_tree(work)
     work.mkdir(mode=0o700)
     try:
-        (work / "root").mkdir()
-        cmd = ["/dwarfs-tool", "--tool=dwarfsextract", "-i", "/app.AppImage", "-O", str(offset),
-               "-o", "/out/root", "--skip-devices", "--skip-specials"]
-        proc = _run_extraction(jail.extract_args(appimage, work, cmd, tools=((tool, "/dwarfs-tool"),)), work)
+        args, tree = build(work)
+        proc = _run_extraction(args, work)
         if proc.returncode != 0:
             raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
-        tree = work / "root"
+        if not tree.is_dir():
+            raise ExtractError("extraction produced no files")
         stats = check_tree(tree)
         resolve_entry(tree, "AppRun")
         os.replace(tree, dest)
         return stats
     finally:
         remove_tree(work)
+
+
+def extract_dwarfs(appimage, dest, offset):
+    """DwarFS image: extract with the pinned, hash-checked dwarfs-universal tool, inside the jail."""
+    try:
+        tool = tools.require("dwarfs")
+    except tools.ToolError as e:
+        raise ExtractError(str(e)) from e
+
+    def build(work):
+        (work / "root").mkdir()
+        cmd = ["/dwarfs-tool", "--tool=dwarfsextract", "-i", "/app.AppImage", "-O", str(offset),
+               "-o", "/out/root", "--skip-devices", "--skip-specials"]
+        return jail.extract_args(appimage, work, cmd, tools=((tool, "/dwarfs-tool"),)), work / "root"
+
+    return _extract_to(dest, build)
 
 
 def _run_extraction(args, work):
@@ -236,37 +249,22 @@ def extract(appimage, dest, runtime_fallback=False):
     runtime_fallback the image's own --appimage-extract is run, still inside the jail.
     Returns (entries, bytes). On any failure dest is not left behind.
     """
-    appimage, dest = Path(appimage), Path(dest)
+    appimage = Path(appimage)
     kind, offset = locate_fs(appimage)
     if kind == "dwarfs":
         return extract_dwarfs(appimage, dest, offset)
     if not have_unsquashfs() and not runtime_fallback:
         raise ExtractError("unsquashfs is not installed (apt install squashfs-tools)")
-    if dest.exists():
-        raise ExtractError(f"{dest} already exists")
-    work = dest.with_name(dest.name + ".tmp")
-    remove_tree(work)
-    work.mkdir(mode=0o700)
-    try:
+
+    def build(work):
         if have_unsquashfs():
             cmd = [UNSQUASHFS, "-no-progress", "-no-xattrs", "-p", "2", "-o", str(offset),
                    "-d", "/out/root", "/app.AppImage"]
-            tree = work / "root"
-        else:
-            # The runtime must be executable inside the jail: use a private copy.
-            copy = work / "app.AppImage"
-            shutil.copyfile(appimage, copy)
-            copy.chmod(0o700)
-            cmd = ["/out/app.AppImage", "--appimage-extract"]
-            tree = work / "squashfs-root"
-        proc = _run_extraction(jail.extract_args(appimage, work, cmd), work)
-        if proc.returncode != 0:
-            raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
-        if not tree.is_dir():
-            raise ExtractError("extraction produced no files")
-        stats = check_tree(tree)
-        resolve_entry(tree, "AppRun")
-        os.replace(tree, dest)
-        return stats
-    finally:
-        remove_tree(work)
+            return jail.extract_args(appimage, work, cmd), work / "root"
+        # The runtime must be executable inside the jail: use a private copy.
+        copy = work / "app.AppImage"
+        shutil.copyfile(appimage, copy)
+        copy.chmod(0o700)
+        return jail.extract_args(appimage, work, ["/out/app.AppImage", "--appimage-extract"]), work / "squashfs-root"
+
+    return _extract_to(dest, build)
