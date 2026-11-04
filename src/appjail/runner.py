@@ -28,10 +28,10 @@ from . import (
     store,
     wayland,
 )
-from .jail import RunError
+from .jail import PASTA_SECCOMP_FD, RunError
 
-# Descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).
-PASTA_SECCOMP_FD, PASTA_STATUS_FD, PASTA_BLOCK_FD = 9, 8, 7
+# More descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).
+PASTA_STATUS_FD, PASTA_BLOCK_FD = 8, 7
 
 
 def _passwd(uid, gid):

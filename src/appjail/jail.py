@@ -239,7 +239,7 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=()):
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
-HELPER_SECCOMP_FD = 9  # behind pasta the filter is opened inside its namespace (see net_wrap: one digit only)
+PASTA_SECCOMP_FD = 9  # behind pasta the filter is opened inside its namespace (see net_wrap: one digit only)
 
 
 def run(args, timeout=1800, watch=None):
@@ -251,8 +251,8 @@ def run(args, timeout=1800, watch=None):
         try:
             with os.fdopen(fd, "wb") as f:
                 f.write(seccomp.program(False))
-            argv = net_wrap([find_bwrap(), "--seccomp", str(HELPER_SECCOMP_FD), *args],
-                            fd_files={HELPER_SECCOMP_FD: path})
+            argv = net_wrap([find_bwrap(), "--seccomp", str(PASTA_SECCOMP_FD), *args],
+                            fd_files={PASTA_SECCOMP_FD: path})
             return supervise(argv, timeout=timeout, watch=watch)
         finally:
             os.unlink(path)
