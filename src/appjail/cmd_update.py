@@ -181,8 +181,7 @@ def cmd_update(args, client, console, download=jail.download, now=None, extract=
         try:
             results[name] = update_app(name, args, client, console, svc, now)
         except github.RateLimited as e:
-            console.out(f"== {name} ==")
-            console.out(f"  {e}")
+            console.error(f"{name}: {e}")
             results[name] = "failed"
             for rest in names[i + 1:]:
                 results[rest] = "not checked (rate limited)"

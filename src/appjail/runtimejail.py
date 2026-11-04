@@ -82,7 +82,7 @@ def file_binds(files, home):
     return args, dests
 
 
-XWAYLAND_PATHS = ("/usr/bin/Xwayland", "/bin/Xwayland")
+XWAYLAND_PATHS = ("/usr/bin/Xwayland",)
 OPENBOX_PATHS = ("/usr/bin/openbox",)
 # Runs inside the jail: an Xwayland of its own, a client of the (restricted) Wayland socket. Its X11 socket lives in
 # the jail's private /tmp and abstract namespace, so no other app and no host X server is involved. Arguments: the
@@ -169,8 +169,8 @@ def _audio_args(host_rt, rt, env):
     sandboxed (by a .flatpak-info in their root), so a jailed app on pipewire-0 would see and use every node, cameras
     and other apps' screen casts included. pipewire-pulse serves audio and nothing else."""
     args = []
-    pulse = Path(host_rt) / "pulse" / "native"
-    if pulse.is_socket():
+    pulse = Path(host_rt) / "pulse" / "native" if host_rt else None
+    if pulse and pulse.is_socket():
         args += ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
         env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
     return args

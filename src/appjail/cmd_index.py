@@ -166,7 +166,7 @@ def cmd_index_update(args, console, client=None, download_url=jail.download_url,
             text, commit = fetch_text(source, args, console, client, download_url)
             review_and_install(source, text, console, now, commit)
         except (IndexProblem, Abort) as e:
-            console.out(f"{name}: {e}")
+            console.error(f"{name}: {e}")
             status = 1
     return status
 
