@@ -14,11 +14,15 @@ dependencies = []  # standard library only, by design
 classifiers = [
     "Operating System :: POSIX :: Linux",
     "Environment :: Console",
-    "Environment :: X11 Applications",
     "Programming Language :: Python :: 3",
     "Topic :: Security",
     "Topic :: System :: Software Distribution",
 ]
+
+[project.urls]
+Homepage = "https://github.com/alberto743/appjail"
+Issues = "https://github.com/alberto743/appjail/issues"
+Design = "https://github.com/alberto743/appjail/blob/main/DESIGN.md"
 
 [project.scripts]
 appjail = "appjail.cli:main"
