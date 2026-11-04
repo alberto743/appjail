@@ -45,7 +45,7 @@ def describe_candidate(console, m, release, asset):
     console.kv("  asset", f"{asset.name} ({human_size(asset.size)})", INDENTED_LABEL)
     console.kv("  sha256", m.sha256, INDENTED_LABEL)
     console.kv("", f"{ARROW_NB}{asset.sha256 or 'unknown until downloaded (no GitHub digest)'}", INDENTED_LABEL)
-    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {3 if asset.sha256 else 4}", INDENTED_LABEL)
+    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {asset.base_tier}", INDENTED_LABEL)
     console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 
 
@@ -86,7 +86,7 @@ def install_release(run, client, info, release, asset, key):
             updater.note_seen(name, key, release.tag, run.now)
             updater.record_hash(name, key, digest)
             return "blocked"
-        tier, why = gather_evidence(client, info, staged, digest, 3 if asset.sha256 else 4, console, svc.verify)
+        tier, why = gather_evidence(client, info, staged, digest, asset.base_tier, console, svc.verify)
         if m.evidence_tier == 1 and tier != 1:
             raise Abort(f"EVIDENCE DOWNGRADE: the previous release was build-attested but this one could not be verified ({why or 'no attestation'}); nothing was installed")
         if why:

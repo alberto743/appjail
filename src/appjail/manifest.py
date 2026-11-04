@@ -32,6 +32,7 @@ SOURCE_KINDS = ("github", "url", "file")
 MAX_URL = 2048
 FILE_NAME_RE = re.compile(r"[^/\x00-\x1f\x7f]{1,255}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
+TIME_FMT = "%Y-%m-%dT%H:%M:%SZ"  # UTC timestamps everywhere: manifests, pending state, index state
 PUBLISHED_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
 
 TIERS = (1, 2, 3, 4, 5)
@@ -148,7 +149,7 @@ def _permissions(table):
 def _published_at(value):
     match(value, PUBLISHED_RE, "published_at")
     try:
-        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+        datetime.strptime(value, TIME_FMT)
     except ValueError as e:
         raise ManifestError(f"published_at is not a valid date: {value!r}") from e
     return value

@@ -72,6 +72,11 @@ class Asset:
     sha256: str  # lowercase hex from the GitHub digest, or "" when GitHub gave none
     url: str  # browser_download_url, validated to belong to the repo's releases
 
+    @property
+    def base_tier(self):
+        """Evidence tier the download alone gives: 3 with a GitHub digest, else 4."""
+        return 3 if self.sha256 else 4
+
 
 @dataclass(frozen=True)
 class Release:
@@ -316,5 +321,5 @@ def suggest_pattern(name, tag):
 
 def age_days(timestamp, now=None):
     now = now or datetime.now(UTC)
-    then = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    then = datetime.strptime(timestamp, manifest.TIME_FMT).replace(tzinfo=UTC)
     return (now - then).days

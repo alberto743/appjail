@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from . import manifest, store
 
 DEFAULT_QUARANTINE_DAYS = 7
-TIME_FMT = "%Y-%m-%dT%H:%M:%SZ"
+TIME_FMT = manifest.TIME_FMT
 # A pending candidate of a `url:` app also keeps what the server said about it (see cmd_updateimage).
 PENDING_KEYS = {"key", "tag", "first_seen", "sha256", "size", "chunks", "etag", "last_modified"}
 
@@ -44,7 +44,7 @@ def blocks(m, info, asset, attested=None):
     if m.evidence_tier == 1 and not attested:
         out.append("EVIDENCE DOWNGRADE: tier 1 → 3 or 4 (this release has no build attestation on GitHub)")
         return out
-    new_tier = 3 if asset.sha256 else 4
+    new_tier = asset.base_tier
     if m.evidence_tier > 1 and new_tier > m.evidence_tier:
         out.append(f"EVIDENCE DOWNGRADE: tier {m.evidence_tier} → {new_tier} "
                    "(GitHub no longer provides a digest for this asset)")

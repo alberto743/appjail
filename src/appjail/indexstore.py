@@ -18,7 +18,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from . import catalog, store
+from . import catalog, manifest, store
 from .catalog import IndexProblem
 from .github import COMMIT_RE
 
@@ -187,7 +187,7 @@ def install(name, text, now=None, digest=None, cat=None, commit=""):
     if state["current"]:
         _write(directory / "previous.json", (directory / "current.json").read_text(encoding="utf-8"))
     _write(directory / "current.json", text)
-    entry = {"sha256": digest, "revision": cat.revision, "updated": (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    entry = {"sha256": digest, "revision": cat.revision, "updated": (now or datetime.now(UTC)).strftime(manifest.TIME_FMT)}
     if commit:
         entry["commit"] = commit
     _write_state(directory, entry, state["current"])

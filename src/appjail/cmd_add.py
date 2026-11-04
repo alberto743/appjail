@@ -120,7 +120,7 @@ def show_asset_evidence(client, console, source, asset):
     console.kv("Attestation", attestation)
     if not asset.sha256:
         console.warn("GitHub gives no digest for this asset: trust on first use only (tier 4) unless an attestation verifies")
-    return 3 if asset.sha256 else 4
+    return asset.base_tier
 
 
 def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,

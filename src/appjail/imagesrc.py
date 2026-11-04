@@ -40,7 +40,7 @@ def check_appimage(path):
         raise Abort(f"not a usable AppImage: {e}") from e
 
 def timestamp(now):
-    return (now or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return (now or datetime.now(UTC)).strftime(manifest.TIME_FMT)
 
 def version_of(digest):
     return f"sha256:{digest[:12]}"
