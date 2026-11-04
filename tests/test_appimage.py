@@ -307,3 +307,34 @@ def test_check_tree_walks_into_an_unreadable_directory(tree):
     entries, _ = appimage.check_tree(tree)
     assert secret.stat().st_mode & 0o7000 == 0
     assert entries == 5  # usr, usr/bin, app, hidden, hidden/f
+
+
+def test_check_tree_refuses_a_symlink_as_root_and_leaves_its_target_alone(tmp_path):
+    target = tmp_path / "host"
+    target.mkdir()
+    (target / "f").write_text("x")
+    (target / "f").chmod(0o4755)
+    target.chmod(0o555)
+    link = tmp_path / "squashfs-root"
+    link.symlink_to(target)
+    with pytest.raises(UnsafeTree, match="not a directory"):
+        appimage.check_tree(link)
+    assert (target / "f").stat().st_mode & 0o7777 == 0o4755 and target.stat().st_mode & 0o777 == 0o555
+    target.chmod(0o755)
+
+
+def test_extraction_whose_tree_is_a_symlink_is_rejected_and_nothing_is_kept(tmp_path, monkeypatch):
+    target = tmp_path / "host"
+    (target / "usr").mkdir(parents=True)
+    (target / "AppRun").write_text("#!/bin/sh\n")
+    (target / "AppRun").chmod(0o755)
+    monkeypatch.setattr(appimage, "_run_extraction", lambda args, work: type("P", (), {"returncode": 0, "stderr": ""})())
+    dest = tmp_path / "root"
+
+    def build(work):
+        (work / "squashfs-root").symlink_to(target)
+        return [], work / "squashfs-root"
+
+    with pytest.raises(UnsafeTree):
+        appimage._extract_to(dest, build)
+    assert not dest.exists() and not (tmp_path / "root.tmp").exists() and (target / "AppRun").is_file()

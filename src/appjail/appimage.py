@@ -110,11 +110,16 @@ def check_tree(root):
 
     Only regular files, directories and symlinks are allowed. Set-id and sticky bits are
     cleared and directories are made owner-accessible so the tree can always be removed.
-    Sizes are apparent sizes, so sparse files cannot hide a huge tree. Returns (entries, bytes).
+    Sizes are apparent sizes, so sparse files cannot hide a huge tree. The root itself must be a real directory: the
+    image's own runtime can name the output, and a symlink there would send every chmod below to its target.
+    Returns (entries, bytes).
     """
     root = Path(root)
     count = total = 0
-    os.chmod(root, (os.lstat(root).st_mode & 0o777) | 0o700)
+    root_mode = os.lstat(root).st_mode
+    if not stat.S_ISDIR(root_mode):
+        raise UnsafeTree("the extracted tree root is not a directory")
+    os.chmod(root, (root_mode & 0o777) | 0o700)
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
         for name in dirnames + filenames:
             p = os.path.join(dirpath, name)
@@ -203,7 +208,7 @@ def _extract_to(dest, build):
         proc = _run_extraction(args, work)
         if proc.returncode != 0:
             raise ExtractError("extraction failed: " + clean(proc.stderr.strip() or f"exit {proc.returncode}", 400))
-        if not tree.is_dir():
+        if not os.path.lexists(tree):
             raise ExtractError("extraction produced no files")
         stats = check_tree(tree)
         resolve_entry(tree, "AppRun")
