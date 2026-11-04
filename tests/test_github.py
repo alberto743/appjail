@@ -108,10 +108,20 @@ def test_not_found():
     ("/repos/o/r", lambda c: c.repo_info("o/r")),
     ("/repos/o/r/releases/latest", lambda c: c.latest_release("o/r")),
     ("/repos/o/r/attestations/sha256:" + SHA, lambda c: c.has_attestation("o/r", SHA)),
+    ("/repos/o/r/attestations/sha256:" + SHA, lambda c: c.attestation_bundles("o/r", SHA)),
+    ("/repos/o/r/commits/HEAD", lambda c: c.head_commit("o/r")),
 ])
 @pytest.mark.parametrize("body", [[], "text"])
 def test_an_unexpected_json_shape_is_a_github_error(route, call, body):
     c, _ = client({route: (200, {}, body)})
+    with pytest.raises(GitHubError, match="unexpected response"):
+        call(c)
+
+
+@pytest.mark.parametrize("found", [{"a": 1}, "text", 7])
+@pytest.mark.parametrize("call", [lambda c: c.has_attestation("o/r", SHA), lambda c: c.attestation_bundles("o/r", SHA)])
+def test_attestations_that_are_not_a_list_are_a_github_error(found, call):
+    c, _ = client({"/repos/o/r/attestations/sha256:" + SHA: (200, {}, {"attestations": found})})
     with pytest.raises(GitHubError, match="unexpected response"):
         call(c)
 

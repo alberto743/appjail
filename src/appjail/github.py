@@ -189,6 +189,7 @@ class Client:
             renamed=repo["full_name"].lower() != source.lower(),
         )
 
+    @_shaped
     def head_commit(self, source):
         """The full commit SHA of the default branch of `source`."""
         _check_source(source)
@@ -226,12 +227,16 @@ class Client:
             data = self._get(f"/repos/{source}/attestations/sha256:{sha256}")
         except NotFound:
             return []
-        return data.get("attestations") or []
+        found = data.get("attestations") or []
+        if not isinstance(found, list):
+            raise GitHubError("unexpected response from GitHub")
+        return found
 
     def has_attestation(self, source, sha256):
         """True if GitHub holds at least one attestation for this digest (existence only)."""
         return bool(self._attestations(source, sha256))
 
+    @_shaped
     def attestation_bundles(self, source, sha256, limit=5):
         """Sigstore bundles (parsed JSON objects) GitHub holds for this digest, to be verified elsewhere.
 
