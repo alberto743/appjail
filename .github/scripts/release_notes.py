@@ -3,8 +3,8 @@
 
 """Release notes for a version tag (run by release.yml): `release_notes.py vX.Y.Z > notes.md`.
 
-Commits since the previous v* tag are grouped by the area in their subject ("Area: text", any case);
-a subject without a known area goes under "Other". Commits that came in through a pull request
+Commits since the previous v* tag are grouped by the files they touch (Interface, Logic, Documentation,
+Tests; Security also by the subject's area, "Area: text"); what fits none goes under "Other". Commits that came in through a pull request
 ("... (#12)") are left to GitHub's own generated notes (grouped by .github/release.yml), which are
 appended. Stdlib only; `git` and `gh` come from the runner.
 """
@@ -14,20 +14,13 @@ import re
 import subprocess
 import sys
 
-# heading -> areas (the first word of the subject's prefix, lower case); order is the order in the notes
-GROUPS = {
-    "Security": {"security", "seccomp", "landlock", "audit"},
-    "Permissions and sandbox": {"permissions", "perms", "display", "audio", "gpu", "grants", "dirs", "linger",
-                                "portals", "portal", "runner", "network_host", "jail", "wayland", "dbus"},
-    "Command line": {"cli", "add", "update", "list", "search", "desktop", "output", "tools", "open", "remove",
-                     "history"},
-    "Catalog": {"index", "catalog"},
-    "GUI": {"gui", "appjail-gui"},
-    "Documentation": {"docs", "doc", "readme"},
-    "Tests and CI": {"tests", "test", "ci", "vm", "pyproject", "release", "packaging"},
-    "Maintenance": {"cleanup", "housekeeping", "refactor", "chore"},
-}
-OTHER = "Other"
+# Security: the subject names it, or the commit touches only these modules
+SECURITY_AREAS = {"security", "seccomp", "landlock", "audit"}
+SECURITY_FILES = {"seccomp.py", "landlock.py", "attest.py", "snappy.py", "textsafe.py", "dbusproxy.py", "grants.py"}
+# Interface: the commit's changes under src/ are all in the GUI, the parser/commands or the console output
+INTERFACE_RE = re.compile(r"src/appjail/(gui/|cli\.py$|cmd_[a-z]+\.py$|console\.py$|permargs\.py$)")
+DOC_RE = re.compile(r"[^/]+\.md$|REUSE\.toml$|docs/")
+HEADINGS = ["Security", "Interface", "Logic", "Documentation", "Tests", "Other"]
 PREFIX_RE = re.compile(r"([^:]{1,60}):\s")
 AREA_RE = re.compile(r"[a-z0-9_-]+")
 PR_RE = re.compile(r"\(#\d+\)$")
@@ -39,18 +32,27 @@ def area(subject):
     return first.group(0) if first else None
 
 
-def heading(subject):
-    a = area(subject)
-    return next((h for h, areas in GROUPS.items() if a in areas), OTHER)
+def heading(subject, files):
+    """The notes section of a commit: by what it says (security) and by the files it touches."""
+    src = [f for f in files if f.startswith("src/")]
+    if area(subject) in SECURITY_AREAS or (src and all(f.rsplit("/", 1)[-1] in SECURITY_FILES for f in src)):
+        return "Security"
+    if src:
+        return "Interface" if all(INTERFACE_RE.match(f) for f in src) else "Logic"
+    if files and all(DOC_RE.match(f) for f in files):
+        return "Documentation"
+    if files and all(f.startswith("tests/") or DOC_RE.match(f) for f in files):
+        return "Tests"
+    return "Other"
 
 
 def group(commits):
     """{heading: [(sha, subject)]} in display order, empty groups left out. Pull-request commits are skipped."""
-    out = {h: [] for h in [*GROUPS, OTHER]}
-    for sha, subject in commits:
+    out = {h: [] for h in HEADINGS}
+    for sha, subject, files in commits:
         if subject.startswith("Merge ") or PR_RE.search(subject):
             continue
-        out[heading(subject)].append((sha, subject))
+        out[heading(subject, files)].append((sha, subject))
     return {h: items for h, items in out.items() if items}
 
 
@@ -75,8 +77,16 @@ def previous_tag(tag):
 
 
 def commits(tag, prev):
+    """[(sha, subject, files)] of the non-merge commits in prev..tag."""
     rng = f"{prev}..{tag}" if prev else tag
-    return [tuple(line.split("\t", 1)) for line in git("log", "--no-merges", "--format=%H%x09%s", rng).splitlines()]
+    out = []
+    for line in git("log", "--no-merges", "--format=@@%H\t%s", "--name-only", rng).splitlines():
+        if line.startswith("@@"):
+            sha, subject = line[2:].split("\t", 1)
+            out.append((sha, subject, []))
+        elif line:
+            out[-1][2].append(line)
+    return out
 
 
 def github_notes(repo, tag, prev):
