@@ -8,9 +8,9 @@
 # appjail
 
 [![PyPI](https://img.shields.io/pypi/v/appjail.svg)](https://pypi.org/project/appjail/)
-[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Falberto743%2Fappjail%2Fmain%2Fpyproject.toml)](pyproject.toml)
+[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Falberto743%2Fappjail%2Fmain%2Fpyproject.toml)](https://github.com/alberto743/appjail/blob/main/pyproject.toml)
 [![CI](https://github.com/alberto743/appjail/actions/workflows/ci.yml/badge.svg)](https://github.com/alberto743/appjail/actions/workflows/ci.yml)
-[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSES/MPL-2.0.txt)
+[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/alberto743/appjail/blob/main/LICENSES/MPL-2.0.txt)
 [![REUSE](https://github.com/alberto743/appjail/actions/workflows/reuse.yml/badge.svg)](https://github.com/alberto743/appjail/actions/workflows/reuse.yml)
 
 A small command-line manager for [AppImages](https://appimage.org/) that runs every app inside a
@@ -370,14 +370,14 @@ owner change.
   with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace (a
   small empty directory `appjail-life-*` stays in the runtime directory).
 
-The full design is in [DESIGN.md](DESIGN.md); the reasoning behind each choice, rejected alternatives and deferred
-features are in [DECISIONS.md](DECISIONS.md).
+The full design is in [DESIGN.md](https://github.com/alberto743/appjail/blob/main/DESIGN.md); the reasoning behind each choice, rejected alternatives and deferred
+features are in [DECISIONS.md](https://github.com/alberto743/appjail/blob/main/DECISIONS.md).
 
 ## Alternatives and related projects
 
 appjail covers one niche: AppImages from GitHub (or a file or URL you name), pinned by hash, each in its own
 bubblewrap jail, with updates held in quarantine. Other tools cover other parts of this; if one fits you better, use it.
-[DECISIONS.md](DECISIONS.md) says why some were not used as a base. Facts are as found on each project's page in
+[DECISIONS.md](https://github.com/alberto743/appjail/blob/main/DECISIONS.md) says why some were not used as a base. Facts are as found on each project's page in
 November 2026; check them before relying on them.
 
 **Managing AppImages**
@@ -457,4 +457,4 @@ separate workflow runs every opt-in suite (real downloads) on demand and weekly.
 
 ## License
 
-[MPL-2.0](LICENSES/MPL-2.0.txt). The repository follows the [REUSE](https://reuse.software/) specification.
+[MPL-2.0](https://github.com/alberto743/appjail/blob/main/LICENSES/MPL-2.0.txt). The repository follows the [REUSE](https://reuse.software/) specification.
