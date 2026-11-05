@@ -43,7 +43,7 @@ is built around the opposite assumptions:
   not supported.
 - Python 3.12 or newer (tested with 3.13 on Debian 13 and 3.14 on Ubuntu 26.04; 3.12 is the declared minimum and is
   not run by the tests). appjail uses only the standard library.
-- Required: `bubblewrap` and `squashfs-tools` (`unsquashfs`).
+- Required: `bubblewrap` (0.10 or later) and `squashfs-tools` (`unsquashfs`).
 - Needed for specific features:
   - `passt` (the `pasta` command): apps with the `network` permission, which are refused without it. Also gives
     the download jails a private network namespace; without it they use the host network and print a warning.

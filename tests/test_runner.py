@@ -131,12 +131,13 @@ def test_dirs_map_into_private_home(sandbox, runtime, monkeypatch):
     (fake_home / "Docs").mkdir(parents=True)
     (fake_home / "Out").mkdir()
     shared = outside_dir()
-    kw = build(sandbox, runtime, dirs=("~/Docs", "~/Out:rw", shared))
-    kw["host_home"] = fake_home
-    args = runtimejail.runtime_args(**kw)
-    assert (str(fake_home / "Docs"), "/home/app/Docs") in pairs(args, "--ro-bind")
-    assert (str(fake_home / "Out"), "/home/app/Out") in pairs(args, "--bind")
-    assert (shared, shared) in pairs(args, "--ro-bind")
+    with runtimejail.Grants(("~/Docs", "~/Out:rw", shared), (), fake_home) as opened:
+        assert [(g.real, g.dest, g.rw) for g in opened.items] == [
+            (str(fake_home / "Docs"), "/home/app/Docs", False), (str(fake_home / "Out"), "/home/app/Out", True), (shared, shared, False)]
+        docs, out, other = opened.fds
+        args = runtimejail.runtime_args(**build(sandbox, runtime), binds=opened.args())
+        assert pairs(args, "--ro-bind-fd") == [(str(docs), "/home/app/Docs"), (str(other), shared)]
+        assert pairs(args, "--bind-fd") == [(str(out), "/home/app/Out")]
 
 
 @pytest.mark.parametrize("base", ["/tmp", "/var/tmp"])
@@ -149,7 +150,7 @@ def test_shared_temp_dirs_refused_after_symlink_resolution(sandbox, runtime, bas
     try:
         (fake_home / "scratch").symlink_to(target)
         with pytest.raises(RunError, match="shared by every program"):
-            runtimejail.dir_binds(["~/scratch"], fake_home)
+            runtimejail.Grants(["~/scratch"], (), fake_home)
     finally:
         os.rmdir(target)
 
@@ -159,36 +160,38 @@ def test_a_single_file_in_tmp_can_still_be_granted(sandbox):
     fd, path = tempfile.mkstemp(prefix="appjail-test-", dir="/tmp")
     os.close(fd)
     try:
-        args, dests = runtimejail.file_binds([path], sandbox)
-        assert dests == [path] and (path, path) in pairs(args, "--ro-bind")
+        with runtimejail.Grants((), [path], sandbox) as opened:
+            assert opened.file_dests == [path] and opened.items[0].real == path
     finally:
         os.unlink(path)
 
 
 def test_missing_granted_dir_is_an_error(sandbox, runtime):
-    kw = build(sandbox, runtime, dirs=("~/NoSuchDir",))
-    kw["host_home"] = sandbox
     with pytest.raises(RunError, match="does not exist"):
-        runtimejail.runtime_args(**kw)
+        runtimejail.Grants(("~/NoSuchDir",), (), sandbox)
+
+
+def test_a_granted_dir_must_be_a_directory(sandbox):
+    (sandbox / "plain").write_text("x")
+    with pytest.raises(RunError, match="not a directory"):
+        runtimejail.Grants(("~/plain",), (), sandbox)
 
 
 @pytest.mark.parametrize("what", ["home", "parent"])
-def test_dirs_cannot_expose_the_whole_home(sandbox, runtime, what):
-    kw = build(sandbox, runtime, dirs=(str(sandbox if what == "home" else sandbox.parent),))
-    kw["host_home"] = sandbox
+def test_dirs_cannot_expose_the_whole_home(sandbox, what):
     with pytest.raises(RunError, match="whole home"):
-        runtimejail.runtime_args(**kw)
+        runtimejail.Grants((str(sandbox if what == "home" else sandbox.parent),), (), sandbox)
 
 
 @pytest.mark.parametrize("where", ["data", "config", "inside_data", "parent_of_data"])
-def test_dirs_cannot_expose_appjail_itself(sandbox, runtime, where):
+def test_dirs_cannot_expose_appjail_itself(sandbox, where):
     store.data_dir().mkdir(parents=True)
     store.config_dir().mkdir(parents=True)
     (store.data_dir() / "apps").mkdir()
     path = {"data": store.data_dir(), "config": store.config_dir(), "inside_data": store.data_dir() / "apps",
             "parent_of_data": store.data_dir().parent}[where]
     with pytest.raises(RunError, match="appjail's own data"):
-        runtimejail.runtime_args(**build(sandbox, runtime, dirs=(str(path),)))
+        runtimejail.Grants((str(path),), (), Path.home())
 
 
 @pytest.mark.parametrize("perms,match", [
@@ -313,27 +316,30 @@ def test_missing_or_hostile_wayland_socket(sandbox, runtime):
 
 # -- single files (run --file) -------------------------------------------------------------
 
-def test_file_binds_read_only_by_default_and_rw_on_request(sandbox):
+def test_file_grants_read_only_by_default_and_rw_on_request(sandbox):
     home = sandbox / "fakehome"
     (home / "docs").mkdir(parents=True)
     ro, rw, outside = home / "docs" / "a.txt", home / "docs" / "b.txt", sandbox / "c.txt"
     for f in (ro, rw, outside):
         f.write_text("x")
-    args, dests = runtimejail.file_binds([str(ro), f"{rw}:rw", str(outside)], home)
-    assert pairs(args, "--ro-bind") == [(str(ro), f"{runtimejail.APP_HOME}/docs/a.txt"), (str(outside), str(outside))]
-    assert pairs(args, "--bind") == [(str(rw), f"{runtimejail.APP_HOME}/docs/b.txt")]
-    assert dests == [f"{runtimejail.APP_HOME}/docs/a.txt", f"{runtimejail.APP_HOME}/docs/b.txt", str(outside)]
+    with runtimejail.Grants((), [str(ro), f"{rw}:rw", str(outside)], home) as opened:
+        dests = [f"{runtimejail.APP_HOME}/docs/a.txt", f"{runtimejail.APP_HOME}/docs/b.txt", str(outside)]
+        assert opened.file_dests == dests
+        assert [(g.real, g.rw) for g in opened.items] == [(str(ro), False), (str(rw), True), (str(outside), False)]
+        a, b, c = opened.fds
+        assert pairs(opened.args(), "--ro-bind-fd") == [(str(a), dests[0]), (str(c), dests[2])]
+        assert pairs(opened.args(), "--bind-fd") == [(str(b), dests[1])]
 
 
-def test_file_binds_refuse_directories_missing_and_special_files(sandbox):
+def test_file_grants_refuse_directories_missing_and_special_files(sandbox):
     (sandbox / "d").mkdir()
     for bad, msg in [(sandbox / "d", "not a regular file"), (sandbox / "nope", "does not exist"), (Path("/dev/null"), "not a regular file")]:
         with pytest.raises(RunError, match=msg):
-            runtimejail.file_binds([str(bad)], sandbox)
+            runtimejail.Grants((), [str(bad)], sandbox)
 
 
 @pytest.mark.parametrize("rel,mode", [(".ssh/id_ed25519", ""), (".gnupg/pubring.kbx", ""), ("vault.kdbx", ""), (".bashrc", ":rw")])
-def test_file_binds_apply_the_sensitive_path_policy(sandbox, rel, mode):
+def test_file_grants_apply_the_sensitive_path_policy(sandbox, rel, mode):
     home = sandbox / "fakehome"
     f = home / rel
     f.parent.mkdir(parents=True, exist_ok=True)
@@ -342,15 +348,15 @@ def test_file_binds_apply_the_sensitive_path_policy(sandbox, rel, mode):
     link.symlink_to(f)
     for path in (f, link):  # a link must not dodge the policy
         with pytest.raises(RunError, match="refused"):
-            runtimejail.file_binds([f"{path}{mode}"], home)
+            runtimejail.Grants((), [f"{path}{mode}"], home)
 
 
-def test_file_binds_refuse_appjails_own_data(sandbox):
+def test_file_grants_refuse_appjails_own_data(sandbox):
     f = store.data_dir() / "x"
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text("x")
     with pytest.raises(RunError, match="own data"):
-        runtimejail.file_binds([str(f)], sandbox)
+        runtimejail.Grants((), [str(f)], sandbox)
 
 
 def test_launch_binds_files_and_passes_their_jail_paths_to_the_app(sandbox, runtime):
@@ -362,7 +368,7 @@ def test_launch_binds_files_and_passes_their_jail_paths_to_the_app(sandbox, runt
                   extract=Extractor(), say=said.append, runner=lambda argv: captured.append(argv) or 0,
                   extra_files=(str(f),), restricted=NO_RESTRICTION)
     argv = captured[0]
-    assert (str(f), str(f)) in pairs(argv, "--ro-bind")
+    assert str(f) in [dest for _, dest in pairs(argv, "--ro-bind-fd")]
     assert argv[-3:] == ["/app/AppRun", "--x", str(f)]
     assert any("Temporary file access" in line for line in said)
 
@@ -381,7 +387,9 @@ def test_only_the_granted_file_is_visible_in_the_jail(sandbox, runtime):
     kw["command"] = ["/app/AppRun", str(d / "in.txt")]
     fd = seccomp.open_fd(kw["perms"].userns)
     try:
-        proc = jail.supervise([jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=fd, files=[str(d / "in.txt")])], timeout=60, pass_fds=(fd,))
+        with runtimejail.Grants((), [str(d / "in.txt")], Path.home()) as opened:
+            args = runtimejail.runtime_args(**kw, seccomp_fd=fd, binds=opened.args())
+            proc = jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd, *opened.fds))
     finally:
         os.close(fd)
     assert proc.returncode == 0, proc.stderr

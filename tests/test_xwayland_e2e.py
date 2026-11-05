@@ -69,7 +69,7 @@ def run_display(display, env, monkeypatch):
     perms = replace(m.permissions, display=display)
     argv = [jail.find_bwrap(), *runtimejail.runtime_args(
         root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-        command=["/bin/sh", "-c", SCRIPT], host_home=Path.home())]
+        command=["/bin/sh", "-c", SCRIPT])]
     return jail.supervise(argv, timeout=60)
 
 

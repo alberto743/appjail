@@ -122,7 +122,7 @@ def test_launch_merges_temporary_directories_without_touching_the_manifest(sandb
     assert code == 0
     assert any("wp_security_context_v1" in m for m in said)
     argv = captured[0]
-    assert (str(granted), "/home/app/granted") in pairs(argv, "--bind")
+    assert "/home/app/granted" in [dest for _, dest in pairs(argv, "--bind-fd")]
     assert argv[-2:] == ["/app/AppRun", "--x"]
     assert any("Temporary access" in line for line in said)
     assert manifest.load(store.manifest_path("app")).permissions.dirs == ()

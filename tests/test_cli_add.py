@@ -239,8 +239,9 @@ def test_a_read_only_file_named_like_a_mode_suffix_stays_that_file_and_read_only
     (tmp_path / "x:rw").write_text("odd")
     (entry,) = cli.files_from_args(["x:rw:ro"], cwd=tmp_path)
     assert entry == f"{tmp_path / 'x:rw'}:ro"
-    args, _ = runtimejail.file_binds([entry], tmp_path / "nohome")
-    assert args[:3] == ["--ro-bind", str((tmp_path / "x:rw").resolve()), str((tmp_path / "x:rw").resolve())]
+    with runtimejail.Grants((), [entry], tmp_path / "nohome") as opened:
+        item = opened.items[0]
+        assert (item.real, item.dest, item.rw) == (str((tmp_path / "x:rw").resolve()), str((tmp_path / "x:rw").resolve()), False)
 
 
 @pytest.mark.parametrize("spec", ["missing.txt", "."])

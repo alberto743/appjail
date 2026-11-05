@@ -143,7 +143,7 @@ def test_sensitive_dirs_refused_after_symlink_resolution(sandbox, runtime, sub, 
     target.mkdir(parents=True)
     (fake_home / "innocent").symlink_to(target)
     with pytest.raises(RunError, match="refused"):
-        runtimejail.dir_binds([f"~/innocent{mode}"], fake_home)
+        runtimejail.Grants([f"~/innocent{mode}"], (), fake_home)
 
 
 def test_restricted_wayland_socket_replaces_the_host_one(sandbox, runtime):

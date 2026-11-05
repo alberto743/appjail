@@ -145,14 +145,14 @@ def _wait_group(proc):
             os.killpg(proc.pid, signal.SIGKILL)
 
 
-def _run_app(argv, filter_fd=None, pipes=None, instance=None):
+def _run_app(argv, filter_fd=None, pipes=None, instance=None, grant_fds=()):
     """Start the jail, publish its init pid for the portal, then let the app run; return its exit status.
 
     filter_fd: the seccomp memfd bwrap inherits; None behind pasta, which closes inherited descriptors (the filter
-    then reaches bwrap through a file, see jail.net_wrap).
+    then reaches bwrap through a file, see jail.net_wrap). grant_fds: the granted paths bwrap binds; empty behind pasta.
     """
     env = {"PATH": "/usr/bin:/bin"}
-    keep = () if filter_fd is None else (filter_fd,)
+    keep = (*grant_fds, *(() if filter_fd is None else (filter_fd,)))
     if instance is None:
         return _wait_group(subprocess.Popen(argv, env=env, pass_fds=keep, start_new_session=True))
     proc = subprocess.Popen(argv, env=env, start_new_session=True,
@@ -179,16 +179,16 @@ def _run_app(argv, filter_fd=None, pipes=None, instance=None):
             proc.wait()
 
 
-def _temporary_grants(perms, extra_dirs, extra_files, extra_args, say):
-    """Apply the grants of this run only (`--dir`, `--file`): the permissions to use and the app's arguments."""
+def _open_grants(stack, perms, extra_dirs, extra_files, extra_args, say):
+    """Open the app's grants with those of this run (`--dir`, `--file`): (permissions, Grants, the app's arguments)."""
     if extra_dirs:
         perms = replace(perms, dirs=grants.merge_dirs(perms.dirs, extra_dirs))
         say("Temporary access for this run: " + ", ".join(extra_dirs))
-    file_dests = runtimejail.file_binds(extra_files, Path.home())[1] if extra_files else []
-    if file_dests:
-        say("Temporary file access for this run: " + ", ".join(file_dests))
-        extra_args = [*extra_args, *file_dests]
-    return perms, extra_args
+    opened = stack.enter_context(runtimejail.Grants(perms.dirs, extra_files, Path.home()))
+    if opened.file_dests:
+        say("Temporary file access for this run: " + ", ".join(opened.file_dests))
+        extra_args = [*extra_args, *opened.file_dests]
+    return perms, opened, extra_args
 
 
 def _seccomp_filter(stack, perms, env, in_pasta):
@@ -240,13 +240,13 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
     if history.modified(name):
         warn(f"the manifest of {name} was changed outside appjail since its last recorded change "
              f"(see `appjail history {name}` and the config directory's git log)")
-    perms, extra_args = _temporary_grants(m.permissions, extra_dirs, extra_files, extra_args, say)
-    scoped = landlock.available()
-    if perms.network_host and not scoped:
-        raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
     env = dict(os.environ if host_env is None else host_env)
-    in_pasta = perms.pasta
+    scoped = landlock.available()
     with contextlib.ExitStack() as stack:
+        perms, opened, extra_args = _open_grants(stack, m.permissions, extra_dirs, extra_files, extra_args, say)
+        if perms.network_host and not scoped:
+            raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
+        in_pasta = perms.pasta
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
@@ -256,16 +256,16 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         pipes = _status_pipes(stack, instance, env, in_pasta)
         args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-            command=[f"{runtimejail.APP_DIR}/AppRun", *extra_args], host_home=Path.home(), dbus_socket=bus,
+            command=[f"{runtimejail.APP_DIR}/AppRun", *extra_args], dbus_socket=bus,
             wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
-            block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), files=extra_files)
+            block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), binds=opened.args(in_pasta))
         argv = [jail.find_bwrap(), *args]
         if in_pasta:
-            argv = jail.net_wrap(argv, required=True, lifeline=life.path, fd_files={
+            argv = jail.net_wrap(opened.reopened(argv), required=True, lifeline=life.path, fd_files={
                 PASTA_SECCOMP_FD: filter_file,
                 **({PASTA_STATUS_FD: (">", pipes.paths["status"]), PASTA_BLOCK_FD: ("<", pipes.paths["block"])} if pipes else {})})
         if scoped and not in_pasta:  # pasta's private namespace already isolates abstract sockets, and pasta does not
             argv = landlock.wrap(argv)  # start its command under the no_new_privs that Landlock needs
         if runner:
             return runner(argv)
-        return _run_app(argv, filter_fd, pipes, instance)
+        return _run_app(argv, filter_fd, pipes, instance, () if in_pasta else opened.fds)

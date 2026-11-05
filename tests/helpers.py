@@ -279,7 +279,7 @@ def build(sandbox, runtime, **perms):
     home.mkdir(exist_ok=True)
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test", "LANG": "it_IT.UTF-8", "SECRET": "x"}
     kw = {"root": root, "home": home, "etc_dir": etc, "perms": Permissions(**perms), "uid": os.getuid(), "host_env": env,
-              "command": ["/app/AppRun"], "host_home": Path.home()}
+              "command": ["/app/AppRun"]}
     return kw
 
 
@@ -336,15 +336,14 @@ def outside_dir():
 
 def run_in_jail(sandbox, runtime, script=FACTS, extra=(), host_home=None, **perms):
     kw = build(sandbox, runtime, **perms)
-    if host_home is not None:
-        kw["host_home"] = host_home
     (kw["root"] / "AppRun").write_text(script)
     (kw["root"] / "AppRun").chmod(0o755)
     kw["command"] = ["/app/AppRun", *extra]
     fd = seccomp.open_fd(kw["perms"].userns)
     try:
-        args = runtimejail.runtime_args(**kw, seccomp_fd=fd)
-        return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd,))
+        with runtimejail.Grants(kw["perms"].dirs, (), host_home or Path.home()) as opened:
+            args = runtimejail.runtime_args(**kw, seccomp_fd=fd, binds=opened.args())
+            return jail.supervise([jail.find_bwrap(), *args], timeout=60, pass_fds=(fd, *opened.fds))
     finally:
         os.close(fd)
 

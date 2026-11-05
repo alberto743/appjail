@@ -57,7 +57,7 @@ def test_gui_app_runs_in_jail_against_headless_weston(installed, tmp_path):
         from appjail import jail
         argv = [jail.find_bwrap(), *runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=m.permissions, uid=os.getuid(), host_env=env,
-            command=["/usr/bin/timeout", "8", "/app/AppRun"], host_home=Path.home())]
+            command=["/usr/bin/timeout", "8", "/app/AppRun"])]
         # timeout(1) lives in /usr/bin of the host system, which is mounted read-only in the jail
         proc = jail.supervise(argv, timeout=60)
         assert proc.returncode == 124, proc.stderr  # still running when timeout stopped it
@@ -85,7 +85,7 @@ def test_gui_app_runs_through_a_private_xwayland(installed):
         perms = replace(m.permissions, display="xwayland")
         argv = [jail.find_bwrap(), *runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
-            command=["/usr/bin/timeout", "8", "/app/AppRun"], host_home=Path.home())]
+            command=["/usr/bin/timeout", "8", "/app/AppRun"])]
         proc = jail.supervise(argv, timeout=60)
         assert proc.returncode == 124, proc.stderr
     finally:

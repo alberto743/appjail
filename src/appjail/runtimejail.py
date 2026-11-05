@@ -6,8 +6,9 @@
 import os
 import stat
 from pathlib import Path
+from typing import NamedTuple
 
-from . import dbusproxy, grants, linger, manifest, store, wayland
+from . import dbusproxy, grants, linger, manifest, reopen, store, wayland
 from .errors import RunError
 from .jail import etc_args, system_args
 
@@ -16,24 +17,95 @@ APP_DIR = "/app"
 RUNTIME_ETC = ("/etc/fonts", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d", "/etc/localtime",
                "/etc/alternatives")
 GPU_RO = ("/sys/dev/char", "/sys/devices", "/usr/share/glvnd", "/usr/share/vulkan", "/etc/vulkan", "/etc/glvnd")
+FIRST_PASTA_FD = 10  # above the single digits jail.net_wrap and the portal pipes use
 
 
 def _guard_dirs():
     return [store.data_dir().resolve(), store.config_dir().resolve()]
 
 
-def dir_binds(dirs, home):
-    """Bind arguments for permissions.dirs. Refuses anything that would expose appjail's own files."""
-    args = []
-    for entry in dirs:
+class Grant(NamedTuple):
+    fd: int
+    real: str  # the path the descriptor had when it was checked
+    dest: str  # where it appears in the jail
+    rw: bool
+    dev: int
+    ino: int
+
+
+class Grants:
+    """The granted directories and files of one run, each opened once and checked through its descriptor.
+
+    bwrap binds the descriptor, not a path, so swapping a path for a symlink after the checks changes nothing. The checks
+    look at what was really opened, so the path may contain symlinks. A context manager: the descriptors stay open for
+    the whole run, which also keeps the inode numbers `reopen` compares from being reused. Behind pasta, which closes
+    inherited descriptors, `reopened` opens the paths again inside its namespace and compares them.
+    """
+
+    def __init__(self, dirs, files, home):
+        self.items, self.file_dests = [], []
+        self._open_fds = []
+        try:
+            home_real = Path(home).resolve()
+            for entry in dirs:
+                self._add_dir(entry, Path(home), home_real)
+            for entry in files:
+                self._add_file(entry, home_real)
+        except BaseException:
+            self.close()
+            raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def close(self):
+        while self._open_fds:
+            os.close(self._open_fds.pop())
+
+    @property
+    def fds(self):
+        return tuple(item.fd for item in self.items)
+
+    def args(self, behind_pasta=False):
+        """The bwrap bind arguments; behind pasta the numbers are those `reopened` gives the descriptors."""
+        args = []
+        for i, item in enumerate(self.items):
+            args += ["--bind-fd" if item.rw else "--ro-bind-fd", str(FIRST_PASTA_FD + i if behind_pasta else item.fd), item.dest]
+        return args
+
+    def reopened(self, argv):
+        """argv preceded by the wrapper that reopens the grants inside pasta's namespace; argv if there are none."""
+        if not self.items:
+            return argv
+        return reopen.wrap([(FIRST_PASTA_FD + i, g.dev, g.ino, g.real) for i, g in enumerate(self.items)], argv)
+
+    def _open(self, path, flags=0):
+        """(descriptor, real path, stat) of `path`. O_PATH does not block on a FIFO or run a device's open."""
+        fd = os.open(path, os.O_PATH | os.O_CLOEXEC | flags)
+        self._open_fds.append(fd)
+        st = os.fstat(fd)
+        real = Path(os.readlink(f"/proc/self/fd/{fd}"))
+        try:
+            same = os.path.samestat(os.stat(real), st)
+        except OSError:  # unlinked: the link reads "... (deleted)", a name the policy cannot judge
+            same = False
+        if not same:
+            raise RunError(f"granted path {path} changed while it was being checked")
+        return fd, real, st
+
+    def _add_dir(self, entry, home, home_real):
         path, _, mode = entry.partition(":")
-        host = Path(home) / path[2:] if path.startswith("~/") else Path(path)
+        host = home / path[2:] if path.startswith("~/") else Path(path)
         dest = f"{APP_HOME}/{path[2:]}" if path.startswith("~/") else path
         try:
-            real = host.resolve(strict=True)
+            fd, real, st = self._open(host, os.O_DIRECTORY)
+        except NotADirectoryError:
+            raise RunError(f"granted directory {host} is not a directory") from None
         except OSError:
             raise RunError(f"granted directory does not exist: {host}") from None
-        home_real = Path(home).resolve()
         if real == home_real or real in home_real.parents:
             raise RunError(f"granted directory {host} would expose the whole home directory")
         for guard in _guard_dirs():
@@ -46,26 +118,18 @@ def dir_binds(dirs, home):
         why = grants.directory_reason(f"~/{rel}" if rel else str(real), mode)
         if why:
             raise RunError(f"granted directory {host} is refused: {why}")
-        args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]
-    return args
+        self.items.append(Grant(fd, str(real), dest, mode == "rw", st.st_dev, st.st_ino))
 
-
-def file_binds(files, home):
-    """(bwrap arguments, in-jail paths) for single files granted for one run: PATH, PATH:ro or PATH:rw, absolute.
-
-    Only the file itself is bound, read-only unless :rw. The same policy as for directories applies to the
-    resolved path, and only regular files are accepted. Files below the real home appear under the app's home.
-    """
-    args, dests = [], []
-    home_real = Path(home).resolve()
-    for entry in files:
+    def _add_file(self, entry, home_real):
+        """A single file for one run: PATH, PATH:ro or PATH:rw, absolute. Only the file itself is bound, read-only unless
+        :rw. The directory policy applies to the real path, and only regular files are accepted. Files below the real
+        home appear under the app's home."""
         path, mode = grants.split_file_mode(entry)
         try:
-            real = Path(path).resolve(strict=True)
-            regular = stat.S_ISREG(real.stat().st_mode)
+            fd, real, st = self._open(path)
         except OSError:
             raise RunError(f"granted file does not exist: {path}") from None
-        if not regular:
+        if not stat.S_ISREG(st.st_mode):
             raise RunError(f"granted path is not a regular file: {path}")
         for guard in _guard_dirs():
             if real == guard or guard in real.parents:
@@ -78,9 +142,8 @@ def file_binds(files, home):
         if why:
             raise RunError(f"granted file {path} is refused: {why}")
         dest = f"{APP_HOME}/{rel}" if rel else str(real)
-        args += ["--bind" if mode == "rw" else "--ro-bind", str(real), dest]
-        dests.append(dest)
-    return args, dests
+        self.items.append(Grant(fd, str(real), dest, mode == "rw", st.st_dev, st.st_ino))
+        self.file_dests.append(dest)
 
 
 XWAYLAND_PATHS = ("/usr/bin/Xwayland",)
@@ -217,10 +280,11 @@ def _base_filesystem_args(etc_dir, rt, perms):
     return args
 
 
-def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_home, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
-                 portal_docs=None, status_fd=None, block_fd=None, files=()):
+def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
+                 portal_docs=None, status_fd=None, block_fd=None, binds=()):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
+    binds: the directory and file grants, from Grants.args.
     Nothing is read from the process environment, only from host_env; the host's files decide what can be bound (which
     system directories, GPU nodes and helper binaries exist). Anything the manifest asks for but appjail cannot enforce
     yet is refused instead of ignored.
@@ -248,8 +312,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, host_hom
         args += _audio_args(host_rt, rt, env)
     if perms.gpu:
         args += _gpu_args()
-    args += dir_binds(perms.dirs, host_home)
-    args += file_binds(files, host_home)[0]
+    args += binds
     for k, v in env.items():
         args += ["--setenv", k, v]
     if status_fd is not None:
