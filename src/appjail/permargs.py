@@ -39,7 +39,7 @@ def dirs_from_args(specs, home=None, cwd=None):
 
 def files_from_args(specs, cwd=None):
     """Absolute, existing regular files for --file options (PATH, PATH:ro or PATH:rw), each with an explicit mode so a
-    file named like a suffix is never re-split later; symlinks are resolved at launch."""
+    file named like a suffix is never re-split later; what the path really names is checked at launch."""
     cwd = Path(cwd or Path.cwd())
     out = []
     for spec in specs:

@@ -110,7 +110,7 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 - **Why:** bwrap resolved the path string again, so a same-user process or an app with a writable grant could swap a component for a symlink between the check and the bind. A test shows the app reading the forbidden file before the fix. Low severity, since the attacker already runs as the user or holds a writable grant, but it is the jail's own boundary. Checking after the open also makes a walk of the intermediate components (`dir_fd`, `openat2`) unnecessary: a swapped component only changes what is opened, and that is what gets judged.
 - **Behind pasta:** pasta closes inherited descriptors, so `reopen.py`, between pasta and bwrap, opens each path again and compares device and inode with the launcher's record. The comparison follows the open, so no window is left; a swap there refuses the start instead of keeping the checked file.
 - **Rejected:** binding `/proc/self/fd/N` (bwrap has an option made for this, added in 0.10 for the same race in Flatpak), and comparing the inode just before exec (a window remains). The `sh` of `net_wrap` could not do the reopening: it has no `fstat` and dash accepts only single-digit descriptors.
-- **Cost:** bubblewrap 0.10 or later is required; both minimum systems have it. A `dirs` entry naming a regular file is now refused, which `--dir` already did at parse time.
+- **Cost:** bubblewrap 0.10 or later is required (its changelog: added to resolve CVE-2024-42472 in Flatpak); both minimum systems have it. A `dirs` entry naming a regular file is now refused, which `--dir` already did at parse time. Ubuntu 26.04 has 0.11.1 (Launchpad) and the Debian 13 guest 0.12.0.
 
 ### Waiting for every process in the jail, by default
 
@@ -154,7 +154,7 @@ Analysis done for appjail-db, which now converts AM; appjail itself no longer re
 ## What the tests cover
 
 - Verified against real software: `add` and `run` of real AppImages (SquashFS and DwarFS), tier 3 and tier 4 downloads and the quarantine hash, Sigstore verification with the real `gh`, the private Xwayland with an X11-only app, a GUI app with `network` behind pasta, the real xdg-desktop-portal frontend with a fake backend and with the GTK backend (non-interactive calls), the real `xdg-dbus-proxy`, the menu entry through `gio`, the real appjail-db catalog, a real PipeWire and pipewire-pulse (`tests/test_audio.py`: Pulse reachable, the camera not), the real permission store (an app's entries forgotten on `remove`), and Landlock ABI 6 on Linux 6.12 (an outside abstract socket refused, the private Xwayland still reachable).
-- Tamper tests: modifying the pinned hash, the stored AppImage or the extracted tree makes `run` refuse; a changed digest on `update` is a new candidate under the quarantine.
+- Tamper tests: modifying the pinned hash, the stored AppImage or the extracted tree makes `run` refuse; a changed digest on `update` is a new candidate under the quarantine; a granted file, directory or parent directory swapped for a symlink just before the jail starts does not reach its target, with and without pasta (`tests/test_grant_swap.py`).
 
 **Not verified**
 - Portals: the GNOME, KDE and wlr backends and interactive dialogs. Desktops differ in which interfaces they implement; each privileged interface depends on its backend asking the user.
