@@ -397,8 +397,8 @@ November 2026; check them before relying on them.
 - [Zap](https://github.com/srevinsaju/zap): Go (MIT); installs from GitHub releases and URLs, delta-updates through the
   update information embedded in the AppImage. Last updated mid-2024.
 - [Bread](https://github.com/pegvin/bread) and [appimage-cli-tool](https://github.com/AppImageCrafters/appimage-cli-tool):
-  small CLIs to install, update and remove AppImages (Bread: from GitHub; optional sandbox, off by default). Light
-  activity.
+  small CLIs to install, update and remove AppImages (Bread: from GitHub; optional sandbox, off by default). Last
+  updated in 2024 and 2023.
 - [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) and
   [appimaged](https://github.com/probonopd/go-appimage): desktop integration for AppImages you already have, no
   sandbox.
@@ -414,7 +414,7 @@ November 2026; check them before relying on them.
   runtimes, portals, signed remotes. appjail is for what is only released as an AppImage, and writes a `.flatpak-info`
   solely so xdg-desktop-portal recognises its sandbox.
 - [simple-appimage-sandbox (sas)](https://github.com/Samueru-sama/simple-appimage-sandbox) (POSIX shell, GPL-3.0) and
-  [aisap](https://github.com/mgord9518/aisap) (Go, MIT; early development): bubblewrap wrappers for AppImages you
+  [aisap](https://github.com/mgord9518/aisap) (Go, with a Zig rewrite not yet usable; MIT; early development): bubblewrap wrappers for AppImages you
   already have. Neither fetches, pins or updates; sas leaves audio, D-Bus, network and display sockets on by default.
 - [FlatImage](https://github.com/flatimage/flatimage) (Apache-2.0): a different format, a portable image sandboxed by
   default, not a manager of AppImages.
