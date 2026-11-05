@@ -77,7 +77,7 @@ pipx install appjail    # or: pip install --user appjail
 appjail --help
 ```
 
-Or from a clone (pip downloads only the build backend, Hatchling):
+Or from a clone (pip downloads only the build backend, Hatchling and hatch-vcs):
 
 ```sh
 git clone https://github.com/alberto743/appjail.git
@@ -315,7 +315,7 @@ owner change.
 | `add owner/repo` | Install the latest release (or `--tag`, `--prerelease`) of a GitHub project. |
 | `add --file PATH` / `add --url URL` | Install an AppImage you give yourself; `--sha256 HEX` confirms it (tier 4). |
 | `run APP [-- ARGS]` | Run an app; `--dir PATH[:ro\|:rw]` and `--file PATH[:ro\|:rw]` grant access for this run only. |
-| `list` | Installed apps, versions, sources, tiers, permissions and updates seen. |
+| `list` | Installed apps, versions, sources, tiers and updates seen; `-l` adds what each is granted, `--json` is for scripts. |
 | `update [APP]` | Check, quarantine and install new versions (see [Updating](#updating)). |
 | `perms APP` | Show or change an app's permissions. |
 | `portals APP` | List or revoke the files an app was granted through the file chooser. |
