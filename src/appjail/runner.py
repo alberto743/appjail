@@ -16,6 +16,7 @@ from pathlib import Path
 
 from . import (
     appimage,
+    audiojail,
     audiomode,
     dbusproxy,
     grants,
@@ -233,6 +234,21 @@ def _status_pipes(stack, instance, env, in_pasta):
     return pipes
 
 
+def _private_audio(stack, name, perms, env, warn):
+    """The app's private audio graph when `audio_mode = pipewire` can be used, else None (after saying why, if it matters)."""
+    backend, note = audiomode.resolve(perms, env)
+    audio = None
+    if backend == audiomode.PIPEWIRE:
+        try:
+            audio = stack.enter_context(audiojail.PrivateAudio(name, perms.mic, audiomode.host_pulse(env), env["XDG_RUNTIME_DIR"],
+                                                               os.getuid(), os.getgid()))
+        except audiojail.AudioUnavailable as e:
+            note = audiomode.fallback_note(str(e), audiomode.host_pulse(env) is not None)
+    if note:
+        warn(note)
+    return audio
+
+
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, warn=None, runner=None,
            extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
     """Start the app in its jail and return its exit status."""
@@ -248,9 +264,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
         in_pasta = perms.pasta
-        _backend, audio_note = audiomode.resolve(perms)
-        if audio_note:
-            warn(audio_note)
+        audio = _private_audio(stack, name, perms, env, warn)
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
@@ -261,7 +275,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
             command=[f"{runtimejail.APP_DIR}/AppRun", *extra_args], dbus_socket=bus,
-            wayland_socket=wl_sock, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
+            wayland_socket=wl_sock, audio_sockets=audio and (audio.pipewire_socket, audio.pulse_socket), seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
             block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), binds=opened.args(in_pasta))
         argv = [jail.find_bwrap(), *args]
         if in_pasta:

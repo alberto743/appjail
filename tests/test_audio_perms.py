@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""The `mic` permission and the `audio_mode` setting: manifest, command line, warnings and what the runner tells."""
+"""The `mic` permission and the `audio_mode` setting: manifest, command line and warnings (the runner is in test_audiojail.py)."""
 
 import pytest
 
-from appjail import audiomode, cli, manifest, runner, store
+from appjail import cli, manifest, store
 from appjail.manifest import Manifest, ManifestError, Permissions
 
-from .helpers import NO_RESTRICTION, Extractor, Script, install, permission_lines_text
+from .helpers import Script, permission_lines_text
 
 
 def sample(**perms):
@@ -128,28 +128,3 @@ def test_the_mode_is_shown_only_with_audio(h):
 def test_the_review_lists_mic_among_the_flags(h):
     h.add(extra=["--allow", "mic"])
     assert "mic" in permission_lines_text(saved())
-
-
-# -- the runner --------------------------------------------------------------------------
-
-
-def test_no_audio_means_no_backend_and_no_note():
-    assert audiomode.resolve(Permissions()) == (None, None)
-
-
-def test_pulse_mode_resolves_to_the_pulse_socket_without_a_note():
-    assert audiomode.resolve(Permissions(audio=True, audio_mode="pulse")) == ("pulse", None)
-
-
-def test_pipewire_mode_falls_back_to_the_pulse_socket_and_says_so():
-    backend, note = audiomode.resolve(Permissions(audio=True))
-    assert backend == "pulse" and "not available yet" in note and "microphone" in note
-
-
-@pytest.mark.parametrize("perms_, noisy", [({}, False), ({"audio": True}, True), ({"audio": True, "audio_mode": "pulse"}, False)])
-def test_launch_tells_only_when_the_requested_mode_is_not_what_it_gets(sandbox, runtime, perms_, noisy):
-    install(sandbox, **perms_)
-    said = []
-    runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}, extract=Extractor(),
-                  say=lambda *_: None, warn=said.append, runner=lambda argv: 0, restricted=NO_RESTRICTION)
-    assert any("audio_mode pipewire is not available yet" in line for line in said) is noisy
