@@ -370,6 +370,8 @@ owner change.
   with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace (a
   small empty directory `appjail-life-*` stays in the runtime directory).
 
+To report a vulnerability, see [SECURITY.md](https://github.com/alberto743/appjail/blob/main/SECURITY.md).
+
 The full design is in [DESIGN.md](https://github.com/alberto743/appjail/blob/main/DESIGN.md); the reasoning behind each choice, rejected alternatives and deferred
 features are in [DECISIONS.md](https://github.com/alberto743/appjail/blob/main/DECISIONS.md).
 
