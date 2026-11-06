@@ -123,7 +123,7 @@ out again. Only a menu entry created that way is ever replaced or deleted.
 
 **From a GitHub release.** `appjail add owner/repo` shows the repository owner, account age, stars and fork or archive
 status before it downloads anything, and asks if several release assets match. By default an app gets a window
-(a restricted Wayland socket) and nothing else: pass `--allow audio` or `--allow gpu` for those, and `--display none`
+(a restricted Wayland socket) and nothing else: pass `--allow audio`, `--allow gpu` or `--allow camera` for those, and `--display none`
 for an app that needs no window.
 
 | Option | Effect |
@@ -172,6 +172,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `network_host` | The host's own network, including localhost services (`--allow network_host`, which implies `network`). For apps that really need them. Landlock (Linux 6.12 or later) keeps the app off the host's abstract unix sockets, such as the X server's; without it the permission is refused. |
 | `audio` | The Pulse socket (`--allow audio`; `--deny` later). Includes the microphone and the sound other apps play, which the server cannot separate. Off by default. |
 | `gpu` | The render nodes, `/dev/nvidia*` and read-only `/sys` (`--allow gpu`). Needed for hardware-accelerated apps (Electron, Qt Quick, games); without it most apps fall back to slower software rendering. Off by default. |
+| `camera` | The camera's V4L2 capture devices and their own `/sys` entries (`--allow camera`). Every capture device is visible to the app, and a camera plugged in after the app starts is not. Off by default. Apps that use PipeWire for the camera (browsers) need `--portal Camera` instead, with `portals`. |
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |

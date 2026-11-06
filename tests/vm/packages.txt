@@ -44,3 +44,7 @@ pipewire              # tests/test_audio.py: a private PipeWire, to check that t
 pipewire-bin          # pw-dump: what a client can see, from the host and from the jail (tests/test_audio.py)
 pipewire-pulse        # the Pulse server whose socket the `audio` permission binds (tests/test_audio.py)
 libspa-0.2-modules    # SPA plugins, including videotestsrc: the camera stand-in of tests/test_audio.py (the guest has no video device)
+v4l-utils             # v4l2-ctl: identifies and queries the vivid virtual camera in tests/test_camera.py
+gstreamer1.0-tools    # gst-launch-1.0: v4l2src writes a frame as a PNG in tests/test_camera.py
+gstreamer1.0-plugins-good # v4l2src and pngenc
+gstreamer1.0-plugins-base # videoconvert

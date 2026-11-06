@@ -33,13 +33,7 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
 
 ## Planned code work
 
-The table records what the code does now, not a design. The read was static (nothing was run), so confirm each gap with a failing test before fixing it. Order is by value for size. Each fix includes its tests and the doc lines named, in the same commit.
-
-| # | Item | Where | Gap | Smallest fix | Tests to add | Docs | Size |
-|---|---|---|---|---|---|---|---|
-| 1 | `camera` device permission | `manifest.BOOL_PERMS`/`PERM_KEYS`/`Permissions`/writer, `permargs.permissions_from_args`, `runtimejail` (new `_camera_args` like `_gpu_args`), `cmd_apps.RISKY_GRANTS`, GUI (automatic via `PERMISSION_FLAGS`) | Not implemented. PipeWire cannot offer cameras safely (see "Native PipeWire audio"), so a device bind is the only workable path. | Boolean `camera`, default off, written only when true, binding `/dev/video*` and `/dev/media*`; a warning like other risky grants. | Manifest round trip, runner bind gated on the grant, `perms --allow/--deny`, `STATE` in `tests/test_gui_argv.py`; `tests/test_audio.py` must still show the camera unreachable over Pulse. | README permission table, DESIGN (`add --allow`, booleans, `perms`, a Camera bullet), CLAUDE open items | L |
-
-Open questions for item 1: whether `/dev/media*` (the media controller, many ioctls, a larger kernel surface than capture nodes) belongs in the same permission or needs its own; whether sysfs (`/sys/class/video4linux`) is needed for enumeration; whether seccomp lets the V4L2 ioctls through (not checked); and a check with a real device in the guest. A manifest with `camera = true` is refused by older appjail versions (strict keys), which is acceptable.
+None at the moment. Deferred features are listed above.
 
 ## Rejected alternatives
 
@@ -111,6 +105,16 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 - **Behind pasta:** pasta closes inherited descriptors, so `reopen.py`, between pasta and bwrap, opens each path again and compares device and inode with the launcher's record. The comparison follows the open, so no window is left; a swap there refuses the start instead of keeping the checked file.
 - **Rejected:** binding `/proc/self/fd/N` (bwrap has an option made for this, added in 0.10 for the same race in Flatpak), and comparing the inode just before exec (a window remains). The `sh` of `net_wrap` could not do the reopening: it has no `fstat` and dash accepts only single-digit descriptors.
 - **Cost:** bubblewrap 0.10 or later is required (its changelog: added to resolve CVE-2024-42472 in Flatpak); both minimum systems have it. A `dirs` entry naming a regular file is now refused, which `--dir` already did at parse time. Ubuntu 26.04 has 0.11.1 (Launchpad) and the Debian 13 guest 0.12.0.
+
+### Camera: the V4L2 capture nodes, nothing else
+
+- **Decided:** `camera` binds the `/dev/video*` nodes whose driver reports video capture and, for each, its own sysfs directory (read-only, with the `/sys/dev/char` symlink recreated). Off by default, a risky grant (`add` and `perms` warn).
+- **Why:** PipeWire cannot hide a camera from a jailed client (see "Native PipeWire audio (deferred)"), so a device bind is the only path that works for apps that open `/dev/video*` themselves. Tested in the guest against the `vivid` virtual camera: a frame captured through `v4l2src` and through raw mmap ioctls, one camera or two, none present, and the other nodes absent.
+- **Narrow, not broad:** a first version bound all `/dev/video*` and the whole of `/sys/devices` and `/sys/dev/char`. Only the capture nodes and their own directory are needed: output, metadata and codec nodes are other devices, and the media controller is unnecessary for capture.
+- **Portal route:** apps that reach the camera through PipeWire use the Camera portal (`portals`, `--portal Camera`), which needs no code. In the guest the portal's remote showed only the camera-role node, and a real frame arrived through it. Not verified: a real V4L2 camera node exposed by the portal. There the node was created by WirePlumber's V4L2 monitor and never reached WirePlumber's own object managers (WirePlumber 0.5.8; a source build of 0.5.19 created no node at all), so neither automatic linking nor the portal's grant worked in the guest. Whether real desktops differ is a manual check.
+- **Not verified:** a real USB webcam (its sysfs path is deeper than `vivid`'s), hot-unplug while the app runs, and whether opening a real device for the capability query wakes it.
+- **Cost:** no per-camera choice; a camera plugged in after the launch is not visible until the next start; the nodes are opened once at every launch with `camera`.
+- **Revisit when:** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted.
 
 ### Waiting for every process in the jail, by default
 
