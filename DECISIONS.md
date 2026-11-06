@@ -33,7 +33,13 @@ Feasible and moderate in code, expensive in verification. Scope if done: aarch64
 
 ## Planned code work
 
-None at the moment. Deferred features are listed above.
+The table records what the code does now and what was measured, not a design.
+
+| # | Item | Where | Gap | Fix | Tests | Docs | Size |
+|---|---|---|---|---|---|---|---|
+| 1 | The private PipeWire graph for `audio_mode = pipewire` | new `audiojail.py` (config, jailed daemons, lifecycle), `audiomode.resolve`, `runner.launch`, `runtimejail._audio_args`, `linger.py` | `mic` has no effect and `pipewire` falls back to the Pulse socket with a warning at every start | Per app, `pipewire`, `wireplumber` and `pipewire-pulse` in a bwrap jail built on `jail.common_args` (no network; its runtime directory, a read-only config and the host Pulse socket). Tunnel nodes (`libpipewire-module-pulse-tunnel`) to the host: a sink with `audio`, a source only with `mic`. WirePlumber with `hardware.audio`, `hardware.video-capture` and `hardware.bluetooth` disabled, or the camera leaks into the graph. The jail hostname is the app name (the host's stream is "Tunnel for user@HOST"). Fall back to the Pulse socket, with a warning, when `pipewire`, `wireplumber`, `pipewire-pulse` or the tunnel module is missing or the host has no Pulse socket | The measurements below, kept as tests | README table and limits, DESIGN Audio, this file | L |
+
+Measured in the guest (PipeWire 1.4.2, WirePlumber 0.5.8) and to be documented as limits of `pipewire` mode: the app keeps the devices that were the default at launch; making a headset the default later ADDS links (playback on both, the microphone mixed from both) instead of moving them, and naming the devices does not prevent it (the host's WirePlumber policy acts on the tunnel's streams); unplugging removes only the unplugged device's links; nothing re-attaches by itself; if the headset was the only device the app is silent until restarted; the tunnel does not reconnect after the host's `pipewire-pulse` restarts. Not built: rebuilding the tunnel on device changes (a `pw-cli` session can unload the module, but `pw-cli` crashed doing so; restarting the daemons drops the app's connection). `pulse` mode follows the host's own policy.
 
 ## Rejected alternatives
 
@@ -105,6 +111,14 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 - **Behind pasta:** pasta closes inherited descriptors, so `reopen.py`, between pasta and bwrap, opens each path again and compares device and inode with the launcher's record. The comparison follows the open, so no window is left; a swap there refuses the start instead of keeping the checked file.
 - **Rejected:** binding `/proc/self/fd/N` (bwrap has an option made for this, added in 0.10 for the same race in Flatpak), and comparing the inode just before exec (a window remains). The `sh` of `net_wrap` could not do the reopening: it has no `fstat` and dash accepts only single-digit descriptors.
 - **Cost:** bubblewrap 0.10 or later is required (its changelog: added to resolve CVE-2024-42472 in Flatpak); both minimum systems have it. A `dirs` entry naming a regular file is now refused, which `--dir` already did at parse time. Ubuntu 26.04 has 0.11.1 (Launchpad) and the Debian 13 guest 0.12.0.
+
+### Audio: `mic` and `audio_mode`
+
+- **Decided:** `audio` is playback only and `mic` is a separate permission (it needs `audio`; `--allow mic` implies it). `audio_mode` is `pipewire` (default, a private PipeWire graph) or `pulse` (the host's Pulse socket). Existing manifests with `audio = true` become playback only without any notice; that was accepted.
+- **Why:** the Pulse server cannot restrict a client by device, so capture is part of the socket and a separate permission would be a promise it cannot keep. A private graph can keep it: with no source tunnel the app only finds the silent monitor of its own sink (measured). Both modes are offered because `pulse` follows the host's device policy and `pipewire` does not (see Planned code work).
+- **Fallback:** `mic` without a usable private graph warns and uses the Pulse socket; it does not refuse. On that path, and in `pulse` mode, capture cannot be denied, and `add` and `perms` say so.
+- **Rejected:** a filtering proxy in front of the Pulse socket. A denylist that blocked recording still let a client load modules into the host's audio server and mute its microphone, and a safe one needs an allowlist of the protocol plus per-source filtering, parsing untrusted data in Python.
+- **State:** the settings and the fallback are in place; the private graph is the planned item above.
 
 ### Camera: the V4L2 capture nodes, nothing else
 

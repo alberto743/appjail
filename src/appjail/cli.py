@@ -86,6 +86,8 @@ def build_parser():
                      help="also allow this privileged portal interface (needs --allow portals); repeatable")
     add.add_argument("--allow", action="append", default=[], choices=PERMISSION_FLAGS,
                      help="grant a permission (repeatable); everything is denied unless granted")
+    add.add_argument("--audio-mode", choices=manifest.AUDIO_MODES, default=manifest.DEFAULT_AUDIO_MODE,
+                     help="with --allow audio: pipewire (default) or pulse, the host's Pulse socket, which cannot deny the microphone")
     add.add_argument("--display", choices=manifest.DISPLAYS, default="wayland",
                      help="wayland (default), xwayland or xwayland-rootful for X11-only apps, none for an app with no window")
     add.add_argument("--display-size", default=manifest.DEFAULT_DISPLAY_SIZE, metavar="WxH",
@@ -162,6 +164,7 @@ def build_parser():
     perms.add_argument("app")
     perms.add_argument("--allow", action="append", default=[], choices=PERMISSION_FLAGS)
     perms.add_argument("--deny", action="append", default=[], choices=PERMISSION_FLAGS)
+    perms.add_argument("--audio-mode", choices=manifest.AUDIO_MODES)
     perms.add_argument("--display", choices=manifest.DISPLAYS)
     perms.add_argument("--display-size", metavar="WxH")
     perms.add_argument("--add-dir", action="append", default=[], metavar="PATH[:ro|:rw]")

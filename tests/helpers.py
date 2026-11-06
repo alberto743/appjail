@@ -440,3 +440,9 @@ def png_info(data):
         colours.update(bytes(row[i:i + bpp]) for i in range(0, stride, bpp))
         prev = row
     return width, height, len(colours)
+
+
+def permission_lines_text(p):
+    """What the review shows for these permissions, as one string."""
+    from appjail import permargs
+    return "; ".join(f"{label}: {text}" for label, text in permargs.permission_lines(p))

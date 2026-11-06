@@ -65,7 +65,7 @@ def test_colour_only_on_a_terminal_without_no_color(monkeypatch):
 def test_permission_lines_and_changes():
     old = manifest.Permissions(audio=True, dirs=("~/Music",))
     new = manifest.Permissions(audio=True, network=True, dirs=("~/Docs",), display="xwayland")
-    assert permission_lines(old) == [("grants", "audio"), ("display", "wayland"), ("dirs", "~/Music")]
+    assert permission_lines(old) == [("grants", "audio"), ("display", "wayland"), ("audio-mode", "pipewire"), ("dirs", "~/Music")]
     arrow = console_mod.ARROW
     assert permission_changes(old, new) == [("network", f"no {arrow} yes"), ("display", f"wayland {arrow} xwayland"),
                                              ("dirs", "+ ~/Docs"), ("dirs", "- ~/Music")]

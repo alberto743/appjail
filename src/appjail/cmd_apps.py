@@ -173,10 +173,16 @@ def flag_changes(args):
         changes[flag] = True
     if changes.get("network_host"):
         changes["network"] = True
+    if changes.get("mic"):
+        changes["audio"] = True
     for flag in args.deny:
         changes[flag] = False
     if changes.get("network") is False:
         changes["network_host"] = False
+    if changes.get("audio") is False:
+        changes["mic"] = False
+    if args.audio_mode:
+        changes["audio_mode"] = args.audio_mode
     if args.display:
         changes["display"] = args.display
     if args.display_size:
@@ -223,7 +229,7 @@ def bus_and_portal_changes(args, p, changes):
 
 RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopback)"),
                 ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
-                ("camera", "access to the camera (the video capture devices)"),
+                ("mic", "access to the microphone"), ("camera", "access to the camera (the video capture devices)"),
                 ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"))
 
 
@@ -231,6 +237,9 @@ def warn_new_grants(console, old, new):
     for risky, text in RISKY_GRANTS:
         if getattr(new, risky) and not getattr(old, risky):
             console.warn(f"this grants {text}")
+    if new.audio and new.audio_mode == "pulse" and not new.mic and not (old.audio and old.audio_mode == "pulse"):
+        console.warn("audio in pulse mode uses the host's Pulse socket, which also lets the app record from the microphone; "
+                     "that cannot be denied in this mode")
     warn_sensitive_dbus(console, set(new.dbus_filter) - set(old.dbus_filter))
     warn_owned_dbus(console, set(new.dbus_own) - set(old.dbus_own))
     warn_privileged_portals(console, set(new.portal_interfaces) - set(old.portal_interfaces))
