@@ -25,6 +25,7 @@ Planned code work is in `DECISIONS.md` (Planned code work: ordered items, with t
 ## Docs
 - `README.md`: user-facing entry point (what it is, requirements, usage, trust model, limits). Keep it short and in step with the CLI, the permission table and the limits, in the same commit. Its "Alternatives and related projects" section states facts about other projects as of the month it names: re-check it (and its date) at each minor release, and record sources in `DECISIONS.md`.
 - `DESIGN.md`: current behaviour, present tense, no dates, no development history. `DECISIONS.md`: why, and what is deferred.
+- `SECURITY.md`: the reporting policy and its scope. It follows the README's Limits and the supported systems and Python version; when those change, update it in the same commit.
 - When code, decisions or the environment change, update the affected documents and the tests/scripts in the same commit.
 
 ## Code layout (src layout, `src/appjail/`)
