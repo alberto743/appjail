@@ -383,7 +383,8 @@ def test_launch_runs_the_app_on_its_private_graph(sandbox, host, monkeypatch):
     m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     said = []
-    assert runner.launch("app", host_env=dict(host.env), say=said.append, warn=said.append, restricted=NO_RESTRICTION) == 0
+    code = runner.launch("app", host_env=dict(host.env), say=said.append, warn=said.append, restricted=NO_RESTRICTION)
+    assert code == 0, "\n".join(said)
     assert not [line for line in said if "audio_mode" in line], said  # no fallback
     assert peak((kw["home"] / "m.wav").read_bytes()) > 1000
     assert "app-mic" in (kw["home"] / "nodes.txt").read_text() and "host-" not in (kw["home"] / "nodes.txt").read_text()
