@@ -196,7 +196,7 @@ def test_a_pulse_only_app_sees_the_tunnels_too(sandbox, host):
         sources = in_jail(sandbox, audio, ["/usr/bin/pactl", "list", "short", "sources"]).stdout
         assert "app-mic" in sources and "host-" not in sources
         path = sandbox / "home" / "p.wav"
-        in_jail(sandbox, audio, ["/usr/bin/timeout", "2", "/usr/bin/parec", "--device=app-mic", "--file-format=wav", "/home/app/p.wav"])
+        in_jail(sandbox, audio, ["/usr/bin/timeout", "-s", "INT", "4", "/usr/bin/parec", "--device=app-mic", "--file-format=wav", "/home/app/p.wav"])
         assert peak(path.read_bytes()) > 1000
 
 
