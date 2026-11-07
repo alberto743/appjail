@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 
 from . import jail, textsafe
+from .errors import JailError
 
 RUNTIME = "/run/appaudio"
 CONFIG = "/etc/appaudio"
@@ -28,6 +29,7 @@ TOOLS = ("pipewire", "wireplumber", "pipewire-pulse", "pw-dump")
 SINK, SOURCE = "app-speaker", "app-mic"
 DRIVERS = ("Dummy-Driver", "Freewheel-Driver")
 READY_TIMEOUT = 15.0
+DUMP_TIMEOUT = 4.0  # one look at the graph; a daemon that is not answering yet must not use up the whole start
 SETTLE = 0.6  # WirePlumber's device monitors start a moment after it connects; look for strays after that
 WIREPLUMBER_CONF = ("wireplumber.profiles = { main = { hardware.audio = disabled, hardware.video-capture = disabled, "
                     "hardware.bluetooth = disabled } }\n")
@@ -146,9 +148,14 @@ class PrivateAudio:
         return [jail.find_bwrap(), *daemon_args(self.runtime, config, passwd, self.host_pulse, command, hostname_for(self.name))]
 
     def _dump(self, config, passwd):
-        proc = jail.supervise(self._jail_argv(["/usr/bin/pw-dump"], config, passwd), timeout=10, keep=1 << 20)  # the JSON must stay whole
+        """The listing of the graph, or None when it could not be had (not answering yet, or too slow): never an exception."""
+        try:
+            proc = jail.supervise(self._jail_argv(["/usr/bin/pw-dump"], config, passwd), timeout=DUMP_TIMEOUT, keep=1 << 20)  # whole JSON
+        except JailError as e:
+            self.last_error = textsafe.clean(str(e), 160)
+            return None
         self.last_error = textsafe.clean(proc.stderr.strip().splitlines()[-1], 160) if proc.returncode and proc.stderr.strip() else ""
-        return proc.stdout if proc.returncode == 0 else ""
+        return proc.stdout if proc.returncode == 0 else None
 
     def _start(self):
         config, passwd = self._write_config()
@@ -161,15 +168,23 @@ class PrivateAudio:
             if self.proc.poll() is not None:
                 raise AudioUnavailable("the private audio daemons exited")
             if self.pipewire_socket.is_socket() and self.pulse_socket.is_socket():
-                nodes, wp = graph_nodes(self._dump(config, passwd))
-                if wanted <= set(nodes) and wp:
-                    break
+                text = self._dump(config, passwd)
+                if text is not None:
+                    nodes, wp = graph_nodes(text)
+                    if wanted <= set(nodes) and wp:
+                        break
             time.sleep(0.2)
         else:
             seen = textsafe.clean(", ".join(sorted(set(nodes))) or "nothing", 200)
             raise AudioUnavailable(f"the private audio graph did not come up in time (nodes seen: {seen}; WirePlumber {'connected' if wp else 'not connected'}{'; pw-dump said: ' + self.last_error if self.last_error else ''})")
         time.sleep(SETTLE)
-        nodes, _ = graph_nodes(self._dump(config, passwd))
+        for _ in range(3):  # the graph must be seen once more, after the settle: an unreadable look is not a clean one
+            text = self._dump(config, passwd)
+            nodes, _ = graph_nodes(text) if text is not None else ([], False)
+            if wanted <= set(nodes):
+                break
+        else:
+            raise AudioUnavailable("the private audio graph could not be checked" + (f" ({self.last_error})" if self.last_error else ""))
         if stray := unexpected(nodes, self.mic):
             raise AudioUnavailable("the private audio graph holds nodes it should not: " + textsafe.clean(", ".join(stray), 200))
 
