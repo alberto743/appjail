@@ -41,10 +41,12 @@ libgtk-3-bin         # gtk-update-icon-cache: run on the user icon theme after a
 desktop-file-utils    # desktop-file-validate and update-desktop-database for the generated menu entries
 libglib2.0-bin        # gio: tests/test_e2e.py opens a file through the generated menu entry with `gio launch` / `gio open`
 pipewire              # tests/test_audio.py: a private PipeWire, to check that the `audio` permission never exposes its socket
-pipewire-bin          # pw-dump: what a client can see, from the host and from the jail (tests/test_audio.py)
-pipewire-pulse        # the Pulse server whose socket the `audio` permission binds (tests/test_audio.py)
+pipewire-bin          # pw-dump: what a client can see, from the host and from the jail (tests/test_audio.py), and appjail's own check of the private graph (audiojail.py)
+pipewire-pulse        # the Pulse server whose socket `audio_mode = pulse` binds (tests/test_audio.py), and one of the three daemons of the private graph (audiojail.py)
 libspa-0.2-modules    # SPA plugins, including videotestsrc: the camera stand-in of tests/test_audio.py (the guest has no video device)
 v4l-utils             # v4l2-ctl: identifies and queries the vivid virtual camera in tests/test_camera.py
 gstreamer1.0-tools    # gst-launch-1.0: v4l2src writes a frame as a PNG in tests/test_camera.py
 gstreamer1.0-plugins-good # v4l2src and pngenc
 gstreamer1.0-plugins-base # videoconvert
+wireplumber           # the session manager of the private audio graph (audiojail.py, tests/test_private_audio.py) and of the test camera portal
+pulseaudio-utils      # pactl, parec and paplay: the Pulse clients of tests/test_private_audio.py
