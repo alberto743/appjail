@@ -219,14 +219,28 @@ def socket_dir(pulse_socket):
     return rt
 
 
-def test_pipewire_mode_falls_back_and_says_why():
-    backend, note = audiomode.resolve(Permissions(audio=True), {"XDG_RUNTIME_DIR": "/nonexistent"}, availability=lambda s: (False, "wireplumber is not installed"))
-    assert backend == "pulse" and "wireplumber is not installed" in note and "no Pulse socket" in note and "no audio" in note
+def unavailable(perms, env):
+    return audiomode.resolve(perms, env, availability=lambda s: (False, "wireplumber is not installed"))
 
 
-def test_the_fallback_note_warns_about_the_microphone_when_there_is_a_socket():
-    assert "record from the microphone" in audiomode.fallback_note("x")
-    assert "no audio" in audiomode.fallback_note("x", has_pulse=False)
+def test_without_mic_a_graph_that_is_not_available_means_no_audio_even_with_a_pulse_socket(pulse_socket):
+    backend, note = unavailable(Permissions(audio=True), {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))})
+    assert backend is None and "wireplumber is not installed" in note and "no audio" in note and "not granted" in note
+
+
+def test_with_mic_a_graph_that_is_not_available_falls_back_to_the_pulse_socket_and_warns(pulse_socket):
+    backend, note = unavailable(Permissions(audio=True, mic=True), {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))})
+    assert backend == "pulse" and "wireplumber is not installed" in note and "record from the microphone" in note
+
+
+def test_with_mic_and_no_host_socket_there_is_no_audio():
+    backend, note = unavailable(Permissions(audio=True, mic=True), {"XDG_RUNTIME_DIR": "/nonexistent"})
+    assert backend is None and "no Pulse socket" in note and "no audio" in note
+
+
+@pytest.mark.parametrize("mic, has_pulse, backend", [(False, True, None), (False, False, None), (True, True, "pulse"), (True, False, None)])
+def test_fallback_backend(mic, has_pulse, backend):
+    assert audiomode.fallback(Permissions(audio=True, mic=mic), "x", has_pulse)[0] == backend
 
 
 # -- the runner ----------------------------------------------------------------------------
@@ -269,20 +283,42 @@ def test_the_app_gets_its_private_sockets_and_not_the_hosts(sandbox, runtime, mo
     assert "PULSE_SERVER" in argv and f"unix:{rt}/pulse/native" in argv
 
 
-def test_a_graph_that_cannot_start_falls_back_to_the_pulse_socket_with_a_note(sandbox, runtime, monkeypatch):
-    class Broken(FakeAudio):
-        def __enter__(self):
-            raise audiojail.AudioUnavailable("the private audio daemons exited")
+class Broken(FakeAudio):
+    def __enter__(self):
+        raise audiojail.AudioUnavailable("the private audio daemons exited")
 
+
+def host_pulse_bind(argv, runtime):
+    return (str(runtime / "pulse" / "native"), f"/run/user/{__import__('os').getuid()}/pulse/native") in pairs(argv, "--ro-bind")
+
+
+def test_a_graph_that_cannot_start_falls_back_to_the_pulse_socket_for_an_app_with_mic(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(audiojail, "PrivateAudio", Broken)
+    monkeypatch.setattr(audiomode, "resolve", lambda perms, env: ("pipewire", None))
+    said = []
+    argv = launch(sandbox, runtime, {"audio": True, "mic": True, "display": "none"}, monkeypatch, said)
+    assert any("the private audio daemons exited" in line and "Pulse socket" in line for line in said)
+    assert host_pulse_bind(argv, runtime) and "PULSE_SERVER" in argv
+
+
+def test_a_graph_that_cannot_start_leaves_an_app_without_mic_with_no_audio_socket(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(audiojail, "PrivateAudio", Broken)
     monkeypatch.setattr(audiomode, "resolve", lambda perms, env: ("pipewire", None))
     said = []
     argv = launch(sandbox, runtime, {"audio": True, "display": "none"}, monkeypatch, said)
-    assert any("the private audio daemons exited" in line and "Pulse socket" in line for line in said)
-    assert (str(runtime / "pulse" / "native"), f"/run/user/{__import__('os').getuid()}/pulse/native") in pairs(argv, "--ro-bind")
+    assert any("the private audio daemons exited" in line and "no audio" in line for line in said)
+    assert not host_pulse_bind(argv, runtime)
+    assert "PULSE_SERVER" not in argv and not any("pulse" in str(a) or "pipewire" in str(a) for a in argv)
 
 
-@pytest.mark.parametrize("perms, noisy", [({}, False), ({"audio": True, "audio_mode": "pulse"}, False), ({"audio": True}, True)])
+def test_no_graph_and_no_host_audio_binds_nothing(sandbox, runtime):
+    from appjail import runtimejail
+    env = {}
+    assert runtimejail._audio_args(str(runtime), "/run/user/1000", env, None, host_audio=False) == [] and not env
+    assert runtimejail._audio_args(str(runtime), "/run/user/1000", env, None) != [] and "PULSE_SERVER" in env  # the default is unchanged
+
+
+@pytest.mark.parametrize("perms, noisy", [({}, False), ({"audio": True, "audio_mode": "pulse"}, False), ({"audio": True}, True), ({"audio": True, "mic": True}, True)])
 def test_launch_tells_only_when_the_requested_mode_is_not_what_it_gets(sandbox, runtime, monkeypatch, perms, noisy):
     monkeypatch.setattr(audiojail, "availability", lambda host_pulse: (False, "wireplumber is not installed"))
     said = []
