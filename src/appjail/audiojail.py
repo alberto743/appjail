@@ -10,12 +10,14 @@ the host's PipeWire, so it sees neither the host's devices, nor cameras, nor oth
 has no microphone at all. The tunnels follow the host's default devices only at connection time (see DECISIONS.md).
 """
 
+import collections
 import json
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -114,6 +116,7 @@ class PrivateAudio:
         self.runtime = self.base / "rt"
         self.proc = None
         self.last_error = ""
+        self.log = collections.deque(maxlen=30)  # the last lines the daemons wrote: memory only, bounded
 
     @property
     def pipewire_socket(self):
@@ -157,16 +160,26 @@ class PrivateAudio:
         self.last_error = textsafe.clean(proc.stderr.strip().splitlines()[-1], 160) if proc.returncode and proc.stderr.strip() else ""
         return proc.stdout if proc.returncode == 0 else None
 
+    def _collect(self, stream):
+        for line in stream:
+            self.log.append(line.rstrip())
+
+    def _said(self):
+        """What the daemons last wrote, for the message that says why the graph is unusable."""
+        lines = [line for line in list(self.log) if line.strip()][-3:]
+        return f"; the daemons said: {textsafe.clean(' | '.join(lines), 300)}" if lines else ""
+
     def _start(self):
         config, passwd = self._write_config()
         self.proc = subprocess.Popen(self._jail_argv(["/bin/sh", "-c", DAEMONS], config, passwd), stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
+        threading.Thread(target=self._collect, args=(self.proc.stdout,), daemon=True).start()
         wanted = {SINK, *([SOURCE] if self.mic else [])}
         deadline = time.monotonic() + self.timeout
         nodes, wp = [], False
         while time.monotonic() < deadline:
             if self.proc.poll() is not None:
-                raise AudioUnavailable("the private audio daemons exited")
+                raise AudioUnavailable("the private audio daemons exited" + self._said())
             if self.pipewire_socket.is_socket() and self.pulse_socket.is_socket():
                 text = self._dump(config, passwd)
                 if text is not None:
@@ -176,7 +189,7 @@ class PrivateAudio:
             time.sleep(0.2)
         else:
             seen = textsafe.clean(", ".join(sorted(set(nodes))) or "nothing", 200)
-            raise AudioUnavailable(f"the private audio graph did not come up in time (nodes seen: {seen}; WirePlumber {'connected' if wp else 'not connected'}{'; pw-dump said: ' + self.last_error if self.last_error else ''})")
+            raise AudioUnavailable(f"the private audio graph did not come up in time (nodes seen: {seen}; WirePlumber {'connected' if wp else 'not connected'}{'; pw-dump said: ' + self.last_error if self.last_error else ''}{self._said()})")
         time.sleep(SETTLE)
         for _ in range(3):  # the graph must be seen once more, after the settle: an unreadable look is not a clean one
             text = self._dump(config, passwd)
@@ -184,7 +197,7 @@ class PrivateAudio:
             if wanted <= set(nodes):
                 break
         else:
-            raise AudioUnavailable("the private audio graph could not be checked" + (f" ({self.last_error})" if self.last_error else ""))
+            raise AudioUnavailable("the private audio graph could not be checked" + (f" ({self.last_error})" if self.last_error else "") + self._said())
         if stray := unexpected(nodes, self.mic):
             raise AudioUnavailable("the private audio graph holds nodes it should not: " + textsafe.clean(", ".join(stray), 200))
 
