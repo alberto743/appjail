@@ -67,6 +67,8 @@ def test_no_camera_present_binds_nothing(sandbox, runtime, monkeypatch):
 def modprobe(*args):
     if shutil.which("sudo"):
         subprocess.run(["sudo", "-n", "modprobe", *args], capture_output=True)
+        if shutil.which("udevadm"):  # the device nodes and their group appear a moment after the module loads
+            subprocess.run(["udevadm", "settle", "--timeout=10"], capture_output=True)
 
 
 @pytest.fixture
