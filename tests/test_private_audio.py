@@ -70,6 +70,18 @@ class Host:
     def pactl(self, *args):
         return subprocess.run(["pactl", "-s", self.pulse, *args], env=self.env, check=True, capture_output=True, text=True).stdout
 
+    def set_default(self, kind, name, timeout=10):
+        """Make a device the default (kind: sink or source). A device that was only just loaded is not known to the session
+        manager at once: pactl answers "Not supported" until it is, so ask again."""
+        deadline = time.monotonic() + timeout
+        while True:
+            done = subprocess.run(["pactl", "-s", self.pulse, f"set-default-{kind}", name], env=self.env, capture_output=True, text=True)
+            if done.returncode == 0:
+                return
+            if time.monotonic() > deadline:
+                raise AssertionError(f"set-default-{kind} {name}: {done.stderr.strip()}")
+            time.sleep(0.2)
+
     def links(self):
         """The host nodes the app's tunnels are linked to: (sources feeding the tunnel, sinks the tunnel feeds)."""
         sources, sinks, current = set(), set(), ""
@@ -296,7 +308,7 @@ def test_the_host_sees_a_stream_named_after_the_app(host):
 
 @integration
 def test_the_tunnel_uses_the_default_source_at_connection_time(host):
-    host.pactl("set-default-source", "host-mic2")
+    host.set_default("source", "host-mic2")
     with private(host):
         assert wait_for(lambda: any(s.get("device") == "host-mic2" for s in host.streams("source-output")), 8), host.streams("source-output")
 
@@ -315,8 +327,8 @@ def test_a_default_change_adds_links_and_unplug_removes_only_the_unplugged_ones(
         host.pactl("load-module", "module-null-sink", "sink_name=headset")
         time.sleep(2)
         assert host.links() == (["host-mic"], ["host-speaker"])  # plugged, not the default: nothing happens
-        host.pactl("set-default-sink", "headset")
-        host.pactl("set-default-source", "headset.monitor")
+        host.set_default("sink", "headset")
+        host.set_default("source", "headset.monitor")
         assert stable((["headset", "host-mic"], ["headset", "host-speaker"]))  # added, not moved
         index = next(line.split("\t")[0] for line in host.pactl("list", "short", "modules").splitlines() if "sink_name=headset" in line)
         host.pactl("unload-module", index)
@@ -329,8 +341,8 @@ def test_a_default_change_adds_links_and_unplug_removes_only_the_unplugged_ones(
 @integration
 def test_a_tunnel_on_a_headset_that_is_unplugged_goes_silent_for_good(sandbox, host):
     host.pactl("load-module", "module-null-sink", "sink_name=headset")
-    host.pactl("set-default-sink", "headset")
-    host.pactl("set-default-source", "headset.monitor")
+    host.set_default("sink", "headset")
+    host.set_default("source", "headset.monitor")
     with private(host) as audio:
         assert wait_for(lambda: host.links() == (["headset"], ["headset"]), 8), host.links()
         index = next(line.split("\t")[0] for line in host.pactl("list", "short", "modules").splitlines() if "sink_name=headset" in line)
