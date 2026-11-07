@@ -5,11 +5,13 @@
 
 import json
 import socket
+import subprocess
 from typing import ClassVar
 
 import pytest
 
-from appjail import audiojail, audiomode, runner, store
+from appjail import audiojail, audiomode, jail, runner, store
+from appjail.errors import JailError
 from appjail.manifest import Permissions
 
 from .helpers import NO_RESTRICTION, Extractor, install, pairs
@@ -123,6 +125,70 @@ def test_daemons_that_exit_are_unavailable_and_leave_nothing(tmp_path, monkeypat
     with pytest.raises(audiojail.AudioUnavailable, match="exited"), audio:
         pytest.fail("must not get here")
     assert list(tmp_path.iterdir()) == []
+
+
+# -- start-up against a fake graph --------------------------------------------------------
+
+
+class Sock:
+    def is_socket(self):
+        return True
+
+
+@pytest.fixture
+def fake(monkeypatch, tmp_path):
+    """A PrivateAudio whose daemons are `sleep` and whose look at the graph (pw-dump in a jail) is a script of answers."""
+    audio = audiojail.PrivateAudio("app", False, "/x", tmp_path, 1000, 1000, timeout=2)
+    monkeypatch.setattr(audio, "_write_config", lambda: (tmp_path, tmp_path))
+    monkeypatch.setattr(audio, "_jail_argv", lambda *a: ["sleep", "30"])
+    monkeypatch.setattr(audiojail.PrivateAudio, "pipewire_socket", property(lambda self: Sock()))
+    monkeypatch.setattr(audiojail.PrivateAudio, "pulse_socket", property(lambda self: Sock()))
+    monkeypatch.setattr(audiojail, "SETTLE", 0)
+    answers = []
+
+    def supervise(argv, **kw):
+        answer = answers.pop(0) if len(answers) > 1 else answers[0]
+        if isinstance(answer, Exception):
+            raise answer
+        return subprocess.CompletedProcess(argv, 0, answer, "")
+
+    monkeypatch.setattr(jail, "supervise", supervise)
+    audio.answers = answers
+    return audio
+
+
+GOOD = dump(["Dummy-Driver", "Freewheel-Driver", "app-speaker"])
+
+
+def test_a_clean_graph_is_accepted(fake):
+    fake.answers.append(GOOD)
+    with fake as audio:
+        assert audio is fake
+
+
+def test_a_look_that_times_out_is_not_ready_yet_and_not_an_exception(fake):
+    fake.answers.append(JailError("jailed command aborted: timed out"))
+    with pytest.raises(audiojail.AudioUnavailable, match="did not come up in time"), fake:
+        pytest.fail("must not get here")
+    assert list(fake.base.parent.glob("appjail-audio-*")) == []
+
+
+def test_the_graph_comes_up_after_a_slow_first_look(fake):
+    fake.answers.extend([JailError("jailed command aborted: timed out"), GOOD])
+    with fake:
+        pass
+
+
+def test_an_unreadable_final_look_is_not_a_clean_one(fake):
+    fake.answers.extend([GOOD, "not json"])  # ready, then nothing can be read at the check
+    with pytest.raises(audiojail.AudioUnavailable, match="could not be checked"), fake:
+        pytest.fail("a graph that was not checked must not be handed to an app")
+
+
+def test_a_stray_node_at_the_final_look_is_refused(fake):
+    fake.answers.extend([GOOD, dump(["app-speaker", "v4l2_input.platform-x.0"])])
+    with pytest.raises(audiojail.AudioUnavailable, match="v4l2_input"), fake:
+        pytest.fail("must not get here")
 
 
 # -- the resolver --------------------------------------------------------------------------
