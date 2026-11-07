@@ -223,6 +223,7 @@ def bus_and_portal_changes(args, p, changes):
 
 RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopback)"),
                 ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
+                ("camera", "access to the camera (the video capture devices)"),
                 ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"))
 
 

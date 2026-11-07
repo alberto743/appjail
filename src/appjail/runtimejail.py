@@ -1,10 +1,12 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""The sandbox an installed app runs in: bwrap arguments for its private home, display, audio, GPU and grants."""
+"""The sandbox an installed app runs in: bwrap arguments for its private home, display, audio, GPU, camera and grants."""
 
+import fcntl
 import os
 import stat
+import struct
 from pathlib import Path
 from typing import NamedTuple
 
@@ -248,6 +250,47 @@ def _gpu_args():
     return args
 
 
+V4L2_CAP_VIDEO_CAPTURE, V4L2_CAP_VIDEO_CAPTURE_MPLANE, V4L2_CAP_DEVICE_CAPS = 0x1, 0x1000, 0x80000000
+VIDIOC_QUERYCAP = 0x80685600  # _IOR('V', 0, struct v4l2_capability), 104 bytes
+
+
+def _capture_nodes():
+    """The /dev/video* nodes that capture video (not output, metadata or codec nodes), asked of the driver with
+    VIDIOC_QUERYCAP, which does not start streaming. A node that cannot be opened or queried is left out."""
+    nodes = []
+    for node in sorted(Path("/dev").glob("video[0-9]*")):
+        try:
+            fd = os.open(node, os.O_RDONLY | os.O_NONBLOCK)
+        except OSError:
+            continue
+        try:
+            buf = bytearray(104)
+            fcntl.ioctl(fd, VIDIOC_QUERYCAP, buf)
+            caps, device_caps = struct.unpack_from("II", buf, 84)
+            if (device_caps if caps & V4L2_CAP_DEVICE_CAPS else caps) & (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE):
+                nodes.append(node)
+        except OSError:
+            pass
+        finally:
+            os.close(fd)
+    return nodes
+
+
+def _camera_args():
+    """The capture nodes, and for each only its own sysfs directory (tools resolve /sys/dev/char/MAJOR:MINOR to it, which
+    is recreated as a symlink). The other video nodes, the media controller and the rest of sysfs are not bound. With no
+    camera present nothing is bound."""
+    args = []
+    for node in _capture_nodes():
+        args += ["--dev-bind", str(node), str(node)]
+        st = os.stat(node)
+        link = f"/sys/dev/char/{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
+        real = os.path.realpath(link)
+        if real != link and os.path.isdir(real):
+            args += ["--ro-bind", real, real, "--symlink", real, link]
+    return args
+
+
 def _namespace_args(perms, uid, seccomp_fd):
     """Namespaces, capabilities, the ids inside the jail and the seccomp filter."""
     args = ["--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv",
@@ -312,6 +355,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
         args += _audio_args(host_rt, rt, env)
     if perms.gpu:
         args += _gpu_args()
+    if perms.camera:
+        args += _camera_args()
     args += binds
     for k, v in env.items():
         args += ["--setenv", k, v]

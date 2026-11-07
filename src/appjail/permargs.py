@@ -110,7 +110,7 @@ def permissions_from_args(args):
         dbus_own=dbus_from_args(args.dbus_own, check=grants.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
         portals="portals" in allowed, userns="userns" in allowed, linger="linger" in allowed,
-        audio="audio" in allowed, gpu="gpu" in allowed,
+        audio="audio" in allowed, gpu="gpu" in allowed, camera="camera" in allowed,
         display=args.display, display_size=args.display_size,
     )
 

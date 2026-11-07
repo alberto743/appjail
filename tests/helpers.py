@@ -10,6 +10,7 @@ import shutil
 import struct
 import subprocess
 import time
+import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -398,3 +399,44 @@ class Extractor:
         (Path(dest) / "usr").mkdir(parents=True)
         (Path(dest) / "AppRun").write_text("#!/bin/sh\n")
         return 1, 1
+
+
+def png_info(data):
+    """(width, height, distinct pixel bytes) of a PNG, decoded with the standard library (8-bit RGB/RGBA, filters applied)."""
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
+    pos, idat, width, height, depth, ctype = 8, b"", 0, 0, 0, 0
+    while pos < len(data):
+        n = int.from_bytes(data[pos:pos + 4], "big")
+        kind = data[pos + 4:pos + 8]
+        body = data[pos + 8:pos + 8 + n]
+        if kind == b"IHDR":
+            width, height, depth, ctype = int.from_bytes(body[:4], "big"), int.from_bytes(body[4:8], "big"), body[8], body[9]
+        elif kind == b"IDAT":
+            idat += body
+        pos += 12 + n
+    assert depth == 8 and ctype in (2, 6), (depth, ctype)
+    bpp = 3 if ctype == 2 else 4
+    raw = zlib.decompress(idat)
+    stride = width * bpp
+    prev = bytearray(stride)
+    colours = set()
+    for y in range(height):
+        row = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        ft = raw[y * (stride + 1)]
+        for i in range(stride):
+            a = row[i - bpp] if i >= bpp else 0
+            b = prev[i]
+            c = prev[i - bpp] if i >= bpp else 0
+            if ft == 1:
+                row[i] = (row[i] + a) & 255
+            elif ft == 2:
+                row[i] = (row[i] + b) & 255
+            elif ft == 3:
+                row[i] = (row[i] + ((a + b) >> 1)) & 255
+            elif ft == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                row[i] = (row[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        colours.update(bytes(row[i:i + bpp]) for i in range(0, stride, bpp))
+        prev = row
+    return width, height, len(colours)

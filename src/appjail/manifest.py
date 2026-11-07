@@ -47,8 +47,8 @@ TOP_KEYS = {
 }
 FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
-BOOL_PERMS = ("network", "network_host", "audio", "gpu", "portals", "userns", "linger")
-PERM_KEYS = {"network", "network_host", "audio", "gpu", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
+BOOL_PERMS = ("network", "network_host", "audio", "gpu", "camera", "portals", "userns", "linger")
+PERM_KEYS = {"network", "network_host", "audio", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -58,6 +58,7 @@ class Permissions:
     network_host: bool = False  # with network: the host's own network namespace, loopback services included
     audio: bool = False
     gpu: bool = False
+    camera: bool = False  # the V4L2 capture nodes (/dev/video*); not the portal, see portals
     display: str = "wayland"
     display_size: str = DEFAULT_DISPLAY_SIZE  # xwayland-rootful only: the size of its window, WxH
     dbus_filter: tuple = ()  # session-bus names the app may talk to
@@ -345,6 +346,7 @@ def dumps(m):
         *(["network_host = true"] if p.network_host else []),
         f"audio = {str(p.audio).lower()}",
         f"gpu = {str(p.gpu).lower()}",
+        *(["camera = true"] if p.camera else []),
         f"display = {_quote(p.display)}",
         *([f"display_size = {_quote(p.display_size)}"] if p.display_size != DEFAULT_DISPLAY_SIZE else []),
         f"dbus_filter = {_array(p.dbus_filter)}",

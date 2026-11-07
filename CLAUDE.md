@@ -16,7 +16,7 @@ A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinn
 - Licensing: MPL-2.0, REUSE-compliant at every commit. Every code file starts with `SPDX-FileCopyrightText: 2026 Alberto P` and `SPDX-License-Identifier: MPL-2.0` (after a shebang if any); other files (Markdown, config, templates) are covered by `REUSE.toml`. New file types need a header or a `REUSE.toml` entry in the same commit.
 
 ## Open items
-Planned code work is in `DECISIONS.md` (Planned code work: ordered items, with the gap, fix, tests and docs for each). Everything else needs a decision or an app/session the user approves.
+There is no planned code work at the moment (`DECISIONS.md`, Planned code work). Everything else needs a decision or an app/session the user approves.
 - Manual checks on the user's machine: the GNOME and KDE portal backends; IPv6 on a real internet route; `display = xwayland-rootful` on GNOME, so far only briefly tested (clipboard, drag-and-drop and GPU acceleration still to check).
 - Paused by the user: arm64 support (`DECISIONS.md`).
 - Deferred by the user (`DECISIONS.md`): the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN.
@@ -45,6 +45,7 @@ Planned code work is in `DECISIONS.md` (Planned code work: ordered items, with t
 - The host-execution rule is under Hard rules. Everything that runs software runs in the qemu-kvm guest.
 - Host requirements (Debian 13): qemu with KVM, `qemu-img`, `cloud-localds`, `genisoimage`, OVMF, and read-write access to `/dev/kvm`. Install nothing else without asking.
 - The guest needs a headless Wayland compositor (weston), user namespaces, bubblewrap, `unsquashfs`, `xdg-dbus-proxy`, `dbus-bin`, `passt`, `xwayland`, portals, PipeWire with pipewire-pulse and a kernel with DRM drivers; the list is `tests/vm/packages.txt` (one commented line per package). Change requirements there, never ad hoc in the guest; `tests/vm/packages.sh` prints the names for `create.sh`, `provision.sh` and the CI action.
+- The camera tests use the `vivid` virtual camera: the fixture loads the kernel module with `sudo modprobe` inside the guest (no device is passed through); where it cannot, the tests skip.
 - Ask before creating or downloading a guest image (a binary download). The VM is reproducible from tracked files; `vm/` (image, disk, ssh key, console log) is gitignored and may be deleted and rebuilt. Keep images, disks and scripts under this directory or the scratchpad, never in the user's home.
 - VM scripts (`tests/vm/`):
   1. `create.sh` downloads the Debian 13 genericcloud image (~340 MB, verified against `SHA512SUMS`), creates the overlay disk, ssh key and cloud-init seed (`--force` rebuilds overlay and seed; the seed only runs on a fresh overlay).
