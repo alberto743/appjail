@@ -110,7 +110,8 @@ def permissions_from_args(args):
         dbus_own=dbus_from_args(args.dbus_own, check=grants.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
         portals="portals" in allowed, userns="userns" in allowed, linger="linger" in allowed,
-        audio="audio" in allowed, gpu="gpu" in allowed, camera="camera" in allowed,
+        audio="audio" in allowed or "mic" in allowed, mic="mic" in allowed, audio_mode=args.audio_mode,
+        gpu="gpu" in allowed, camera="camera" in allowed,
         display=args.display, display_size=args.display_size,
     )
 
@@ -124,6 +125,8 @@ def permission_lines(p):
     """What an app is granted, one (label, text) per line: the flags and the display always, the lists when not empty."""
     display = p.display + (f" {p.display_size}" if p.rootful else "")
     lines = [("grants", ", ".join(k for k in PERMISSION_FLAGS if getattr(p, k)) or "none"), ("display", display)]
+    if p.audio:
+        lines.append(("audio-mode", p.audio_mode))
     for label, values in (("dirs", p.dirs), ("dbus", p.dbus_filter), ("dbus-own", p.dbus_own), ("portals", p.portal_interfaces)):
         if values:
             lines.append((label, ", ".join(values)))
@@ -136,7 +139,7 @@ def permission_changes(old, new):
     for k in PERMISSION_FLAGS:
         if getattr(old, k) != getattr(new, k):
             lines.append((k, f"{'yes' if getattr(old, k) else 'no'} {ARROW} {'yes' if getattr(new, k) else 'no'}"))
-    for k in ("display", "display_size"):
+    for k in ("audio_mode", "display", "display_size"):
         if getattr(old, k) != getattr(new, k):
             lines.append((k.replace("_", "-"), f"{getattr(old, k)} {ARROW} {getattr(new, k)}"))
     for label, a, b in (("dirs", old.dirs, new.dirs), ("dbus", old.dbus_filter, new.dbus_filter),

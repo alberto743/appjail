@@ -16,6 +16,7 @@ from pathlib import Path
 
 from . import (
     appimage,
+    audiomode,
     dbusproxy,
     grants,
     history,
@@ -247,6 +248,9 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
         in_pasta = perms.pasta
+        _backend, audio_note = audiomode.resolve(perms)
+        if audio_note:
+            warn(audio_note)
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None

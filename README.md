@@ -123,7 +123,7 @@ out again. Only a menu entry created that way is ever replaced or deleted.
 
 **From a GitHub release.** `appjail add owner/repo` shows the repository owner, account age, stars and fork or archive
 status before it downloads anything, and asks if several release assets match. By default an app gets a window
-(a restricted Wayland socket) and nothing else: pass `--allow audio`, `--allow gpu` or `--allow camera` for those, and `--display none`
+(a restricted Wayland socket) and nothing else: pass `--allow audio`, `--allow mic`, `--allow gpu` or `--allow camera` for those, and `--display none`
 for an app that needs no window.
 
 | Option | Effect |
@@ -170,7 +170,9 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 |---|---|
 | `network` | Outbound internet through a private network namespace made by `pasta`. The app cannot reach services on your machine's localhost or its own addresses. Needs `passt`; without it the app is refused rather than put on the host network. |
 | `network_host` | The host's own network, including localhost services (`--allow network_host`, which implies `network`). For apps that really need them. Landlock (Linux 6.12 or later) keeps the app off the host's abstract unix sockets, such as the X server's; without it the permission is refused. |
-| `audio` | The Pulse socket (`--allow audio`; `--deny` later). Includes the microphone and the sound other apps play, which the server cannot separate. Off by default. |
+| `audio` | Sound playback (`--allow audio`; `--deny` later). For now the app gets the host's Pulse socket in both audio modes, and the server cannot tell playback from capture, so the app can also record the microphone and the sound other apps play. Off by default. |
+| `mic` | The microphone (`--allow mic`, which implies `audio`; `--deny mic` keeps playback). Saved and shown in the review, but it cannot take effect until the private PipeWire exists (see `audio_mode`): until then `audio` already includes it. |
+| `audio_mode` | `pipewire` (default) or `pulse` (`--audio-mode`, shown in the review once `audio` is granted). `pulse` is the host's Pulse socket and cannot deny the microphone. `pipewire` is meant to be a private PipeWire graph that separates playback from the microphone; it is not built yet, so it falls back to the Pulse socket and says so at every start. |
 | `gpu` | The render nodes, `/dev/nvidia*` and read-only `/sys` (`--allow gpu`). Needed for hardware-accelerated apps (Electron, Qt Quick, games); without it most apps fall back to slower software rendering. Off by default. |
 | `camera` | The camera's V4L2 capture devices and their own `/sys` entries (`--allow camera`). Every capture device is visible to the app, and a camera plugged in after the app starts is not. Off by default. Apps that use PipeWire for the camera (browsers) need `--portal Camera` instead, with `portals`. |
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |

@@ -6,7 +6,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from ..manifest import DEFAULT_DISPLAY_SIZE, DISPLAYS
+from ..manifest import AUDIO_MODES, DEFAULT_AUDIO_MODE, DEFAULT_DISPLAY_SIZE, DISPLAYS
 from ..permargs import PERMISSION_FLAGS
 
 
@@ -255,6 +255,9 @@ def permissions_editor(parent, name, state):
     for flag in PERMISSION_FLAGS:
         flags[flag] = tk.BooleanVar(value=bool(state.get(flag)))
         ttk.Checkbutton(box, text=flag, variable=flags[flag]).pack(anchor="w")
+    audio_mode = tk.StringVar(value=state.get("audio_mode", DEFAULT_AUDIO_MODE))
+    ttk.Label(box, text="audio mode").pack(anchor="w", pady=(6, 0))
+    ttk.Combobox(box, textvariable=audio_mode, values=AUDIO_MODES, state="readonly", width=16).pack(anchor="w")
     display = tk.StringVar(value=state.get("display", "wayland"))
     ttk.Label(box, text="display").pack(anchor="w", pady=(6, 0))
     ttk.Combobox(box, textvariable=display, values=DISPLAYS, state="readonly", width=16).pack(anchor="w")
@@ -277,6 +280,7 @@ def permissions_editor(parent, name, state):
 
     def apply():
         new = {k: v.get() for k, v in flags.items()}
+        new["audio_mode"] = audio_mode.get()
         new["display"] = display.get()
         new["display_size"] = size.get().strip()
         new.update({k: ed.values() for k, ed in editors.items()})

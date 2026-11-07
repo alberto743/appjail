@@ -6,8 +6,8 @@ import pytest
 from appjail import cli
 from appjail.gui import argv
 
-STATE = {"network": False, "network_host": False, "audio": True, "gpu": True, "camera": False, "portals": False, "userns": False, "linger": False,
-         "display": "wayland", "dirs": ("~/a", "~/b:rw"), "dbus_filter": (), "dbus_own": (), "portal_interfaces": ()}
+STATE = {"network": False, "network_host": False, "audio": True, "mic": False, "gpu": True, "camera": False, "portals": False, "userns": False, "linger": False,
+         "audio_mode": "pipewire", "display": "wayland", "dirs": ("~/a", "~/b:rw"), "dbus_filter": (), "dbus_own": (), "portal_interfaces": ()}
 
 
 def parses(command):
@@ -110,3 +110,14 @@ def test_rootful_display_size_reaches_the_argv():
     assert command[-4:] == ["--display", "xwayland-rootful", "--display-size", "1024x768"]
     assert parses(command).display_size == "1024x768"
     assert "--display-size" not in argv.perms_argv("app", STATE, dict(STATE, display_size="1024x768"))
+
+
+def test_audio_mode_and_mic_reach_the_argv():
+    command = argv.add_argv({"kind": "github", "source": "o/App", "allow": ["audio", "mic"], "audio_mode": "pulse"})
+    args = parses(command)
+    assert args.audio_mode == "pulse" and args.allow == ["audio", "mic"]
+    assert "--audio-mode" not in argv.add_argv({"kind": "github", "source": "o/App", "allow": ["audio"], "audio_mode": "pipewire"})
+    command = argv.perms_argv("app", STATE, dict(STATE, mic=True, audio_mode="pulse"))
+    assert command == ["perms", "app", "--allow", "mic", "--audio-mode", "pulse"]
+    assert parses(command).audio_mode == "pulse"
+    assert "--audio-mode" not in argv.perms_argv("app", STATE, dict(STATE))

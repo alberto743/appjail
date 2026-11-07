@@ -47,8 +47,10 @@ TOP_KEYS = {
 }
 FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
-BOOL_PERMS = ("network", "network_host", "audio", "gpu", "camera", "portals", "userns", "linger")
-PERM_KEYS = {"network", "network_host", "audio", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
+AUDIO_MODES = ("pipewire", "pulse")
+DEFAULT_AUDIO_MODE = "pipewire"
+BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger")
+PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -56,7 +58,9 @@ class Permissions:
     """Everything is denied unless granted."""
     network: bool = False  # outbound only, in a private pasta namespace (no host loopback)
     network_host: bool = False  # with network: the host's own network namespace, loopback services included
-    audio: bool = False
+    audio: bool = False  # playback; with audio_mode "pipewire" the microphone is the separate mic permission
+    mic: bool = False  # needs audio
+    audio_mode: str = DEFAULT_AUDIO_MODE  # "pipewire": a private PipeWire graph; "pulse": the host Pulse socket (capture included)
     gpu: bool = False
     camera: bool = False  # the V4L2 capture nodes (/dev/video*); not the portal, see portals
     display: str = "wayland"
@@ -135,6 +139,13 @@ def _portal_consistency(p):
         raise ManifestError("permissions.portal_interfaces needs portals = true")
 
 
+def _audio_consistency(p):
+    if p.mic and not p.audio:
+        raise ManifestError("permissions.mic needs audio = true")
+    if p.audio_mode not in AUDIO_MODES:
+        raise ManifestError(f"permissions.audio_mode must be one of {', '.join(AUDIO_MODES)}")
+
+
 def _network_consistency(p):
     if p.network_host and not p.network:
         raise ManifestError("permissions.network_host needs network = true")
@@ -145,7 +156,7 @@ def _permissions(table):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
     # Only the shape is settled here (lists of strings); validate() checks every value.
-    perms = {key: table[key] for key in (*BOOL_PERMS, "display", "display_size") if key in table}
+    perms = {key: table[key] for key in (*BOOL_PERMS, "audio_mode", "display", "display_size") if key in table}
     for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs"):
         if key in table:
             perms[key] = tuple(str_list(table[key], f"permissions.{key}"))
@@ -254,6 +265,7 @@ def validate(m):
         check_portal_interface(n)
     _portal_consistency(p)
     _network_consistency(p)
+    _audio_consistency(p)
     for d in p.dirs:
         check_dir(string(d, "permissions.dirs entry"))
     return m
@@ -345,6 +357,8 @@ def dumps(m):
         f"network = {str(p.network).lower()}",
         *(["network_host = true"] if p.network_host else []),
         f"audio = {str(p.audio).lower()}",
+        *(["mic = true"] if p.mic else []),
+        *([f"audio_mode = {_quote(p.audio_mode)}"] if p.audio_mode != DEFAULT_AUDIO_MODE else []),
         f"gpu = {str(p.gpu).lower()}",
         *(["camera = true"] if p.camera else []),
         f"display = {_quote(p.display)}",
