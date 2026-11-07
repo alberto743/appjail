@@ -140,7 +140,7 @@ def fake(monkeypatch, tmp_path):
     """A PrivateAudio whose daemons are `sleep` and whose look at the graph (pw-dump in a jail) is a script of answers."""
     audio = audiojail.PrivateAudio("app", False, "/x", tmp_path, 1000, 1000, timeout=2)
     monkeypatch.setattr(audio, "_write_config", lambda: (tmp_path, tmp_path))
-    monkeypatch.setattr(audio, "_jail_argv", lambda *a: ["sleep", "30"])
+    monkeypatch.setattr(audio, "_jail_argv", lambda *a: ["sh", "-c", "echo daemon-says-boom >&2; sleep 30"])
     monkeypatch.setattr(audiojail.PrivateAudio, "pipewire_socket", property(lambda self: Sock()))
     monkeypatch.setattr(audiojail.PrivateAudio, "pulse_socket", property(lambda self: Sock()))
     monkeypatch.setattr(audiojail, "SETTLE", 0)
@@ -168,8 +168,9 @@ def test_a_clean_graph_is_accepted(fake):
 
 def test_a_look_that_times_out_is_not_ready_yet_and_not_an_exception(fake):
     fake.answers.append(JailError("jailed command aborted: timed out"))
-    with pytest.raises(audiojail.AudioUnavailable, match="did not come up in time"), fake:
+    with pytest.raises(audiojail.AudioUnavailable, match="did not come up in time") as failure, fake:
         pytest.fail("must not get here")
+    assert "the daemons said: daemon-says-boom" in str(failure.value)  # and the reason is in the message
     assert list(fake.base.parent.glob("appjail-audio-*")) == []
 
 
