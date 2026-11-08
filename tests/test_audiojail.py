@@ -93,6 +93,14 @@ def test_the_daemons_jail_has_no_network_and_only_what_it_needs(tmp_path):
     assert (str(tmp_path / "rt"), audiojail.RUNTIME) in pairs(args, "--bind")
     assert {dest for _, dest in pairs(args, "--ro-bind")} >= {audiojail.CONFIG, "/etc/passwd", audiojail.HOST_PULSE}
     assert args[-1] == "/bin/true" and args[args.index("--remount-ro") + 1] == "/"
+    assert "--seccomp" not in args  # only when the caller has the filter open
+    filtered = audiojail.daemon_args(tmp_path / "rt", tmp_path / "cfg", tmp_path / "passwd", tmp_path / "native", ["/bin/true"], "notes", 7)
+    assert filtered[:2] == ["--seccomp", "7"] and "--disable-userns" in filtered
+
+
+def test_the_private_pulse_server_refuses_modules_from_its_clients():
+    """The app is a Pulse client of pipewire-pulse: a module-tunnel-source it loaded would open the host microphone."""
+    assert "pulse.allow-module-loading = false" in audiojail.PULSE_CONF
 
 
 # -- reading the graph ---------------------------------------------------------------------
@@ -121,7 +129,7 @@ def test_only_the_expected_nodes_are_allowed():
 
 def test_daemons_that_exit_are_unavailable_and_leave_nothing(tmp_path, monkeypatch):
     audio = audiojail.PrivateAudio("app", False, "/nonexistent", tmp_path, 1000, 1000, timeout=5)
-    monkeypatch.setattr(audio, "_jail_argv", lambda command, config, passwd: ["/bin/true"])
+    monkeypatch.setattr(audio, "_jail_argv", lambda command, config, passwd, fd=None: ["/bin/true"])
     with pytest.raises(audiojail.AudioUnavailable, match="exited"), audio:
         pytest.fail("must not get here")
     assert list(tmp_path.iterdir()) == []
