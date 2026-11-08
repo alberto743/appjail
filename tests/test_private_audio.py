@@ -208,6 +208,19 @@ def test_without_mic_there_is_no_source_and_only_silence(sandbox, host):
 
 
 @integration
+def test_an_app_cannot_load_a_tunnel_to_the_host_microphone_through_pipewire_pulse(sandbox, host):
+    """pactl load-module is open to every Pulse client unless the server refuses it. An app without `mic` must not be able to
+    give itself the host microphone that way (found by loading module-tunnel-source from inside the app jail)."""
+    with private(host, mic=False) as audio:
+        load = in_jail(sandbox, audio, ["/usr/bin/pactl", "load-module", "module-tunnel-source",
+                                        f"server=unix:{audiojail.HOST_PULSE}", "source_name=hostmic"])
+        assert load.returncode != 0, load.stdout
+        seen = node_names(in_jail(sandbox, audio, ["/usr/bin/pw-dump"]))
+        assert "hostmic" not in seen and not [n for n in seen if n.startswith("host-")], seen
+        assert peak(record(sandbox, audio, target="hostmic")) == 0
+
+
+@integration
 def test_a_pulse_only_app_sees_the_tunnels_too(sandbox, host):
     with private(host) as audio:
         assert "PipeWire" in in_jail(sandbox, audio, ["/usr/bin/pactl", "info"]).stdout
