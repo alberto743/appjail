@@ -59,8 +59,9 @@ def availability(host_pulse_socket, which=shutil.which, module_dirs=None):
             return False, f"{tool} is not installed"
         if not _in_jail_system(path):
             return False, f"{tool} is not under /usr, where the audio jail can see it"
-    dirs = module_dirs if module_dirs is not None else [str(p) for p in Path("/usr/lib").glob("*/pipewire-0.3")] + ["/usr/lib/pipewire-0.3"]
-    if not any((Path(d) / "libpipewire-module-pulse-tunnel.so").exists() for d in dirs):
+    if module_dirs is None:
+        module_dirs = [*Path("/usr/lib").glob("*/pipewire-0.3"), Path("/usr/lib/pipewire-0.3")]
+    if not any((Path(d) / "libpipewire-module-pulse-tunnel.so").exists() for d in module_dirs):
         return False, "PipeWire's pulse-tunnel module is missing"
     if not (host_pulse_socket and Path(host_pulse_socket).is_socket()):
         return False, "the host has no Pulse socket (pipewire-pulse or PulseAudio is not running)"
@@ -178,6 +179,14 @@ class PrivateAudio:
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
         threading.Thread(target=self._collect, args=(self.proc.stdout,), daemon=True).start()
         wanted = {SINK, *([SOURCE] if self.mic else [])}
+        self._wait_until_up(config, passwd, wanted)
+        time.sleep(SETTLE)
+        nodes = self._look_again(config, passwd, wanted)
+        if stray := unexpected(nodes, self.mic):
+            raise AudioUnavailable("the private audio graph holds nodes it should not: " + textsafe.clean(", ".join(stray), 200))
+
+    def _wait_until_up(self, config, passwd, wanted):
+        """Return when both sockets exist, WirePlumber is connected and the wanted nodes are there."""
         deadline = time.monotonic() + self.timeout
         nodes, wp = [], False
         while time.monotonic() < deadline:
@@ -188,21 +197,22 @@ class PrivateAudio:
                 if text is not None:
                     nodes, wp = graph_nodes(text)
                     if wanted <= set(nodes) and wp:
-                        break
+                        return
             time.sleep(0.2)
-        else:
-            seen = textsafe.clean(", ".join(sorted(set(nodes))) or "nothing", 200)
-            raise AudioUnavailable(f"the private audio graph did not come up in time (nodes seen: {seen}; WirePlumber {'connected' if wp else 'not connected'}{'; pw-dump said: ' + self.last_error if self.last_error else ''}{self._said()})")
-        time.sleep(SETTLE)
-        for _ in range(3):  # the graph must be seen once more, after the settle: an unreadable look is not a clean one
+        seen = textsafe.clean(", ".join(sorted(set(nodes))) or "nothing", 200)
+        detail = f"nodes seen: {seen}; WirePlumber {'connected' if wp else 'not connected'}"
+        if self.last_error:
+            detail += f"; pw-dump said: {self.last_error}"
+        raise AudioUnavailable(f"the private audio graph did not come up in time ({detail}{self._said()})")
+
+    def _look_again(self, config, passwd, wanted):
+        """The nodes seen after the settle: an unreadable look is not a clean one, so it is repeated and then fails."""
+        for _ in range(3):
             text = self._dump(config, passwd)
-            nodes, _ = graph_nodes(text) if text is not None else ([], False)
+            nodes = graph_nodes(text)[0] if text is not None else []
             if wanted <= set(nodes):
-                break
-        else:
-            raise AudioUnavailable("the private audio graph could not be checked" + (f" ({self.last_error})" if self.last_error else "") + self._said())
-        if stray := unexpected(nodes, self.mic):
-            raise AudioUnavailable("the private audio graph holds nodes it should not: " + textsafe.clean(", ".join(stray), 200))
+                return nodes
+        raise AudioUnavailable("the private audio graph could not be checked" + (f" ({self.last_error})" if self.last_error else "") + self._said())
 
     def close(self):
         if self.proc is not None and self.proc.poll() is None:

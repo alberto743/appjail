@@ -227,21 +227,23 @@ def _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env):
 
 
 def _audio_args(host_rt, rt, env, private=None, host_audio=True):
-    """The app's audio sockets. private: (pipewire socket, pulse socket) of its own private graph (audiojail.py), which is
-    all it sees. Without it, the host's Pulse socket only (and not even that when host_audio is false): the host's PipeWire socket is never bound, because PipeWire
-    restricts only clients it recognises as sandboxed (by a .flatpak-info in their root), so a jailed app on pipewire-0
-    would see and use every node, cameras and other apps' screen casts included. pipewire-pulse serves audio and nothing
-    else, but cannot keep capture apart from playback."""
-    args = []
+    """The app's audio sockets.
+
+    private: (pipewire socket, pulse socket) of the app's own graph (audiojail.py), which is all it sees. Without it, the
+    host's Pulse socket, unless host_audio is false. The host's PipeWire socket is never bound: PipeWire restricts only
+    clients it recognises as sandboxed (by a .flatpak-info in their root), so a jailed app on pipewire-0 would see and use
+    every node, cameras and other apps' screen casts included. pipewire-pulse serves audio and nothing else, but cannot
+    keep capture apart from playback.
+    """
     if private:
         pipewire, pulse = private
         env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
         return ["--ro-bind", str(pipewire), f"{rt}/pipewire-0", "--ro-bind", str(pulse), f"{rt}/pulse/native"]
     pulse = Path(host_rt) / "pulse" / "native" if host_rt and host_audio else None
-    if pulse and pulse.is_socket():
-        args += ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
-        env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
-    return args
+    if not (pulse and pulse.is_socket()):
+        return []
+    env["PULSE_SERVER"] = f"unix:{rt}/pulse/native"
+    return ["--ro-bind", str(pulse), f"{rt}/pulse/native"]
 
 
 def _gpu_args():
@@ -334,8 +336,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     binds: the directory and file grants, from Grants.args.
-    audio_sockets: (pipewire, pulse) sockets of the app's private audio graph; without them `audio` is the host's Pulse socket when host_audio,
-    and nothing when not (the private graph could not start and the app has no `mic`).
+    audio_sockets: (pipewire, pulse) sockets of the app's private audio graph; without them `audio` is the host's Pulse
+    socket, or nothing when host_audio is false (the private graph could not start and the app has no `mic`).
     Nothing is read from the process environment, only from host_env; the host's files decide what can be bound (which
     system directories, GPU nodes and helper binaries exist). Anything the manifest asks for but appjail cannot enforce
     yet is refused instead of ignored.

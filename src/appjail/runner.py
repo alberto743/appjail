@@ -235,8 +235,11 @@ def _status_pipes(stack, instance, env, in_pasta):
 
 
 def _private_audio(stack, name, perms, env, warn):
-    """(graph, backend): the app's private audio graph when `audio_mode = pipewire` can be used, else None; backend is
-    `pulse` when the app gets the host's Pulse socket and None when it gets no host audio (after saying why, if it matters)."""
+    """(graph, backend): the app's private audio graph, started when `audio_mode = pipewire` can be used, else None.
+
+    The backend is `pulse` when the app gets the host's Pulse socket and None otherwise; a warning says why when it is not
+    what was asked.
+    """
     backend, note = audiomode.resolve(perms, env)
     graph = None
     if backend == audiomode.PIPEWIRE:
