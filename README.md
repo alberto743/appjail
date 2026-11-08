@@ -183,7 +183,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
-| `full_wayland` | Allow the compositor's own Wayland socket when it offers no restricted one (`--allow full_wayland`). Without `wp_security_context_v1` (weston, GNOME before Mutter 46) a windowed app is refused, because the full socket can let it capture the screen or inject input. With the permission it runs with that socket and `run` warns. On a compositor that does restrict the socket it changes nothing. Off by default; an app with `display = none` never needs it. |
+| `full_wayland` | Allow the compositor's own Wayland socket when it offers no restricted one (`--allow full_wayland`). Without `wp_security_context_v1` (weston, GNOME and others; see [Wayland compositors](#wayland-compositors)) a windowed app is refused, because the full socket can let it capture the screen or inject input on some compositors. With the permission it runs with that socket and `run` warns. On a compositor that does restrict the socket it changes nothing. Off by default; an app with `display = none` never needs it. |
 | `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access where code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
 | `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window), or `none`: no Wayland socket and no display variables, for command-line apps (no menu entry either). |
@@ -352,13 +352,41 @@ owner change.
 | DwarFS-based AppImage | `appjail tools install dwarfs` fetches the pinned helper. |
 | An app cannot see a file or folder | Nothing outside its private home is visible by default: `appjail perms APP --add-dir PATH`, or `appjail run APP --file PATH` for one run. |
 
+## Wayland compositors
+
+What an app can reach through the Wayland socket depends on the compositor. appjail measured it: each compositor was
+started headless in a virtual machine (Debian 13 and Ubuntu 26.04, the same probe in both), and real clients tried to
+capture the screen (`grim`), read another client's clipboard (`wl-paste`) and type (`wtype`), on the compositor's own socket
+and on the restricted socket appjail creates where `wp_security_context_v1` exists. The method, the raw results and the
+caveats are in [docs/compositor-assessment](docs/compositor-assessment/ASSESSMENT.md); `tests/compositors/probe.py` repeats it.
+
+| Compositor (tested versions) | `wp_security_context_v1` | A client on the compositor's own socket can | A client on appjail's restricted socket can |
+|---|---|---|---|
+| GNOME: Mutter and GNOME Shell 48.7, 50.1 | no | do none of the three; one privileged-looking global (keyboard-shortcuts inhibit) | (no restricted socket) |
+| KDE: KWin 6.3.6, 6.6.6 | yes | read the clipboard | still read the clipboard |
+| sway 1.10.1, 1.11 | yes | capture, read the clipboard, type | none of the three |
+| labwc 0.8.3, 0.9.3 | yes | capture, read the clipboard, type | none of the three |
+| Hyprland 0.55.2 | yes | read the clipboard, type | none of the three |
+| Hyprland 0.53.3 | announced, but connections to the restricted socket were refused | (not measured) | (unusable) |
+| Wayfire 0.9.0, 0.10.0 | no | read the clipboard, type (0.10: capture too) | (no restricted socket) |
+| Cage 0.2.0, 0.2.1 | no | capture, read the clipboard, type | (no restricted socket) |
+| Weston 14.0.2 | no | none of the three (it offers weston-specific interfaces) | (no restricted socket) |
+
+Not tested: Cinnamon (Muffin), niri, river, COSMIC, Mir, Louvre, GameScope and other compositors not packaged in both
+systems. "Capture" means `grim`, which uses the wlroots and ext-image-copy-capture protocols only; a compositor with its own
+(KWin's, Hyprland's) is not covered by that probe. GNOME and KDE keep their privileged operations on D-Bus (ScreenCast,
+RemoteDesktop, InputCapture, KWin's scripting and screenshots), which appjail's bus filter closes by default and which the
+assessment checks name by name.
+
 ## Limits
 
 - **Not audited, not a security boundary you should bet on yet.** bwrap and the Linux kernel do the isolation; appjail
   configures them conservatively but has had no external review.
 - **The Wayland socket is restricted only if the compositor allows it.** Compositors with `wp_security_context_v1` (sway,
-  labwc, Mutter 46+, KWin 6.x) hide their privileged protocols from the app. On others, such as weston, `run` refuses a
-  windowed app unless it is granted `full_wayland`, in which case it receives the full host socket and `run` warns.
+  labwc, Hyprland, KWin) restrict the app's socket, though not equally (see [Wayland compositors](#wayland-compositors)).
+  GNOME does not implement it. On a compositor without it `run` currently refuses a windowed app unless it is granted
+  `full_wayland`, in which case it receives the full host socket and `run` warns. This is under review: on GNOME the full
+  socket exposes nothing privileged (measured), so the refusal protects little there.
 - Releases are resolved on GitHub only. Apps hosted elsewhere appear in `search` and can be added with `--url` or `--file`,
   but then nothing identifies the publisher (tier 5, or tier 4 with a matching `--sha256`). The cheap `update` check for
   URL apps detects a new version; a change confined to bytes it does not sample, with the same size and validators, is
