@@ -3,8 +3,10 @@
 
 """A private PipeWire graph for one app's `audio` and `mic`.
 
-Three daemons (pipewire, wireplumber, pipewire-pulse) run in their own jail: no network, no host files except their
-runtime directory, a read-only configuration and the host's Pulse socket. The only nodes in their graph are tunnels to
+Three daemons (pipewire, wireplumber, pipewire-pulse) run in their own jail, with the seccomp filter of the helper jails: no
+network, no host files except their runtime directory, a read-only configuration and the host's Pulse socket. The app can
+ask `pipewire-pulse` to load modules (`pactl load-module`), and a tunnel module it loaded would reach that socket and open
+the microphone; so `pipewire-pulse` is configured with `pulse.allow-module-loading = false`. The only nodes in their graph are tunnels to
 the host's Pulse server: a sink always, a source only with `mic`. The app jail gets this graph's sockets and nothing of
 the host's PipeWire, so it sees neither the host's devices, nor cameras, nor other apps' streams, and without `mic` it
 has no microphone at all. The tunnels follow the host's default devices only at connection time (see DECISIONS.md).
@@ -21,7 +23,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import jail, textsafe
+from . import jail, seccomp, textsafe
 from .errors import JailError
 
 RUNTIME = "/run/appaudio"
@@ -38,6 +40,9 @@ WIREPLUMBER_CONF = ("wireplumber.profiles = { main = { hardware.audio = disabled
 # WirePlumber connects to PipeWire once and, if the socket is not there yet, stays up without a connection for good (found on a
 # loaded Ubuntu 26.04 guest: "Failed to connect to PipeWire" 0.4 ms before the socket appeared). So the others start only once
 # PipeWire answers.
+# Module loading by clients is refused: the app is a Pulse client of this daemon and would otherwise load a tunnel to the host's
+# microphone (`module-tunnel-source`) next to the one it was or was not granted. The modules the graph needs are in PIPEWIRE_CONF.
+PULSE_CONF = "pulse.properties = { pulse.allow-module-loading = false }\n"
 DAEMONS = "pipewire & until pw-dump >/dev/null 2>&1; do sleep 0.05; done; wireplumber & pipewire-pulse & wait"
 
 
@@ -82,9 +87,10 @@ def hostname_for(name):
     return host or "app"
 
 
-def daemon_args(runtime_dir, config_dir, passwd_file, host_pulse_socket, command, hostname="app"):
-    """bwrap arguments (without the bwrap path) that run command with the private daemons' view of the system."""
-    return (jail.common_args() + ["--hostname", hostname]
+def daemon_args(runtime_dir, config_dir, passwd_file, host_pulse_socket, command, hostname="app", seccomp_fd=None):
+    """bwrap arguments (without the bwrap path) that run command with the private daemons' view of the system.
+    seccomp_fd: the filter the helper jails share (seccomp.open_fd)."""
+    return ((["--seccomp", str(seccomp_fd)] if seccomp_fd is not None else []) + jail.common_args() + ["--hostname", hostname]
             + ["--bind", str(runtime_dir), RUNTIME, "--ro-bind", str(config_dir), CONFIG, "--ro-bind", str(passwd_file), "/etc/passwd",
                "--ro-bind", str(host_pulse_socket), HOST_PULSE,
                "--setenv", "XDG_RUNTIME_DIR", RUNTIME, "--setenv", "XDG_CONFIG_HOME", CONFIG,
@@ -143,7 +149,8 @@ class PrivateAudio:
 
     def _write_config(self):
         config = self.base / "cfg"
-        for sub, text in (("pipewire/pipewire.conf.d", pipewire_conf(self.mic)), ("wireplumber/wireplumber.conf.d", WIREPLUMBER_CONF)):
+        for sub, text in (("pipewire/pipewire.conf.d", pipewire_conf(self.mic)), ("pipewire/pipewire-pulse.conf.d", PULSE_CONF),
+                          ("wireplumber/wireplumber.conf.d", WIREPLUMBER_CONF)):
             (config / sub).mkdir(parents=True)
             (config / sub / "appjail.conf").write_text(text)
         passwd = self.base / "passwd"
@@ -151,16 +158,21 @@ class PrivateAudio:
         self.runtime.mkdir(mode=0o700)
         return config, passwd
 
-    def _jail_argv(self, command, config, passwd):
-        return [jail.find_bwrap(), *daemon_args(self.runtime, config, passwd, self.host_pulse, command, hostname_for(self.name))]
+    def _jail_argv(self, command, config, passwd, filter_fd=None):
+        return [jail.find_bwrap(), *daemon_args(self.runtime, config, passwd, self.host_pulse, command, hostname_for(self.name),
+                                                filter_fd)]
 
     def _dump(self, config, passwd):
         """The listing of the graph, or None when it could not be had (not answering yet, or too slow): never an exception."""
+        fd = seccomp.open_fd(False)  # one per jail: bwrap reads it to the end, and a shared descriptor shares its offset
         try:
-            proc = jail.supervise(self._jail_argv(["/usr/bin/pw-dump"], config, passwd), timeout=DUMP_TIMEOUT, keep=1 << 20)  # whole JSON
+            proc = jail.supervise(self._jail_argv(["/usr/bin/pw-dump"], config, passwd, fd), timeout=DUMP_TIMEOUT, keep=1 << 20,
+                                  pass_fds=(fd,))  # whole JSON
         except JailError as e:
             self.last_error = textsafe.clean(str(e), 160)
             return None
+        finally:
+            os.close(fd)
         self.last_error = textsafe.clean(proc.stderr.strip().splitlines()[-1], 160) if proc.returncode and proc.stderr.strip() else ""
         return proc.stdout if proc.returncode == 0 else None
 
@@ -175,8 +187,13 @@ class PrivateAudio:
 
     def _start(self):
         config, passwd = self._write_config()
-        self.proc = subprocess.Popen(self._jail_argv(["/bin/sh", "-c", DAEMONS], config, passwd), stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
+        fd = seccomp.open_fd(False)
+        try:
+            self.proc = subprocess.Popen(self._jail_argv(["/bin/sh", "-c", DAEMONS], config, passwd, fd), stdin=subprocess.DEVNULL,
+                                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
+                                         start_new_session=True, pass_fds=(fd,))
+        finally:
+            os.close(fd)
         threading.Thread(target=self._collect, args=(self.proc.stdout,), daemon=True).start()
         wanted = {SINK, *([SOURCE] if self.mic else [])}
         self._wait_until_up(config, passwd, wanted)
