@@ -16,6 +16,7 @@ import socket
 import struct
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -130,6 +131,11 @@ def host():
         assert wait_for(lambda: "host-mic" in h.nodes(), 10)
         h.start("pipewire-pulse")
         assert wait_for(lambda: (h.rt / "pulse" / "native").is_socket(), 10)
+        # Two sources are equally good, so WirePlumber's choice of the default may change as the nodes come in (it does with
+        # 1.6, and a tunnel that connected before the change keeps the first link and gets a second). A host with a settled
+        # default is the one the tests are about.
+        h.set_default("source", "host-mic")
+        h.set_default("sink", "host-speaker")
         yield h
     finally:
         for p in reversed(h.procs):
@@ -376,16 +382,32 @@ def test_launch_runs_the_app_on_its_private_graph(sandbox, host, monkeypatch):
     kw = build(sandbox, sandbox / "rt", **perms)
     (sandbox / "rt").mkdir(exist_ok=True)
     (kw["root"] / "AppRun").write_text(
-        "#!/bin/sh\n/usr/bin/timeout -s INT 3 /usr/bin/pw-record --target app-mic /home/app/m.wav\n"
+        "#!/bin/sh\ntouch /home/app/recording\n/usr/bin/timeout -s INT 3 /usr/bin/pw-record --target app-mic /home/app/m.wav\n"
         "/usr/bin/pw-dump | /usr/bin/python3 -c \"import json,sys; print(sorted(o['info']['props']['node.name'] for o in json.load(sys.stdin) "
         "if o['type'].endswith('Node')))\" > /home/app/nodes.txt\n")
     (kw["root"] / "AppRun").chmod(0o755)
     m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     said = []
+    # The test host's own tone source is now and then silent for a second or more on a loaded machine (a plain recording from it,
+    # with no appjail involved, shows it). So the same window is recorded from it directly, to tell that apart from a private
+    # graph that does not carry the sound.
+    reference = []
+
+    def record_reference():
+        if wait_for(lambda: (kw["home"] / "recording").exists(), 20):
+            wav = sandbox / "reference.wav"
+            subprocess.run(["timeout", "-s", "INT", "3", "pw-record", "--target", "host-mic", str(wav)], env=host.env, capture_output=True)
+            reference.append(peak(wav.read_bytes()))
+
+    watcher = threading.Thread(target=record_reference)
+    watcher.start()
     code = runner.launch("app", host_env=dict(host.env), say=said.append, warn=said.append, restricted=NO_RESTRICTION)
+    watcher.join()
     assert code == 0, "\n".join(said)
     assert not [line for line in said if "audio_mode" in line], said  # no fallback
-    assert peak((kw["home"] / "m.wav").read_bytes()) > 1000
     assert "app-mic" in (kw["home"] / "nodes.txt").read_text() and "host-" not in (kw["home"] / "nodes.txt").read_text()
     assert not list(host.rt.glob("appjail-audio-*"))  # the graph is gone with the run
+    if peak((kw["home"] / "m.wav").read_bytes()) <= 1000:
+        assert reference and reference[0] <= 1000, f"the app recorded silence while the host source played (peak {reference})"
+        pytest.skip("the test host's own source was silent in that window: nothing to compare the private graph with")
