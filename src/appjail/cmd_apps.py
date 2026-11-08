@@ -230,7 +230,10 @@ def bus_and_portal_changes(args, p, changes):
 RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopback)"),
                 ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
                 ("mic", "access to the microphone"), ("camera", "access to the camera (the video capture devices)"),
-                ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"))
+                ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"),
+                ("full_wayland", ("the compositor's own Wayland socket when it offers no restricted one (it may be able to capture "
+                                  "the screen or inject input where the compositor allows it); a compositor with "
+                                  "wp_security_context_v1 is unaffected")))
 
 
 def warn_new_grants(console, old, new):

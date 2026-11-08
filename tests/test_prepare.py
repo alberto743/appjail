@@ -15,7 +15,7 @@ from appjail import (
 from appjail.errors import RunError
 
 from .helpers import (
-    NO_RESTRICTION,
+    RESTRICTED,
     Extractor,
     install,
     pairs,
@@ -118,9 +118,8 @@ def test_launch_merges_temporary_directories_without_touching_the_manifest(sandb
     said = []
     code = runner.launch("app", ["--x"], host_env=env, extract=Extractor(), say=said.append,
                          runner=lambda argv: captured.append(argv) or 0, extra_dirs=("~/granted:rw",),
-                         restricted=NO_RESTRICTION)
+                         restricted=RESTRICTED)
     assert code == 0
-    assert any("wp_security_context_v1" in m for m in said)
     argv = captured[0]
     assert "/home/app/granted" in [dest for _, dest in pairs(argv, "--bind-fd")]
     assert argv[-2:] == ["/app/AppRun", "--x"]

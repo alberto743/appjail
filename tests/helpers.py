@@ -267,6 +267,12 @@ def NO_RESTRICTION(env, app_id=None):
     yield None
 
 
+@contextlib.contextmanager
+def RESTRICTED(env, app_id=None):
+    """Stands in for a compositor with wp_security_context_v1: a restricted socket (here the test runtime's)."""
+    yield str(Path(env["XDG_RUNTIME_DIR"]) / env.get("WAYLAND_DISPLAY", "wayland-test"))
+
+
 def build(sandbox, runtime, **perms):
     root = sandbox / "root"
     root.mkdir(exist_ok=True)
