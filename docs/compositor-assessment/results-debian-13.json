@@ -1,0 +1,1929 @@
+{
+ "compositors": {
+  "cage": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "version": "cage 0.2.0-2",
+   "wayland": {
+    "display": "wayland-0",
+    "full": {
+     "ext_idle_notifier_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_presentation": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 4,
+     "xwayland_shell_v1": 1,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "input": [
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_output_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "gnome-shell": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/ScreenCast/Session/u1\"]}",
+      "member": "org.gnome.Mutter.ScreenCast.CreateSession",
+      "name": "org.gnome.Mutter.ScreenCast",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/RemoteDesktop/Session/u1\"]}",
+      "member": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+      "name": "org.gnome.Mutter.RemoteDesktop",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/InputCapture/Session/u1\"]}",
+      "member": "org.gnome.Mutter.InputCapture.CreateSession",
+      "name": "org.gnome.Mutter.InputCapture",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv}\",\"data\":[2,[[[\"Meta-0\",\"MetaVendor\",\"MetaVirtualMonitor\",\"0x00\"],[[\"1024x768@60.000\",1024,768,6.000000000000000000000e+01,1.00000000000",
+      "member": "org.gnome.Mutter.DisplayConfig.GetCurrentState",
+      "name": "org.gnome.Mutter.DisplayConfig",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.gnome.Shell.Screenshot.SelectArea",
+      "name": "org.gnome.Shell.Screenshot",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"bs\",\"data\":[false,\"\"]}",
+      "member": "org.gnome.Shell.Eval",
+      "name": "org.gnome.Shell",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"h\",\"data\":[{\"fd\":5,\"path\":\"socket:[71529]\",\"stat\":{\"dev\":{\"major\":0,\"minor\":9},\"inode\":71529,\"type\":\"sock\",\"mode\":\"0777\",\"linkCount\":1,\"uid\":1000,\"gid\":1000,\"size\":0,\"blockSize\":4096,\"blocks\"",
+      "member": "org.gnome.Mutter.ServiceChannel.OpenWaylandServiceConnection",
+      "name": "org.gnome.Mutter.ServiceChannel",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.gnome.Shell.Introspect.GetWindows",
+      "name": "org.gnome.Shell.Introspect",
+      "ok": false
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {},
+      "names": [
+       "org.freedesktop.IBus"
+      ],
+      "privileged_looking": []
+     },
+     {
+      "interfaces": {
+       "org.freedesktop.Application": [
+        "Activate",
+        "ActivateAction",
+        "Open"
+       ],
+       "org.gtk.Actions": [
+        "Activate",
+        "Describe",
+        "DescribeAll",
+        "List",
+        "SetState"
+       ],
+       "org.gtk.Application": [
+        "Activate",
+        "CommandLine",
+        "Open"
+       ]
+      },
+      "names": [
+       "org.freedesktop.IBus.Panel.Extension.Gtk3"
+      ],
+      "privileged_looking": []
+     },
+     {
+      "interfaces": {
+       "org.Gtk.MountOperationHandler": [
+        "AskPassword",
+        "AskQuestion",
+        "Close",
+        "ShowProcesses"
+       ],
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.Notifications": [
+        "CloseNotification",
+        "GetCapabilities",
+        "GetServerInformation",
+        "Notify"
+       ],
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.freedesktop.impl.portal.Access": [
+        "AccessDialog"
+       ],
+       "org.gnome.Mutter.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "ResetLuminance",
+        "SetBacklight",
+        "SetCrtcGamma",
+        "SetLuminance",
+        "SetOutputCTM"
+       ],
+       "org.gnome.Mutter.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.gnome.Mutter.InputCapture": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.InputMapping": [
+        "GetDeviceMapping"
+       ],
+       "org.gnome.Mutter.RemoteDesktop": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ScreenCast": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ServiceChannel": [
+        "OpenWaylandServiceConnection"
+       ],
+       "org.gnome.ScreenSaver": [
+        "GetActive",
+        "GetActiveTime",
+        "Lock",
+        "SetActive"
+       ],
+       "org.gnome.SessionManager.EndSessionDialog": [
+        "Close",
+        "Open"
+       ],
+       "org.gnome.Shell": [
+        "Eval",
+        "FocusApp",
+        "FocusSearch",
+        "GrabAccelerator",
+        "GrabAccelerators",
+        "HideMonitorLabels",
+        "ScreenTransition",
+        "ShowApplications",
+        "ShowMonitorLabels",
+        "ShowOSD",
+        "UngrabAccelerator",
+        "UngrabAccelerators"
+       ],
+       "org.gnome.Shell.AudioDeviceSelection": [
+        "Close",
+        "Open"
+       ],
+       "org.gnome.Shell.Extensions": [
+        "CheckForUpdates",
+        "DisableExtension",
+        "EnableExtension",
+        "GetExtensionErrors",
+        "GetExtensionInfo",
+        "InstallRemoteExtension",
+        "LaunchExtensionPrefs",
+        "ListExtensions",
+        "OpenExtensionPrefs",
+        "ReloadExtension",
+        "UninstallExtension"
+       ],
+       "org.gnome.Shell.Introspect": [
+        "GetRunningApplications",
+        "GetWindows"
+       ],
+       "org.gnome.Shell.ScreenTime": [],
+       "org.gnome.Shell.Screenshot": [
+        "FlashArea",
+        "InteractiveScreenshot",
+        "PickColor",
+        "Screenshot",
+        "ScreenshotArea",
+        "ScreenshotWindow",
+        "SelectArea"
+       ],
+       "org.gnome.Shell.Wacom.PadOsd": [
+        "Show"
+       ],
+       "org.gnome.Sysprof3.Profiler": [
+        "Start",
+        "Stop"
+       ],
+       "org.gnome.keyring.internal.Prompter": [
+        "BeginPrompting",
+        "PerformPrompt",
+        "StopPrompting"
+       ],
+       "org.gtk.Notifications": [
+        "AddNotification",
+        "RemoveNotification"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.IdleMonitor",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.InputMapping",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel",
+       "org.gnome.Shell",
+       "org.gnome.Shell.AudioDeviceSelection",
+       "org.gnome.Shell.Introspect",
+       "org.gnome.Shell.ScreenShield",
+       "org.gnome.Shell.Screenshot",
+       "org.gnome.Shell.Wacom.PadOsd",
+       "org.gnome.keyring.SystemPrompter",
+       "org.gtk.MountOperationHandler",
+       "org.gtk.Notifications"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel",
+       "org.gnome.ScreenSaver",
+       "org.gnome.SessionManager.EndSessionDialog",
+       "org.gnome.Shell.Extensions",
+       "org.gnome.Shell.Introspect",
+       "org.gnome.Shell.Screenshot"
+      ]
+     }
+    ],
+    "names": {
+     "org.freedesktop.IBus": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.freedesktop.IBus.Panel.Extension.Gtk3": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.DisplayConfig": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.IdleMonitor": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.InputCapture": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.InputMapping": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.RemoteDesktop": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.ScreenCast": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.ServiceChannel": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Shell": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell' is refused: it reaches org.gnome.Shell, which can cont"
+     },
+     "org.gnome.Shell.AudioDeviceSelection": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.AudioDeviceSelection' is refused: it reaches org.gnome."
+     },
+     "org.gnome.Shell.Introspect": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.Introspect' is refused: it reaches org.gnome.Shell, whi"
+     },
+     "org.gnome.Shell.ScreenShield": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.ScreenShield' is refused: it reaches org.gnome.Shell, w"
+     },
+     "org.gnome.Shell.Screenshot": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.Screenshot' is refused: it reaches org.gnome.Shell, whi"
+     },
+     "org.gnome.Shell.Wacom.PadOsd": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.Wacom.PadOsd' is refused: it reaches org.gnome.Shell, w"
+     },
+     "org.gnome.keyring.SystemPrompter": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gtk.MountOperationHandler": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gtk.Notifications": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    },
+    "service_channel": {
+     "0": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "1": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "2": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "3": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "4": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "5": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "6": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "7": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     }
+    }
+   },
+   "status": "ok",
+   "version": "gnome-shell 48.7-0+deb13u2",
+   "wayland": {
+    "display": "probe-shell",
+    "full": {
+     "gtk_shell1": 6,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 8,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_color_manager_v1": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_drm_lease_device_v1": 1,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 3,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support wlr-screencopy-unstable-v1",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "hyprland": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "version": "hyprland 0.55.2+ds-1~bpo13+1",
+   "wayland": {
+    "display": "wayland-1",
+    "full": {
+     "ext_data_control_manager_v1": 1,
+     "ext_foreign_toplevel_image_capture_source_manager_v1": 1,
+     "ext_foreign_toplevel_list_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "ext_image_copy_capture_manager_v1": 1,
+     "ext_output_image_capture_source_manager_v1": 1,
+     "ext_session_lock_manager_v1": 1,
+     "ext_workspace_manager_v1": 1,
+     "hyprland_ctm_control_manager_v1": 2,
+     "hyprland_focus_grab_manager_v1": 1,
+     "hyprland_global_shortcuts_manager_v1": 1,
+     "hyprland_lock_notifier_v1": 1,
+     "hyprland_surface_manager_v1": 2,
+     "hyprland_toplevel_export_manager_v1": 2,
+     "hyprland_toplevel_mapping_manager_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_drm": 2,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_drm_lease_device_v1": 1,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 7,
+     "xdg_wm_dialog_v1": 1,
+     "xwayland_shell_v1": 1,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 5,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_input_method_manager_v2": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 5,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v1": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "ext_foreign_toplevel_image_capture_source_manager_v1",
+      "ext_image_copy_capture_manager_v1",
+      "ext_output_image_capture_source_manager_v1",
+      "hyprland_toplevel_export_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "ext_data_control_manager_v1",
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "hyprland_global_shortcuts_manager_v1",
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_input_method_manager_v2",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "ext_foreign_toplevel_list_v1",
+      "ext_session_lock_manager_v1",
+      "ext_workspace_manager_v1",
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "failed to create buffer",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "warning: zxdg_output_manager_v1 isn't available, guessing the output layout\ncompositor doesn't support wlr-screencopy-un",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_data_control_manager_v1",
+     "ext_foreign_toplevel_image_capture_source_manager_v1",
+     "ext_foreign_toplevel_list_v1",
+     "ext_image_copy_capture_manager_v1",
+     "ext_output_image_capture_source_manager_v1",
+     "ext_session_lock_manager_v1",
+     "ext_workspace_manager_v1",
+     "hyprland_ctm_control_manager_v1",
+     "hyprland_focus_grab_manager_v1",
+     "hyprland_global_shortcuts_manager_v1",
+     "hyprland_lock_notifier_v1",
+     "hyprland_toplevel_export_manager_v1",
+     "hyprland_toplevel_mapping_manager_v1",
+     "wp_content_type_manager_v1",
+     "wp_drm_lease_device_v1",
+     "wp_pointer_warp_v1",
+     "wp_security_context_manager_v1",
+     "xwayland_shell_v1",
+     "zwlr_data_control_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1",
+     "zwlr_screencopy_manager_v1",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_input_method_manager_v2",
+     "zwp_virtual_keyboard_manager_v1",
+     "zxdg_output_manager_v1"
+    ],
+    "restricted": {
+     "ext_idle_notifier_v1": 2,
+     "hyprland_surface_manager_v1": 2,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_drm": 2,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 7,
+     "xdg_wm_dialog_v1": 1,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 5,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v1": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1
+    },
+    "restricted_attempts": 1,
+    "restricted_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ]
+    },
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "kwin": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"b\",\"data\":[false]}",
+      "member": "org.kde.kwin.Scripting.isScriptLoaded",
+      "name": "org.kde.KWin",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"s\",\"data\":[\"KWin Support Information:\\nThe following information should be used when requesting support on e.g. https://discuss.kde.org.\\nIt provides information about the currently running i",
+      "member": "org.kde.KWin.supportInformation",
+      "name": "org.kde.KWin",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"ao\",\"data\":[[\"/component/systemsettings_desktop\",\"/component/kwin\",\"/component/KDE_Keyboard_Layout_Switcher\",\"/component/kcm_touchpad\"]]}",
+      "member": "org.kde.KGlobalAccel.allComponents",
+      "name": "org.kde.kglobalaccel",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.kde.KGlobalAccel": [
+        "action",
+        "actionList",
+        "activateGlobalShortcutContext",
+        "allActionsForComponent",
+        "allComponents",
+        "allMainComponents",
+        "blockGlobalShortcuts",
+        "defaultShortcut",
+        "defaultShortcutKeys",
+        "doRegister",
+        "getComponent",
+        "getGlobalShortcutsByKey",
+        "globalShortcutAvailable",
+        "globalShortcutsByKey",
+        "isGlobalShortcutAvailable",
+        "setForeignShortcut",
+        "setForeignShortcutKeys",
+        "setInactive",
+        "setShortcut",
+        "setShortcutKeys",
+        "shortcut",
+        "shortcutKeys",
+        "unRegister",
+        "unregister"
+       ],
+       "org.kde.KWin": [
+        "activeOutputName",
+        "cascadeDesktop",
+        "currentDesktop",
+        "getWindowInfo",
+        "killWindow",
+        "nextDesktop",
+        "previousDesktop",
+        "queryWindowInfo",
+        "reconfigure",
+        "replace",
+        "setCurrentDesktop",
+        "showDebugConsole",
+        "showDesktop",
+        "startActivity",
+        "stopActivity",
+        "supportInformation",
+        "unclutterDesktop"
+       ],
+       "org.kde.KWin.Effect.OutputLocator1": [
+        "hide",
+        "show"
+       ],
+       "org.kde.KWin.Effect.SystemBell1": [
+        "triggerScreen",
+        "triggerWindow"
+       ],
+       "org.kde.KWin.Effect.WindowView1": [
+        "activate"
+       ],
+       "org.kde.KWin.HighlightWindow": [
+        "highlightWindows"
+       ],
+       "org.kde.KWin.Plugins": [
+        "LoadPlugin",
+        "UnloadPlugin"
+       ],
+       "org.kde.KWin.ScreenShot2": [
+        "CaptureActiveScreen",
+        "CaptureActiveWindow",
+        "CaptureArea",
+        "CaptureInteractive",
+        "CaptureScreen",
+        "CaptureWindow",
+        "CaptureWorkspace"
+       ],
+       "org.kde.KWin.Session": [
+        "aboutToSaveSession",
+        "closeWaylandWindows",
+        "finishSaveSession",
+        "loadSession",
+        "quit",
+        "setState"
+       ],
+       "org.kde.KWin.TabletModeManager": [],
+       "org.kde.KWin.VirtualDesktopManager": [
+        "createDesktop",
+        "removeDesktop",
+        "setDesktopName"
+       ],
+       "org.kde.KeyboardLayouts": [
+        "getLayout",
+        "getLayoutsList",
+        "setLayout",
+        "switchToNextLayout",
+        "switchToPreviousLayout"
+       ],
+       "org.kde.kglobalaccel.Component": [
+        "allShortcutInfos",
+        "cleanUp",
+        "getShortcutContexts",
+        "invokeShortcut",
+        "isActive",
+        "shortcutNames"
+       ],
+       "org.kde.kwin.ColorPicker": [
+        "pick"
+       ],
+       "org.kde.kwin.Compositing": [],
+       "org.kde.kwin.Effects": [
+        "areEffectsSupported",
+        "debug",
+        "isEffectLoaded",
+        "isEffectSupported",
+        "loadEffect",
+        "reconfigureEffect",
+        "supportInformation",
+        "toggleEffect",
+        "unloadEffect"
+       ],
+       "org.kde.kwin.FTrace": [
+        "setEnabled"
+       ],
+       "org.kde.kwin.Scripting": [
+        "isScriptLoaded",
+        "loadDeclarativeScript",
+        "loadScript",
+        "start",
+        "unloadScript"
+       ],
+       "org.kde.kwin.VirtualKeyboard": [
+        "forceActivate",
+        "willShowOnActive"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager",
+       "org.kde.KWin",
+       "org.kde.KWin.Effect.WindowView1",
+       "org.kde.KWin.HighlightWindow",
+       "org.kde.KWin.ScreenShot2",
+       "org.kde.keyboard",
+       "org.kde.kglobalaccel"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.kde.KGlobalAccel",
+       "org.kde.KWin.Plugins",
+       "org.kde.KWin.ScreenShot2",
+       "org.kde.KWin.Session",
+       "org.kde.kglobalaccel.Component",
+       "org.kde.kwin.ColorPicker",
+       "org.kde.kwin.Effects",
+       "org.kde.kwin.Scripting",
+       "org.kde.kwin.VirtualKeyboard"
+      ]
+     }
+    ],
+    "names": {
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.KWin": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin' is refused: it reaches org.kde.KWin, which can control th"
+     },
+     "org.kde.KWin.Effect.WindowView1": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.Effect.WindowView1' is refused: it reaches org.kde.KWin, w"
+     },
+     "org.kde.KWin.HighlightWindow": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.HighlightWindow' is refused: it reaches org.kde.KWin, whic"
+     },
+     "org.kde.KWin.ScreenShot2": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.ScreenShot2' is refused: it reaches org.kde.KWin, which ca"
+     },
+     "org.kde.keyboard": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.kglobalaccel": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    }
+   },
+   "status": "ok",
+   "version": "kwin-wayland 4:6.3.6-1",
+   "wayland": {
+    "display": "probe-kwin",
+    "full": {
+     "ext_idle_notifier_v1": 1,
+     "frog_color_management_factory_v1": 1,
+     "kde_external_brightness_v1": 2,
+     "kde_output_device_v2": 11,
+     "kde_output_management_v2": 12,
+     "kde_output_order_v1": 1,
+     "kde_screen_edge_manager_v1": 1,
+     "org_kde_kwin_appmenu_manager": 2,
+     "org_kde_kwin_dpms_manager": 1,
+     "org_kde_kwin_idle": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "org_kde_kwin_server_decoration_palette_manager": 1,
+     "org_kde_kwin_shadow_manager": 2,
+     "org_kde_plasma_shell": 8,
+     "org_kde_plasma_virtual_desktop_management": 2,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_drm": 2,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 1,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_linux_drm_syncobj_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_security_context_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 4,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v1": 1,
+     "zwp_text_input_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "clipboard": [
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "windows": [
+      "kde_output_management_v2",
+      "org_kde_plasma_shell",
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support wlr-screencopy-unstable-v1",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "compositor doesn't support wlr-screencopy-unstable-v1",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "wp_security_context_manager_v1"
+    ],
+    "restricted": {
+     "ext_idle_notifier_v1": 1,
+     "frog_color_management_factory_v1": 1,
+     "kde_external_brightness_v1": 2,
+     "kde_output_device_v2": 11,
+     "kde_output_management_v2": 12,
+     "kde_output_order_v1": 1,
+     "kde_screen_edge_manager_v1": 1,
+     "org_kde_kwin_appmenu_manager": 2,
+     "org_kde_kwin_dpms_manager": 1,
+     "org_kde_kwin_idle": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "org_kde_kwin_server_decoration_palette_manager": 1,
+     "org_kde_kwin_shadow_manager": 2,
+     "org_kde_plasma_shell": 8,
+     "org_kde_plasma_virtual_desktop_management": 2,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_drm": 2,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 1,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_linux_drm_syncobj_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 4,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v1": 1,
+     "zwp_text_input_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "restricted_attempts": 1,
+    "restricted_privileged": {
+     "clipboard": [
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "windows": [
+      "kde_output_management_v2",
+      "org_kde_plasma_shell",
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "labwc": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "version": "labwc 0.8.3-1",
+   "wayland": {
+    "display": "wayland-0",
+    "full": {
+     "ext_foreign_toplevel_list_v1": 1,
+     "ext_idle_notifier_v1": 1,
+     "ext_session_lock_manager_v1": 1,
+     "ext_workspace_manager_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 5,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 1,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_wm_base": 3,
+     "zcosmic_workspace_manager_v1": 1,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 4,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_input_method_manager_v2": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_input_method_manager_v2",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "ext_foreign_toplevel_list_v1",
+      "ext_session_lock_manager_v1",
+      "ext_workspace_manager_v1",
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "compositor doesn't support wlr-screencopy-unstable-v1",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Command '['wl-paste', '--no-newline']' timed out after 10 seconds",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_foreign_toplevel_list_v1",
+     "ext_idle_notifier_v1",
+     "ext_session_lock_manager_v1",
+     "ext_workspace_manager_v1",
+     "wp_security_context_manager_v1",
+     "zcosmic_workspace_manager_v1",
+     "zwlr_data_control_manager_v1",
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1",
+     "zwlr_screencopy_manager_v1",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_input_method_manager_v2",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "restricted": {
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 5,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_wm_base": 3,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "restricted_attempts": 1,
+    "restricted_privileged": {},
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "mutter": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/ScreenCast/Session/u1\"]}",
+      "member": "org.gnome.Mutter.ScreenCast.CreateSession",
+      "name": "org.gnome.Mutter.ScreenCast",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/RemoteDesktop/Session/u1\"]}",
+      "member": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+      "name": "org.gnome.Mutter.RemoteDesktop",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/InputCapture/Session/u1\"]}",
+      "member": "org.gnome.Mutter.InputCapture.CreateSession",
+      "name": "org.gnome.Mutter.InputCapture",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv}\",\"data\":[2,[[[\"Meta-0\",\"MetaVendor\",\"MetaVirtualMonitor\",\"0x00\"],[[\"1024x768@60.000\",1024,768,6.000000000000000000000e+01,1.00000000000",
+      "member": "org.gnome.Mutter.DisplayConfig.GetCurrentState",
+      "name": "org.gnome.Mutter.DisplayConfig",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"h\",\"data\":[{\"fd\":5,\"path\":\"socket:[67243]\",\"stat\":{\"dev\":{\"major\":0,\"minor\":9},\"inode\":67243,\"type\":\"sock\",\"mode\":\"0777\",\"linkCount\":1,\"uid\":1000,\"gid\":1000,\"size\":0,\"blockSize\":4096,\"blocks\"",
+      "member": "org.gnome.Mutter.ServiceChannel.OpenWaylandServiceConnection",
+      "name": "org.gnome.Mutter.ServiceChannel",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.gnome.Mutter.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "ResetLuminance",
+        "SetBacklight",
+        "SetCrtcGamma",
+        "SetLuminance",
+        "SetOutputCTM"
+       ],
+       "org.gnome.Mutter.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.gnome.Mutter.InputCapture": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.InputMapping": [
+        "GetDeviceMapping"
+       ],
+       "org.gnome.Mutter.RemoteDesktop": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ScreenCast": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ServiceChannel": [
+        "OpenWaylandServiceConnection"
+       ],
+       "org.gnome.Sysprof3.Profiler": [
+        "Start",
+        "Stop"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.IdleMonitor",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.InputMapping",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel"
+      ]
+     }
+    ],
+    "names": {
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.DisplayConfig": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.IdleMonitor": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.InputCapture": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.InputMapping": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.RemoteDesktop": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.ScreenCast": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Mutter.ServiceChannel": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    },
+    "service_channel": {
+     "0": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "1": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "2": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "3": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "4": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "5": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "6": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "7": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     }
+    }
+   },
+   "status": "ok",
+   "version": "mutter 48.7-0+deb13u1",
+   "wayland": {
+    "display": "probe-mutter",
+    "full": {
+     "gtk_shell1": 6,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 8,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_color_manager_v1": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_drm_lease_device_v1": 1,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 3,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support wlr-screencopy-unstable-v1",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "sway": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "version": "sway 1.10.1-2",
+   "wayland": {
+    "display": "wayland-1",
+    "full": {
+     "ext_foreign_toplevel_list_v1": 1,
+     "ext_idle_notifier_v1": 1,
+     "ext_session_lock_manager_v1": 1,
+     "ext_transient_seat_manager_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 1,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_wm_base": 5,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 4,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_input_method_manager_v2": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_input_method_manager_v2",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "ext_foreign_toplevel_list_v1",
+      "ext_session_lock_manager_v1",
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "warning: zxdg_output_manager_v1 isn't available, guessing the output layout\ncompositor doesn't support wlr-screencopy-un",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_foreign_toplevel_list_v1",
+     "ext_session_lock_manager_v1",
+     "ext_transient_seat_manager_v1",
+     "wp_security_context_manager_v1",
+     "zwlr_data_control_manager_v1",
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1",
+     "zwlr_screencopy_manager_v1",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_input_method_manager_v2",
+     "zwp_keyboard_shortcuts_inhibit_manager_v1",
+     "zwp_virtual_keyboard_manager_v1",
+     "zxdg_output_manager_v1"
+    ],
+    "restricted": {
+     "ext_idle_notifier_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_wm_base": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1
+    },
+    "restricted_attempts": 1,
+    "restricted_privileged": {},
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "wayfire": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "version": "wayfire 0.9.0-5",
+   "wayland": {
+    "display": "wayland-1",
+    "full": {
+     "ext_idle_notifier_v1": 1,
+     "gtk_shell1": 3,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 6,
+     "xwayland_shell_v1": 1,
+     "zwf_shell_manager_v2": 2,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 4,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 4,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwf_shell_manager_v2",
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "failed to copy output HEADLESS-1",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "weston": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "version": "weston 14.0.2-1",
+   "wayland": {
+    "display": "probe-wl",
+    "full": {
+     "weston_capture_v1": 1,
+     "weston_desktop_shell": 1,
+     "wl_compositor": 5,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_presentation": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 5,
+     "zwp_input_panel_v1": 1,
+     "zwp_input_timestamps_manager_v1": 1,
+     "zwp_linux_explicit_synchronization_v1": 2,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_text_input_manager_v1": 1,
+     "zxdg_output_manager_v1": 2
+    },
+    "full_privileged": {
+     "capture": [
+      "weston_capture_v1"
+     ],
+     "input": [
+      "zwp_input_panel_v1"
+     ],
+     "windows": [
+      "weston_desktop_shell"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support wlr-screencopy-unstable-v1",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: The compositor does not seem to implement seat, which is required for wl-clipboard to work",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "debian",
+  "kernel": "6.12.116+deb13-amd64",
+  "name": "Debian GNU/Linux 13 (trixie)",
+  "version": "13"
+ }
+}
