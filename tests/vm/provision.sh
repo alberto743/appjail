@@ -5,7 +5,8 @@
 # Bring a running guest to the state tests expect (idempotent; needs the guest up).
 # Installs tests/vm/packages.txt, the pinned ruff (install-ruff.sh), switches from the cloud kernel (no DRM) to the regular one
 # (linux-image-amd64 on Debian, linux-image-virtual on Ubuntu; guest.sh) and gives the test user the video and render groups
-# (access to /dev/dri). Reboots the guest when the kernel changed. GUEST=debian|ubuntu.
+# (access to /dev/dri). Reboots the guest when the kernel changed. GUEST=debian|ubuntu|debian-pulse (which also makes PulseAudio the
+# host's sound server, with a sine source as the microphone).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/guest.sh"
@@ -16,6 +17,15 @@ ssh_ "sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRON
 ssh_ 'sh -s' < "$here/install-ruff.sh"
 if [ "$GUEST" = ubuntu ]; then  # as the CI action does: Ubuntu restricts unprivileged user namespaces through AppArmor
 	ssh_ 'sudo sysctl -qw kernel.apparmor_restrict_unprivileged_userns=0 && echo kernel.apparmor_restrict_unprivileged_userns=0 | sudo tee /etc/sysctl.d/99-appjail.conf >/dev/null'
+fi
+if [ "$GUEST" = debian-pulse ]; then  # PulseAudio proper is the host's sound server; a sine source stands in for a microphone
+	ssh_ 'sudo systemctl --global mask pipewire.socket pipewire.service pipewire-pulse.socket pipewire-pulse.service wireplumber.service >/dev/null 2>&1
+		rm -f ~/.config/systemd/user/pipewire*.s* ~/.config/systemd/user/wireplumber.service
+		sudo mkdir -p /etc/pulse/default.pa.d
+		printf "load-module module-sine-source source_name=host-mic frequency=440 rate=48000\nset-default-source host-mic\n" | sudo tee /etc/pulse/default.pa.d/appjail-test.pa >/dev/null
+		systemctl --user daemon-reload
+		systemctl --user stop pipewire.socket pipewire-pulse.socket pipewire.service pipewire-pulse.service wireplumber.service pulseaudio.service 2>/dev/null
+		systemctl --user restart pulseaudio.socket'
 fi
 ssh_ 'sudo usermod -aG video,render tester'
 if ssh_ 'dpkg -l | grep -q "^ii  linux-image-.*'$cloud_kernel'"'; then
