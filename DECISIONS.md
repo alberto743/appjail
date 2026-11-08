@@ -114,6 +114,12 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 - **Not verified:** a real headset, microphone and desktop (the guest has test devices only); a PulseAudio host without `pipewire-pulse` installed (the guest has it, so the private graph ran there); two apps at once (each has its own graph, so the memory doubles); latency; the versions in Ubuntu 26.04 (the module options are unchanged to PipeWire 1.6.11 and the WirePlumber 0.5.19 profile names are the ones used, both read from the sources).
 - **Revisit when:** the limits above hurt (a supervisor that rebuilds the tunnel on host device changes), or xdg-desktop-portal gains an audio portal.
 
+### The full Wayland socket is refused unless granted
+- **Decided (by the user):** on a compositor without `wp_security_context_v1`, `run` refuses a windowed app (`display` wayland, xwayland or xwayland-rootful) unless the manifest grants `full_wayland`; with it the app gets the full host socket and `run` warns, as every app did before. A compositor that has the protocol is unaffected, and `display = none` never asks.
+- **Why:** principle 4 says what cannot be enforced is refused, and the restricted socket is what keeps an app off the compositor's screen-capture and input-injection protocols where it has them. A warning that scrolls past in a terminal, or never shows when the app is started from a menu entry, is not consent. The cost lands where the isolation is missing: weston, and GNOME before Mutter 46 (Debian 13 and Ubuntu 26.04 ship a newer one).
+- **How:** a manifest permission, not a `run` option, so that menu entries and `open` (which run `appjail run NAME`) can work for an app the user decided about. The check comes first in `runner.launch`, before the audio graph, the filtered bus or the portal instance are started; a refusal through `open` is also a desktop notification. Existing manifests do not have the key, so on such a compositor their apps are refused until `perms APP --allow full_wayland`.
+- **Tests:** the stand-in compositors of the tests are `NO_RESTRICTION` (no protocol) and `RESTRICTED`; the tests that are not about this use the second. The opt-in end-to-end suite under headless weston (no protocol) adds `--allow full_wayland` at `add`.
+
 ### Camera: the V4L2 capture nodes, nothing else
 
 - **Decided:** `camera` binds the `/dev/video*` nodes whose driver reports video capture and, for each, its own sysfs directory (read-only, with the `/sys/dev/char` symlink recreated). Off by default, a risky grant (`add` and `perms` warn).

@@ -25,7 +25,7 @@ import pytest
 from appjail import audiojail, jail, runner, runtimejail, seccomp
 from appjail.manifest import Manifest, Permissions
 
-from .helpers import NO_RESTRICTION, build, integration, wait_for
+from .helpers import RESTRICTED, build, integration, wait_for
 
 HOST_CONF = """context.spa-libs = { videotestsrc = videotestsrc/libspa-videotestsrc, audiotestsrc = audiotestsrc/libspa-audiotestsrc }
 context.objects = [
@@ -415,7 +415,7 @@ def test_launch_runs_the_app_on_its_private_graph(sandbox, host, monkeypatch):
 
     watcher = threading.Thread(target=record_reference)
     watcher.start()
-    code = runner.launch("app", host_env=dict(host.env), say=said.append, warn=said.append, restricted=NO_RESTRICTION)
+    code = runner.launch("app", host_env=dict(host.env), say=said.append, warn=said.append, restricted=RESTRICTED)
     watcher.join()
     assert code == 0, "\n".join(said)
     assert not [line for line in said if "audio_mode" in line], said  # no fallback

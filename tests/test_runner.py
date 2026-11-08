@@ -25,6 +25,7 @@ from appjail.errors import RunError
 
 from .helpers import (
     NO_RESTRICTION,
+    RESTRICTED,
     Extractor,
     build,
     install,
@@ -105,7 +106,7 @@ def test_networked_app_runs_in_pasta_and_is_refused_without_it(sandbox, runtime,
 
     def go():
         return runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
-                             runner=lambda argv: captured.append(argv) or 0, restricted=NO_RESTRICTION)
+                             runner=lambda argv: captured.append(argv) or 0, restricted=RESTRICTED)
     monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
     go()
     assert captured[0][0] == "/usr/bin/pasta" and "--share-net" in captured[0]
@@ -122,7 +123,7 @@ def test_network_host_and_offline_apps_are_not_wrapped(sandbox, runtime, monkeyp
         install(sandbox, **perms)
         captured = []
         runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
-                      runner=lambda argv, captured=captured: captured.append(argv) or 0, restricted=NO_RESTRICTION)
+                      runner=lambda argv, captured=captured: captured.append(argv) or 0, restricted=RESTRICTED)
         assert captured[0][0] != "/usr/bin/pasta"
 
 
@@ -366,7 +367,7 @@ def test_launch_binds_files_and_passes_their_jail_paths_to_the_app(sandbox, runt
     captured, said = [], []
     runner.launch("app", ["--x"], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
                   extract=Extractor(), say=said.append, runner=lambda argv: captured.append(argv) or 0,
-                  extra_files=(str(f),), restricted=NO_RESTRICTION)
+                  extra_files=(str(f),), restricted=RESTRICTED)
     argv = captured[0]
     assert str(f) in [dest for _, dest in pairs(argv, "--ro-bind-fd")]
     assert argv[-3:] == ["/app/AppRun", "--x", str(f)]
@@ -469,7 +470,7 @@ def test_launch_applies_the_seccomp_filter_in_every_network_mode(sandbox, runtim
                           permissions=manifest.Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                         say=lambda *_: None, restricted=NO_RESTRICTION)
+                         say=lambda *_: None, restricted=RESTRICTED)
     out = capfd.readouterr()
     assert code == 0, out.err
     assert out.out.split() == ["38"], out.err  # ENOSYS: the filter is installed
@@ -543,7 +544,7 @@ def _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=(), **perms):
                           permissions=manifest.Permissions(network=True, **perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                         say=lambda *_: None, restricted=NO_RESTRICTION, extra_args=list(args))
+                         say=lambda *_: None, restricted=RESTRICTED, extra_args=list(args))
     out = capfd.readouterr()
     assert code == 0, out.err
     return out.out.split()
@@ -568,7 +569,7 @@ def test_linger_under_pasta_waits_for_the_detached_child(sandbox, runtime, monke
                           permissions=manifest.Permissions(network=True, linger=True))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                         say=lambda *_: None, restricted=NO_RESTRICTION)
+                         say=lambda *_: None, restricted=RESTRICTED)
     assert code == 3
     assert (kw["home"] / "out.txt").read_text() == "done\n"
 
@@ -628,7 +629,7 @@ def test_ipv6_forwarding_inside_the_fake_namespace(sandbox, runtime, monkeypatch
                               permissions=manifest.Permissions(network=True))
         monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
         code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                             say=lambda *_: None, restricted=NO_RESTRICTION,
+                             say=lambda *_: None, restricted=RESTRICTED,
                              extra_args=[V6_LISTENER, str(srv.getsockname()[1])])
         out = capfd.readouterr()
         assert code == 0, out.err
@@ -710,7 +711,7 @@ def test_display_none_does_not_ask_the_compositor_for_a_socket(sandbox, runtime)
 
     def restricted(env, app_id=None):
         asked.append(app_id)
-        return NO_RESTRICTION(env, app_id)
+        return RESTRICTED(env, app_id)
 
     says = []
     runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime)}, extract=Extractor(), say=says.append,
@@ -732,3 +733,48 @@ def test_display_none_jail_really_has_no_wayland_socket(sandbox, runtime):
     assert proc.returncode == 0, proc.stderr
     assert "wayland" not in (kw["home"] / "ls.txt").read_text()
     assert "WAYLAND_DISPLAY" not in (kw["home"] / "env.txt").read_text()
+
+
+# -- a compositor that cannot restrict the Wayland socket ------------------------------------------
+
+
+def launch_windowed(sandbox, runtime, restricted, **perms):
+    install(sandbox, **perms)
+    ran, says = [], []
+    code = None
+    try:
+        code = runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
+                             extract=Extractor(), say=says.append, warn=says.append, runner=lambda argv: ran.append(argv) or 0,
+                             restricted=restricted)
+    except RunError as e:
+        says.append(str(e))
+    return code, ran, says
+
+
+def test_a_compositor_without_the_security_context_protocol_refuses_the_app_by_default(sandbox, runtime):
+    code, ran, says = launch_windowed(sandbox, runtime, NO_RESTRICTION)
+    assert code is None and ran == []  # nothing was started
+    assert any("wp_security_context_v1" in s and "appjail perms app --allow full_wayland" in s for s in says)
+
+
+def test_full_wayland_lets_the_app_have_the_full_socket_with_a_warning(sandbox, runtime):
+    code, ran, says = launch_windowed(sandbox, runtime, NO_RESTRICTION, full_wayland=True)
+    assert code == 0 and len(ran) == 1
+    assert any("wp_security_context_v1" in s and "full Wayland socket" in s for s in says)
+    assert (str(runtime / "wayland-test"), f"/run/user/{os.getuid()}/wayland-0") in pairs(ran[0], "--ro-bind")
+
+
+def test_full_wayland_changes_nothing_on_a_compositor_that_restricts(sandbox, runtime):
+    code, _, says = launch_windowed(sandbox, runtime, RESTRICTED, full_wayland=True)
+    assert code == 0 and not any("wp_security_context_v1" in s for s in says)
+
+
+@pytest.mark.parametrize("display", ["xwayland", "xwayland-rootful"])
+def test_x11_apps_are_refused_too_because_xwayland_is_a_client_of_the_same_socket(sandbox, runtime, display):
+    _, ran, says = launch_windowed(sandbox, runtime, NO_RESTRICTION, display=display)
+    assert ran == [] and any("full_wayland" in s for s in says)
+
+
+def test_a_headless_app_needs_no_wayland_socket_and_is_not_refused(sandbox, runtime):
+    code, _, says = launch_windowed(sandbox, runtime, NO_RESTRICTION, display="none")
+    assert code == 0 and not any("wp_security_context_v1" in s for s in says)
