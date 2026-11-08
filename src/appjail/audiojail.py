@@ -35,7 +35,10 @@ DUMP_TIMEOUT = 4.0  # one look at the graph; a daemon that is not answering yet 
 SETTLE = 0.6  # WirePlumber's device monitors start a moment after it connects; look for strays after that
 WIREPLUMBER_CONF = ("wireplumber.profiles = { main = { hardware.audio = disabled, hardware.video-capture = disabled, "
                     "hardware.bluetooth = disabled } }\n")
-DAEMONS = "pipewire & wireplumber & pipewire-pulse & wait"
+# WirePlumber connects to PipeWire once and, if the socket is not there yet, stays up without a connection for good (found on a
+# loaded Ubuntu 26.04 guest: "Failed to connect to PipeWire" 0.4 ms before the socket appeared). So the others start only once
+# PipeWire answers.
+DAEMONS = "pipewire & until pw-dump >/dev/null 2>&1; do sleep 0.05; done; wireplumber & pipewire-pulse & wait"
 
 
 class AudioUnavailable(Exception):

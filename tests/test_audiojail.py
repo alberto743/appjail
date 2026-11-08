@@ -324,3 +324,25 @@ def test_launch_tells_only_when_the_requested_mode_is_not_what_it_gets(sandbox, 
     said = []
     launch(sandbox, runtime, {**perms, "display": "none"}, monkeypatch, said)
     assert any("audio_mode pipewire is not available" in line for line in said) is noisy
+
+
+# -- start order ---------------------------------------------------------------------------
+
+
+def test_wireplumber_and_pulse_start_only_after_pipewire_answers(tmp_path):
+    """WirePlumber connects once; started before PipeWire's socket exists it stays up unconnected for good (seen on a loaded
+    guest). Stand-in daemons: pipewire is slow to open its socket, and the others record whether it was open when they began."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    ready, seen = tmp_path / "ready", tmp_path / "seen"
+    scripts = {
+        "pipewire": f"sleep 1; touch {ready}; sleep 3",
+        "pw-dump": f"test -e {ready}",
+        "wireplumber": f"test -e {ready} && echo wireplumber-ok >> {seen} || echo wireplumber-EARLY >> {seen}",
+        "pipewire-pulse": f"test -e {ready} && echo pulse-ok >> {seen} || echo pulse-EARLY >> {seen}",
+    }
+    for name, body in scripts.items():
+        (bin_dir / name).write_text(f"#!/bin/sh\n{body}\n")
+        (bin_dir / name).chmod(0o755)
+    subprocess.run(["/bin/sh", "-c", audiojail.DAEMONS], env={"PATH": f"{bin_dir}:/usr/bin:/bin"}, timeout=20, check=True)
+    assert sorted(seen.read_text().split()) == ["pulse-ok", "wireplumber-ok"]
