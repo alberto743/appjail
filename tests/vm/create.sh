@@ -18,17 +18,17 @@ here=$(cd "$(dirname "$0")" && pwd)
 packages=${PACKAGES:-$("$here/packages.sh" | grep -v '^linux-image' | tr '\n' ' ' | sed 's/ $//')}
 force=0; [ "${1:-}" = --force ] && force=1
 
-mkdir -p "$vm/dl" "$vm/run"
+mkdir -p "$dl" "$vm/run"
 
-if [ ! -f "$vm/dl/$img" ]; then
-	curl -fsSL -o "$vm/dl/$sums" "$base_url/$sums"
-	curl -fsSL -o "$vm/dl/$img" "$base_url/$img"
-	(cd "$vm/dl" && grep "[ *]$img\$" "$sums" | "$sumtool" -c -)
+if [ ! -f "$dl/$img" ]; then
+	curl -fsSL -o "$dl/$sums" "$base_url/$sums"
+	curl -fsSL -o "$dl/$img" "$base_url/$img"
+	(cd "$dl" && grep "[ *]$img\$" "$sums" | "$sumtool" -c -)
 fi
 
 if [ "$force" = 1 ] || [ ! -f "$vm/run/disk.qcow2" ]; then
 	rm -f "$vm/run/disk.qcow2" "$vm/run/seed.iso" "$vm/run/known_hosts" "$vm/run/console.log"
-	qemu-img create -q -f qcow2 -F qcow2 -b "../dl/$img" "$vm/run/disk.qcow2" 20G
+	qemu-img create -q -f qcow2 -F qcow2 -b "$(cd "$dl" && pwd)/$img" "$vm/run/disk.qcow2" 20G
 	[ -f "$vm/run/id_appjail" ] || ssh-keygen -q -t ed25519 -N '' -C "appjail-$GUEST" -f "$vm/run/id_appjail"
 	sed -e "s|@SSH_PUBKEY@|$(cat "$vm/run/id_appjail.pub")|" -e "s|@PACKAGES@|$(echo "$packages" | sed 's/ /, /g')|" \
 		-e "s|@HOSTNAME@|appjail-$GUEST|" "$here/user-data.tmpl" > "$vm/run/user-data"
