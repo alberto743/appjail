@@ -241,6 +241,60 @@ def test_with_mic_a_graph_that_is_not_available_falls_back_to_the_pulse_socket_a
     assert backend == "pulse" and "wireplumber is not installed" in note and "record from the microphone" in note
 
 
+def fake_proc(tmp_path, socket_path, holders):
+    """A /proc with one listening socket (inode 999) held by the given process names, and its /proc/net/unix."""
+    proc = tmp_path / "proc"
+    for pid, comm in enumerate(holders, 100):
+        fds = proc / str(pid) / "fd"
+        fds.mkdir(parents=True)
+        (fds / "5").symlink_to("socket:[999]")
+        (proc / str(pid) / "comm").write_text(comm + "\n")
+    table = tmp_path / "unix"
+    table.write_text("Num       RefCount Protocol Flags    Type St Inode Path\n"
+                     f"0000000000000000: 00000002 00000000 00010000 0001 01 999 {socket_path}\n")
+    return {"proc": str(proc), "unix_table": str(table), "wait": 0}
+
+
+def test_the_server_behind_a_socket_is_found_by_its_inode_and_systemd_does_not_count(pulse_socket, tmp_path):
+    assert audiomode.host_server(pulse_socket, **fake_proc(tmp_path, pulse_socket, ["systemd", "pulseaudio"])) == "pulseaudio"
+    assert audiomode.host_server(pulse_socket, **fake_proc(tmp_path / "b", pulse_socket, ["pipewire-pulse"])) == "pipewire-pulse"
+
+
+def test_a_socket_held_only_by_systemd_has_no_known_server_yet(pulse_socket, tmp_path):
+    assert audiomode.host_server(pulse_socket, **fake_proc(tmp_path, pulse_socket, ["systemd"])) is None
+
+
+def test_a_socket_nobody_listens_on_has_no_server(pulse_socket, tmp_path):
+    assert audiomode.host_server(pulse_socket + "-other", **fake_proc(tmp_path, pulse_socket, ["pulseaudio"])) is None
+
+
+def pulseaudio_host(name):
+    return lambda path: name
+
+
+def test_the_pulse_socket_of_pulseaudio_is_refused_in_pulse_mode(pulse_socket):
+    env = {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))}
+    perms = Permissions(audio=True, audio_mode="pulse")
+    backend, note = audiomode.resolve(perms, env, server=pulseaudio_host("pulseaudio"))
+    assert backend is None and "refused" in note and "PulseAudio" in note and "load its own code" in note
+    assert audiomode.resolve(perms, env, server=pulseaudio_host("pipewire-pulse")) == ("pulse", None)
+    assert audiomode.resolve(perms, env, server=pulseaudio_host(None)) == ("pulse", None)  # not told: the old behaviour, warned about
+
+
+def test_the_private_graph_is_still_used_on_a_pulseaudio_host(pulse_socket):
+    env = {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))}
+    assert audiomode.resolve(Permissions(audio=True, mic=True), env, availability=lambda s: (True, ""),
+                             server=pulseaudio_host("pulseaudio")) == ("pipewire", None)
+
+
+@pytest.mark.parametrize("mic", [False, True])
+def test_the_fallback_never_hands_over_the_socket_of_pulseaudio(pulse_socket, mic):
+    env = {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))}
+    backend, note = audiomode.resolve(Permissions(audio=True, mic=mic), env, availability=lambda s: (False, "wireplumber is not installed"),
+                                      server=pulseaudio_host("pulseaudio"))
+    assert backend is None and "wireplumber is not installed" in note and "PulseAudio" in note and "no audio" in note
+
+
 def test_with_mic_and_no_host_socket_there_is_no_audio():
     backend, note = unavailable(Permissions(audio=True, mic=True), {"XDG_RUNTIME_DIR": "/nonexistent"})
     assert backend is None and "no Pulse socket" in note and "no audio" in note
