@@ -239,7 +239,8 @@ def warn_new_grants(console, old, new):
             console.warn(f"this grants {text}")
     if new.audio and new.audio_mode == "pulse" and not new.mic and not (old.audio and old.audio_mode == "pulse"):
         console.warn("audio in pulse mode uses the host's Pulse socket, which also lets the app record from the microphone; "
-                     "that cannot be denied in this mode")
+                     "that cannot be denied in this mode, and the server can be told to create files and listeners in your name "
+                     "and, if it is PulseAudio itself, to load the app's own code (appjail refuses the socket then)")
     warn_sensitive_dbus(console, set(new.dbus_filter) - set(old.dbus_filter))
     warn_owned_dbus(console, set(new.dbus_own) - set(old.dbus_own))
     warn_privileged_portals(console, set(new.portal_interfaces) - set(old.portal_interfaces))
