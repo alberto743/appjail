@@ -30,7 +30,7 @@ def installed(tmp_path_factory):
     os.environ["APPJAIL_DATA_DIR"] = str(base / "data")
     os.environ["APPJAIL_CONFIG_DIR"] = str(base / "config")
     console = Answers(["2", "y"])  # the second AppImage of the release is the GUI one; confirm the download
-    assert cli.main(["add", "skyjake/lagrange", "--name", "lagrange"], console=console) == 0, console.lines
+    assert cli.main(["add", "skyjake/lagrange", "--name", "lagrange", "--allow", "full_wayland"], console=console) == 0, console.lines
     yield console
     shutil.rmtree(base, ignore_errors=True)
     del os.environ["APPJAIL_DATA_DIR"], os.environ["APPJAIL_CONFIG_DIR"]

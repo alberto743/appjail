@@ -35,6 +35,7 @@ from .jail import PASTA_SECCOMP_FD
 
 # More descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).
 PASTA_STATUS_FD, PASTA_BLOCK_FD = 8, 7
+NO_SECURITY_CONTEXT = "the compositor does not offer wp_security_context_v1, so it cannot restrict this app's Wayland socket"
 
 
 def _passwd(uid, gid):
@@ -268,14 +269,17 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         perms, opened, extra_args = _open_grants(stack, m.permissions, extra_dirs, extra_files, extra_args, say)
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
+        wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
+        if perms.windowed and wl_sock is None:
+            if not perms.full_wayland:
+                raise RunError(NO_SECURITY_CONTEXT + f"; {name} is not allowed the full socket. Run it on a compositor that has "
+                               f"the protocol, or allow the full socket with `appjail perms {name} --allow full_wayland`")
+            warn(NO_SECURITY_CONTEXT + ", and full_wayland is granted, so this app gets the full Wayland socket (it may be able "
+                 "to capture the screen or inject input where the compositor allows it)")
         in_pasta = perms.pasta
         audio, audio_backend = _private_audio(stack, name, perms, env, warn)
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
-        wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
-        if perms.windowed and wl_sock is None:
-            warn("the compositor does not offer wp_security_context_v1, so this app gets the full "
-                 "Wayland socket (it may be able to capture the screen or inject input where the compositor allows it)")
         pipes = _status_pipes(stack, instance, env, in_pasta)
         args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,

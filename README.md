@@ -183,6 +183,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
+| `full_wayland` | Allow the compositor's own Wayland socket when it offers no restricted one (`--allow full_wayland`). Without `wp_security_context_v1` (weston, GNOME before Mutter 46) a windowed app is refused, because the full socket can let it capture the screen or inject input. With the permission it runs with that socket and `run` warns. On a compositor that does restrict the socket it changes nothing. Off by default; an app with `display = none` never needs it. |
 | `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access where code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
 | `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window), or `none`: no Wayland socket and no display variables, for command-line apps (no menu entry either). |
@@ -343,6 +344,7 @@ owner change.
 | bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
 | An app exits after a few seconds with code 0 and no window | Its launcher starts the real app detached and exits, and the jail ends with it (VSCodium does this). `appjail perms APP --allow linger` keeps the jail until every process in it has exited; or pass the app's own wait option, e.g. `appjail run vscodium -- --wait`. |
 | `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Command-line apps need no window: `perms APP --display none` runs them without a Wayland session at all. Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`), or `xwayland-rootful` (needs `xwayland` and `openbox`) when no window appears, as on GNOME. |
+| `run` refuses an app, saying the compositor does not offer `wp_security_context_v1` | The compositor cannot restrict the app's Wayland socket, and giving the app the full one could let it capture the screen or inject input. Run it on a compositor that has the protocol, or accept that with `appjail perms APP --allow full_wayland`. |
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |
@@ -355,8 +357,8 @@ owner change.
 - **Not audited, not a security boundary you should bet on yet.** bwrap and the Linux kernel do the isolation; appjail
   configures them conservatively but has had no external review.
 - **The Wayland socket is restricted only if the compositor allows it.** Compositors with `wp_security_context_v1` (sway,
-  labwc, Mutter 46+, KWin 6.x) hide their privileged protocols from the app. Others, such as weston, get a warning from
-  `run` and the app receives the full host socket.
+  labwc, Mutter 46+, KWin 6.x) hide their privileged protocols from the app. On others, such as weston, `run` refuses a
+  windowed app unless it is granted `full_wayland`, in which case it receives the full host socket and `run` warns.
 - Releases are resolved on GitHub only. Apps hosted elsewhere appear in `search` and can be added with `--url` or `--file`,
   but then nothing identifies the publisher (tier 5, or tier 4 with a matching `--sha256`). The cheap `update` check for
   URL apps detects a new version; a change confined to bytes it does not sample, with the same size and validators, is

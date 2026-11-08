@@ -49,8 +49,8 @@ FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
 AUDIO_MODES = ("pipewire", "pulse")
 DEFAULT_AUDIO_MODE = "pipewire"
-BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger")
-PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "dirs"}
+BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland")
+PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -71,6 +71,7 @@ class Permissions:
     portal_interfaces: tuple = ()  # opt-in portal interfaces beyond the safe set (see PORTAL_OPT_IN)
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
     linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
+    full_wayland: bool = False  # allow the compositor's own socket when it offers no restricted one (wp_security_context_v1)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
     @property
@@ -369,6 +370,7 @@ def dumps(m):
         f"portal_interfaces = {_array(p.portal_interfaces)}",
         f"userns = {str(p.userns).lower()}",
         *(["linger = true"] if p.linger else []),
+        *(["full_wayland = true"] if p.full_wayland else []),
         f"dirs = {_array(p.dirs)}",
         "",
     ]
