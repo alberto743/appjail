@@ -17,7 +17,7 @@ debian|debian-pulse)
 	img=debian-13-genericcloud-amd64.qcow2
 	sums=SHA512SUMS sumtool=sha512sum
 	port=2222 cloud_kernel=cloud kernel_pkg=linux-image-amd64
-	[ "$GUEST" = debian-pulse ] && port=2224 ;;
+	if [ "$GUEST" = debian-pulse ]; then port=2224; fi ;;
 ubuntu)
 	base_url=https://cloud-images.ubuntu.com/resolute/current
 	img=resolute-server-cloudimg-amd64.img
@@ -28,4 +28,4 @@ esac
 vm=$vm_root/$GUEST
 run=$vm/run
 dl=$vm/dl
-[ "$GUEST" = debian-pulse ] && dl=$vm_root/debian/dl  # the same image: no second download
+if [ "$GUEST" = debian-pulse ]; then dl=$vm_root/debian/dl; fi  # the same image: no second download
