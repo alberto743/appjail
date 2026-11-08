@@ -1,0 +1,13 @@
+# Wayland compositors and the tools to look at them, for the *-compositors guests only (GUEST=debian-compositors|ubuntu-compositors;
+# tests/compositors/). One commented line per package, like packages.txt, whose packages these guests also get.
+labwc                 # a wlroots stacking compositor (headless backend)
+wayfire               # a wlroots compositor with plugins (headless backend)
+cage                  # a wlroots kiosk compositor (headless backend; runs one client)
+hyprland              # a compositor with its own backend (aquamarine, headless); on Debian only from backports, which provision.sh installs apart
+kwin-wayland          # KDE's compositor (`kwin_wayland --virtual`) and its D-Bus interfaces
+mutter                # GNOME's compositor library with a standalone `mutter --headless`, and the org.gnome.Mutter.* D-Bus interfaces
+gnome-shell           # GNOME's shell (`gnome-shell --headless`), which adds the org.gnome.Shell.* D-Bus interfaces
+wayland-utils         # wayland-info: the registry of a compositor, to compare with the probe's own reading
+grim                  # takes a screenshot through wlr-screencopy or ext-image-copy-capture: whether a client can capture the screen (tests/compositors/probe.py)
+wl-clipboard          # wl-copy and wl-paste through data-control: whether one client can read another's clipboard
+wtype                 # types through the virtual keyboard protocol: whether a client can inject keystrokes
