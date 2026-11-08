@@ -247,7 +247,8 @@ def _private_audio(stack, name, perms, env, warn):
             graph = stack.enter_context(audiojail.PrivateAudio(name, perms.mic, audiomode.host_pulse(env), env["XDG_RUNTIME_DIR"],
                                                                os.getuid(), os.getgid()))
         except audiojail.AudioUnavailable as e:
-            backend, note = audiomode.fallback(perms, str(e), audiomode.host_pulse(env) is not None)
+            pulse, refused = audiomode.usable_pulse(env)
+            backend, note = audiomode.fallback(perms, str(e), pulse is not None, refused)
     if note:
         warn(note)
     return graph, backend
