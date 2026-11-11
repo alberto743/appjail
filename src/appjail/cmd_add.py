@@ -243,8 +243,8 @@ def swap_in(name, staged, stage, record, extract, fallback):
         placed.append(root)
         os.replace(staged, dest)
         placed.append(dest)
-        marks[0].write_text(record.sha256 + "\n")
-        marks[1].write_text(appimage.tree_digest(root) + "\n")
+        store.atomic_write(marks[0], record.sha256 + "\n")
+        store.atomic_write(marks[1], appimage.tree_digest(root) + "\n")
         manifest.dump(store.manifest_path(name), record)
     except BaseException:
         if fresh:
@@ -256,6 +256,6 @@ def swap_in(name, staged, stage, record, extract, fallback):
                 os.replace(backup, original)
             for mark, text in zip(marks, old_marks, strict=True):
                 if text is not None:
-                    mark.write_text(text)
+                    store.atomic_write(mark, text)
         raise
     return entries, size
