@@ -1,26 +1,32 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Markdown tables from the results of probe.py, one results file per distribution.
+"""The tables of docs/compositor-assessment/ASSESSMENT.md, generated from the saved results of probe.py, rule_a.py and clipboard.py.
 
-    python3 tests/compositors/report.py docs/compositor-assessment/results-*.json
+    python3 tests/compositors/report.py            # print every table
+    python3 tests/compositors/report.py --write    # rewrite the tables in ASSESSMENT.md
+    python3 tests/compositors/report.py --check    # exit 1 if ASSESSMENT.md differs from the results (tests/test_assessment.py)
 
-Nothing is measured here: every cell is read from the files.
+In ASSESSMENT.md a table sits between `<!-- generated:NAME -->` and `<!-- /generated -->`; NAME is one of SECTIONS. Nothing is
+measured here: every cell is read from the results-*.json (probe.py), rule-a-*.json and clipboard-*.json files next to it.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
+DIRECTORY = Path(__file__).resolve().parents[2] / "docs" / "compositor-assessment"
+DOCUMENT = "ASSESSMENT.md"
 CAPABILITIES = ("capture", "clipboard", "type")
-LABELS = {"capture": "capture", "clipboard": "clipboard", "type": "typing"}
+BLOCK = re.compile(r"(<!-- generated:(\w+) -->\n)(.*?)(<!-- /generated -->)", re.DOTALL)
 
 
-def load(paths):
-    """[(distribution label, results)] in the order given."""
+def load(directory, prefix):
+    """[(distribution label, compositors)] from the `prefix`-*.json files of a directory, in file-name order."""
     out = []
-    for path in paths:
-        data = json.loads(Path(path).read_text())
+    for path in sorted(Path(directory).glob(f"{prefix}-*.json")):
+        data = json.loads(path.read_text())
         d = data["distro"]
         out.append((f"{d['id']} {d['version']}", data["compositors"]))
     return out
@@ -33,6 +39,11 @@ def yes(flag):
 def version(entry):
     text = (entry or {}).get("version") or "-"
     return text.split(" ", 1)[-1]
+
+
+def table(head, rows):
+    lines = [head, ["---"] * len(head), *rows]
+    return "\n".join("| " + " | ".join(r) + " |" for r in lines)
 
 
 def functional_cell(wayland, label):
@@ -48,7 +59,7 @@ def wayland_table(results):
     names = sorted({k for _, comps in results for k in comps})
     head = ["Compositor", "Distribution", "Version", "Security context", "Privileged interfaces on the full socket",
             "Full socket: capture / clipboard / typing", "Restricted socket: capture / clipboard / typing", "Note"]
-    rows = [head, ["---"] * len(head)]
+    rows = []
     for name in names:
         for label, comps in results:
             entry = comps.get(name)
@@ -60,7 +71,40 @@ def wayland_table(results):
             rows.append([name, label, version(entry), yes(w["security_context"]),
                          str(sum(len(v) for v in w["full_privileged"].values())),
                          functional_cell(w, "full"), functional_cell(w, "restricted"), note[:70]])
-    return "\n".join("| " + " | ".join(r) + " |" for r in rows)
+    return table(head, rows)
+
+
+def rule_table(results):
+    """The rule of `appjail run` applied live: the socket the app gets, what is left on it, and the verdict."""
+    names = sorted({k for _, comps in results for k in comps})
+    head = ["Compositor", "Distribution", "Version", "Socket the app gets", "Privileged interfaces left on it", "Window client", "Verdict"]
+    rows = []
+    for name in names:
+        for label, comps in results:
+            entry = comps.get(name)
+            if not entry or entry["status"] != "ok":
+                rows.append([name, label, version(entry), "-", "-", "-", (entry or {}).get("status", "not run")])
+                continue
+            left = "; ".join(f"{kind}: {', '.join(found)}" for kind, found in sorted(entry.get("left", {}).items())) or "nothing"
+            window = entry.get("window")
+            rows.append([name, label, version(entry), entry.get("socket", "-"), left,
+                         "-" if not window else ("works" if window["ok"] else "failed"), entry.get("verdict", "-")])
+    return table(head, rows)
+
+
+def clipboard_table(results):
+    """Copy and paste with keyboard focus between a window outside and a window on the socket the app gets."""
+    names = sorted({k for _, comps in results for k in comps})
+    head = ["Compositor", "Distribution", "Version", "Socket the app gets", "Outside → app", "App → outside"]
+    rows = []
+    for name in names:
+        for label, comps in results:
+            entry = comps.get(name)
+            if not entry or entry["status"] != "ok":
+                rows.append([name, label, version(entry), "-", "-", (entry or {}).get("status", "not run")])
+                continue
+            rows.append([name, label, version(entry), entry.get("app_socket", "-"), entry.get("inbound", "-"), entry.get("outbound", "-")])
+    return table(head, rows)
 
 
 def dbus_table(results):
@@ -71,16 +115,16 @@ def dbus_table(results):
             for call in (entry.get("dbus") or {}).get("calls", []):
                 seen.setdefault((name, call["member"]), {})[label] = call["ok"]
     labels = [label for label, _ in results]
-    rows = [["Compositor", "Call, as an ordinary client", *labels], ["---"] * (2 + len(labels))]
+    rows = []
     for (name, member), outcome in sorted(seen.items()):
         short = ".".join(member.split(".")[-2:])
         rows.append([name, f"`{short}`", *["allowed" if outcome.get(label) else ("refused" if label in outcome else "-") for label in labels]])
-    return "\n".join("| " + " | ".join(r) + " |" for r in rows)
+    return table(["Compositor", "Call, as an ordinary client", *labels], rows)
 
 
 def policy_table(results):
-    """Privileged-looking D-Bus names and what appjail's own name policy does with them."""
-    rows = [["Compositor", "Bus names on a connection with privileged-looking interfaces", "appjail policy"], ["---"] * 3]
+    """Privileged-looking D-Bus names and what appjail's name policy did with them when the survey ran."""
+    rows = []
     done = set()
     for _label, comps in results:
         for name, entry in comps.items():
@@ -96,16 +140,38 @@ def policy_table(results):
                 refused = [n for n in conn["names"] if not policy[n]["appjail_policy_allows"]]
                 rows.append([name, ", ".join(f"`{n}`" for n in conn["names"]),
                              f"allows {len(allowed)}, refuses {len(refused)}" + (f" (allows: {', '.join(allowed)})" if allowed else "")])
-    return "\n".join("| " + " | ".join(r) + " |" for r in rows)
+    return table(["Compositor", "Bus names on a connection with privileged-looking interfaces", "appjail policy when surveyed"], rows)
+
+
+def sections(directory=DIRECTORY):
+    """{name: markdown table} for every table that can be generated from the files of this directory."""
+    survey = load(directory, "results")
+    return {"wayland": wayland_table(survey), "rule": rule_table(load(directory, "rule-a")),
+            "clipboard": clipboard_table(load(directory, "clipboard")), "dbus": dbus_table(survey), "policy": policy_table(survey)}
+
+
+def splice(document, tables):
+    """The document with each generated block replaced by its table; a block with an unknown name is an error."""
+    def fill(m):
+        if m.group(2) not in tables:
+            raise ValueError(f"unknown generated block: {m.group(2)}")
+        return m.group(1) + tables[m.group(2)] + "\n" + m.group(4)
+    return BLOCK.sub(fill, document)
 
 
 def main(argv):
-    if not argv:
-        print(__doc__)
-        return 2
-    results = load(argv)
-    print("### Wayland\n\n" + wayland_table(results) + "\n\n### D-Bus calls\n\n" + dbus_table(results)
-          + "\n\n### appjail's D-Bus name policy\n\n" + policy_table(results))
+    path = DIRECTORY / DOCUMENT
+    if "--check" in argv or "--write" in argv:
+        old = path.read_text()
+        new = splice(old, sections())
+        if "--write" in argv:
+            path.write_text(new)
+            return 0
+        if new != old:
+            print(f"{DOCUMENT} differs from the saved results: run report.py --write", file=sys.stderr)
+            return 1
+        return 0
+    print("\n\n".join(f"### {name}\n\n{text}" for name, text in sections().items()))
     return 0
 
 
