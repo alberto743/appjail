@@ -5,23 +5,22 @@
 
 import os
 import shutil
-import struct
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from appjail import cli, desktop, store
+from appjail import cli, desktop, pngclean, store
 from appjail.cmd_desktop import refresh_after_update
 from appjail.console import Abort
 
-from .helpers import Script
+from .helpers import Script, make_png
 
 ARGV = ["/opt/appjail/bin/appjail"]
 
 
 def png(size=64):
-    return b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">II", size, size) + b"\x08\x06\x00\x00\x00" + b"\0\0\0\0"
+    return make_png(size)
 
 
 @pytest.fixture
@@ -120,7 +119,7 @@ def test_install_writes_entry_icon_and_nothing_else(h, xdg):
     out = run(["desktop", "app", "--mime", "image/png", "--yes"]).text
     entry = desktop.entry_path("app").read_text()
     assert "MimeType=image/png;" in entry and "open app -- %F" in entry and "Icon=appjail-app" in entry
-    assert (xdg / "icons/hicolor/64x64/apps/appjail-app.png").read_bytes() == png()
+    assert (xdg / "icons/hicolor/64x64/apps/appjail-app.png").read_bytes() == pngclean.sanitize(png())[0]  # a canonical copy
     assert "not offered" in out.lower() and "x-scheme-handler/http" in out
     assert not (tmp := xdg.parent / "xdgconf" / "mimeapps.list").exists(), tmp
 
