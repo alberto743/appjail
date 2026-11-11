@@ -14,7 +14,11 @@ DBUS_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)+(
 # the desktop, so a filter that allows them would not be a filter. Refused, never granted.
 DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedesktop.Flatpak",
                 "org.freedesktop.impl", "org.gnome.Shell", "org.gnome.SessionManager", "org.kde.KWin",
-                "org.kde.klauncher5", "org.kde.klauncher6", "org.freedesktop.portal", "ca.desrt.dconf", "org.gtk.vfs")
+                "org.kde.klauncher5", "org.kde.klauncher6", "org.freedesktop.portal", "ca.desrt.dconf", "org.gtk.vfs",
+                # measured (docs/compositor-assessment): Mutter's ScreenCast, RemoteDesktop and InputCapture open a session for
+                # any client of the bus, so these names are the only thing between an app and the screen or the keyboard
+                "org.gnome.Mutter", "org.freedesktop.a11y", "org.gnome.ScreenSaver",
+                "org.kde.kglobalaccel", "org.kde.keyboard")
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
 # Owning a name lets the app be the service behind it. Impersonating a desktop service (notifications, secrets,
