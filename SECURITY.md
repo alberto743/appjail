@@ -29,8 +29,8 @@ they prefer not to be.
 
 ## Out of scope
 
-- What the README documents as limits: for example an app granted `full_wayland` receiving the full Wayland socket
-  on a compositor without `wp_security_context_v1`, or reaching the LAN with `network`.
+- What the README documents as limits: for example an app granted `full_wayland` running although its Wayland socket
+  lists privileged interfaces, a privileged interface the list does not know, or reaching the LAN with `network`.
 - What a granted permission allows, and what a tier means: tiers 3 to 5 prove "unchanged", not "safe".
 - Flaws in the installed apps, or in bubblewrap, the kernel, pasta, `gh` or DwarFS themselves. Report those upstream; if
   appjail's use of them makes the flaw reachable, report that here.
