@@ -80,7 +80,13 @@ SECRET_HOME_DIRS = (".ssh", ".gnupg", ".aws", ".kube", ".docker", ".password-sto
                     ".lesshst", ".psql_history", ".mysql_history", ".node_repl_history", ".local/share/fish",
                     ".mozilla", ".thunderbird", ".mail", ".gnupg2", ".var", ".config/google-chrome",
                     ".config/chromium", ".config/BraveSoftware", ".config/vivaldi", ".config/microsoft-edge",
-                    ".config/opera", ".config/mozilla", ".cache/mozilla", ".local/share/kwalletd", ".local/share/Trash")
+                    ".config/opera", ".config/mozilla", ".cache/mozilla", ".local/share/kwalletd", ".local/share/Trash",
+                    # package-registry and cloud tokens, and tools that hold a password vault or a messaging session
+                    ".npmrc", ".yarnrc", ".yarnrc.yml", ".pypirc", ".cargo/credentials", ".cargo/credentials.toml",
+                    ".gem/credentials", ".m2/settings.xml", ".gradle/gradle.properties", ".config/rclone", ".azure",
+                    ".oci", ".config/doctl", ".config/hub", ".config/glab-cli", ".terraform.d", ".config/op",
+                    ".config/1Password", ".1password", ".config/keepassxc", ".local/share/keepassxc", ".config/KeePass",
+                    ".config/Signal")
 # Name patterns of password databases, wherever they sit below the home directory.
 SECRET_SUFFIXES = (".kdbx", ".kdb", ".key", ".pem", ".p12", ".pfx")
 # Too broad: they contain the secrets of other applications and the persistence locations below.
@@ -122,6 +128,8 @@ def sensitive_reason(path, mode):
         for d in SECRET_HOME_DIRS:
             if _within(rel, d):
                 return f"~/{d} holds credentials or secrets"
+            if rel and _within(d, rel):
+                return f"~/{rel} contains ~/{d}, which holds credentials or secrets; grant a subdirectory"
         if rel.lower().endswith(SECRET_SUFFIXES):
             return "files like this hold credentials or secrets (password databases, private keys)"
         for d in BROAD_HOME_DIRS:
