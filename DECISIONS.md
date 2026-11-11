@@ -139,6 +139,7 @@ The jail ends with its main command; the `linger` permission (opt-in per app) wa
 - `ca.desrt.dconf`: the settings database; writing it can set GNOME custom keybindings, which run commands.
 - `org.gtk.vfs*`: GVfs mounts and host locations outside the jail's file grants.
 - `org.gtk.` and `ca.desrt.` are also unownable, like the other desktop namespaces.
+- `org.gnome.Mutter*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.kde.kglobalaccel`, `org.kde.keyboard`: measured on headless Mutter 48.7 and 50.1, where `ScreenCast`, `RemoteDesktop` and `InputCapture` open a session for any client of the bus (the portal's consent dialog is what normally stands in front of them), and `kglobalaccel` answers any client. GNOME offers no privileged Wayland global, so these bus names are what keep an app from the screen and the keyboard there. A complete capture or injected keystroke through them was not attempted. See docs/compositor-assessment.
 - Not refused: `org.freedesktop.FileManager1`, which is needed to browse files when portals are active. Terminal and other file-manager names vary by desktop and were not verified on a live desktop, so they are not listed.
 
 ### X11-only apps on GNOME: rootful Xwayland with openbox
