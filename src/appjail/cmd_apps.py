@@ -231,9 +231,9 @@ RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopb
                 ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
                 ("mic", "access to the microphone"), ("camera", "access to the camera (the video capture devices)"),
                 ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"),
-                ("full_wayland", ("the compositor's own Wayland socket when it offers no restricted one (it may be able to capture "
-                                  "the screen or inject input where the compositor allows it); a compositor with "
-                                  "wp_security_context_v1 is unaffected")))
+                ("full_wayland", ("running on a compositor whose Wayland socket for the app still lists privileged interfaces "
+                                  "(the app may then capture the screen, inject input, read the clipboard without focus or control "
+                                  "other windows, depending on the compositor); a socket that lists none is unaffected")))
 
 
 def warn_new_grants(console, old, new):
