@@ -17,8 +17,9 @@ compositor's own answers is read:
   ordinary client (an unprivileged process on the same bus) to see whether the compositor itself refuses them;
 * whether appjail's D-Bus name policy (`grants.check_dbus_name`) would let a user grant each privileged name.
 
-The interface names that count as privileged (PRIVILEGED) are a first guess, kept next to the data: the whole registry is
-saved too, so the list can be judged and changed afterwards without running anything again.
+The interface names that count as privileged are those of `wayland.PRIVILEGED` (the list `appjail run` applies, taken from
+these measurements) plus EXTRA, which the survey also counts and the rule does not. The whole registry is saved too, so the
+lists can be judged and changed afterwards without running anything again.
 """
 
 import argparse
@@ -30,7 +31,6 @@ import re
 import shutil
 import signal
 import socket
-import struct
 import subprocess
 import sys
 import tempfile
@@ -43,24 +43,15 @@ from appjail import grants, wayland
 from appjail.errors import RunError
 from appjail.valid import ManifestError
 
-SECURITY_CONTEXT = "wp_security_context_manager_v1"
+SECURITY_CONTEXT = wayland.MANAGER
 START_TIMEOUT = 30.0
 
-# Interfaces by what they let a client do beyond its own windows. A first guess; see the module docstring.
-PRIVILEGED = {
-    "capture": ("zwlr_screencopy_manager_v1", "ext_image_copy_capture_manager_v1", "ext_output_image_capture_source_manager_v1",
-                "ext_foreign_toplevel_image_capture_source_manager_v1", "zwlr_export_dmabuf_manager_v1",
-                "hyprland_toplevel_export_manager_v1", "zkde_screencast_unstable_v1", "weston_capture_v1"),
-    "input": ("zwlr_virtual_pointer_manager_v1", "zwp_virtual_keyboard_manager_v1", "zwp_input_method_manager_v2",
-              "zwp_input_method_v1", "zwp_input_panel_v1", "org_kde_kwin_fake_input", "zwlr_input_inhibit_manager_v1",
-              "hyprland_global_shortcuts_manager_v1", "zwp_keyboard_shortcuts_inhibit_manager_v1", "zwf_shell_manager_v2"),
-    "clipboard": ("zwlr_data_control_manager_v1", "ext_data_control_manager_v1"),
-    "windows": ("zwlr_foreign_toplevel_manager_v1", "ext_foreign_toplevel_list_v1", "org_kde_plasma_window_management",
-                "zwlr_layer_shell_v1", "org_kde_plasma_shell", "weston_desktop_shell", "zwlr_output_manager_v1",
-                "zwlr_output_power_manager_v1", "zwlr_gamma_control_manager_v1", "kde_output_management_v2",
-                "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1"),
+# Globals the survey counts as privileged and the rule leaves out on purpose (see the comment on wayland.PRIVILEGED): the two
+# capture-source managers only name a target, and an app asks to inhibit shortcuts while it has the focus.
+EXTRA = {
+    "capture": ("ext_output_image_capture_source_manager_v1", "ext_foreign_toplevel_image_capture_source_manager_v1"),
+    "input": ("zwp_keyboard_shortcuts_inhibit_manager_v1",),
 }
-PRIVILEGED_BY_NAME = {name: kind for kind, names in PRIVILEGED.items() for name in names}
 
 # Words that mark a D-Bus interface as one a desktop should not hand to an arbitrary client.
 DBUS_PRIVILEGED = re.compile(r"ScreenCast|Screenshot|ScreenShot|RemoteDesktop|InputCapture|Eval|Script|FakeInput|"
@@ -179,9 +170,7 @@ def sockets(rt):
 
 def registry(rt, display):
     """{interface: version} of the registry, as appjail's own wayland code reads it."""
-    sock, _events, found = wayland._connect({"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": display})
-    sock.close()
-    return {iface: version for iface, (_name, version) in sorted(found.items())}
+    return wayland.registry({"XDG_RUNTIME_DIR": str(rt), "WAYLAND_DISPLAY": display})
 
 
 def wait_for_display(proc, rt, before, timeout=START_TIMEOUT):
@@ -209,11 +198,11 @@ def wayland_info(session, display):
 
 
 def classify(interfaces):
-    found = {}
-    for iface in interfaces:
-        if iface in PRIVILEGED_BY_NAME:
-            found.setdefault(PRIVILEGED_BY_NAME[iface], []).append(iface)
-    return found
+    """{kind: [interface, ...]} of the privileged globals among these names, EXTRA included."""
+    found = wayland.privileged(interfaces)
+    for kind, names in EXTRA.items():
+        found.setdefault(kind, []).extend(n for n in names if n in interfaces)
+    return {kind: sorted(names) for kind, names in found.items() if names}
 
 
 def tool_env(session, directory, display):
@@ -256,7 +245,7 @@ def functional(session, display, restricted):
     return result
 
 
-def wayland_section(session, display, log):
+def wayland_section(session, display):
     full = registry(session.rt, display)
     section = {"display": display, "full": full, "full_privileged": classify(full),
                "wayland_info_agrees": None, "security_context": SECURITY_CONTEXT in full}
@@ -272,16 +261,7 @@ def wayland_section(session, display, log):
                 section["restricted_error"] = "the manager was announced but no socket was made"
                 section["functional"] = functional(session, display, None)
             else:
-                restricted = None
-                for attempt in range(6):  # a compositor may start serving the socket a moment after it accepted it
-                    try:
-                        restricted = registry(Path(path).parent, Path(path).name)
-                        break
-                    except (OSError, RunError):
-                        if attempt == 5:
-                            raise
-                        time.sleep(0.5)
-                section["restricted_attempts"] = attempt + 1
+                restricted = wayland.registry({}, path=path)  # waits for a socket the compositor has just been given
                 section.update(restricted=restricted, restricted_privileged=classify(restricted),
                                hidden_by_restriction=sorted(set(full) - set(restricted)))
                 section["functional"] = functional(session, display, (Path(path).parent, Path(path).name))
@@ -351,15 +331,6 @@ def appjail_allows(name):
     return True, ""
 
 
-def registry_of_socket(sock):
-    """{interface: version} of the registry of a connected socket (one that was handed over, not opened by path)."""
-    sock.settimeout(5)
-    events, found = wayland.Events(sock), {}
-    wayland._send(sock, wayland._message(wayland.DISPLAY_ID, 1, struct.pack("I", wayland.REGISTRY_ID)))
-    wayland._roundtrip(sock, events, lambda *a: wayland._collect(*a, found))
-    return {iface: version for iface, (_name, version) in sorted(found.items())}
-
-
 def service_connections(session, display):
     """Mutter's ServiceChannel hands any client on the session bus a Wayland connection (a file descriptor). What its registry
     holds beyond the ordinary socket's, for each client type the service accepts; needs GLib's Python bindings (gi)."""
@@ -382,12 +353,12 @@ def service_connections(session, display):
             out[str(client_type)] = {"ok": False, "detail": e.message[-90:]}
             continue
         with socket.socket(fileno=fds.get(0)) as sock:
-            found = registry_of_socket(sock)
+            found = wayland.read_registry(sock)
         out[str(client_type)] = {"ok": True, "extra_globals": sorted(set(found) - plain), "missing_globals": sorted(plain - set(found))}
     return out
 
 
-def dbus_section(session, pid, log, display=None):
+def dbus_section(session, pid, display=None):
     """The well-known names the compositor owns, their interfaces (grouped: the names of one connection share its objects),
     what appjail's D-Bus policy would do with each name, and the outcome of the CALLS made as an ordinary client."""
     names = owned_by(session, pid)
@@ -414,9 +385,12 @@ def dbus_section(session, pid, log, display=None):
     return section
 
 
-def stop(proc):
+def stop(proc, signum=signal.SIGTERM):
+    """End a process started in its own session, and what it started; SIGKILL after 10 s. None is fine."""
+    if proc is None:
+        return
     with contextlib.suppress(ProcessLookupError):
-        os.killpg(proc.pid, signal.SIGTERM)
+        os.killpg(proc.pid, signum)
     try:
         proc.wait(10)
     except subprocess.TimeoutExpired:
@@ -424,7 +398,7 @@ def stop(proc):
             os.killpg(proc.pid, signal.SIGKILL)
 
 
-def survey(key, log):
+def survey(key):
     packages, argv_for, extra = COMPOSITORS[key]
     result = {"version": package_version(*packages)}
     if not shutil.which(argv_for(None)[0]):
@@ -441,8 +415,8 @@ def survey(key, log):
                 result["log_tail"] = (session.rt / "compositor.log").read_text(errors="replace")[-600:]
                 return result
             result["status"] = "ok"
-            result["wayland"] = wayland_section(session, display, log)
-            result["dbus"] = dbus_section(session, proc.pid, log, display)
+            result["wayland"] = wayland_section(session, display)
+            result["dbus"] = dbus_section(session, proc.pid, display)
         except Exception as e:  # noqa: BLE001  (one compositor must not stop the others)
             result["status"] = f"error: {type(e).__name__}: {e}"
         finally:
@@ -458,7 +432,7 @@ def main(argv=None):
     results = {"distro": distro(), "compositors": {}}
     for key in args.only or COMPOSITORS:
         print(f"== {key}", flush=True)
-        results["compositors"][key] = survey(key, print)
+        results["compositors"][key] = survey(key)
         r = results["compositors"][key]
         wl = r.get("wayland", {})
         print(f"   {r['status']}; {r.get('version')}; security context: {wl.get('security_context')}; "
