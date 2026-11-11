@@ -278,6 +278,11 @@ def NO_PRIVILEGED(env, path):
     return {"wl_compositor", "xdg_wm_base", "wl_seat", "wl_data_device_manager"}
 
 
+# What a test of `runner.launch` passes to stand in for the compositor: `runner.launch(..., **COMPOSITOR)`. A test of the
+# Wayland rule itself picks its own stand-ins instead.
+COMPOSITOR = {"restricted": RESTRICTED, "registry": NO_PRIVILEGED}
+
+
 def build(sandbox, runtime, **perms):
     root = sandbox / "root"
     root.mkdir(exist_ok=True)

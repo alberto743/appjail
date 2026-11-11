@@ -19,7 +19,7 @@ from appjail.cli import Abort
 from appjail.errors import RunError
 from appjail.permargs import require_network_isolation
 
-from .helpers import NO_PRIVILEGED, RESTRICTED, build, install, integration
+from .helpers import COMPOSITOR, build, install, integration
 
 
 def extract(image, dest, fallback=False):
@@ -79,7 +79,7 @@ def test_network_host_is_refused_without_landlock(sandbox, runtime, monkeypatch)
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
     with pytest.raises(RunError, match="Landlock"):
         runner.launch("app", host_env=env, extract=extract, say=lambda *_: None, runner=lambda argv: 0,
-                      restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                      **COMPOSITOR)
     with pytest.raises(Abort, match="Landlock"):
         require_network_isolation(manifest.Permissions(network=True, network_host=True))
     require_network_isolation(manifest.Permissions(audio=True))  # nothing else depends on it
@@ -94,7 +94,7 @@ def test_launch_puts_jails_outside_pasta_in_the_landlock_domain(sandbox, runtime
     install(sandbox, **perms)
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
     seen = []
-    runner.launch("app", host_env=env, extract=extract, say=lambda *_: None, runner=seen.append, restricted=RESTRICTED, registry=NO_PRIVILEGED)
+    runner.launch("app", host_env=env, extract=extract, say=lambda *_: None, runner=seen.append, **COMPOSITOR)
     argv = seen[0]
     assert (argv[:3] == [sys.executable, "-I", landlock.__file__]) is wrapped
     assert argv[3 if wrapped else 0] == (jail.find_bwrap() if wrapped else "/usr/bin/pasta")
