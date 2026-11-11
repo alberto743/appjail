@@ -2,7 +2,8 @@ name: Build distributions
 
 # Reusable: builds the sdist and the wheel (the version is derived from the git tag), checks that the built version is the tag,
 # checks their metadata and uploads them as the artifact "dist". pypi.yml publishes it and release.yml attaches the sdist;
-# each of the two builds its own copy from the same tag.
+# each of the two builds its own copy from the same tag. The build tooling is installed from .github/requirements-build.txt,
+# which pins every package to exact versions and file hashes.
 
 on:
   workflow_call:
@@ -22,8 +23,8 @@ jobs:
       - name: Build the sdist and the wheel
         run: |
           python3 -m venv "$RUNNER_TEMP/build"
-          "$RUNNER_TEMP/build/bin/pip" install --quiet build twine
-          "$RUNNER_TEMP/build/bin/python" -m build --outdir dist
+          "$RUNNER_TEMP/build/bin/pip" install --quiet --require-hashes --only-binary=:all: -r .github/requirements-build.txt
+          "$RUNNER_TEMP/build/bin/python" -m build --no-isolation --outdir dist
           "$RUNNER_TEMP/build/bin/twine" check --strict dist/*
       - name: The built version must be the tag
         run: |

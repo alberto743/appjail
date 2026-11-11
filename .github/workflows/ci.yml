@@ -53,6 +53,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends python3-pytest python3-venv
 
+      - name: The pinned release tooling installs (what build-dist.yml uses on a tag)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/build"
+          "$RUNNER_TEMP/build/bin/pip" install --quiet --require-hashes --only-binary=:all: -r .github/requirements-build.txt
+
       - name: Build, install and run
         env:
           APPJAIL_E2E: "1"
