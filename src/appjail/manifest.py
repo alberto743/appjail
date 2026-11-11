@@ -71,7 +71,7 @@ class Permissions:
     portal_interfaces: tuple = ()  # opt-in portal interfaces beyond the safe set (see PORTAL_OPT_IN)
     userns: bool = False  # nested user namespaces and mounts (Electron/Chromium sandboxes, nested bwrap)
     linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
-    full_wayland: bool = False  # allow the compositor's own socket when it offers no restricted one (wp_security_context_v1)
+    full_wayland: bool = False  # run although the app's Wayland socket lists privileged globals (see wayland.PRIVILEGED)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
     @property

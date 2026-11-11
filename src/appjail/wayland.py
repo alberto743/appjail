@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Restricted Wayland socket for an app, through the `wp_security_context_v1` protocol.
+"""Restricted Wayland socket for an app, through the `wp_security_context_v1` protocol, and what its registry offers.
 
 The host compositor's own socket gives a client every protocol the compositor offers, including
 screen capture and input injection where it has them. When the compositor implements the security
@@ -10,6 +10,11 @@ every client on that socket belongs to a sandbox; the compositor then hides its 
 interfaces from those clients. Only the minimal part of the wire protocol needed here is spoken
 (stdlib sockets, fd passing with SCM_RIGHTS); nothing from the compositor is interpreted beyond
 the registry and error events.
+
+What an app may do on the socket it gets is read from that socket's registry (`interfaces`, `privileged`), not inferred
+from the compositor's name or from whether it offers the protocol: some compositors restrict the socket (sway, labwc,
+Hyprland), some leave privileged globals visible on it (KWin), and some have none on their own socket (GNOME, which guards
+the privileged operations on D-Bus). docs/compositor-assessment has the measurements.
 """
 
 import array
@@ -18,6 +23,7 @@ import shutil
 import socket
 import struct
 import tempfile
+import time
 from pathlib import Path
 
 from .errors import RunError
@@ -25,6 +31,31 @@ from .errors import RunError
 MANAGER = "wp_security_context_manager_v1"
 SANDBOX_ENGINE = "appjail"
 TIMEOUT = 5.0
+
+# Globals that let a client act on more than its own windows, by what they allow. Measured on nine compositors; the
+# listed ones are the ones those compositors offer, so a compositor with others is not covered by name. Left out on
+# purpose: zwp_keyboard_shortcuts_inhibit_manager_v1 (an app asks for its shortcuts while it has focus; the only extra
+# global GNOME shows) and the capture-*source* managers (they name a target; the copy manager is what captures).
+PRIVILEGED = {
+    "capture": ("zwlr_screencopy_manager_v1", "ext_image_copy_capture_manager_v1", "zwlr_export_dmabuf_manager_v1",
+                "hyprland_toplevel_export_manager_v1", "zkde_screencast_unstable_v1", "weston_capture_v1"),
+    "input": ("zwlr_virtual_pointer_manager_v1", "zwp_virtual_keyboard_manager_v1", "zwp_input_method_manager_v2",
+              "zwp_input_method_v1", "zwp_input_panel_v1", "org_kde_kwin_fake_input", "zwlr_input_inhibit_manager_v1",
+              "hyprland_global_shortcuts_manager_v1", "zwf_shell_manager_v2"),
+    "clipboard": ("zwlr_data_control_manager_v1", "ext_data_control_manager_v1"),
+    "windows": ("zwlr_foreign_toplevel_manager_v1", "ext_foreign_toplevel_list_v1", "org_kde_plasma_window_management",
+                "zwlr_layer_shell_v1", "org_kde_plasma_shell", "weston_desktop_shell", "zwlr_output_manager_v1",
+                "zwlr_output_power_manager_v1", "zwlr_gamma_control_manager_v1", "kde_output_management_v2",
+                "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1"),
+}
+CAPABILITY = {
+    "capture": "capture the screen",
+    "input": "type or click for other apps, or take over the keyboard",
+    "clipboard": "read and replace the clipboard without having the focus",
+    "windows": "see or control other apps' windows, the screen layout or the lock screen",
+}
+PRIVILEGED_BY_NAME = {name: kind for kind, names in PRIVILEGED.items() for name in names}
+CONNECT_ATTEMPTS = 6  # a compositor may start serving a socket it was just given a moment after it accepted it
 
 DISPLAY_ID, REGISTRY_ID, CALLBACK_ID, MANAGER_ID, CONTEXT_ID = 1, 2, 3, 4, 5
 
@@ -107,12 +138,13 @@ def _collect(obj, opcode, payload, found):
         found[iface] = (name, version)
 
 
-def _connect(host_env):
-    """Connection to the compositor with the registry listed: (socket, events, {interface: (name, version)})."""
+def _connect(host_env, path=None):
+    """Connection with the registry listed: (socket, events, {interface: (name, version)}). The compositor's own socket,
+    or the one at `path`."""
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         sock.settimeout(TIMEOUT)
-        sock.connect(str(host_socket_path(host_env)))
+        sock.connect(str(path or host_socket_path(host_env)))
         events, found = Events(sock), {}
         _send(sock, _message(DISPLAY_ID, 1, struct.pack("I", REGISTRY_ID)))
         _roundtrip(sock, events, lambda *a: _collect(*a, found))
@@ -120,6 +152,35 @@ def _connect(host_env):
         sock.close()
         raise
     return sock, events, found
+
+
+def interfaces(host_env, path=None):
+    """The interface names the registry of a socket lists: the compositor's own, or the restricted one at `path`."""
+    for attempt in range(CONNECT_ATTEMPTS):
+        try:
+            sock, _events, found = _connect(host_env, path)
+        except (ConnectionRefusedError, RunError):
+            if path is None or attempt == CONNECT_ATTEMPTS - 1:  # only a socket just handed to the compositor is waited for
+                raise
+            time.sleep(0.5)
+        else:
+            sock.close()
+            return set(found)
+    return set()  # unreachable
+
+
+def privileged(names):
+    """{kind: [interface, ...]} of the privileged globals among these names (see PRIVILEGED)."""
+    found = {}
+    for name in sorted(names):
+        if name in PRIVILEGED_BY_NAME:
+            found.setdefault(PRIVILEGED_BY_NAME[name], []).append(name)
+    return found
+
+
+def describe(found):
+    """What the privileged globals of `privileged()` would let an app do, as one sentence fragment."""
+    return "; ".join(f"{', '.join(names)} (could {CAPABILITY[kind]})" for kind, names in found.items())
 
 
 class RestrictedSocket:

@@ -273,6 +273,11 @@ def RESTRICTED(env, app_id=None):
     yield str(Path(env["XDG_RUNTIME_DIR"]) / env.get("WAYLAND_DISPLAY", "wayland-test"))
 
 
+def NO_PRIVILEGED(env, path):
+    """Stands in for reading the registry of the app's Wayland socket: a socket that lists nothing privileged."""
+    return {"wl_compositor", "xdg_wm_base", "wl_seat", "wl_data_device_manager"}
+
+
 def build(sandbox, runtime, **perms):
     root = sandbox / "root"
     root.mkdir(exist_ok=True)
