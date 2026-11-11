@@ -1,0 +1,207 @@
+{
+ "compositors": {
+  "cage": {
+   "left": {
+    "capture": [
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_screencopy_manager_v1"
+    ],
+    "input": [
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "windows": [
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_output_manager_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "cage 0.2.1-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "gnome-shell": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "gnome-shell 50.1-0ubuntu1.5",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "hyprland": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": true
+   },
+   "left": {
+    "input": [
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_input_method_manager_v2",
+     "zwp_virtual_keyboard_manager_v1"
+    ]
+   },
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "hyprland 0.53.3+ds-4",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "kwin": {
+   "functional": {
+    "capture": false,
+    "clipboard": true,
+    "type": false
+   },
+   "left": {
+    "clipboard": [
+     "ext_data_control_manager_v1"
+    ],
+    "windows": [
+     "kde_output_management_v2",
+     "org_kde_plasma_shell",
+     "zwlr_layer_shell_v1"
+    ]
+   },
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "kwin-wayland 4:6.6.6-0ubuntu0.1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "labwc": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "labwc 0.9.3-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "mutter": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "mutter 50.1-0ubuntu2.5",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "sway": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "sway 1.11-3",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "wayfire": {
+   "left": {
+    "capture": [
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_screencopy_manager_v1"
+    ],
+    "clipboard": [
+     "zwlr_data_control_manager_v1"
+    ],
+    "input": [
+     "zwf_shell_manager_v2",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "windows": [
+     "ext_session_lock_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "wayfire 0.10.0-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "weston": {
+   "left": {
+    "capture": [
+     "weston_capture_v1"
+    ],
+    "input": [
+     "zwp_input_panel_v1"
+    ],
+    "windows": [
+     "weston_desktop_shell"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "weston 14.0.2-5",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "ubuntu",
+  "kernel": "7.0.0-43-generic",
+  "name": "Ubuntu 26.04.1 LTS",
+  "version": "26.04"
+ }
+}
