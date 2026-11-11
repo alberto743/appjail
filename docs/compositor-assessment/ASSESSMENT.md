@@ -1,7 +1,8 @@
 # Compositor security assessment
 
-Status: measurements complete for Debian 13 and Ubuntu 26.04; the security model they call for is **not decided**. Written
-for the people (and the Claude Code sessions) who will decide it.
+Status: measurements complete for Debian 13 and Ubuntu 26.04. Decided: option A below (the rule reads the registry of the
+socket the app will get), KWin is refused by default, and the D-Bus names that hand over the desktop are refused as a family.
+The implementation follows in `src/appjail/wayland.py` and `grants.py`; this document keeps the evidence.
 
 ## Why this exists
 
@@ -71,8 +72,48 @@ What the table shows:
 5. **Weston 14**: no security context; none of the three works. It advertises weston-specific interfaces
    (`weston_capture_v1`, `weston_desktop_shell`, `zwp_input_panel_v1`) that these tools do not exercise, so this is not a
    statement that weston is safe.
-6. **Hyprland 0.53.3 (Ubuntu 26.04)**: announces the protocol, but connections to the restricted socket are **refused**, also
-   after retries. appjail's app would not get a working display there. 0.55.2 (Debian backports) works.
+6. **Hyprland 0.53.3 (Ubuntu 26.04)**: the table above comes from the first survey, where connections to the restricted socket
+   were refused. A later, repeated run (`rule-a-*.json`) connected every time, so the refusal was a startup timing problem of
+   the probe, not of Hyprland. What the later runs show is worse for 0.53: its restricted socket still lists
+   `zwlr_virtual_pointer_manager_v1`, `zwp_input_method_manager_v2` and `zwp_virtual_keyboard_manager_v1`, and `wtype` types
+   through it. 0.55.2 (Debian backports) hides them.
+
+## Results: option A and the clipboard, tried live
+
+`tests/compositors/rule_a.py` applies option A to every compositor: it picks the socket the app would get (the restricted
+one when the compositor makes it, else its own), lists the privileged globals left on it, and starts a real window client
+(`weston-simple-shm`) there. The privileged set is the one of `probe.py` minus three globals that are harmless on their own:
+`zwp_keyboard_shortcuts_inhibit_manager_v1` (apps use it while focused; it is also the only extra global GNOME shows) and the
+two capture-*source* managers (they name a target; a copy manager is what captures). Raw data: `rule-a-*.json`.
+
+| Compositor | Socket the app gets | Left on it | Verdict |
+|---|---|---|---|
+| sway, labwc | restricted | nothing | runs |
+| Hyprland 0.55 | restricted | nothing | runs |
+| Hyprland 0.53 | restricted | virtual pointer, virtual keyboard, input method | refused |
+| GNOME Shell, Mutter | the compositor's own | nothing | runs |
+| KWin 6.3, 6.6 | restricted | data-control (clipboard), layer-shell, `org_kde_plasma_shell`, output management | refused |
+| Wayfire, Cage | the compositor's own | capture, input, windows | refused |
+| Weston 14 | the compositor's own | `weston_capture_v1`, input panel, desktop shell | refused (none of the three probes worked, so this is conservative) |
+
+A window client ran on the chosen socket of every compositor, on both distributions.
+
+`tests/compositors/clipboard.py` tests what an ordinary user does: copy in one window, paste in another, with real keyboard
+focus, in both directions between a window outside and a window on the app's socket (`clipboard-*.json`). The headless
+seats have no keyboard, so one is added: a persistent virtual keyboard (`wtype`) for the wlroots family, KWin's own seat, the
+`org.gnome.Mutter.RemoteDesktop` API for Mutter and GNOME Shell (it needs a pointer click and a key to focus a new window),
+and, for Weston, which has no input of its own, a nested run as a window of a headless sway.
+
+| Compositor | Socket the app gets | Outside → app | App → outside |
+|---|---|---|---|
+| sway, labwc, Hyprland 0.55, KWin | restricted | ok | ok |
+| GNOME Shell, Mutter | the compositor's own | ok | ok |
+| Wayfire, Cage | the compositor's own | ok | ok |
+| Weston 14 (nested) | the compositor's own | ok | ok |
+| Hyprland 0.53 | restricted | ok | ok in some runs; in others the window on the restricted socket never got keyboard focus (untestable), cause unknown |
+
+So ordinary copy and paste works wherever an app is allowed to run: the core clipboard (`wl_data_device`) needs focus and
+is unaffected by hiding data-control. What the KWin refusal prevents is an app reading the clipboard without focus.
 
 ## Results: D-Bus
 
@@ -131,33 +172,31 @@ So the security-context test ("does the compositor offer the protocol") is neith
 without it) nor sufficient (KWin offers it and still shows the clipboard). The property that matters is **what the socket the
 app will get actually lets a client do**, plus, for GNOME and KDE, **which bus names a user may grant**.
 
-## Options
+## Options considered and decision
 
-**A. Decide from the registry of the socket the app will get (proposition 1).** appjail already reads that registry. After
-choosing the socket (the restricted one when the protocol exists, else the compositor's own), refuse or warn when it lists
-interfaces from a fixed set of privileged ones (capture, virtual input, input method, data-control, foreign-toplevel, layer
-shell, session lock, output management, gamma, ...), naming them. The data above calibrates the set and checks it: GNOME
-passes (one mild global), sway/labwc/Hyprland restricted sockets pass, Wayfire/Cage are refused, **KWin's restricted socket is
-refused or warned about because of data-control** unless the set tolerates it. Weakness: a denylist of interface names misses
-interfaces not on it; the inverse (allow only known-harmless globals) is safer but refuses on compositor-specific extras.
+**A. Decide from the registry of the socket the app will get.** Chosen. After choosing the socket, `run` refuses a windowed
+app when the registry lists a privileged global (capture, virtual input, input method, data-control, foreign-toplevel, layer
+shell, session lock, output management, gamma, ...) and names them; `full_wayland` overrides the refusal. It matched the
+measurements of all 18 compositor and distribution runs. Weakness: a denylist of interface names misses interfaces not on it
+(the inverse, allowing only known-harmless globals, would refuse compositors on their own extras).
 
-**B. Warn only without the protocol** (appjail's behaviour before `full_wayland`). Simple and usable everywhere, but it is the
-behaviour that violated "what cannot be enforced is refused" and that a warning in a terminal does not make a decision.
+**B. Warn only without the protocol.** Rejected: Wayfire and Cage let an app capture, type and read the clipboard, and a
+terminal warning is not a decision.
 
-**C. A table of compositors** identified from their registry fingerprint. Accurate for the measured set, brittle for the rest.
+**C. A table of compositors.** Rejected: right for the nine measured, stale with every release, silent on the rest; A reads
+the registry anyway.
 
-**Independent of the choice, D. Close the D-Bus gaps the survey found**: refuse `org.gnome.Mutter.*` (at least ScreenCast,
-RemoteDesktop, InputCapture, DisplayConfig, ServiceChannel), consider `org.kde.kglobalaccel` and `org.kde.keyboard`, and
-review `org.freedesktop.a11y.*` and `org.gnome.ScreenSaver`. This is DESIGN.md's list of names that "hand over the desktop",
-and the measurements show it incomplete.
+**D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` (every name of the family), `org.freedesktop.a11y`,
+`org.gnome.ScreenSaver`, `org.kde.kglobalaccel` and `org.kde.keyboard` are refused. Under A a GNOME app has no privileged
+global on its socket, so these bus names are what keep it from capturing, injecting input or locking the screen.
 
-## Decisions needed
+**KWin.** Its restricted socket hides only the protocol manager, so data-control stays visible and a client reads another
+client's clipboard. Accepting that for KWin alone would give the same capability as `full_wayland` without asking, so KWin is
+refused like any other compositor with a privileged global, and the message says what is exposed.
 
-1. Which Wayland rule: A, B or C. And if A: is a clipboard-reading restricted socket (KWin) a refusal, a warning or accepted?
-2. The fate of `full_wayland` (kept as the override of A, or removed with B).
-3. Which D-Bus names to add to the refused list (D), and whether wildcards like `org.gnome.Mutter.*` are refused as a family.
-4. How to treat compositors that were not measured (A handles them by reading their registry at run time).
-5. Hyprland 0.53: is a compositor that announces the protocol but refuses the restricted socket to be detected and handled?
+**Hyprland 0.53.** Refused by A without a special case (see above).
+
+**Unmeasured compositors** (niri, river, COSMIC, Muffin) are decided by their registry at run time.
 
 ## Limits of this measurement
 
@@ -165,9 +204,9 @@ and the measurements show it incomplete.
   no portal backends, no consent dialogs. A real GNOME or Plasma session may add services.
 * Capture was tried with `grim`, which speaks only the wlroots and ext-image-copy-capture protocols: a compositor with its own
   (KWin's screencast, Hyprland's toplevel export) is not covered, and "no" means "not demonstrated with this tool".
-* Clipboard was tried through data-control (`wl-clipboard`): a compositor without it, GNOME included, cannot be tested this
-  way, since the fallback needs a focused surface, and the headless seat has no keyboard. GNOME's clipboard model was therefore
-  not exercised.
+* The unfocused clipboard read was tried through data-control (`wl-clipboard`), which GNOME does not offer. Focused copy and
+  paste was tested on all compositors with GTK 4 windows (see above), but with an added virtual input device, in headless
+  compositors; a real session adds clipboard managers and extensions that were not tried.
 * One client per capability, on a quiet compositor. Xwayland, GPU, camera and audio were not part of this.
 * Only the versions the two distributions package (and Hyprland from Debian backports). niri, river and COSMIC are not
   packaged in either, so they were not measured here.
@@ -183,3 +222,6 @@ On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `
     GUEST=<distro>-compositors tests/vm/provision.sh   # installs the compositors (several hundred packages) and reboots
     GUEST=<distro>-compositors tests/vm/sync.sh
     GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/probe.py --out /tmp/results.json'
+    # option A and the focused clipboard, each with its own results file:
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/rule_a.py --out /tmp/rule-a.json'
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/clipboard.py --out /tmp/clipboard.json'

@@ -1,0 +1,74 @@
+{
+ "compositors": {
+  "cage": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "cage 0.2.0-2"
+  },
+  "gnome-shell": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "gnome-shell 48.7-0+deb13u2"
+  },
+  "hyprland": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "hyprland 0.55.2+ds-1~bpo13+1"
+  },
+  "kwin": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "kwin-wayland 4:6.3.6-1"
+  },
+  "labwc": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "labwc 0.8.3-1"
+  },
+  "mutter": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "mutter 48.7-0+deb13u1"
+  },
+  "sway": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "sway 1.10.1-2"
+  },
+  "wayfire": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "wayfire 0.9.0-5"
+  },
+  "weston-nested": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "weston 14.0.2-1"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "debian",
+  "kernel": "6.12.116+deb13-amd64",
+  "name": "Debian GNU/Linux 13 (trixie)",
+  "version": "13"
+ }
+}

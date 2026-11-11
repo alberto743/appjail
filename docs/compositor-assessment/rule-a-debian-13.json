@@ -1,0 +1,200 @@
+{
+ "compositors": {
+  "cage": {
+   "left": {
+    "capture": [
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_screencopy_manager_v1"
+    ],
+    "input": [
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "windows": [
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_output_manager_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "cage 0.2.0-2",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "gnome-shell": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "gnome-shell 48.7-0+deb13u2",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "hyprland": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "hyprland 0.55.2+ds-1~bpo13+1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "kwin": {
+   "functional": {
+    "capture": false,
+    "clipboard": true,
+    "type": false
+   },
+   "left": {
+    "clipboard": [
+     "zwlr_data_control_manager_v1"
+    ],
+    "windows": [
+     "kde_output_management_v2",
+     "org_kde_plasma_shell",
+     "zwlr_layer_shell_v1"
+    ]
+   },
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "kwin-wayland 4:6.3.6-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "labwc": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "labwc 0.8.3-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "mutter": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "mutter 48.7-0+deb13u1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "sway": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "sway 1.10.1-2",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "wayfire": {
+   "left": {
+    "capture": [
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_screencopy_manager_v1"
+    ],
+    "clipboard": [
+     "zwlr_data_control_manager_v1"
+    ],
+    "input": [
+     "zwf_shell_manager_v2",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "windows": [
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "wayfire 0.9.0-5",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "weston": {
+   "left": {
+    "capture": [
+     "weston_capture_v1"
+    ],
+    "input": [
+     "zwp_input_panel_v1"
+    ],
+    "windows": [
+     "weston_desktop_shell"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "weston 14.0.2-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "debian",
+  "kernel": "6.12.116+deb13-amd64",
+  "name": "Debian GNU/Linux 13 (trixie)",
+  "version": "13"
+ }
+}
