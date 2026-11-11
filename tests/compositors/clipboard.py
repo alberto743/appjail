@@ -14,7 +14,6 @@ is `ok` (the text arrived), `failed` (it did not) or `untestable` (a window neve
 import argparse
 import contextlib
 import json
-import os
 import shutil
 import signal
 import subprocess
@@ -39,12 +38,6 @@ def start(session, directory, name, mode, out, text=""):
     env.update(GTK)
     return subprocess.Popen(["python3", CLIENT, mode, str(out), text], env=env, stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL, start_new_session=True)
-
-
-def stop(proc):
-    if proc and proc.poll() is None:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(proc.pid, signal.SIGKILL)
 
 
 def wait_line(out, prefix, timeout):
@@ -99,10 +92,10 @@ def direction(session, work, label, copy_on, paste_on):
             wait_active(session, paste_out, 30)
             _line, paster_lines = wait_line(paste_out, "pasted:", 16)
         finally:
-            stop(paster)
+            probe.stop(paster, signal.SIGKILL)
         return verdict(copier_lines, paster_lines)
     finally:
-        stop(copier)
+        probe.stop(copier, signal.SIGKILL)
 
 
 def wtype_keyboard(session, directory, display):
