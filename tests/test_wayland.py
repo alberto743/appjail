@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import array
+import json
 import os
 import shutil
 import socket
@@ -129,6 +130,63 @@ def test_protocol_error_is_reported_and_leaves_nothing(compositor):
 def test_missing_host_socket_is_an_error(sandbox):
     with pytest.raises(RunError, match="not found"):
         advertised({"XDG_RUNTIME_DIR": str(sandbox), "WAYLAND_DISPLAY": "nope"})
+
+
+# -- what a socket lets a client do, read from its registry -------------------------------------------------
+
+
+def test_interfaces_reads_the_registry_of_the_own_and_of_another_socket(compositor, sandbox):
+    _c, env = compositor(["wl_compositor", "zwlr_screencopy_manager_v1"])
+    assert wayland.interfaces(env) == {"wl_compositor", "zwlr_screencopy_manager_v1"}
+    assert wayland.interfaces({}, path=sandbox / "wl") == {"wl_compositor", "zwlr_screencopy_manager_v1"}
+
+
+def test_a_socket_that_refuses_connections_is_waited_for_then_reported(sandbox, monkeypatch):
+    monkeypatch.setattr(wayland.time, "sleep", lambda _s: None)
+    dead = sandbox / "dead"
+    listener = socket.socket(socket.AF_UNIX)
+    listener.bind(str(dead))  # bound but never listening: connections are refused
+    with pytest.raises(ConnectionRefusedError):
+        wayland.interfaces({}, path=dead)
+    listener.close()
+
+
+def test_the_privileged_set_groups_by_capability_and_ignores_harmless_globals():
+    names = {"wl_compositor", "zwp_keyboard_shortcuts_inhibit_manager_v1", "ext_output_image_capture_source_manager_v1",
+             "zwlr_screencopy_manager_v1", "zwlr_data_control_manager_v1", "zwp_virtual_keyboard_manager_v1"}
+    assert wayland.privileged(names) == {"capture": ["zwlr_screencopy_manager_v1"],
+                                         "input": ["zwp_virtual_keyboard_manager_v1"],
+                                         "clipboard": ["zwlr_data_control_manager_v1"]}
+    assert wayland.privileged({"wl_compositor", "zwp_keyboard_shortcuts_inhibit_manager_v1"}) == {}
+    assert "capture the screen" in wayland.describe({"capture": ["zwlr_screencopy_manager_v1"]})
+
+
+ASSESSMENT = Path(__file__).resolve().parents[1] / "docs" / "compositor-assessment"
+
+
+def measured():
+    """(label, registry of the socket an app would get, what the live run of option A decided) for every compositor surveyed."""
+    out = []
+    for results in sorted(ASSESSMENT.glob("results-*.json")):
+        survey = json.loads(results.read_text())
+        decided = json.loads(results.with_name(results.name.replace("results-", "rule-a-")).read_text())
+        for name, entry in survey["compositors"].items():
+            w = entry.get("wayland")
+            if entry["status"] != "ok" or not w:
+                continue
+            names = w.get("restricted") if w["security_context"] and w.get("restricted") is not None else w["full"]
+            if w["security_context"] and w.get("restricted") is None:
+                continue  # Hyprland 0.53 in the first survey: the restricted socket was not read (see rule-a-*.json)
+            out.append((f"{survey['distro']['id']}-{survey['distro']['version']}-{name}", set(names), decided["compositors"][name]["verdict"]))
+    return out
+
+
+@pytest.mark.skipif(not ASSESSMENT.is_dir(), reason="the measurements are not in this tree")
+@pytest.mark.parametrize(("label", "names", "decided"), measured(), ids=[m[0] for m in measured()])
+def test_the_rule_matches_the_registries_measured_on_real_compositors(label, names, decided):
+    """The registries are those of real compositors on Debian 13 and Ubuntu 26.04; `decided` is what option A decided when it
+    was run live against them: GNOME, sway, labwc and Hyprland 0.55 run; KWin, Wayfire, Cage and Weston are refused."""
+    assert bool(wayland.privileged(names)) == (decided == "refuse")
 
 
 @integration

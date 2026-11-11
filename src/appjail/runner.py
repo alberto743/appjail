@@ -35,7 +35,6 @@ from .jail import PASTA_SECCOMP_FD
 
 # More descriptors the pasta wrapper opens for bwrap (single digits: dash redirects accept no more; see jail.net_wrap).
 PASTA_STATUS_FD, PASTA_BLOCK_FD = 8, 7
-NO_SECURITY_CONTEXT = "the compositor does not offer wp_security_context_v1, so it cannot restrict this app's Wayland socket"
 
 
 def _passwd(uid, gid):
@@ -255,8 +254,26 @@ def _private_audio(stack, name, perms, env, warn):
     return graph, backend
 
 
+def _check_wayland_socket(name, perms, restricted_socket, offered, warn):
+    """Refuse the app (or warn, with `full_wayland`) when the socket it will get lists privileged globals: the restricted
+    socket when the compositor made one, else the compositor's own. What matters is what that socket lets a client do."""
+    found = wayland.privileged(offered)
+    if not found:
+        return
+    if restricted_socket is None:
+        which = "the compositor does not offer wp_security_context_v1, so this app would get its own Wayland socket"
+    else:
+        which = "the restricted Wayland socket this compositor makes for this app"
+    what = f"{which}, which lists {wayland.describe(found)}"
+    if not perms.full_wayland:
+        raise RunError(f"{what}. {name} is not allowed that. Run it on a compositor that hides them, or accept it with "
+                       f"`appjail perms {name} --allow full_wayland`")
+    warn(f"{what}, and full_wayland is granted, so the app runs with it")
+
+
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, warn=None, runner=None,
-           extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket):
+           extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket,
+           registry=wayland.interfaces):
     """Start the app in its jail and return its exit status."""
     warn = _warner(say, warn)
     m, root, home, etc = prepare(name, extract, say, warn)
@@ -270,12 +287,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
-        if perms.windowed and wl_sock is None:
-            if not perms.full_wayland:
-                raise RunError(NO_SECURITY_CONTEXT + f"; {name} is not allowed the full socket. Run it on a compositor that has "
-                               f"the protocol, or allow the full socket with `appjail perms {name} --allow full_wayland`")
-            warn(NO_SECURITY_CONTEXT + ", and full_wayland is granted, so this app gets the full Wayland socket (it may be able "
-                 "to capture the screen or inject input where the compositor allows it)")
+        if perms.windowed:
+            _check_wayland_socket(name, perms, wl_sock, registry(env, wl_sock), warn)
         in_pasta = perms.pasta
         audio, audio_backend = _private_audio(stack, name, perms, env, warn)
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
