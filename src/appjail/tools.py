@@ -42,15 +42,15 @@ TOOLS = {
         "https://github.com/mhx/dwarfs/releases/download/v0.15.8/dwarfs-universal-small-0.15.8-Linux-x86_64",
         2195148, "d29734ed51547f5a5e1c92ede3ea0f2e003902f5c58df10d5e060c87b4e07e69",
         "extracting DwarFS AppImages"),
-    # GitHub CLI v2.102.0: used only for `gh attestation verify --bundle` (Sigstore verification), inside a
+    # GitHub CLI v2.103.3: used only for `gh attestation verify --bundle` (Sigstore verification), inside a
     # jail, on bundles appjail fetched itself. Not packaged in Debian 13 in a usable version.
     "gh": Tool(
         "gh",
-        "https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz",
-        15319960, "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386",
+        "https://github.com/cli/cli/releases/download/v2.103.3/gh_2.103.3_linux_amd64.tar.gz",
+        15031972, "4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d",
         "verifying build attestations (evidence tier 1)",
-        member="gh_2.102.0_linux_amd64/bin/gh", exe_size=42086560,
-        exe_sha256="7469124f706944133d6a169691dd1c6c3511b12e85878d255e044e2948df4c9b"),
+        member="gh_2.103.3_linux_amd64/bin/gh", exe_size=41070752,
+        exe_sha256="b768184570b12536be4ac1528893f6340d1c6a7b40b56ad45bca9cd0e87ad34d"),
 }
 
 
