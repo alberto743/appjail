@@ -13,7 +13,7 @@ from appjail import dbusproxy, grants, jail, manifest, runner, runtimejail
 from appjail.errors import RunError
 from appjail.manifest import ManifestError, Permissions
 
-from .helpers import NO_PRIVILEGED, RESTRICTED, build, integration, needs_proxy, pairs
+from .helpers import COMPOSITOR, build, integration, needs_proxy, pairs
 
 NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.StatusNotifierWatcher")
 
@@ -187,7 +187,7 @@ def test_launch_wraps_the_run_in_the_proxy(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     env = kw["host_env"]
     code = runner.launch("app", host_env=env, proxy=FakeProxy, runner=lambda argv: events.append(argv) or 0,
-                         restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                         **COMPOSITOR)
     assert code == 0 and events[:2] == ["init", "start"] and events[-1] == "stop"
     assert ("/fake/bus", f"/run/user/{os.getuid()}/bus") in pairs(events[2], "--ro-bind")
 
