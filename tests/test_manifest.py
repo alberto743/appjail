@@ -306,6 +306,23 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/.thunderbird", "", True),
     ("~/.var/app/org.x.App", "", True),
     ("~/Vault/pass.KDBX", "", True),
+    ("~/.npmrc", "", True),  # registry tokens
+    ("~/.pypirc", "", True),
+    ("~/.cargo/credentials.toml", "", True),
+    ("~/.cargo", "", True),  # contains the credentials file
+    ("~/.cargo/registry", "", False),
+    ("~/.m2", "", True),
+    ("~/.m2/repository", "", False),
+    ("~/.gradle", "", True),
+    ("~/.config/rclone", "", True),
+    ("~/.config/rclone/rclone.conf", "", True),
+    ("~/.azure", "", True),
+    ("~/.oci", "", True),
+    ("~/.terraform.d", "", True),
+    ("~/.config/keepassxc", "", True),
+    ("~/.local/share/keepassxc", "", True),
+    ("~/.config/op", "", True),
+    ("~/.config/Signal", "", True),
     ("~/.configuration", "", False),  # prefix of a rule is not the rule
     ("~/.varnish", "", False),
 ])
