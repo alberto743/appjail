@@ -412,6 +412,27 @@ class Extractor:
         return 1, 1
 
 
+def make_png(size=64, colour=6, depth=8, interlace=False, extra=(), width=None):
+    """A valid PNG of flat pixels, built with the standard library. `extra` is a list of (type, body) chunks put before IDAT."""
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[colour]
+    width = width or size
+    if interlace:
+        passes = ((0, 0, 8, 8), (4, 0, 8, 8), (0, 4, 4, 8), (2, 0, 4, 4), (0, 2, 2, 4), (1, 0, 2, 2), (0, 1, 1, 2))
+        dims = [((width - x + dx - 1) // dx, (size - y + dy - 1) // dy) for x, y, dx, dy in passes]
+    else:
+        dims = [(width, size)]
+    raw = b"".join(b"\0" + b"\x40" * ((w * channels * depth + 7) // 8) for w, h in dims if w > 0 and h > 0 for _ in range(h))
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+    chunks = [chunk(b"IHDR", struct.pack(">IIBBBBB", width, size, depth, colour, 0, 0, int(interlace)))]
+    if colour == 3:
+        chunks.append(chunk(b"PLTE", bytes(i % 256 for i in range(3 * (1 << depth)))))
+    chunks += [chunk(kind, body) for kind, body in extra]
+    chunks += [chunk(b"IDAT", zlib.compress(raw)), chunk(b"IEND", b"")]
+    return b"\x89PNG\r\n\x1a\n" + b"".join(chunks)
+
+
 def png_info(data):
     """(width, height, distinct pixel bytes) of a PNG, decoded with the standard library (8-bit RGB/RGBA, filters applied)."""
     assert data[:8] == b"\x89PNG\r\n\x1a\n"
