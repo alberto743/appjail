@@ -1,0 +1,74 @@
+{
+ "compositors": {
+  "cage": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "cage 0.2.1-1"
+  },
+  "gnome-shell": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "gnome-shell 50.1-0ubuntu1.5"
+  },
+  "hyprland": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "untestable (a window never got keyboard focus)",
+   "status": "ok",
+   "version": "hyprland 0.53.3+ds-4"
+  },
+  "kwin": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "kwin-wayland 4:6.6.6-0ubuntu0.1"
+  },
+  "labwc": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "labwc 0.9.3-1"
+  },
+  "mutter": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "mutter 50.1-0ubuntu2.5"
+  },
+  "sway": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "sway 1.11-3"
+  },
+  "wayfire": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "wayfire 0.10.0-1"
+  },
+  "weston-nested": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "weston 14.0.2-5"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "ubuntu",
+  "kernel": "7.0.0-43-generic",
+  "name": "Ubuntu 26.04.1 LTS",
+  "version": "26.04"
+ }
+}
