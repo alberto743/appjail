@@ -7,3 +7,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+  # The release tooling (.github/requirements-build.txt) is pinned by version and hash; Dependabot proposes new versions with
+  # their hashes, to be reviewed like any dependency.
+  - package-ecosystem: pip
+    directory: /.github
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
