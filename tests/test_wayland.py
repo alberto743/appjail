@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import array
+import importlib.util
 import json
 import os
 import shutil
@@ -141,14 +142,37 @@ def test_interfaces_reads_the_registry_of_the_own_and_of_another_socket(composit
     assert wayland.interfaces({}, path=sandbox / "wl") == {"wl_compositor", "zwlr_screencopy_manager_v1"}
 
 
-def test_a_socket_that_refuses_connections_is_waited_for_then_reported(sandbox, monkeypatch):
-    monkeypatch.setattr(wayland.time, "sleep", lambda _s: None)
-    dead = sandbox / "dead"
+def test_registry_gives_the_versions_and_read_registry_reads_a_connection_handed_over(compositor, sandbox):
+    _c, env = compositor(["wl_compositor", "zwlr_screencopy_manager_v1"])
+    assert wayland.registry(env) == {"wl_compositor": 1, "zwlr_screencopy_manager_v1": 1}
+    with socket.socket(socket.AF_UNIX) as sock:
+        sock.connect(str(sandbox / "wl"))
+        assert wayland.read_registry(sock) == {"wl_compositor": 1, "zwlr_screencopy_manager_v1": 1}
+
+
+@pytest.fixture
+def dead_socket(sandbox, monkeypatch):
+    """A socket path that is bound but never listening (connections are refused), and the sleeps taken while waiting."""
+    slept = []
+    monkeypatch.setattr(wayland.time, "sleep", slept.append)
     listener = socket.socket(socket.AF_UNIX)
-    listener.bind(str(dead))  # bound but never listening: connections are refused
-    with pytest.raises(ConnectionRefusedError):
-        wayland.interfaces({}, path=dead)
+    listener.bind(str(sandbox / "dead"))
+    yield sandbox / "dead", slept
     listener.close()
+
+
+def test_a_socket_that_refuses_connections_is_waited_for_then_reported(dead_socket):
+    path, slept = dead_socket
+    with pytest.raises(ConnectionRefusedError):
+        wayland.interfaces({}, path=path)
+    assert len(slept) == wayland.CONNECT_ATTEMPTS - 1
+
+
+def test_the_compositors_own_socket_is_not_waited_for(dead_socket):
+    path, slept = dead_socket
+    with pytest.raises(ConnectionRefusedError):
+        wayland.interfaces({"XDG_RUNTIME_DIR": str(path.parent), "WAYLAND_DISPLAY": path.name})
+    assert slept == []
 
 
 def test_the_privileged_set_groups_by_capability_and_ignores_harmless_globals():
@@ -159,6 +183,20 @@ def test_the_privileged_set_groups_by_capability_and_ignores_harmless_globals():
                                          "clipboard": ["zwlr_data_control_manager_v1"]}
     assert wayland.privileged({"wl_compositor", "zwp_keyboard_shortcuts_inhibit_manager_v1"}) == {}
     assert "capture the screen" in wayland.describe({"capture": ["zwlr_screencopy_manager_v1"]})
+
+
+def test_the_survey_tool_counts_what_the_rule_counts_and_names_what_it_adds():
+    """tests/compositors/probe.py takes its list from wayland.PRIVILEGED; it adds only EXTRA, which the rule leaves out."""
+    spec = importlib.util.spec_from_file_location("probe", Path(__file__).parent / "compositors" / "probe.py")
+    probe = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(probe)
+    extra = {n for names in probe.EXTRA.values() for n in names}
+    assert not extra & set(wayland.PRIVILEGED_BY_NAME)
+    names = set(wayland.PRIVILEGED_BY_NAME) | extra | {"wl_compositor"}
+    assert {n for found in probe.classify(names).values() for n in found} == names - {"wl_compositor"}
+    assert probe.classify({"wl_compositor", *extra}) == {"capture": sorted(probe.EXTRA["capture"]), "input": sorted(probe.EXTRA["input"])}
+    assert wayland.privileged({"wl_compositor", *extra}) == {}
+    assert probe.SECURITY_CONTEXT == wayland.MANAGER
 
 
 ASSESSMENT = Path(__file__).resolve().parents[1] / "docs" / "compositor-assessment"

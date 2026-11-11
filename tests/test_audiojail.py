@@ -14,7 +14,7 @@ from appjail import audiojail, audiomode, jail, runner, store
 from appjail.errors import JailError
 from appjail.manifest import Permissions
 
-from .helpers import NO_PRIVILEGED, RESTRICTED, Extractor, install, pairs
+from .helpers import COMPOSITOR, Extractor, install, pairs
 
 
 def have(*tools):
@@ -328,7 +328,7 @@ def launch(sandbox, runtime, perms, monkeypatch, said=None, **patches):
     captured = []
     runner.launch("app", [], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}, extract=Extractor(),
                   say=lambda *_: None, warn=(said if said is not None else []).append, runner=lambda argv: captured.append(argv) or 0,
-                  restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                  **COMPOSITOR)
     return captured[0]
 
 

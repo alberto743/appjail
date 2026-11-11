@@ -138,35 +138,53 @@ def _collect(obj, opcode, payload, found):
         found[iface] = (name, version)
 
 
+def _list(sock):
+    """Ask a connected socket for its registry: (events, {interface: (name, version)})."""
+    sock.settimeout(TIMEOUT)
+    events, found = Events(sock), {}
+    _send(sock, _message(DISPLAY_ID, 1, struct.pack("I", REGISTRY_ID)))
+    _roundtrip(sock, events, lambda *a: _collect(*a, found))
+    return events, found
+
+
+def read_registry(sock):
+    """{interface: version} of the registry of a connected socket, such as a connection handed over as a file descriptor."""
+    return {iface: version for iface, (_name, version) in sorted(_list(sock)[1].items())}
+
+
 def _connect(host_env, path=None):
     """Connection with the registry listed: (socket, events, {interface: (name, version)}). The compositor's own socket,
     or the one at `path`."""
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        sock.settimeout(TIMEOUT)
         sock.connect(str(path or host_socket_path(host_env)))
-        events, found = Events(sock), {}
-        _send(sock, _message(DISPLAY_ID, 1, struct.pack("I", REGISTRY_ID)))
-        _roundtrip(sock, events, lambda *a: _collect(*a, found))
+        events, found = _list(sock)
     except BaseException:
         sock.close()
         raise
     return sock, events, found
 
 
-def interfaces(host_env, path=None):
-    """The interface names the registry of a socket lists: the compositor's own, or the restricted one at `path`."""
-    for attempt in range(CONNECT_ATTEMPTS):
+def registry(host_env, path=None):
+    """{interface: version} the registry of a socket lists: the compositor's own, or the restricted one at `path`, which is
+    waited for a few seconds (a compositor may serve a socket it was just given a moment after accepting it)."""
+    left = CONNECT_ATTEMPTS if path is not None else 1  # only a socket just handed to the compositor is waited for
+    while True:
+        left -= 1
         try:
             sock, _events, found = _connect(host_env, path)
         except (ConnectionRefusedError, RunError):
-            if path is None or attempt == CONNECT_ATTEMPTS - 1:  # only a socket just handed to the compositor is waited for
+            if not left:
                 raise
             time.sleep(0.5)
         else:
             sock.close()
-            return set(found)
-    return set()  # unreachable
+            return {iface: version for iface, (_name, version) in sorted(found.items())}
+
+
+def interfaces(host_env, path=None):
+    """The interface names the registry of a socket lists (see `registry`)."""
+    return set(registry(host_env, path))
 
 
 def privileged(names):

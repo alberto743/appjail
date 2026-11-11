@@ -24,7 +24,7 @@ from appjail import (
 from appjail.errors import RunError
 
 from .helpers import (
-    NO_PRIVILEGED,
+    COMPOSITOR,
     NO_RESTRICTION,
     RESTRICTED,
     Extractor,
@@ -107,7 +107,7 @@ def test_networked_app_runs_in_pasta_and_is_refused_without_it(sandbox, runtime,
 
     def go():
         return runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
-                             runner=lambda argv: captured.append(argv) or 0, restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                             runner=lambda argv: captured.append(argv) or 0, **COMPOSITOR)
     monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
     go()
     assert captured[0][0] == "/usr/bin/pasta" and "--share-net" in captured[0]
@@ -124,7 +124,7 @@ def test_network_host_and_offline_apps_are_not_wrapped(sandbox, runtime, monkeyp
         install(sandbox, **perms)
         captured = []
         runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None,
-                      runner=lambda argv, captured=captured: captured.append(argv) or 0, restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                      runner=lambda argv, captured=captured: captured.append(argv) or 0, **COMPOSITOR)
         assert captured[0][0] != "/usr/bin/pasta"
 
 
@@ -368,7 +368,7 @@ def test_launch_binds_files_and_passes_their_jail_paths_to_the_app(sandbox, runt
     captured, said = [], []
     runner.launch("app", ["--x"], host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
                   extract=Extractor(), say=said.append, runner=lambda argv: captured.append(argv) or 0,
-                  extra_files=(str(f),), restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                  extra_files=(str(f),), **COMPOSITOR)
     argv = captured[0]
     assert str(f) in [dest for _, dest in pairs(argv, "--ro-bind-fd")]
     assert argv[-3:] == ["/app/AppRun", "--x", str(f)]
@@ -471,7 +471,7 @@ def test_launch_applies_the_seccomp_filter_in_every_network_mode(sandbox, runtim
                           permissions=manifest.Permissions(**perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                         say=lambda *_: None, restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                         say=lambda *_: None, **COMPOSITOR)
     out = capfd.readouterr()
     assert code == 0, out.err
     assert out.out.split() == ["38"], out.err  # ENOSYS: the filter is installed
@@ -545,7 +545,7 @@ def _launch_pasta_probe(sandbox, runtime, monkeypatch, capfd, args=(), **perms):
                           permissions=manifest.Permissions(network=True, **perms))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                         say=lambda *_: None, restricted=RESTRICTED, registry=NO_PRIVILEGED, extra_args=list(args))
+                         say=lambda *_: None, **COMPOSITOR, extra_args=list(args))
     out = capfd.readouterr()
     assert code == 0, out.err
     return out.out.split()
@@ -570,7 +570,7 @@ def test_linger_under_pasta_waits_for_the_detached_child(sandbox, runtime, monke
                           permissions=manifest.Permissions(network=True, linger=True))
     monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
     code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                         say=lambda *_: None, restricted=RESTRICTED, registry=NO_PRIVILEGED)
+                         say=lambda *_: None, **COMPOSITOR)
     assert code == 3
     assert (kw["home"] / "out.txt").read_text() == "done\n"
 
@@ -630,7 +630,7 @@ def test_ipv6_forwarding_inside_the_fake_namespace(sandbox, runtime, monkeypatch
                               permissions=manifest.Permissions(network=True))
         monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
         code = runner.launch("app", host_env={"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"},
-                             say=lambda *_: None, restricted=RESTRICTED, registry=NO_PRIVILEGED,
+                             say=lambda *_: None, **COMPOSITOR,
                              extra_args=[V6_LISTENER, str(srv.getsockname()[1])])
         out = capfd.readouterr()
         assert code == 0, out.err
