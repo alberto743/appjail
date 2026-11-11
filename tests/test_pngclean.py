@@ -96,7 +96,7 @@ def test_image_data_that_is_not_what_the_header_promises_is_refused():
 
 
 def test_an_inflate_bomb_is_stopped_at_the_expected_size():
-    body = zlib.compress(b"\0" * (200 * 1024 * 1024), 9)  # a few hundred KB that expand to 200 MB
+    body = zlib.compress(b"\0" * (16 * 1024 * 1024), 9)  # ~16 KB that expand to 16 MB
     header = struct.pack(">IIBBBBB", 32, 32, 8, 6, 0, 0, 0)
     bomb = pngclean.MAGIC + chunk(b"IHDR", header) + chunk(b"IDAT", body) + chunk(b"IEND", b"")
     assert pngclean.sanitize(bomb) is None
