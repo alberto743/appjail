@@ -13,13 +13,12 @@ import os
 import re
 import shutil
 import stat
-import struct
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-from . import appimage, jail, store
+from . import appimage, jail, pngclean, store
 from .textsafe import clean
 
 MARKER = "X-Appjail-App"
@@ -234,12 +233,9 @@ def _is_svg(data):
 
 
 def png_size(data):
-    """(width, height) of a PNG after checking the signature and the first (IHDR) chunk, else None."""
-    if len(data) < 33 or data[:8] != PNG_MAGIC or data[12:16] != b"IHDR":
-        return None
-    width, height = struct.unpack(">II", data[16:24])
-    lo, hi = ICON_SIZE_RANGE
-    return (width, height) if width == height and lo <= width <= hi else None
+    """(width, height) of a PNG that `pngclean.sanitize` accepts, else None."""
+    clean_png = pngclean.sanitize(data, *ICON_SIZE_RANGE)
+    return clean_png[1] if clean_png else None
 
 
 def find_icon(root, fields):
@@ -289,8 +285,9 @@ def install_icon(name, root, fields, convert=None):
         if not _is_svg(data):
             return None
         data = svg_to_png(data, convert)
-    if len(data) > MAX_PNG_BYTES or (size := png_size(data)) is None:
+    if len(data) > MAX_PNG_BYTES or (cleaned := pngclean.sanitize(data, *ICON_SIZE_RANGE)) is None:
         return None
+    data, size = cleaned  # a new, canonical file: the desktop's image loaders never see the app's bytes
     remove_icons(name)
     target = data_home() / f"icons/hicolor/{size[0]}x{size[1]}/apps/appjail-{name}.png"
     target.parent.mkdir(parents=True, exist_ok=True)

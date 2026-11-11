@@ -123,6 +123,12 @@ An unprivileged kernel filesystem and network filter. appjail uses exactly one p
 - **How:** a manifest permission, not a `run` option, so that menu entries and `open` (which run `appjail run NAME`) can work for an app the user decided about. The check comes first in `runner.launch`, after the restricted socket exists and before the audio graph, the filtered bus or the portal instance are started; a refusal through `open` is also a desktop notification. Existing manifests do not have the key. A restricted socket that refuses connections is retried for a few seconds (`wayland.CONNECT_ATTEMPTS`).
 - **Tests:** the registries measured on real compositors are replayed against the rule (`tests/test_wayland.py`, from the saved results); the stand-ins of the other tests are `NO_RESTRICTION` and `RESTRICTED` for the socket and `NO_PRIVILEGED` for its registry. The opt-in end-to-end suite under headless weston (which lists privileged interfaces) adds `--allow full_wayland` at `add`.
 
+### Icons: a canonical PNG, written by appjail, no jail
+
+- **Decided:** the app's PNG icon (and the PNG rsvg-convert makes from an SVG) is rewritten by `pngclean.sanitize` before it is installed: chunks and CRCs checked, data inflated to the exact size the header promises, only IHDR, PLTE, tRNS, IDAT and IEND written. The audit had suggested re-encoding in a jail.
+- **Why not a jail:** a jail needs an image tool (ImageMagick or similar) that is not a dependency, and that tool would itself decode the untrusted file. The sanitiser is stdlib code that never interprets a pixel; what it removes is the malformed structure, ancillary chunks (text, profiles, EXIF), trailing bytes and oversize data that crafted icons use against the loaders in the shell and the file manager.
+- **Limit:** a bug in a loader that is triggered by pixel values of a well-formed image is not removed. **Revisit when:** a tool that decodes and re-encodes safely is already a dependency.
+
 ### Camera: the V4L2 capture nodes, nothing else
 
 - **Decided:** `camera` binds the `/dev/video*` nodes whose driver reports video capture and, for each, its own sysfs directory (read-only, with the `/sys/dev/char` symlink recreated). Off by default, a risky grant (`add` and `perms` warn).
