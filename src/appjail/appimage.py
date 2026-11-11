@@ -105,7 +105,8 @@ def check_tree(root):
     """Validate an extracted tree and make it safe to handle. Never follows symlinks.
 
     Only regular files, directories and symlinks are allowed. Set-id and sticky bits are
-    cleared and directories are made owner-accessible so the tree can always be removed.
+    cleared, files are made readable by their owner (the tree is hashed and mounted) and directories owner-accessible so the
+    tree can always be removed.
     Sizes are apparent sizes, so sparse files cannot hide a huge tree. The root itself must be a real directory: the
     image's own runtime can name the output, and a symlink there would send every chmod below to its target.
     Returns (entries, bytes).
@@ -129,8 +130,8 @@ def check_tree(root):
             if not stat.S_ISREG(st.st_mode):
                 raise UnsafeTree(f"special file in image: {clean(os.path.relpath(p, root), 200)}")
             total += st.st_size
-            if st.st_mode & 0o7000:
-                os.chmod(p, st.st_mode & 0o777)
+            if st.st_mode & 0o7000 or not st.st_mode & 0o400:  # no set-id bits; always readable by the owner (hashing, the jail)
+                os.chmod(p, (st.st_mode & 0o777) | 0o400)
     if total > MAX_EXTRACTED_BYTES or count > MAX_EXTRACTED_ENTRIES:
         raise UnsafeTree("extracted tree is too large")
     return count, total

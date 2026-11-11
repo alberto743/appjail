@@ -81,8 +81,8 @@ def prepare(name, extract=appimage.extract, say=print, warn=None):
             extract(image, root, False)
         except appimage.EXTRACT_ERRORS as e:
             raise RunError(f"cannot extract {name}: {e}") from e
-        marker.write_text(digest + "\n")
-        tree_mark.write_text(appimage.tree_digest(root) + "\n")
+        store.atomic_write(marker, digest + "\n")
+        store.atomic_write(tree_mark, appimage.tree_digest(root) + "\n")
     home, etc = store.home_path(name), store.etc_path(name)
     for d in (home, etc):
         store.make_private(d)

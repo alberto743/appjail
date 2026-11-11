@@ -120,6 +120,19 @@ def test_check_tree_clears_setid_fixes_dirs_and_counts(tree):
     assert size >= 15
 
 
+def test_check_tree_makes_files_readable_by_their_owner_and_keeps_the_rest(tree):
+    hidden = tree / "hidden"
+    hidden.write_text("secret")
+    hidden.chmod(0o000)  # the tree is hashed and mounted, so a file the owner cannot read would break both
+    script = tree / "script"
+    script.write_text("#!/bin/sh\n")
+    script.chmod(0o751)
+    appimage.check_tree(tree)
+    assert hidden.stat().st_mode & 0o777 == 0o400
+    assert script.stat().st_mode & 0o777 == 0o751
+    assert appimage.tree_digest(tree)  # no PermissionError
+
+
 def test_check_tree_rejects_special_files(tree):
     os.mkfifo(tree / "pipe")
     with pytest.raises(UnsafeTree, match="special file"):
