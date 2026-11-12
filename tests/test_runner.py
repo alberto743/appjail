@@ -775,6 +775,16 @@ def test_a_restricted_socket_that_still_lists_the_clipboard_is_refused_and_says_
     assert any("restricted Wayland socket" in s and "ext_data_control_manager_v1" in s and "clipboard" in s for s in says)
 
 
+def test_a_socket_listing_a_global_appjail_does_not_know_is_refused_and_names_it(sandbox, runtime):
+    code, ran, says = launch_windowed(sandbox, runtime, RESTRICTED, QUIET | {"zniri_future_manager_v1"})
+    assert code is None and ran == []
+    assert any("zniri_future_manager_v1" in s and "not known to it" in s and "appjail perms app --allow full_wayland" in s
+               for s in says)
+    code, ran, says = launch_windowed(sandbox, runtime, RESTRICTED, QUIET | {"zniri_future_manager_v1"}, full_wayland=True)
+    assert code == 0 and len(ran) == 1 and any("zniri_future_manager_v1" in s and "full_wayland is granted" in s
+                                               for s in says)
+
+
 def test_full_wayland_lets_the_app_run_with_a_warning_naming_what_is_listed(sandbox, runtime):
     code, ran, says = launch_windowed(sandbox, runtime, NO_RESTRICTION, CAPTURE, full_wayland=True)
     assert code == 0 and len(ran) == 1

@@ -186,7 +186,7 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
-| `full_wayland` | Let the app run although its Wayland socket lists privileged interfaces (`--allow full_wayland`). `run` reads the registry of the socket the app would get (the restricted one where the compositor makes it, else the compositor's own) and refuses a windowed app when it lists screen capture, input injection, data-control (reading the clipboard without focus) or control of other windows, naming them; see [Wayland compositors](#wayland-compositors). With the permission the app runs and `run` warns. A socket that lists none (GNOME's, sway's restricted one) never needs it. Off by default; an app with `display = none` never needs it. |
+| `full_wayland` | Let the app run although its Wayland socket lists privileged or unknown interfaces (`--allow full_wayland`). `run` reads the registry of the socket the app would get (the restricted one where the compositor makes it, else the compositor's own) and refuses a windowed app when it lists screen capture, input injection, data-control (reading the clipboard without focus), control of other windows or of the desktop, or an interface appjail does not know, naming them; see [Wayland compositors](#wayland-compositors). With the permission the app runs and `run` warns. A socket that lists none (GNOME's, sway's restricted one) never needs it. Off by default; an app with `display = none` never needs it. |
 | `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials and the directories that contain them, key and password-database files, browser profiles, the whole home, the broad `~/.config`, `~/.local` and `~/.cache`, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access to shell startup files and wherever else code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
 | `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Names that control the desktop (the shell, the session, settings, screen capture, the bus itself) cannot be talked to, and no name in a desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, ...) can be owned. |
 | `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window), or `none`: no Wayland socket and no display variables, for command-line apps (no menu entry either). |
@@ -350,7 +350,8 @@ owner change.
 | bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
 | An app exits after a few seconds with code 0 and no window | Its launcher starts the real app detached and exits, and the jail ends with it (VSCodium does this). `appjail perms APP --allow linger` keeps the jail until every process in it has exited; or pass the app's own wait option, e.g. `appjail run vscodium -- --wait`. |
 | `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Command-line apps need no window: `perms APP --display none` runs them without a Wayland session at all. Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`), or `xwayland-rootful` (needs `xwayland` and `openbox`) when no window appears, as on GNOME. |
-| `run` refuses an app, saying its Wayland socket lists privileged interfaces | The socket the app would get lets a client capture the screen, inject input, read the clipboard without focus or control other windows (the message names which). Run it on a compositor whose socket lists none (GNOME, sway, labwc, Hyprland 0.55), or accept that with `appjail perms APP --allow full_wayland`. Copy and paste in the app's own window is not affected. |
+| `run` refuses an app, saying its Wayland socket lists privileged interfaces | The socket the app would get lets a client capture the screen, inject input, read the clipboard without focus or control other windows or the desktop (the message names which). Run it on a compositor whose socket lists none (GNOME, sway, labwc, Hyprland 0.55), or accept that with `appjail perms APP --allow full_wayland`. Copy and paste in the app's own window is not affected. |
+| `run` refuses an app, saying its socket lists interfaces "not known to it" | The compositor offers an interface appjail has not classified (a compositor that was not measured, or a new version of one that was), so appjail cannot say what it allows. Accept it with `appjail perms APP --allow full_wayland`, and please report the interface name and the compositor version so it can be classified. |
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |
@@ -364,7 +365,8 @@ owner change.
 What an app can reach through the Wayland socket depends on the compositor, so `run` does not go by the compositor's name or by
 `wp_security_context_v1` alone: it reads the registry of the socket the app would get (the restricted socket where the
 compositor makes one, else the compositor's own) and refuses a windowed app when that socket lists privileged interfaces
-(screen capture, virtual input, data-control, control of other windows), unless the app has `full_wayland`. The table is what
+(screen capture, virtual input, data-control, control of other windows or of the desktop) or interfaces appjail does not
+know, unless the app has `full_wayland`. The table is what
 that gave on each compositor, started headless in a virtual machine (Debian 13 and Ubuntu 26.04, the same probes in both),
 with real clients: capture (`grim`), another client's clipboard (`wl-paste`), typing (`wtype`), a window, and copy and paste
 between windows with keyboard focus (GTK 4). The method, the raw results and the caveats are in
@@ -377,7 +379,7 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 | labwc 0.8.3, 0.9.3 | restricted | none | runs | works |
 | Hyprland 0.55.2 | restricted | none | runs | works |
 | Hyprland 0.53.3 | restricted | virtual pointer, virtual keyboard, input method (a client can type) | refused | works (intermittent focus problem in the test) |
-| KDE: KWin 6.3.6, 6.6.6 | restricted | clipboard (data-control), layer shell, plasma shell, output management | refused | works |
+| KDE: KWin 6.3.6, 6.6.6 | restricted | clipboard (data-control), layer shell, plasma shell, output management, desktop controls (screen power, brightness, virtual desktops, screen edges) | refused | works |
 | Wayfire 0.9.0, 0.10.0 | the compositor's own | capture, clipboard, input, windows | refused | works |
 | Cage 0.2.0, 0.2.1 | the compositor's own | capture, input, gamma and output | refused | works |
 | Weston 14.0.2 | the compositor's own | weston capture, input panel, desktop shell | refused | works |
@@ -385,8 +387,24 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 On KWin the restricted socket hides only the protocol manager, so another app's clipboard can be read without focus; that
 is why KWin is refused, not copy and paste, which uses the core clipboard and needs focus. Plasma users therefore need
 `full_wayland` for each app until KWin hides data-control on restricted sockets. Compositors not measured (Cinnamon's Muffin,
-niri, river, COSMIC, Mir, Louvre, GameScope) are decided by their registry when the app starts. The list of privileged
-interfaces is a list of names, so an interface it does not know about is not caught.
+niri, river, COSMIC, Mir, Louvre, GameScope) are decided by their registry when the app starts.
+
+appjail keeps two lists of interface names (`src/appjail/wayland.py`): the privileged ones, and the ones checked to act only
+on the app's own windows, on input while it has the focus, or on its own buffers. An interface in neither list is
+unknown and refused like a privileged one, since what it allows has not been checked. So a compositor that was not measured,
+or an update that adds an interface, can refuse apps that ran before, until the interface is classified;
+`full_wayland` is the way around that meanwhile. Some interfaces are allowed after a decision, because they reveal or
+take a little but do not let the app act on other apps, and refusing them would refuse compositors that are otherwise fine:
+
+| Interface | Listed by | What it gives the app | Why it is allowed |
+|---|---|---|---|
+| `ext_idle_notifier_v1`, `org_kde_kwin_idle` | sway, Hyprland 0.55 (and KWin, Wayfire, Cage) | whether the user is idle or active, at any time | a privacy signal, not control; refusing it would refuse sway and Hyprland |
+| `wp_drm_lease_device_v1` | GNOME | the lease of a display the desktop does not use (a VR headset) | the desktop's own screens are not leased; refusing it would refuse GNOME |
+| `zwp_pointer_constraints_v1`, `zwp_keyboard_shortcuts_inhibit_manager_v1` | most | locking the pointer, and receiving the desktop's shortcuts | only while the app has the focus (games, remote desktops); the user can switch away |
+| `ext_output_image_capture_source_manager_v1`, `ext_foreign_toplevel_image_capture_source_manager_v1` | sway | naming a screen or window as a capture source | capturing needs the copy manager, which is privileged |
+
+KWin's own controls (screen power, brightness, virtual desktops, screen edges, the lock keys) count as privileged, under
+"desktop"; KWin is refused for data-control anyway.
 
 GNOME and KDE keep their privileged operations on D-Bus (Mutter's ScreenCast, RemoteDesktop and InputCapture, KWin's scripting
 and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant
@@ -400,8 +418,9 @@ and `org.kde.keyboard`.
 - **The Wayland socket is only as restricted as the compositor makes it.** Compositors with `wp_security_context_v1` (sway,
   labwc, Hyprland 0.55) hide their privileged interfaces from the app's socket; KWin and Hyprland 0.53 do not hide all of them;
   GNOME has none on its own socket and keeps them on D-Bus. `run` reads the app's socket and refuses a windowed app that would
-  get privileged interfaces unless it has `full_wayland` (see [Wayland compositors](#wayland-compositors)). Measured on headless
-  compositors, not on real desktop sessions.
+  get privileged interfaces, or interfaces appjail does not know, unless it has `full_wayland` (see
+  [Wayland compositors](#wayland-compositors)). An app can still learn when the user is idle where the compositor offers
+  that. Measured on headless compositors, not on real desktop sessions.
 - Releases are resolved on GitHub only. Apps hosted elsewhere appear in `search` and can be added with `--url` or `--file`,
   but then nothing identifies the publisher (tier 5, or tier 4 with a matching `--sha256`). The cheap `update` check for
   URL apps detects a new version; a change confined to bytes it does not sample, with the same size and validators, is

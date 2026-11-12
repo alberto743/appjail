@@ -255,8 +255,9 @@ def _private_audio(stack, name, perms, env, warn):
 
 
 def _check_wayland_socket(name, perms, restricted_socket, offered, warn):
-    """Refuse the app (or warn, with `full_wayland`) when the socket it will get lists privileged globals: the restricted
-    socket when the compositor made one, else the compositor's own. What matters is what that socket lets a client do."""
+    """Refuse the app (or warn, with `full_wayland`) when the socket it will get lists privileged globals or globals
+    appjail does not know (`wayland.privileged`): the restricted socket when the compositor made one, else the
+    compositor's own. What matters is what that socket lets a client do."""
     found = wayland.privileged(offered)
     if not found:
         return

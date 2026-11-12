@@ -32,27 +32,68 @@ MANAGER = "wp_security_context_manager_v1"
 SANDBOX_ENGINE = "appjail"
 TIMEOUT = 5.0
 
-# Globals that let a client act on more than its own windows, by what they allow. Measured on nine compositors; the
-# listed ones are the ones those compositors offer, so a compositor with others is not covered by name. Left out on
-# purpose: zwp_keyboard_shortcuts_inhibit_manager_v1 (an app asks for its shortcuts while it has focus; the only extra
-# global GNOME shows) and the capture-*source* managers (they name a target; the copy manager is what captures).
+# What an app's Wayland socket may list. Every global is in one of two lists, or it is unknown:
+#
+# PRIVILEGED: globals that let a client act on more than its own windows, by what they allow. An app whose socket lists
+#   one is refused unless it has full_wayland.
+# ALLOWED: globals checked to act only on the client's own surfaces, input while it has the focus, or its own buffers.
+#   Every non-privileged global the measured compositors (docs/compositor-assessment) list is here.
+# Anything else is unknown (a compositor that was not measured, or a new protocol in one that was) and is refused like a
+#   privileged global: appjail cannot say what it allows. tests/test_wayland.py checks that every measured name is in one
+#   of the lists, so new measurements have to be classified.
+#
+# Allowed after a decision (README.md, "Wayland compositors"): ext_idle_notifier_v1 and org_kde_kwin_idle (they tell an app
+# whether the user is idle, a privacy signal, not control; sway and Hyprland list the first), wp_drm_lease_device_v1
+# (leases an output the desktop does not use, such as a VR headset; GNOME lists it),
+# zwp_keyboard_shortcuts_inhibit_manager_v1 and zwp_pointer_constraints_v1 (they act while the app has the focus), the
+# capture-*source* managers (they name a target; the copy manager, privileged, is what captures).
 PRIVILEGED = {
     "capture": ("zwlr_screencopy_manager_v1", "ext_image_copy_capture_manager_v1", "zwlr_export_dmabuf_manager_v1",
                 "hyprland_toplevel_export_manager_v1", "zkde_screencast_unstable_v1", "weston_capture_v1"),
     "input": ("zwlr_virtual_pointer_manager_v1", "zwp_virtual_keyboard_manager_v1", "zwp_input_method_manager_v2",
               "zwp_input_method_v1", "zwp_input_panel_v1", "org_kde_kwin_fake_input", "zwlr_input_inhibit_manager_v1",
-              "hyprland_global_shortcuts_manager_v1", "zwf_shell_manager_v2"),
+              "hyprland_global_shortcuts_manager_v1", "zwf_shell_manager_v2", "ext_transient_seat_manager_v1",
+              "hyprland_focus_grab_manager_v1"),
     "clipboard": ("zwlr_data_control_manager_v1", "ext_data_control_manager_v1"),
     "windows": ("zwlr_foreign_toplevel_manager_v1", "ext_foreign_toplevel_list_v1", "org_kde_plasma_window_management",
                 "zwlr_layer_shell_v1", "org_kde_plasma_shell", "weston_desktop_shell", "zwlr_output_manager_v1",
                 "zwlr_output_power_manager_v1", "zwlr_gamma_control_manager_v1", "kde_output_management_v2",
-                "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1"),
+                "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1",
+                "zcosmic_workspace_manager_v1", "hyprland_toplevel_mapping_manager_v1", "hyprland_ctm_control_manager_v1",
+                "hyprland_lock_notifier_v1"),
+    "desktop": ("org_kde_kwin_dpms_manager", "kde_external_brightness_v1", "org_kde_plasma_virtual_desktop_management",
+                "kde_screen_edge_manager_v1", "org_kde_kwin_keystate"),
 }
+ALLOWED = frozenset({
+    # core, xdg and stable or staging client protocols
+    "wl_compositor", "wl_subcompositor", "wl_shm", "wl_seat", "wl_output", "wl_data_device_manager", "wl_drm", "wl_fixes",
+    "xdg_wm_base", "xdg_wm_dialog_v1", "xdg_activation_v1", "xdg_system_bell_v1", "xdg_toplevel_drag_manager_v1",
+    "xdg_toplevel_icon_manager_v1", "xdg_toplevel_tag_manager_v1", "zxdg_decoration_manager_v1", "zxdg_output_manager_v1",
+    "zxdg_exporter_v1", "zxdg_exporter_v2", "zxdg_importer_v1", "zxdg_importer_v2", "xwayland_shell_v1",
+    "wp_viewporter", "wp_presentation", "wp_single_pixel_buffer_manager_v1", "wp_fractional_scale_manager_v1",
+    "wp_cursor_shape_manager_v1", "wp_tearing_control_manager_v1", "wp_content_type_manager_v1", "wp_alpha_modifier_v1",
+    "wp_fifo_manager_v1", "wp_commit_timing_manager_v1", "wp_color_manager_v1", "wp_color_representation_manager_v1",
+    "wp_linux_drm_syncobj_manager_v1", "wp_pointer_warp_v1", "wp_drm_lease_device_v1", "wp_security_context_manager_v1",
+    "zwp_linux_dmabuf_v1", "zwp_linux_explicit_synchronization_v1", "zwp_primary_selection_device_manager_v1",
+    "zwp_relative_pointer_manager_v1", "zwp_pointer_constraints_v1", "zwp_pointer_gestures_v1", "zwp_tablet_manager_v2",
+    "zwp_idle_inhibit_manager_v1", "zwp_input_timestamps_manager_v1", "zwp_keyboard_shortcuts_inhibit_manager_v1",
+    "zwp_text_input_manager_v1", "zwp_text_input_manager_v2", "zwp_text_input_manager_v3",
+    "ext_idle_notifier_v1", "ext_output_image_capture_source_manager_v1",
+    "ext_foreign_toplevel_image_capture_source_manager_v1",
+    # compositor extras that act on the client's own surfaces or only describe the outputs
+    "gtk_shell1", "hyprland_surface_manager_v1", "frog_color_management_factory_v1", "org_kde_kwin_idle",
+    "org_kde_kwin_server_decoration_manager", "org_kde_kwin_server_decoration_palette_manager",
+    "org_kde_kwin_shadow_manager", "org_kde_kwin_appmenu_manager", "kde_output_device_v2", "kde_output_order_v1",
+})
+UNKNOWN = "unknown"
 CAPABILITY = {
     "capture": "capture the screen",
     "input": "type or click for other apps, or take over the keyboard",
     "clipboard": "read and replace the clipboard without having the focus",
     "windows": "see or control other apps' windows, the screen layout or the lock screen",
+    "desktop": "switch the screens off, change their brightness, the virtual desktops or the screen edges, or read the "
+               "lock keys",
+    UNKNOWN: "do something appjail has not checked: these interfaces are not known to it",
 }
 PRIVILEGED_BY_NAME = {name: kind for kind, names in PRIVILEGED.items() for name in names}
 CONNECT_ATTEMPTS = 6  # a compositor may start serving a socket it was just given a moment after it accepted it
@@ -188,17 +229,21 @@ def interfaces(host_env, path=None):
 
 
 def privileged(names):
-    """{kind: [interface, ...]} of the privileged globals among these names (see PRIVILEGED)."""
+    """{kind: [interface, ...]} of the globals among these names that an app may not have without full_wayland: the
+    privileged ones by what they allow (see PRIVILEGED), and under UNKNOWN those in neither list (see ALLOWED)."""
     found = {}
     for name in sorted(names):
         if name in PRIVILEGED_BY_NAME:
             found.setdefault(PRIVILEGED_BY_NAME[name], []).append(name)
+        elif name not in ALLOWED:
+            found.setdefault(UNKNOWN, []).append(name)
     return found
 
 
 def describe(found):
     """What the privileged globals of `privileged()` would let an app do, as one sentence fragment."""
-    return "; ".join(f"{', '.join(names)} (could {CAPABILITY[kind]})" for kind, names in found.items())
+    return "; ".join(f"{', '.join(names)} (could {CAPABILITY[kind]})"
+                     for kind, names in sorted(found.items(), key=lambda item: item[0] == UNKNOWN))
 
 
 class RestrictedSocket:

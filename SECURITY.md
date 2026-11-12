@@ -30,7 +30,9 @@ they prefer not to be.
 ## Out of scope
 
 - What the README documents as limits: for example an app granted `full_wayland` running although its Wayland socket
-  lists privileged interfaces, a privileged interface the list does not know, or reaching the LAN with `network`.
+  lists privileged or unknown interfaces, the Wayland interfaces the README allows after a decision (such as idle
+  notification), or reaching the LAN with `network`. An interface in appjail's allowed list that lets an app act on other
+  apps is in scope.
 - What a granted permission allows, and what a tier means: tiers 3 to 5 prove "unchanged", not "safe".
 - Flaws in the installed apps, or in bubblewrap, the kernel, pasta, `gh` or DwarFS themselves. Report those upstream; if
   appjail's use of them makes the flaw reachable, report that here.

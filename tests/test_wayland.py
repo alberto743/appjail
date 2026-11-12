@@ -185,6 +185,26 @@ def test_the_privileged_set_groups_by_capability_and_ignores_harmless_globals():
     assert "capture the screen" in wayland.describe({"capture": ["zwlr_screencopy_manager_v1"]})
 
 
+def test_a_global_in_neither_list_is_unknown_and_named_last():
+    found = wayland.privileged({"wl_compositor", "zcosmic_future_manager_v1", "zwlr_screencopy_manager_v1"})
+    assert found == {"capture": ["zwlr_screencopy_manager_v1"], wayland.UNKNOWN: ["zcosmic_future_manager_v1"]}
+    text = wayland.describe(found)
+    assert text.index("zwlr_screencopy_manager_v1") < text.index("zcosmic_future_manager_v1")
+    assert "not known to it" in text
+
+
+def test_the_lists_do_not_overlap_and_every_kind_says_what_it_allows():
+    assert not wayland.ALLOWED & set(wayland.PRIVILEGED_BY_NAME)
+    assert set(wayland.CAPABILITY) == set(wayland.PRIVILEGED) | {wayland.UNKNOWN}
+
+
+@pytest.mark.parametrize("name", ["ext_idle_notifier_v1", "wp_drm_lease_device_v1", "zwp_pointer_constraints_v1",
+                                  "zwp_keyboard_shortcuts_inhibit_manager_v1", "ext_output_image_capture_source_manager_v1"])
+def test_the_globals_allowed_after_a_decision_stay_allowed(name):
+    """README.md, "Wayland compositors", names these; moving one means changing the docs and refusing compositors."""
+    assert name in wayland.ALLOWED
+
+
 def test_the_survey_tool_counts_what_the_rule_counts_and_names_what_it_adds():
     """tests/compositors/probe.py takes its list from wayland.PRIVILEGED; it adds only EXTRA, which the rule leaves out."""
     spec = importlib.util.spec_from_file_location("probe", Path(__file__).parent / "compositors" / "probe.py")
@@ -225,6 +245,19 @@ def test_the_rule_matches_the_registries_measured_on_real_compositors(label, nam
     """The registries are those of real compositors on Debian 13 and Ubuntu 26.04; `decided` is what option A decided when it
     was run live against them: GNOME, sway, labwc and Hyprland 0.55 run; KWin, Wayfire, Cage and Weston are refused."""
     assert bool(wayland.privileged(names)) == (decided == "refuse")
+
+
+@pytest.mark.skipif(not ASSESSMENT.is_dir(), reason="the measurements are not in this tree")
+def test_every_global_a_measured_compositor_lists_is_classified():
+    """New measurements fail here until each new name is put in wayland.ALLOWED or wayland.PRIVILEGED; the full socket
+    of every compositor is read too, not only the socket an app gets."""
+    names = set()
+    for results in ASSESSMENT.glob("results-*.json"):
+        for entry in json.loads(results.read_text())["compositors"].values():
+            w = entry.get("wayland") or {}
+            names |= set(w.get("full") or ()) | set(w.get("restricted") or ())
+    assert names, "no registry found in the saved results"
+    assert wayland.privileged(names).get(wayland.UNKNOWN) is None
 
 
 @integration

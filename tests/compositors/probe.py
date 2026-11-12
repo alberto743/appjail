@@ -18,7 +18,8 @@ compositor's own answers is read:
 * whether appjail's D-Bus name policy (`grants.check_dbus_name`) would let a user grant each privileged name.
 
 The interface names that count as privileged are those of `wayland.PRIVILEGED` (the list `appjail run` applies, taken from
-these measurements) plus EXTRA, which the survey also counts and the rule does not. The whole registry is saved too, so the
+these measurements), those in neither it nor `wayland.ALLOWED` (kind "unknown": classify them before the rule can
+decide), plus EXTRA, which the survey also counts and the rule allows. The whole registry is saved too, so the
 lists can be judged and changed afterwards without running anything again.
 """
 
