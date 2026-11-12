@@ -22,11 +22,11 @@ _SPACE = re.compile(r"[\t\n\r]+")
 def clean(text, max_len=2000):
     """Return text with escape sequences and control characters removed.
 
-    Tabs and newlines become single spaces; the result is cut to max_len.
+    Tabs and newlines become single spaces; the result is cut to max_len (None: never cut).
     """
     text = _ESC.sub("", str(text))
     text = _SPACE.sub(" ", text)
     text = _CTRL.sub("", text)
-    if len(text) > max_len:
+    if max_len is not None and len(text) > max_len:
         text = text[: max_len - 1] + "…"
     return text

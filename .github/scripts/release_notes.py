@@ -5,8 +5,8 @@
 
 Commits since the previous v* tag are grouped by the files they touch (Interface, Logic, Documentation,
 Tests; Security also by the subject's area, "Area: text"); what fits none goes under "Other". Commits that came in through a pull request
-("... (#12)") are left to GitHub's own generated notes (grouped by .github/release.yml), which are
-appended. Stdlib only; `git` and `gh` come from the runner.
+(squash-merged "... (#12)", or behind a "Merge pull request #12" merge) are left to GitHub's own generated notes (grouped by
+.github/release.yml), which are appended. Merge commits themselves are not listed. Stdlib only; `git` and `gh` come from the runner.
 """
 
 import os
@@ -24,6 +24,7 @@ HEADINGS = ["Security", "Interface", "Logic", "Documentation", "Tests", "Other"]
 PREFIX_RE = re.compile(r"([^:]{1,60}):\s")
 AREA_RE = re.compile(r"[a-z0-9_-]+")
 PR_RE = re.compile(r"\(#\d+\)$")
+MERGE_PR_RE = re.compile(r"Merge pull request #\d+ ")
 
 
 def area(subject):
@@ -76,9 +77,21 @@ def previous_tag(tag):
     return r.stdout.strip() or None
 
 
+def pull_request_commits(rng):
+    """The commits brought in by the "Merge pull request #N" merges in rng: GitHub's notes list them already."""
+    shas = set()
+    for line in git("log", "--merges", "--format=%P\t%s", rng).splitlines():
+        parents, subject = line.split("\t", 1)
+        parents = parents.split()
+        if MERGE_PR_RE.match(subject) and len(parents) == 2:
+            shas.update(git("rev-list", f"{parents[0]}..{parents[1]}").split())
+    return shas
+
+
 def commits(tag, prev):
-    """[(sha, subject, files)] of the non-merge commits in prev..tag."""
+    """[(sha, subject, files)] of the non-merge commits in prev..tag, without those merged through a pull request."""
     rng = f"{prev}..{tag}" if prev else tag
+    skip = pull_request_commits(rng)
     out = []
     for line in git("log", "--no-merges", "--format=@@%H\t%s", "--name-only", rng).splitlines():
         if line.startswith("@@"):
@@ -86,7 +99,7 @@ def commits(tag, prev):
             out.append((sha, subject, []))
         elif line:
             out[-1][2].append(line)
-    return out
+    return [c for c in out if c[0] not in skip]
 
 
 def github_notes(repo, tag, prev):

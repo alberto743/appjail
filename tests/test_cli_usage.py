@@ -68,7 +68,7 @@ def test_ctrl_c_at_a_prompt_ends_cleanly(monkeypatch):
         def __init__(self):
             self.lines = []
 
-        def out(self, line=""):
+        def out(self, line="", max_len=None):
             self.lines.append(line)
 
     monkeypatch.setitem(cli.COMMANDS, "list", lambda *a: (_ for _ in ()).throw(KeyboardInterrupt()))

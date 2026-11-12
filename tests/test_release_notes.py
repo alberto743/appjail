@@ -50,6 +50,36 @@ def test_pull_request_and_merge_commits_are_left_to_github():
                                ("Merge pull request #3 from x/y", []))) == {}
 
 
+def test_commits_merged_through_a_pull_request_are_skipped(tmp_path, monkeypatch):
+    import subprocess
+
+    def git(*args):
+        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.invalid", "GIT_COMMITTER_NAME": "t",
+               "GIT_COMMITTER_EMAIL": "t@example.invalid", "HOME": str(tmp_path), "PATH": "/usr/bin:/bin"}
+        subprocess.run(["git", *args], cwd=tmp_path, env=env, check=True, capture_output=True)
+
+    def commit(name):
+        (tmp_path / name).write_text(name)
+        git("add", name)
+        git("commit", "-q", "-m", f"change {name}")
+
+    git("init", "-q", "-b", "main")
+    commit("a")
+    git("tag", "v1.0.0")
+    git("switch", "-q", "-c", "pr")
+    commit("from-pr")
+    git("switch", "-q", "main")
+    commit("on-main")
+    git("merge", "-q", "--no-ff", "-m", "Merge pull request #2 from o/pr", "pr")
+    git("switch", "-q", "-c", "feature")
+    commit("from-branch")
+    git("switch", "-q", "main")
+    git("merge", "-q", "--no-ff", "-m", "Merge branch 'feature'", "feature")
+    git("tag", "v1.0.1")
+    monkeypatch.chdir(tmp_path)
+    assert sorted(s for _, s, _ in notes.commits("v1.0.1", "v1.0.0")) == ["change from-branch", "change on-main"]
+
+
 def test_empty_groups_are_omitted_and_render_links_the_commit():
     out = notes.render(notes.group(commits(("docs: pin", ["README.md"]))), "https://example.test/o/r")
     assert out.startswith("## Documentation\n\n- docs: pin ([`0000000`](https://example.test/o/r/commit/" + "0" * 40 + "))")

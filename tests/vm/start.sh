@@ -2,7 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Boot an appjail test guest (GUEST=debian|ubuntu, see guest.sh; KVM, user-mode networking, ssh on 127.0.0.1:2222 or :2223).
+# Boot an appjail test guest (GUEST=debian, ubuntu, debian-pulse, debian-compositors or ubuntu-compositors, see guest.sh; KVM,
+# user-mode networking, ssh on 127.0.0.1 at the port guest.sh gives).
 # Images live in ../../vm; nothing here touches the host outside this directory.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
