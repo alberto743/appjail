@@ -1,0 +1,12 @@
+# What must never appear in a commit message: session links, local paths.
+# One extended regular expression per line, matched case-insensitively;
+# lines starting with # are comments. Read by .githooks/commit-msg and
+# .github/scripts/commit_hygiene.py. E-mail addresses are checked separately:
+# only noreply addresses are allowed.
+^Claude-Session:
+claude\.ai/
+session_01[A-Za-z0-9]{8}
+/home/[A-Za-z]
+/Users/[A-Za-z]
+/tmp/claude-
+scratchpad

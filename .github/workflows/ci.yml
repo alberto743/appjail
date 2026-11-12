@@ -39,6 +39,19 @@ jobs:
           APPJAIL_INTEGRATION: "1"
         run: python3 -m pytest -q
 
+  # No commit message may carry a session link, a local path or a personal e-mail (.githooks/forbidden-patterns).
+  hygiene:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check every commit message
+        run: python3 -I .github/scripts/commit_hygiene.py HEAD
+
   # Installs appjail with pip into a fresh virtual environment and runs the `appjail` command, as a user would.
   package:
     runs-on: ubuntu-26.04
