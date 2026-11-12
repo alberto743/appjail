@@ -88,6 +88,12 @@ def test_permission_options_apply(h, image):
     assert (p.network, p.audio, p.gpu, p.display) == (True, True, False, "xwayland")
 
 
+def test_risky_grants_are_warned_about(h, image):
+    console = add_file(h, image, "--name", "x", "--allow", "camera", "--allow", "mic")
+    assert "this grants access to the camera" in console.text
+    assert "this grants access to the microphone" in console.text
+
+
 def test_not_an_appimage_is_refused(h, tmp_path):
     bad = tmp_path / "x.AppImage"
     bad.write_bytes(b"#!/bin/sh\necho hi\n")

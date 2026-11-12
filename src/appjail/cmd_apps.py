@@ -30,9 +30,7 @@ from .permargs import (
     permission_lines,
     portals_from_args,
     require_network_isolation,
-    warn_owned_dbus,
-    warn_privileged_portals,
-    warn_sensitive_dbus,
+    warn_new_grants,
 )
 
 
@@ -225,28 +223,6 @@ def bus_and_portal_changes(args, p, changes):
         changes["portal_interfaces"] = portal_names
     if portal_names and not changes.get("portals", p.portals):
         raise Abort("--add-portal needs portals to be allowed (--allow portals)")
-
-
-RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopback)"),
-                ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
-                ("mic", "access to the microphone"), ("camera", "access to the camera (the video capture devices)"),
-                ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"),
-                ("full_wayland", ("running on a compositor whose Wayland socket for the app still lists privileged interfaces "
-                                  "(the app may then capture the screen, inject input, read the clipboard without focus or control "
-                                  "other windows, depending on the compositor); a socket that lists none is unaffected")))
-
-
-def warn_new_grants(console, old, new):
-    for risky, text in RISKY_GRANTS:
-        if getattr(new, risky) and not getattr(old, risky):
-            console.warn(f"this grants {text}")
-    if new.audio and new.audio_mode == "pulse" and not new.mic and not (old.audio and old.audio_mode == "pulse"):
-        console.warn("audio in pulse mode uses the host's Pulse socket, which also lets the app record from the microphone; "
-                     "that cannot be denied in this mode, and the server can be told to create files and listeners in your name "
-                     "and, if it is PulseAudio itself, to load the app's own code (appjail refuses the socket then)")
-    warn_sensitive_dbus(console, set(new.dbus_filter) - set(old.dbus_filter))
-    warn_owned_dbus(console, set(new.dbus_own) - set(old.dbus_own))
-    warn_privileged_portals(console, set(new.portal_interfaces) - set(old.portal_interfaces))
 
 
 def cmd_perms(args, console):

@@ -56,6 +56,17 @@ def test_permission_flags(h):
     assert (p.network, p.audio, p.gpu, p.display) == (True, False, True, "xwayland")
 
 
+def test_risky_grants_are_warned_about_at_add_as_at_perms(h):
+    console = h.add(extra=["--allow", "camera", "--allow", "userns", "--allow", "audio", "--audio-mode", "pulse"])
+    for text in ("this grants access to the camera", "this grants nested user namespaces",
+                 "audio in pulse mode uses the host's Pulse socket"):
+        assert text in console.text
+
+
+def test_a_plain_add_has_no_grant_warnings(h):
+    assert "this grants" not in h.add().text
+
+
 def test_rootful_display_and_its_size(h):
     h.add(extra=["--display", "xwayland-rootful", "--display-size", "1024x768"])
     p = manifest.load(store.manifest_path("app")).permissions

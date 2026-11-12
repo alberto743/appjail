@@ -16,9 +16,7 @@ PERMISSION_FLAGS = manifest.BOOL_PERMS
 def show_permissions(console, perms):
     """The permission summary of an install, with the warnings for grants that deserve one."""
     console.kv("Permissions", granted_summary(perms))
-    warn_sensitive_dbus(console, perms.dbus_filter)
-    warn_owned_dbus(console, perms.dbus_own)
-    warn_privileged_portals(console, perms.portal_interfaces)
+    warn_new_grants(console, manifest.Permissions(), perms)
 
 
 def dirs_from_args(specs, home=None, cwd=None):
@@ -84,6 +82,29 @@ def warn_sensitive_dbus(console, names):
 def warn_owned_dbus(console, names):
     for n in names:
         console.warn(f"{n}: the app may own this session-bus name (be the service behind it) and talk to it")
+
+
+RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopback)"),
+                ("network_host", "the host's own network, including services bound to localhost"), ("portals", "portals"),
+                ("mic", "access to the microphone"), ("camera", "access to the camera (the video capture devices)"),
+                ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"),
+                ("full_wayland", ("running on a compositor whose Wayland socket for the app still lists privileged interfaces "
+                                  "(the app may then capture the screen, inject input, read the clipboard without focus or control "
+                                  "other windows, depending on the compositor); a socket that lists none is unaffected")))
+
+
+def warn_new_grants(console, old, new):
+    """A warning for each risky grant in new that old did not have (old is all-denied for an install)."""
+    for risky, text in RISKY_GRANTS:
+        if getattr(new, risky) and not getattr(old, risky):
+            console.warn(f"this grants {text}")
+    if new.audio and new.audio_mode == "pulse" and not new.mic and not (old.audio and old.audio_mode == "pulse"):
+        console.warn("audio in pulse mode uses the host's Pulse socket, which also lets the app record from the microphone; "
+                     "that cannot be denied in this mode, and the server can be told to create files and listeners in your name "
+                     "and, if it is PulseAudio itself, to load the app's own code (appjail refuses the socket then)")
+    warn_sensitive_dbus(console, [n for n in new.dbus_filter if n not in old.dbus_filter])
+    warn_owned_dbus(console, [n for n in new.dbus_own if n not in old.dbus_own])
+    warn_privileged_portals(console, [n for n in new.portal_interfaces if n not in old.portal_interfaces])
 
 
 def require_network_isolation(perms):
