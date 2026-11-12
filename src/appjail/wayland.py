@@ -80,6 +80,9 @@ ALLOWED = frozenset({
     "zwp_text_input_manager_v1", "zwp_text_input_manager_v2", "zwp_text_input_manager_v3",
     "ext_idle_notifier_v1", "ext_output_image_capture_source_manager_v1",
     "ext_foreign_toplevel_image_capture_source_manager_v1",
+    # older versions of the above, which Muffin lists: the deprecated core shell and the unstable xdg shell (own windows),
+    # and GTK's own primary selection and text input (the focused client's selection and input method, as the zwp_ ones)
+    "wl_shell", "zxdg_shell_v6", "gtk_primary_selection_device_manager", "gtk_text_input_manager",
     # compositor extras that act on the client's own surfaces or only describe the outputs
     "gtk_shell1", "hyprland_surface_manager_v1", "frog_color_management_factory_v1", "org_kde_kwin_idle",
     "org_kde_kwin_server_decoration_manager", "org_kde_kwin_server_decoration_palette_manager",

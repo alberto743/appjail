@@ -375,6 +375,7 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 | Compositor (tested versions) | The app's socket | Privileged interfaces left on it | Without `full_wayland` | Copy and paste with the app |
 |---|---|---|---|---|
 | GNOME: Mutter and GNOME Shell 48.7, 50.1 | the compositor's own (no `wp_security_context_v1`) | none | runs | works |
+| Cinnamon's Muffin 6.4.1 (standalone, not a full Cinnamon session) | the compositor's own (no `wp_security_context_v1`) | none | runs | works |
 | sway 1.10.1, 1.11 | restricted | none | runs | works |
 | labwc 0.8.3, 0.9.3 | restricted | none | runs | works |
 | Hyprland 0.55.2 | restricted | none | runs | works |
@@ -386,8 +387,9 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 
 On KWin the restricted socket hides only the protocol manager, so another app's clipboard can be read without focus; that
 is why KWin is refused, not copy and paste, which uses the core clipboard and needs focus. Plasma users therefore need
-`full_wayland` for each app until KWin hides data-control on restricted sockets. Compositors not measured (Cinnamon's Muffin,
-niri, river, COSMIC, Mir, Louvre, GameScope) are decided by their registry when the app starts.
+`full_wayland` for each app until KWin hides data-control on restricted sockets. Muffin crashes when some ordinary clients
+connect (`wl-copy`, `wl-paste`), so on Cinnamon any app given a window can end the session; appjail cannot prevent that.
+Compositors not measured (niri, river, COSMIC, Mir, Louvre, GameScope) are decided by their registry when the app starts.
 
 appjail keeps two lists of interface names (`src/appjail/wayland.py`): the privileged ones, and the ones checked to act only
 on the app's own windows, on input while it has the focus, or on its own buffers. An interface in neither list is
@@ -408,7 +410,7 @@ KWin's own controls (screen power, brightness, virtual desktops, screen edges, t
 
 GNOME and KDE keep their privileged operations on D-Bus (Mutter's ScreenCast, RemoteDesktop and InputCapture, KWin's scripting
 and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant
-the names `org.gnome.Mutter*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
+the names `org.gnome.Mutter*`, `org.cinnamon.Muffin*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
 and `org.kde.keyboard`.
 
 ## Limits

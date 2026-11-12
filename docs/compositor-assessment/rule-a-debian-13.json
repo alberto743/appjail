@@ -67,6 +67,12 @@
     "clipboard": [
      "zwlr_data_control_manager_v1"
     ],
+    "desktop": [
+     "kde_external_brightness_v1",
+     "kde_screen_edge_manager_v1",
+     "org_kde_kwin_dpms_manager",
+     "org_kde_plasma_virtual_desktop_management"
+    ],
     "windows": [
      "kde_output_management_v2",
      "org_kde_plasma_shell",
@@ -96,6 +102,19 @@
    "status": "ok",
    "verdict": "run",
    "version": "labwc 0.8.3-1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "muffin": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "muffin 6.4.1-1",
    "window": {
     "client": "weston-simple-shm",
     "detail": "",
