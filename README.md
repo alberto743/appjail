@@ -43,7 +43,9 @@ is built around the opposite assumptions:
   not supported.
 - Python 3.12 or newer (tested with 3.13 on Debian 13 and 3.14 on Ubuntu 26.04; 3.12 is the declared minimum and is
   not run by the tests). appjail uses only the standard library.
-- Required: `bubblewrap` (0.10 or later) and `squashfs-tools` (`unsquashfs`).
+- Required: `bubblewrap` (0.10 or later) and `squashfs-tools` (`unsquashfs`). The downloads run the system's
+  `/usr/bin/python3` inside their jail (whatever Python appjail itself was installed with), with the CA certificates of
+  `/etc/ssl` (`ca-certificates`).
 - Needed for specific features:
   - `passt` (the `pasta` command): apps with the `network` permission, which are refused without it. Also gives
     the download jails a private network namespace; without it they use the host network and print a warning.
@@ -109,7 +111,8 @@ appjail update                   # check every app for a newer release
 appjail remove lagrange          # delete the app and its private home
 ```
 
-Commands that change or delete something ask first; `remove`, `perms`, `portals` and `desktop` accept `--yes`.
+Commands that change or delete something ask first (except `desktop --remove`/`--prune`, which only delete appjail's own
+menu entries, and `index rollback`, which can be rolled back again); `remove`, `perms`, `portals` and `desktop` accept `--yes`.
 `appjail COMMAND --help` lists every option.
 `GITHUB_TOKEN`, if set, raises the GitHub API rate limit; it is only ever sent to `api.github.com`.
 
@@ -118,7 +121,7 @@ Commands that change or delete something ask first; `remove`, `perms`, `portals`
 `appjail-gui` opens a window with the same commands and options: the installed apps (run, run with extra access
 for one run, open a file, update, permissions, portals, history, menu entry, remove), adding an app, searching the
 catalogs and the helper tools. It runs the CLI underneath, so it shows the same reviews and asks the same questions
-(the default answer is always No) in dialogs. It needs the system package `python3-tk` (`sudo apt install python3-tk`)
+in dialogs, with the same default answer: No, except when writing a menu entry you asked for. It needs the system package `python3-tk` (`sudo apt install python3-tk`)
 and a display.
 
 `appjail-gui --desktop` adds appjail to your application menu, with its icon; `appjail-gui --remove-desktop` takes it
@@ -136,8 +139,8 @@ for an app that needs no window.
 | `--tag TAG` | A specific release instead of the latest; the app is then *pinned* and `update` leaves it alone. |
 | `--prerelease` | Follow pre-releases. |
 | `--name NAME` | The app's name (default: from the project). |
-| `--allow`, `--dir`, `--dbus`, `--dbus-own`, `--portal`, `--display` | Permissions at install time (see [Permissions](#permissions)). |
-| `--desktop [--mime TYPE] [--rw]` | Also create a menu entry (see [Menu entry](#menu-entry-and-opening-files)). |
+| `--allow`, `--dir`, `--dbus`, `--dbus-own`, `--portal`, `--display`, `--display-size`, `--audio-mode` | Permissions at install time (see [Permissions](#permissions)); the review warns about each risky one. |
+| `--desktop [--mime TYPE] [--mime-all] [--rw]` | Also create a menu entry (see [Menu entry](#menu-entry-and-opening-files)). |
 
 `run` passes everything after `--` to the app (`appjail run lagrange -- --help`).
 
@@ -178,14 +181,14 @@ appjail portals lagrange --revoke-all                    # take those grants bac
 | `audio` | Sound playback (`--allow audio`; `--deny` later). In the default `pipewire` mode the app gets a private audio graph that holds only a speaker tunnelled to your default output: it sees none of your devices, no camera and no other app's stream, and cannot record. In `pulse` mode it gets the host's Pulse socket, which also lets it record the microphone and the sound other apps play, and load modules into your audio server (rewire your audio, open a listener, create FIFOs in your name). Off by default. |
 | `mic` | The microphone (`--allow mic`, which implies `audio`; `--deny mic` keeps playback): adds a microphone tunnelled to your default input to the private graph. In `pulse` mode, or when the private graph cannot start, it cannot be denied: the app gets the Pulse socket, which always includes capture, and appjail warns (an app without `mic` gets no audio then, see `audio_mode`). |
 | `audio_mode` | `pipewire` (default) or `pulse` (`--audio-mode`; shown in the review once `audio` is granted). `pipewire` is the private graph described above and needs the tools listed under Requirements; if one is missing, or the graph does not come up, a warning says why and an app with `mic` falls back to the Pulse socket, while one without `mic` gets no audio (the Pulse socket would let it record). `pulse` is the host's Pulse socket, which follows the desktop's own device handling; it is refused (no audio, with a message) when that server is PulseAudio itself, since an app can make PulseAudio load its own code. The private graph has [limits](#limits) with changing devices. |
-| `gpu` | The render nodes, `/dev/nvidia*` and read-only `/sys` (`--allow gpu`). Needed for hardware-accelerated apps (Electron, Qt Quick, games); without it most apps fall back to slower software rendering. Off by default. |
+| `gpu` | `/dev/dri` (card and render nodes), `/dev/nvidia*` and read-only `/sys/devices` (`--allow gpu`). Needed for hardware-accelerated apps (Electron, Qt Quick, games); without it most apps fall back to slower software rendering. Off by default. |
 | `camera` | The camera's V4L2 capture devices and their own `/sys` entries (`--allow camera`). Every capture device is visible to the app, and a camera plugged in after the app starts is not. Off by default. Apps that use PipeWire for the camera (browsers) need `--portal Camera` instead, with `portals`. |
 | `portals` | The safe set of desktop portals; privileged ones are listed per app with `--add-portal`. |
 | `userns` | Nested user namespaces (Chromium and Electron sandboxes). Weakens isolation, off by default. |
 | `linger` | Keep the jail until every process in it has exited, not only the one that was started. For apps whose launcher starts the real app detached and exits (VSCodium). Grants nothing; off by default. |
 | `full_wayland` | Let the app run although its Wayland socket lists privileged interfaces (`--allow full_wayland`). `run` reads the registry of the socket the app would get (the restricted one where the compositor makes it, else the compositor's own) and refuses a windowed app when it lists screen capture, input injection, data-control (reading the clipboard without focus) or control of other windows, naming them; see [Wayland compositors](#wayland-compositors). With the permission the app runs and `run` warns. A socket that lists none (GNOME's, sway's restricted one) never needs it. Off by default; an app with `display = none` never needs it. |
-| `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials, browser profiles, shell startup files, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access where code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
-| `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Desktop namespaces are refused. |
+| `dirs` | Directories mapped into the private home (`--dir` / `--add-dir`). Credentials and the directories that contain them, key and password-database files, browser profiles, the whole home, the broad `~/.config`, `~/.local` and `~/.cache`, system trees, `/tmp` and `/var/tmp` (other programs' sockets live there) are refused, and so is write access to shell startup files and wherever else code would run outside the jail later (`~/.local/bin`, `~/.local/lib`, autostart, icon themes, thumbnailers, file-manager scripts, ...). |
+| `dbus_filter`, `dbus_own` | Session-bus names the app may talk to (`--dbus`) or own (`--dbus-own`), through `xdg-dbus-proxy`. Names that control the desktop (the shell, the session, settings, screen capture, the bus itself) cannot be talked to, and no name in a desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, ...) can be owned. |
 | `display` | `wayland` (default), `xwayland` or `xwayland-rootful` (`display_size`, default `1280x800`, sets its window), or `none`: no Wayland socket and no display variables, for command-line apps (no menu entry either). |
 
 **Temporary grants.** `run APP --dir PATH[:ro|:rw]` and `run APP --file PATH[:ro|:rw]` grant access for that run only and
@@ -196,8 +199,8 @@ shell startup files are never writable. Apps that save by writing a temporary fi
 a standing grant use a directory, or the portal file chooser.
 
 Every sandbox also drops all capabilities, has its own PID, IPC and UTS namespaces, a read-only system, a minimal
-`/dev`, a generated `/etc/passwd` and a seccomp filter. Outside `pasta`'s private network, Landlock also keeps it off
-abstract unix sockets created outside the sandbox. The extracted app tree is hashed and checked at every launch.
+`/dev`, a generated `/etc/passwd` and a seccomp filter. An app's sandbox outside `pasta`'s private network is also kept
+off abstract unix sockets created outside it by Landlock, where the kernel has it. The extracted app tree is hashed and checked at every launch.
 
 ## Menu entry and opening files
 
@@ -243,7 +246,9 @@ What `update` prints per app:
 - *declined*: you answered no;
 - *pinned*: the app follows no releases.
 
-The exit status is 1 if any app was blocked or failed. A URL app's candidate is kept on disk during the quarantine and
+With several apps a closing table repeats each result (`current`, `updated`, `waiting`, `blocked`, `declined`, `pinned`,
+`failed`, or `not checked` after a rate limit). `--prerelease` takes pre-releases into account for this one run. The exit
+status is 1 if any app was blocked, failed or not checked. A URL app's candidate is kept on disk during the quarantine and
 installed from there (`--verify` downloads it again first); a file app has no quarantine, you hold the bytes.
 
 Every change to the manifests is committed to a local git repository (`appjail history [APP] [--limit N]` lists them), and
@@ -267,7 +272,8 @@ appjail index remove mine
 appjail search editor                 # all sources; with several, each hit shows its source in brackets
 ```
 
-`search` shows 20 results; use `--limit N` or `--all` for more.
+`search` needs a catalog: run `appjail index update` once first. It shows 20 results; use `--limit N` or `--all` for
+more. `search --json` and `index status --json` print one JSON document for scripts.
 
 **Sources.** The built-in `appjail-db` source is the catalog of the sister project
 [appjail-db](https://github.com/alberto743/appjail-db), rebuilt weekly from the [AM](https://github.com/ivan-hc/AM)
@@ -307,11 +313,11 @@ replaces the catalog. One previous catalog is kept per source for `index rollbac
 | `apps` | yes | A list of objects, with unique `name`s. |
 | `apps[].name` | yes | The name to search for: letters, digits, `.`, `_`, `+`, `-`; starts with a letter or digit; up to 81 characters. |
 | `apps[].description` | no | One line of text, up to 300 characters. |
-| `apps[].source` | no | Where the app comes from, as `kind:target`: `github:owner/repo`, `gitlab:HOST/group/.../project`, `forgejo:HOST/owner/repo`, `codeberg:owner/repo` (shorthand for `forgejo:codeberg.org/...`), `url:https://...`. The host is always explicit (`gitlab:gitlab.com/...`), without port or credentials. Anything else, including `file:` and a bare `owner/repo`, is refused: put other locations in `note`. |
+| `apps[].source` | no | Where the app comes from, as `kind:target`: `github:owner/repo`, `gitlab:HOST/group/.../project`, `forgejo:HOST/owner/repo`, `codeberg:owner/repo` (shorthand for `forgejo:codeberg.org/...`), `url:https://...`. A forge host is always explicit (`gitlab:gitlab.com/...`), without port or credentials; a `url:` has no credentials. Anything else, including `file:` and a bare `owner/repo`, is refused: put other locations in `note`. |
 | `apps[].note` | no | Why there is no usable `source`, or a flag such as a repackager. Up to 200 characters. |
 
 Unknown keys are errors, so a catalog means the same thing to every version that accepts it. A catalog that breaks
-a rule is refused as a whole and nothing changes. appjail writes the catalog it validated, not the downloaded bytes.
+a rule is refused as a whole and nothing changes; texts longer than their limit are cut, not refused. appjail writes the catalog it validated, not the downloaded bytes.
 `search` offers `appjail add` for `github:` and `url:` sources only; GitLab and Forgejo sources are shown as information
 until appjail can install from those forges. An app the two origins place in different repositories has no `source`; its note says
 `resolve manually: ...` and names both, and you choose the repository at `appjail add`. An update that moves an app to another kind, host or owner is flagged as an
@@ -329,7 +335,7 @@ owner change.
 | `perms APP` | Show or change an app's permissions. |
 | `portals APP` | List or revoke the files an app was granted through the file chooser. |
 | `desktop APP` / `open APP -- FILE...` | Menu entry, and opening files with an app. |
-| `remove APP` | Delete the app and its private home. |
+| `remove APP` | Delete the app, its private home and menu entry, and take back its portal grants and remembered portal decisions. |
 | `history [APP]` | Recorded changes to the manifests. |
 | `search WORDS` | Suggestions from the catalogs. |
 | `index add\|remove\|update\|rollback\|status` | Manage the catalogs `search` reads (the built-in appjail-db list and any you add). |
@@ -348,7 +354,8 @@ owner change.
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |
-| `unsquashfs is not installed` | Install `squashfs-tools`, or accept the offer to run the AppImage's own extractor in a jail with no network. |
+| `unsquashfs is not installed` | Install `squashfs-tools`. `add` also offers to run the AppImage's own extractor in a jail with no network; `update` and `run` need `squashfs-tools`. |
+| `no local index; run appjail index update first` | `search` reads downloaded catalogs only: run `appjail index update`. |
 | DwarFS-based AppImage | `appjail tools install dwarfs` fetches the pinned helper. |
 | An app cannot see a file or folder | Nothing outside its private home is visible by default: `appjail perms APP --add-dir PATH`, or `appjail run APP --file PATH` for one run. |
 
@@ -383,7 +390,8 @@ interfaces is a list of names, so an interface it does not know about is not cau
 
 GNOME and KDE keep their privileged operations on D-Bus (Mutter's ScreenCast, RemoteDesktop and InputCapture, KWin's scripting
 and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant
-the names `org.gnome.Mutter*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.kde.kglobalaccel` and `org.kde.keyboard`.
+the names `org.gnome.Mutter*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
+and `org.kde.keyboard`.
 
 ## Limits
 
@@ -415,8 +423,8 @@ the names `org.gnome.Mutter*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`,
   that window, and GPU acceleration through Xwayland, have not been verified. Real desktop D-Bus services (notification
   daemon, MPRIS players) and tray icons that need a `-<pid>` bus name are untested too.
 - Stopping `appjail run` with SIGINT, SIGTERM or SIGHUP stops the whole jail, including `pasta`. If appjail is killed
-  with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace (a
-  small empty directory `appjail-life-*` stays in the runtime directory).
+  with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace; small
+  `appjail-*` directories and files (sockets, a FIFO, the seccomp filter) stay in the runtime directory until logout.
 
 To report a vulnerability, see [SECURITY.md](https://github.com/alberto743/appjail/blob/main/SECURITY.md).
 
@@ -502,8 +510,10 @@ APPJAIL_INTEGRATION=1 python3 -m pytest
 Without `APPJAIL_INTEGRATION=1` the tests that need real sandboxes are skipped. Tests that download from the network are
 opt-in (`APPJAIL_E2E=1`, `APPJAIL_LIVE=1`). The project's own workflow runs the suite inside a disposable QEMU guest
 built from `tests/vm/` (`create.sh`, `start.sh`, `provision.sh`, `test.sh`) so that downloads and sandboxed apps never
-run on the developer's machine. GitHub Actions runs the full suite and a REUSE compliance check on every push, and a
-separate workflow runs every opt-in suite (real downloads) on demand and weekly.
+run on the developer's machine. GitHub Actions runs the full suite, the packaging test, a check of every commit message
+and a REUSE compliance check on pushes to `main` and on pull requests, and a separate workflow runs every opt-in suite
+(real downloads) on demand and weekly. Enable the same commit-message check locally with
+`git config core.hooksPath .githooks`.
 
 ## License
 
