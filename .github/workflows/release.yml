@@ -2,7 +2,7 @@ name: Release
 
 # Creates the GitHub release for a version tag (vX.Y.Z), with notes built by .github/scripts/release_notes.py (commits since
 # the previous tag grouped by area, plus GitHub's generated notes for pull requests, categorised by .github/release.yml)
-# and the sdist attached (the same file pypi.yml publishes, built once by build-dist.yml).
+# and the sdist attached (built by build-dist.yml from the tag; pypi.yml builds its own copy the same way).
 # A tag with a pre-release suffix (v1.0.0rc1, v1.0.0-beta.1) is marked as a pre-release. Runs only after CI passed.
 
 on:
