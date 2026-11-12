@@ -17,7 +17,8 @@ the claim with measurements and sets out what a correct rule has to rest on.
 
 `tests/compositors/probe.py` runs, unchanged, in a guest per distribution (`GUEST=debian-compositors`,
 `GUEST=ubuntu-compositors`, see `tests/vm/guest.sh`; the packages are in `tests/vm/packages-compositors.txt`). For every
-compositor it starts the compositor headless in a private runtime directory and on a private session bus, and records:
+compositor it starts the compositor headless (Muffin, which has no headless backend, as a window of a private Xvfb) in a
+private runtime directory and on a private session bus, and records:
 
 * **Wayland registry** on the compositor's own socket, read with appjail's own protocol code and, as a second reader, with
   `wayland-info` (the two agreed for every compositor); whether `wp_security_context_manager_v1` is offered; and, when it is,
@@ -52,6 +53,8 @@ Cell format is capture / clipboard / typing, `yes` meaning a client succeeded.
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | yes | 5 | no/yes/no | no/yes/no |  |
 | labwc | debian 13 | 0.8.3-1 | yes | 14 | yes/yes/yes | no/no/no |  |
 | labwc | ubuntu 26.04 | 0.9.3-1 | yes | 17 | yes/yes/yes | no/no/no |  |
+| muffin | debian 13 | 6.4.1-1 | no | 1 | no/no/no | - |  |
+| muffin | ubuntu 26.04 | 6.4.1-1build1 | no | 1 | no/no/no | - |  |
 | mutter | debian 13 | 48.7-0+deb13u1 | no | 1 | no/no/no | - |  |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | no | 1 | no/no/no | - |  |
 | sway | debian 13 | 1.10.1-2 | yes | 14 | yes/yes/yes | no/no/no |  |
@@ -85,6 +88,15 @@ What the table shows:
    the probe, not of Hyprland. What the later runs show is worse for 0.53: its restricted socket still lists
    `zwlr_virtual_pointer_manager_v1`, `zwp_input_method_manager_v2` and `zwp_virtual_keyboard_manager_v1`, and `wtype` types
    through it. 0.55.2 (Debian backports) hides them.
+7. **Muffin 6.4.1** (Cinnamon's compositor, a Mutter fork; measured later, 2026-11-13): no security context, and, like Mutter,
+   no privileged capability on the socket (the only extra global is keyboard-shortcuts inhibit). It lists four older or
+   GTK-private versions of ordinary protocols (`wl_shell`, `zxdg_shell_v6`, `gtk_primary_selection_device_manager`,
+   `gtk_text_input_manager`), classed as allowed. Muffin crashes (a floating-point exception) when `wl-copy` or `wl-paste`
+   connect, so any client can end the session; that is Muffin's bug, and it is why the probe reads D-Bus before running the
+   clients. Its D-Bus name `org.cinnamon.Muffin.DisplayConfig` answers any client of the bus and offers
+   `ApplyMonitorsConfig`, `ChangeBacklight` and `SetCrtcGamma`; `org.cinnamon.Muffin` is refused as a family, like
+   `org.gnome.Mutter`. Measured standalone, not inside a Cinnamon session (the `cinnamon` shell adds its own bus names,
+   which were not measured).
 
 ## Results: option A and the clipboard, tried live
 
@@ -104,10 +116,12 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | nothing | works | run |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | nothing | works | run |
 | hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | input: zwlr_virtual_pointer_manager_v1, zwp_input_method_manager_v2, zwp_virtual_keyboard_manager_v1 | works | refuse |
-| kwin | debian 13 | 4:6.3.6-1 | restricted | clipboard: zwlr_data_control_manager_v1; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
-| kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| kwin | debian 13 | 4:6.3.6-1 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | labwc | debian 13 | 0.8.3-1 | restricted | nothing | works | run |
 | labwc | ubuntu 26.04 | 0.9.3-1 | restricted | nothing | works | run |
+| muffin | debian 13 | 6.4.1-1 | full | nothing | works | run |
+| muffin | ubuntu 26.04 | 6.4.1-1build1 | full | nothing | works | run |
 | mutter | debian 13 | 48.7-0+deb13u1 | full | nothing | works | run |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | nothing | works | run |
 | sway | debian 13 | 1.10.1-2 | restricted | nothing | works | run |
@@ -141,6 +155,8 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | ok | ok |
 | labwc | debian 13 | 0.8.3-1 | restricted | ok | ok |
 | labwc | ubuntu 26.04 | 0.9.3-1 | restricted | ok | ok |
+| muffin | debian 13 | 6.4.1-1 | full | ok | ok |
+| muffin | ubuntu 26.04 | 6.4.1-1build1 | full | ok | ok |
 | mutter | debian 13 | 48.7-0+deb13u1 | full | ok | ok |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | ok | ok |
 | sway | debian 13 | 1.10.1-2 | restricted | ok | ok |
@@ -178,6 +194,7 @@ checked the caller):
 | kwin | `KGlobalAccel.allComponents` | allowed | allowed |
 | kwin | `KWin.supportInformation` | allowed | allowed |
 | kwin | `Scripting.isScriptLoaded` | allowed | allowed |
+| muffin | `DisplayConfig.GetCurrentState` | allowed | allowed |
 | mutter | `KeyboardMonitor.WatchKeyboard` | refused | refused |
 | mutter | `DisplayConfig.GetCurrentState` | allowed | allowed |
 | mutter | `InputCapture.CreateSession` | allowed | allowed |
@@ -231,7 +248,8 @@ terminal warning is not a decision.
 **C. A table of compositors.** Rejected: right for the nine measured, stale with every release, silent on the rest; A reads
 the registry anyway.
 
-**D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` (every name of the family), `org.freedesktop.a11y`,
+**D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` and, after Muffin was measured, `org.cinnamon.Muffin`
+(every name of each family), `org.freedesktop.a11y`,
 `org.gnome.ScreenSaver`, `org.kde.kglobalaccel` and `org.kde.keyboard` are refused. Under A a GNOME app has no privileged
 global on its socket, so these bus names are what keep it from capturing, injecting input or locking the screen.
 
@@ -241,7 +259,8 @@ refused like any other compositor with a privileged global, and the message says
 
 **Hyprland 0.53.** Refused by A without a special case (see above).
 
-**Unmeasured compositors** (niri, river, COSMIC, Muffin) are decided by their registry at run time.
+**Unmeasured compositors** (niri, river, COSMIC) are decided by their registry at run time, and a global appjail does not
+know refuses the app (`wayland.ALLOWED`).
 
 ## Limits of this measurement
 
@@ -253,8 +272,9 @@ refused like any other compositor with a privileged global, and the message says
   paste was tested on all compositors with GTK 4 windows (see above), but with an added virtual input device, in headless
   compositors; a real session adds clipboard managers and extensions that were not tried.
 * One client per capability, on a quiet compositor. Xwayland, GPU, camera and audio were not part of this.
-* Only the versions the two distributions package (and Hyprland from Debian backports). niri, river and COSMIC are not
-  packaged in either, so they were not measured here.
+* Only the versions the two distributions package (and Hyprland from Debian backports). niri, river, COSMIC and Miriway are
+  not packaged in either, so they were not measured here. Muffin was measured standalone and nested in Xvfb, not as the
+  compositor of a Cinnamon session.
 * Hyprland needed a particular environment to start in the VM, and its 0.53 result may be a bug fixed later.
 
 ## Reproducing

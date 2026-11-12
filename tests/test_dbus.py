@@ -21,7 +21,7 @@ NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.S
 # -- name validation ----------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", NAMES + ("org.a11y.Bus", "org.gnome.Mutterly", "org.freedesktop.a11yx", "org.example.App", "org.example.App.*", "org.gtkmm.Example", "org.freedesktop.FileManager1"))
+@pytest.mark.parametrize("name", NAMES + ("org.a11y.Bus", "org.gnome.Mutterly", "org.cinnamon.Muffinx", "org.freedesktop.a11yx", "org.example.App", "org.example.App.*", "org.gtkmm.Example", "org.freedesktop.FileManager1"))
 def test_ordinary_names_are_accepted(name):
     assert grants.check_dbus_name(name) == name
 
@@ -35,6 +35,7 @@ def test_ordinary_names_are_accepted(name):
     "org.gnome.Mutter.ScreenCast", "org.gnome.Mutter.RemoteDesktop", "org.gnome.Mutter.InputCapture",
     "org.gnome.Mutter.DisplayConfig", "org.gnome.Mutter.ServiceChannel", "org.gnome.Mutter.*",
     "org.freedesktop.a11y.Manager", "org.freedesktop.a11y.*", "org.gnome.ScreenSaver", "org.kde.kglobalaccel", "org.kde.keyboard",
+    "org.cinnamon.Muffin.DisplayConfig", "org.cinnamon.Muffin.IdleMonitor", "org.cinnamon.Muffin.*",
 ])
 def test_names_that_hand_over_the_host_are_refused(name):
     with pytest.raises(ManifestError):

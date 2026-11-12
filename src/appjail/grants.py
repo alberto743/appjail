@@ -18,7 +18,10 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 # measured (docs/compositor-assessment): Mutter's ScreenCast, RemoteDesktop and InputCapture open a session for
                 # any client of the bus, so these names are the only thing between an app and the screen or the keyboard
                 "org.gnome.Mutter", "org.freedesktop.a11y", "org.gnome.ScreenSaver",
-                "org.kde.kglobalaccel", "org.kde.keyboard")
+                "org.kde.kglobalaccel", "org.kde.keyboard",
+                # measured on Muffin 6.4: its DisplayConfig answers any client and can apply a monitor layout, the backlight and
+                # the gamma ramps
+                "org.cinnamon.Muffin")
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
 # Owning a name lets the app be the service behind it. Impersonating a desktop service (notifications, secrets,

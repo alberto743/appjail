@@ -39,7 +39,7 @@ def window(session, directory, name):
 def evaluate(key):
     packages, argv_for, extra = probe.COMPOSITORS[key]
     result = {"version": probe.package_version(*packages)}
-    if not shutil.which(argv_for(None)[0]):
+    if not probe.installed(argv_for(None)):
         result["status"] = "not installed"
         return result
     with probe.Session() as session, open(session.rt / "compositor.log", "w") as logfile:

@@ -67,6 +67,8 @@ CALLS = (
     ("org.gnome.Mutter.RemoteDesktop", "/org/gnome/Mutter/RemoteDesktop", "org.gnome.Mutter.RemoteDesktop.CreateSession", "", []),
     ("org.gnome.Mutter.InputCapture", "/org/gnome/Mutter/InputCapture", "org.gnome.Mutter.InputCapture.CreateSession", "u", ["1"]),
     ("org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig.GetCurrentState", "", []),
+    ("org.cinnamon.Muffin.DisplayConfig", "/org/cinnamon/Muffin/DisplayConfig", "org.cinnamon.Muffin.DisplayConfig.GetCurrentState",
+     "", []),
     ("org.gnome.Shell.Screenshot", "/org/gnome/Shell/Screenshot", "org.gnome.Shell.Screenshot.SelectArea", "", []),
     ("org.gnome.Shell", "/org/gnome/Shell", "org.gnome.Shell.Eval", "s", ["1+1"]),
     ("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.isScriptLoaded", "s", ["appjail-probe"]),
@@ -147,6 +149,7 @@ class Session:
 
 RENDER_NODE = "/dev/dri/renderD128"  # wayfire and Hyprland insist on a DRM device even with a headless backend
 WLROOTS = {"WLR_BACKENDS": "headless", "WLR_LIBINPUT_NO_DEVICES": "1", "WLR_RENDERER": "pixman"}
+XVFB = ["xvfb-run", "-a", "-s", "-screen 0 1024x768x24"]
 
 # name -> (packages whose version is recorded, argv builder(session) -> argv, extra environment)
 COMPOSITORS = {
@@ -162,7 +165,16 @@ COMPOSITORS = {
                                        "--wayland-display=probe-mutter"], {}),
     "gnome-shell": (("gnome-shell",), lambda s: ["gnome-shell", "--headless", "--wayland", "--no-x11", "--virtual-monitor",
                                                  "1024x768", "--wayland-display=probe-shell"], {}),
+    # Muffin (Cinnamon's Mutter fork, 6.4) has no headless backend: it runs nested, as a window of a private Xvfb.
+    "muffin": (("muffin",), lambda s: [*XVFB, "muffin", "--wayland", "--nested", "--no-x11"], {}),
 }
+
+
+def installed(argv):
+    """Whether the compositor of this command line is installed (and xvfb-run, when it runs in one)."""
+    if argv[:len(XVFB)] == XVFB:
+        return bool(shutil.which(XVFB[0]) and shutil.which(argv[len(XVFB)]))
+    return bool(shutil.which(argv[0]))
 
 
 def sockets(rt):
@@ -402,7 +414,7 @@ def stop(proc, signum=signal.SIGTERM):
 def survey(key):
     packages, argv_for, extra = COMPOSITORS[key]
     result = {"version": package_version(*packages)}
-    if not shutil.which(argv_for(None)[0]):
+    if not installed(argv_for(None)):
         result["status"] = "not installed"
         return result
     with Session() as session, open(session.rt / "compositor.log", "w") as logfile:
@@ -416,8 +428,11 @@ def survey(key):
                 result["log_tail"] = (session.rt / "compositor.log").read_text(errors="replace")[-600:]
                 return result
             result["status"] = "ok"
-            result["wayland"] = wayland_section(session, display)
+            # D-Bus first: a client of the functional checks can crash the compositor (Muffin 6.4 dies of a floating-point
+            # exception serving wl-copy and wl-paste), and its bus names go with it
             result["dbus"] = dbus_section(session, proc.pid, display)
+            result["wayland"] = wayland_section(session, display)
+            result["survived_clients"] = proc.poll() is None
         except Exception as e:  # noqa: BLE001  (one compositor must not stop the others)
             result["status"] = f"error: {type(e).__name__}: {e}"
         finally:

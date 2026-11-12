@@ -14,7 +14,6 @@ is `ok` (the text arrived), `failed` (it did not) or `untestable` (a window neve
 import argparse
 import contextlib
 import json
-import shutil
 import signal
 import subprocess
 import sys
@@ -140,7 +139,7 @@ def evaluate(key):
     nested = key == "weston-nested"
     packages, argv_for, extra = probe.COMPOSITORS["weston" if nested else key]
     result = {"version": probe.package_version(*packages)}
-    if not shutil.which(argv_for(None)[0]):
+    if not probe.installed(argv_for(None)):
         result["status"] = "not installed"
         return result
     with probe.Session() as session, open(session.rt / "compositor.log", "w") as logfile:
