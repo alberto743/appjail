@@ -227,8 +227,16 @@ def test_a_pulse_only_app_sees_the_tunnels_too(sandbox, host):
         sources = in_jail(sandbox, audio, ["/usr/bin/pactl", "list", "short", "sources"]).stdout
         assert "app-mic" in sources and "host-" not in sources
         path = sandbox / "home" / "p.wav"
+        # The same window recorded from the host's tone source, which is now and then silent on a loaded machine (see the
+        # whole-launch test below): a silent app recording only fails when the source itself was sounding.
+        wav = sandbox / "reference.wav"
+        reference = subprocess.Popen(["timeout", "-s", "INT", "4", "pw-record", "--target", "host-mic", str(wav)], env=host.env,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         in_jail(sandbox, audio, ["/usr/bin/timeout", "-s", "INT", "4", "/usr/bin/parec", "--device=app-mic", "--file-format=wav", "/home/app/p.wav"])
-        assert peak(path.read_bytes()) > 1000
+        reference.wait(10)
+        if peak(path.read_bytes()) <= 1000:
+            assert peak(wav.read_bytes()) <= 1000, "the app recorded silence while the host source played"
+            pytest.skip("the test host's own source was silent in that window: nothing to compare the private graph with")
 
 
 @integration
