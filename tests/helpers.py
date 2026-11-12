@@ -116,7 +116,7 @@ class Answers(cli.Console):
     def __init__(self, answers=(), default=None):
         self.answers, self.default, self.lines = list(answers), default, []
 
-    def out(self, line=""):
+    def out(self, line="", max_len=None):
         self.lines.append(line)
 
     def warn(self, line):
@@ -135,7 +135,7 @@ class Script(cli.Console):
     def __init__(self, answers=()):
         self.answers, self.lines = list(answers), []
 
-    def out(self, line=""):
+    def out(self, line="", max_len=None):
         self.lines.append(line)
 
     def warn(self, line):

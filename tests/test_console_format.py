@@ -80,6 +80,27 @@ def test_json_is_one_ascii_line(con):
     assert json.loads(out) == {"a": "x\x1b[2Jé", "b": [1, None]}
 
 
+def test_long_json_is_never_cut(con):
+    c, cap = con
+    data = [{"name": f"app{i}", "description": "d" * 100} for i in range(100)]
+    c.json(data)
+    out = cap.readouterr().out
+    assert len(out) > 10000
+    import json
+    assert json.loads(out) == data
+
+
+def test_gui_console_keeps_long_json_whole():
+    import json
+    import queue
+
+    from appjail.gui.console import GuiConsole
+    c = GuiConsole(queue.Queue())
+    data = {"x": "y" * 5000}
+    c.json(data)
+    assert json.loads(c.lines[-1]) == data
+
+
 def test_note_and_item(con):
     c, cap = con
     c.note("x")

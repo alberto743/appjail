@@ -54,8 +54,8 @@ class Console:
     added after cleaning, only for the fixed prefixes, never for text that came from outside.
     """
 
-    def out(self, line=""):
-        print(textsafe.clean(line))
+    def out(self, line="", max_len=2000):
+        print(textsafe.clean(line, max_len))
 
     def kv(self, label, value, width=11):
         """`Label      value`, the label padded to width; a long value wraps under itself."""
@@ -76,8 +76,9 @@ class Console:
             self.out("  ".join(line[i].ljust(widths[i]) for i in keep).rstrip())
 
     def json(self, data):
-        """One JSON document on stdout. ASCII only (non-ASCII is escaped), so no terminal control can pass through."""
-        self.out(json.dumps(data, ensure_ascii=True))
+        """One JSON document on stdout. ASCII only (non-ASCII is escaped), so no terminal control can pass through; never
+        cut, since a cut document is no longer JSON."""
+        self.out(json.dumps(data, ensure_ascii=True), max_len=None)
 
     def note(self, line):
         for text in wrapped(textsafe.clean("note: " + line), hang=2):

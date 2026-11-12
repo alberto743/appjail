@@ -36,8 +36,8 @@ class GuiConsole(Console):
         self.lines.append(text)
         self.events.put(("out", text))
 
-    def out(self, line=""):
-        self._say(textsafe.clean(line))
+    def out(self, line="", max_len=2000):
+        self._say(textsafe.clean(line, max_len))
 
     def warn(self, line):
         self._say("! warning: " + textsafe.clean(line))
