@@ -78,3 +78,28 @@ def test_measure_refuses_a_non_regular_member(tmp_path):
         tar.addfile(info)
     with pytest.raises(SystemExit):
         bump.measure(arc, "m")
+
+
+def _fake_run(monkeypatch, pr_status):
+    calls = []
+
+    def run(*cmd, capture=False, check=True):
+        calls.append(cmd)
+        status = pr_status if cmd[:3] == ("gh", "pr", "create") else 0
+        return bump.subprocess.CompletedProcess(cmd, status, "", "")
+    monkeypatch.setattr(bump, "run", run)
+    return calls
+
+
+def test_a_refused_pull_request_deletes_the_pushed_branch(monkeypatch):
+    """Otherwise the next run finds the branch and skips the release for good (seen when Actions could not open PRs)."""
+    calls = _fake_run(monkeypatch, pr_status=1)
+    with pytest.raises(SystemExit, match="branch was deleted.*Workflow permissions"):
+        bump.open_pr("bump-gh-9.9.9", "tools: bump gh to 9.9.9", "body")
+    assert calls[-1] == ("git", "push", "origin", "--delete", "bump-gh-9.9.9")
+
+
+def test_an_opened_pull_request_keeps_the_branch(monkeypatch):
+    calls = _fake_run(monkeypatch, pr_status=0)
+    bump.open_pr("bump-gh-9.9.9", "tools: bump gh to 9.9.9", "body")
+    assert [c[:3] for c in calls] == [("gh", "pr", "create")]

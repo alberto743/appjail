@@ -95,9 +95,9 @@ def test_gui_app_runs_through_a_private_xwayland(installed):
 
 @needs_pasta
 def test_gui_app_with_network_reaches_a_server_through_pasta(installed, tmp_path):
-    """Lagrange (a Gemini browser) is given a gemini:// URL. Its trust-on-first-use store, written into the private
-    home, records the server certificate only if the TLS connection really went through the pasta namespace.
-    Depends on one public Gemini server (geminiprotocol.net) being up."""
+    """Lagrange (a Gemini browser) is given a gemini:// URL. Its trust-on-first-use store (trusted.lst since Lagrange
+    2.0, trusted.2.txt before), written into the private home, records the server certificate only if the TLS
+    connection really went through the pasta namespace. Depends on one public Gemini server (geminiprotocol.net) being up."""
     import signal
 
     from appjail import jail
@@ -119,8 +119,10 @@ def test_gui_app_with_network_reaches_a_server_through_pasta(installed, tmp_path
         runner.launch("lagrange", extra_args=["gemini://geminiprotocol.net/"], host_env=env, say=lambda *_: None,
                       runner=run)
     assert launched[0] == jail.find_pasta()
-    trusted = store.home_path("lagrange") / ".config" / "lagrange" / "trusted.2.txt"
-    assert "geminiprotocol.net;1965" in trusted.read_text(), "no certificate was stored: the app did not connect"
+    config = store.home_path("lagrange") / ".config" / "lagrange"
+    stores = [config / "trusted.lst", config / "trusted.2.txt"]  # Lagrange 2.0 and later; 1.x
+    text = "".join(p.read_text() for p in stores if p.is_file())
+    assert "geminiprotocol.net;1965" in text, "no certificate was stored: the app did not connect"
 
 
 def _jail_processes(needle):
