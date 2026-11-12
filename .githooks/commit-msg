@@ -1,0 +1,33 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Alberto P
+# SPDX-License-Identifier: MPL-2.0
+
+# Refuses a commit message that carries a session link, a local path or a
+# personal e-mail address. Enable once per clone:
+#   git config core.hooksPath .githooks
+# CI runs the same check over the whole history (.github/scripts/commit_hygiene.py).
+
+msg="$1"
+patterns="$(dirname "$0")/forbidden-patterns"
+body=$(grep -v '^#' "$msg")
+status=0
+
+list=$(mktemp) || exit 1
+grep -v -e '^#' -e '^$' "$patterns" > "$list"
+hits=$(printf '%s\n' "$body" | grep -Ein -f "$list")
+rm -f "$list"
+if [ -n "$hits" ]; then
+    echo "commit-msg: the message carries a session link or a local path:" >&2
+    printf '%s\n' "$hits" >&2
+    status=1
+fi
+
+mails=$(printf '%s\n' "$body" | grep -Eio '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' | grep -viF 'noreply')
+if [ -n "$mails" ]; then
+    echo "commit-msg: the message carries an e-mail address that is not a noreply one:" >&2
+    printf '%s\n' "$mails" >&2
+    status=1
+fi
+
+[ "$status" -eq 0 ] || echo "commit-msg: remove it and commit again." >&2
+exit "$status"
