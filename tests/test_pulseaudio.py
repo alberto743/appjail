@@ -78,6 +78,21 @@ def test_pulse_mode_and_the_fallback_get_no_socket_from_pulseaudio(host):
 
 
 @integration
+def test_without_pipewire_pulse_a_pulseaudio_host_gives_no_audio(host):
+    """A PulseAudio host without the private graph's tools: the real availability check finds one missing, and the fallback
+    still never hands out PulseAudio's socket, with or without `mic`."""
+    env, _ = host
+
+    def which(tool):
+        return None if tool == "pipewire-pulse" else shutil.which(tool)
+
+    for mic in (False, True):
+        backend, note = audiomode.resolve(Permissions(audio=True, mic=mic), env,
+                                          availability=lambda s: audiojail.availability(s, which=which))
+        assert backend is None and "pipewire-pulse is not installed" in note and "PulseAudio" in note
+
+
+@integration
 def test_the_private_graph_on_a_pulseaudio_host_refuses_what_pulseaudio_would_load(host, library, tmp_path):
     env, socket_path = host
     so, marker = library
