@@ -453,7 +453,7 @@ November 2026; check them before relying on them.
 - [Gear Lever](https://github.com/mijorus/gearlever): Python/GTK (GPL-3.0, Flatpak); adds AppImages to the menu and
   updates them; a CLI since 3.0. No sandbox of its own that I found.
 - [Zap](https://github.com/srevinsaju/zap): Go (MIT); installs from GitHub releases and URLs, delta-updates through the
-  update information embedded in the AppImage. Last updated mid-2024.
+  update information embedded in the AppImage. Last updated in June 2024; latest release December 2021.
 - [Bread](https://github.com/pegvin/bread) and [appimage-cli-tool](https://github.com/AppImageCrafters/appimage-cli-tool):
   small CLIs to install, update and remove AppImages (Bread: from GitHub; optional sandbox, off by default). Last
   updated in 2024 and 2023.
