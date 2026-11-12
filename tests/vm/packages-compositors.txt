@@ -7,6 +7,8 @@ hyprland              # a compositor with its own backend (aquamarine, headless)
 kwin-wayland          # KDE's compositor (`kwin_wayland --virtual`) and its D-Bus interfaces
 mutter                # GNOME's compositor library with a standalone `mutter --headless`, and the org.gnome.Mutter.* D-Bus interfaces
 gnome-shell           # GNOME's shell (`gnome-shell --headless`), which adds the org.gnome.Shell.* D-Bus interfaces
+muffin                # Cinnamon's compositor (a Mutter fork), started standalone and headless like mutter
+cinnamon-settings-daemon  # holds the GSettings schemas muffin reads at start (peripherals.touchscreen); without them it aborts
 wayland-utils         # wayland-info: the registry of a compositor, to compare with the probe's own reading
 grim                  # takes a screenshot through wlr-screencopy or ext-image-copy-capture: whether a client can capture the screen (tests/compositors/probe.py)
 wl-clipboard          # wl-copy and wl-paste through data-control: whether one client can read another's clipboard
