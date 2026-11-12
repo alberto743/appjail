@@ -185,9 +185,20 @@ def bump(name):
     run("git", "commit", "-am", f"tools: bump {name} to {new}")
     run("git", "push", "origin", branch)
     run("gh", "label", "create", "tools", "--description", "Pinned helper tools", "--force")
-    run("gh", "pr", "create", "--label", "tools", "--base", "main", "--head", branch, "--title", f"tools: bump {name} to {new}",
-        "--body", body(name, spec, old, new, rel, size, sha, exe_size, exe_sha))
+    open_pr(branch, f"tools: bump {name} to {new}", body(name, spec, old, new, rel, size, sha, exe_size, exe_sha))
     run("git", "switch", "-")
+
+
+def open_pr(branch, title, text):
+    """Open the pull request of a pushed branch. If GitHub refuses, delete the branch: a branch left behind without a
+    pull request would make every later run skip this release as already proposed."""
+    if run("gh", "pr", "create", "--label", "tools", "--base", "main", "--head", branch, "--title", title,
+           "--body", text, check=False).returncode == 0:
+        return
+    run("git", "push", "origin", "--delete", branch, check=False)
+    raise SystemExit(f"{branch}: the pull request could not be opened (gh's message is above), so the branch was deleted "
+                     "and the next run tries again. If gh says GitHub Actions may not create pull requests, allow it in "
+                     "the repository settings: Actions, General, Workflow permissions.")
 
 
 def main():
