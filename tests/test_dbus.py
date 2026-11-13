@@ -128,12 +128,12 @@ def test_a_talk_name_sharing_the_owner_of_a_refused_one_is_found():
 
 
 def test_owner_check_refuses_shared_talk_names_and_skips_confined_ones():
-    owners = lambda bus: SHELL_OWNERS
+    owners = lambda bus, wanted: {n: o for n, o in SHELL_OWNERS.items() if wanted(n)}
     with pytest.raises(RunError, match="org.gnome.Panel is owned by the same process as org.Cinnamon"):
         dbusproxy.check_owners(Permissions(dbus_filter=("org.gnome.Panel",)), "/bus", owners)
     dbusproxy.check_owners(Permissions(dbus_filter=("org.freedesktop.Notifications", "org.example.Alone")), "/bus", owners)
     dbusproxy.check_owners(Permissions(dbus_filter=("org.freedesktop.Notifications",)), "/bus",
-                           lambda bus: pytest.fail("no talk name, so the bus is not asked"))
+                           lambda bus, wanted: pytest.fail("no talk name, so the bus is not asked"))
 
 
 def test_dbus_own_without_proxy_socket_is_refused(sandbox, runtime):
@@ -369,12 +369,17 @@ class Obj(dbus.service.Object):
     def CollectionProbe(self):
         return "collection"
 
+    @dbus.service.method("org.mpris.MediaPlayer2.Player", out_signature="s")
+    def Probe(self):
+        return "player"
+
     @dbus.service.method("org.example.Plain", out_signature="s")
     def Ping(self):
         return "pong"
 
 objs = [Obj(p, None) for p in ("/org/Cinnamon", "/org/freedesktop/Notifications", "/org/freedesktop/secrets",
-                                "/org/freedesktop/secrets/collection/login", "/org/example/Plain")]
+                                "/org/freedesktop/secrets/collection/login", "/org/example/Plain",
+                                "/org/mpris/MediaPlayer2")]
 print(bus.get_unique_name(), flush=True)
 GLib.MainLoop().run()
 """
@@ -393,6 +398,7 @@ def call(dest, path, iface, member, *args):
 got = []
 bus.add_signal_receiver(lambda *a: got.append(int(a[0])), "NotificationClosed", "org.freedesktop.Notifications")
 out = {}
+out["listed"] = sorted(str(n) for n in bus.list_names() if not str(n).startswith(":"))
 for label, dest in (("name", sys.argv[3]), ("unique", unique)):
     out[label] = {
         "eval": call(dest, "/org/Cinnamon", "org.Cinnamon", "Eval"),
@@ -402,6 +408,7 @@ for label, dest in (("name", sys.argv[3]), ("unique", unique)):
         "secret_service": call(dest, "/org/freedesktop/secrets", "org.freedesktop.Secret.Service", "ServiceProbe"),
         "secret_collection": call(dest, "/org/freedesktop/secrets/collection/login", "org.freedesktop.Secret.Collection", "CollectionProbe"),
         "plain": call(dest, "/org/example/Plain", "org.example.Plain", "Ping"),
+        "mpris_player": call(dest, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", "Probe"),
     }
 loop = GLib.MainLoop()
 GLib.timeout_add(1500, loop.quit)
@@ -422,19 +429,19 @@ def fake_shell(runtime, session_bus, tmp_path):
     script.write_text(FAKE_SHELL)
     env = {"PATH": "/usr/bin:/bin", "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
     proc = subprocess.Popen(["python3", str(script), "org.Cinnamon", "org.freedesktop.Notifications", "org.freedesktop.secrets",
-                             "org.example.Plain"], stdout=subprocess.PIPE, text=True, env=env)
+                             "org.example.Plain", "org.mpris.MediaPlayer2.fake"], stdout=subprocess.PIPE, text=True, env=env)
     unique = proc.stdout.readline().strip()
     yield unique
     proc.terminate()
     proc.wait()
 
 
-def through(runtime, session_bus, tmp_path, unique, name):
+def through(runtime, session_bus, tmp_path, unique, name, dest=None):
     env = {"XDG_RUNTIME_DIR": str(runtime), "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
     client = tmp_path / "client.py"
     client.write_text(CLIENT)
     with dbusproxy.Proxy(Permissions(dbus_filter=(name,)), env) as sock:
-        r = subprocess.run(["python3", str(client), f"unix:path={sock}", unique, name], capture_output=True, text=True,
+        r = subprocess.run(["python3", str(client), f"unix:path={sock}", unique, dest or name], capture_output=True, text=True,
                            timeout=60, env={"PATH": "/usr/bin:/bin"})
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
@@ -475,3 +482,17 @@ def test_a_talk_name_of_a_refused_owner_is_refused_at_launch(runtime, session_bu
           dbusproxy.Proxy(Permissions(dbus_filter=("org.example.Plain",)), env)):
         pass
     assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []
+
+
+@integration
+@needs_proxy
+@needs_python_dbus
+def test_an_mpris_wildcard_reaches_the_players_only(runtime, session_bus, tmp_path, fake_shell):
+    r = through(runtime, session_bus, tmp_path, fake_shell, "org.mpris.MediaPlayer2.*", dest="org.mpris.MediaPlayer2.fake")
+    assert "org.mpris.MediaPlayer2.fake" in r["listed"]  # a controller finds the players by listing the names
+    assert not {"org.Cinnamon", "org.example.Plain", "org.freedesktop.secrets"} & set(r["listed"])
+    for label in ("name", "unique"):
+        got = r[label]
+        assert got["mpris_player"] == "player", label
+        for denied in ("eval", "notify_info", "secret_service", "plain"):
+            assert got[denied] == "error: org.freedesktop.DBus.Error.AccessDenied", (label, denied)
