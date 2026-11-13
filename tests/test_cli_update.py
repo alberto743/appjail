@@ -589,3 +589,41 @@ def test_a_tier1_block_says_why_the_attestation_is_missing(sha256, says):
     reasons = updater.blocks(m, SimpleNamespace(owner_id=7), SimpleNamespace(sha256=sha256, base_tier=3 if sha256 else 4),
                              attested=False)
     assert reasons == [f"EVIDENCE DOWNGRADE: tier 1 → 3 or 4 ({says})"]
+
+
+def test_pattern_option_follows_a_renamed_asset_and_is_saved(h):
+    path = installed(h)
+    renamed = release2(name="App-2.0-linux-x64.AppImage")
+    code, c = update(h, FakeClient(release_=renamed))
+    assert code == 1 and "no asset in v2.0 matches" in c.text
+    code, c = update(h, FakeClient(release_=renamed), extra=("--pattern", "App-*-linux-x64.AppImage"))
+    assert code == 0 and "asset pattern is now App-*-linux-x64.AppImage" in c.text and "can be installed from" in c.text
+    assert manifest.load(path).asset_pattern == "App-*-linux-x64.AppImage"
+
+
+def test_a_pattern_that_selects_nothing_or_is_invalid_is_not_saved(h):
+    path = installed(h)
+    code, c = update(h, FakeClient(release_=release2()), extra=("--pattern", "Other-*"))
+    assert code == 1 and "no asset in v2.0 matches 'Other-*'" in c.text
+    code, c = update(h, FakeClient(release_=release2(name="x/App.AppImage")), extra=("--pattern", "x/*"))
+    assert code == 1 and "cannot record this pattern" in c.text
+    assert manifest.load(path).asset_pattern == "App-*-x86_64.AppImage"
+
+
+@pytest.mark.parametrize("extra, message", [
+    (("--pattern", "App-*"), "--pattern needs an app name"),
+    (("--allow-private-redirects",), "--allow-private-redirects needs an app name"),
+])
+def test_new_update_options_need_an_app_name(h, extra, message):
+    installed(h)
+    with pytest.raises(Abort, match=message):
+        update(h, FakeClient(release_=release2()), app=None, extra=extra)
+
+
+def test_pattern_on_a_pinned_app_and_private_redirects_on_a_github_app_are_refused(h):
+    installed(h)
+    update(h, FakeClient(release_=release2()), extra=("--channel", "pinned"))
+    code, c = update(h, FakeClient(release_=release2()), extra=("--pattern", "App-*"))
+    assert code == 1 and "a pinned app is never updated" in c.text
+    code, c = update(h, FakeClient(release_=release2()), extra=("--channel", "stable", "--allow-private-redirects"))
+    assert code == 1 and "--allow-private-redirects applies to apps installed from a URL" in c.text

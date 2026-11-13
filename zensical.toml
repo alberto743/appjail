@@ -82,6 +82,7 @@ nav = [
       "decisions/acquisition/evidence-tiers.md",
       "decisions/acquisition/attestations.md",
       "decisions/acquisition/pinned-tools.md",
+      "decisions/acquisition/private-redirects.md",
     ] },
     { "Isolation" = [
       "decisions/isolation/index.md",

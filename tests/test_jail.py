@@ -213,3 +213,14 @@ def test_network_jail_cannot_reach_host_loopback_or_host_addresses(stage):
         assert shared.stdout.split() == ["True", "True"], shared.stderr
     finally:
         srv.close()
+
+
+def test_url_downloads_pass_the_private_redirect_switch_to_the_fetcher(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(jail, "_fetcher_json", lambda args, stage: calls.append(args) or {"size": 1, "status": "no-range"})
+    jail.download_url("https://e.test/a", tmp_path, "f", 10)
+    jail.download_url("https://e.test/a", tmp_path, "f", 10, private_redirects=True)
+    jail.check_url("https://e.test/a", tmp_path, private_redirects=True)
+    assert calls[0][:2] == ["--any", "https://e.test/a"]
+    assert calls[1][:3] == ["--any", "--allow-private-redirects", "https://e.test/a"]
+    assert calls[2][:3] == ["--check", "--allow-private-redirects", "https://e.test/a"]

@@ -112,8 +112,9 @@ reused by another file.
 - A file granted read-write with `--file` cannot be replaced, only rewritten in place: apps that save by writing a new
   file and renaming it over the old one fail on such a file. Grant its folder, or use the portal file chooser.
 - A folder whose path contains `:` cannot be granted (the character separates the mode).
-- `/run` is a system tree, so removable media mounted under `/run/media/USER` cannot be granted; Debian and Ubuntu mount
-  them under `/media/USER`, which can.
+- `/run` is a system tree, so removable media mounted under `/run/media/USER` (Fedora, Arch) cannot be granted, as a
+  folder or as a file; Debian and Ubuntu mount them under `/media/USER`, which can. The ways around it are in
+  [removable media](../../guide/files.md#removable-media-usb-drives-sd-cards).
 - A secret is recognised by where it is, not by what it is: a key file kept in an ordinary folder you grant is visible
   to the app.
 - The private home is persistent and is deleted only by `appjail remove`; an app can keep state there between runs, as

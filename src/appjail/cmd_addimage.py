@@ -89,6 +89,11 @@ def url_basename(url):
     return unquote(PurePosixPath(parts.path).name) or parts.hostname
 
 
+def private_redirects(args):
+    """The keyword that lets a download follow redirects to private network addresses, when the user asked for it."""
+    return {"private_redirects": True} if getattr(args, "allow_private_redirects", False) else {}
+
+
 def cmd_add_url(args, console, svc=None, now=None):
     svc = svc or Services()
     expected = parse_sha256(args.sha256)
@@ -104,7 +109,9 @@ def cmd_add_url(args, console, svc=None, now=None):
     require_network_isolation(perms)
 
     console.kv("URL", url)
-    console.kv("Limit", f"{human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http")
+    console.kv("Limit", f"{human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http, "
+               + ("private network addresses included" if args.allow_private_redirects
+                  else "but not to a private network address"))
     console.warn(NO_ORIGIN)
     show_permissions(console, perms)
     fallback = ask_extractor(console, svc.extract_ok)
@@ -113,7 +120,8 @@ def cmd_add_url(args, console, svc=None, now=None):
 
     with store.staging() as stage:
         try:
-            staged, info = svc.download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
+            staged, info = svc.download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2,
+                                            **private_redirects(args))
         except JailError as e:
             raise Abort(str(e)) from e
         digest = store.sha256_file(staged)

@@ -59,7 +59,8 @@ a token; a `GITHUB_TOKEN` in the environment raises the limit and is sent only t
 ### URL and file sources
 
 For an app that is not a GitHub release, you give the file. A URL must be https and without credentials; the download
-may be redirected to another host, and a redirect through plain http needs an extra confirmation unless you give the
+may be redirected to another host, but not to a private network address (unless your URL is itself on one, or you pass
+`--allow-private-redirects`), and a redirect through plain http needs an extra confirmation unless you give the
 expected hash with `--sha256`. A local file must be a regular file; it is copied, and the copy is what gets checked and
 installed. Nothing identifies the publisher in either case, which the [evidence tier](evidence.md) records.
 
@@ -79,8 +80,7 @@ installed. Nothing identifies the publisher in either case, which the [evidence 
 - Asset selection by name relies on publishers naming their files; an unusual name may need you to choose.
 - The pattern replaces the version only when the release tag appears in the file name. Otherwise it is the exact file
   name, and a later release whose file is named differently matches nothing: `update` stops and lists the release's
-  files. The way out is to edit `asset_pattern` in the manifest (which `run` then reports as an edit made outside
-  appjail).
+  files. `update APP --pattern GLOB` then sets a new pattern, saved once it selects a file of the latest release.
 
 ## References
 

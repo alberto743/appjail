@@ -50,6 +50,19 @@ def apply_channel(name, m, args, console):
     return m
 
 
+def apply_pattern(name, m, args, console):
+    """`--pattern` changes which release asset the app follows, once it has selected one in the latest release; saved
+    like --channel. The asset it selects still goes through the review and the quarantine."""
+    if not args.pattern or args.pattern == m.asset_pattern:
+        return m
+    new = replace(m, asset_pattern=args.pattern)
+    check_record(new, "this pattern")
+    manifest.dump(store.manifest_path(name), new)
+    history.record(f"pattern {name} {args.pattern}")
+    console.out(f"  asset pattern is now {args.pattern}")
+    return new
+
+
 def is_current(m, release, asset):
     """GitHub's digest equals the pin, or, without a digest, the same tag and publication time."""
     return asset.sha256 == m.sha256 if asset.sha256 else (release.tag == m.version and release.published_at == m.published_at)
@@ -120,12 +133,16 @@ def update_github(name, m, args, client, console, svc, now):
     console.kv("  installed", f"{m.version} (published {m.published_at}, tier {m.evidence_tier})", INDENTED_LABEL)
     m = apply_channel(name, m, args, console)
     if m.channel == "pinned":
+        if args.pattern:
+            raise Abort("--pattern needs an app that follows releases: a pinned app is never updated "
+                        "(change --channel first)")
         console.out(f"  pinned to {m.version}: not checked (use --channel stable or prerelease to follow releases)")
         return "pinned"
     run = UpdateRun(name, m, args, console, svc, now)
     prerelease = args.prerelease or m.channel == "prerelease"
     release = client.latest_release(info.full_name, prerelease)
-    asset = pick_asset(console, release, m.asset_pattern)
+    asset = pick_asset(console, release, args.pattern or m.asset_pattern)
+    m = apply_pattern(name, m, args, console)
     if is_current(m, release, asset):
         updater.clear_pending(name)
         console.out("  up to date")
@@ -160,12 +177,17 @@ def update_app(name, args, client, console, svc, now):
     """Update one app. Returns 'updated', 'current', 'pinned', 'waiting', 'blocked' or 'declined'."""
     m = manifest.load(store.manifest_path(name))
     if m.kind in ("file", "url"):
-        if args.channel:
-            raise Abort("--channel applies to apps installed from a GitHub release: a file or a URL has no releases to follow")
+        if args.channel or args.pattern:
+            raise Abort("--channel and --pattern apply to apps installed from a GitHub release: a file or a URL has no "
+                        "releases to follow")
+        if args.allow_private_redirects and m.kind != "url":
+            raise Abort("--allow-private-redirects applies to apps installed from a URL")
         run = UpdateRun(name, m, args, console, svc, now)
         return (update_file if m.kind == "file" else update_url)(run)
     if args.file or args.sha256:
         raise Abort("--file and --sha256 apply to apps installed from a file or a URL")
+    if args.allow_private_redirects:
+        raise Abort("--allow-private-redirects applies to apps installed from a URL")
     return update_github(name, m, args, client, console, svc, now)
 
 
@@ -174,7 +196,8 @@ def cmd_update(args, client, console, svc=None, now=None):
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
-    for flag, value in (("--file", args.file), ("--sha256", args.sha256), ("--channel", args.channel)):
+    for flag, value in (("--file", args.file), ("--sha256", args.sha256), ("--channel", args.channel),
+                        ("--pattern", args.pattern), ("--allow-private-redirects", args.allow_private_redirects)):
         if value and not args.app:
             raise Abort(f"{flag} needs an app name")
     if args.app:

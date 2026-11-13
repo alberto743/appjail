@@ -36,7 +36,7 @@ What the downloader may do is decided by appjail, never by the server:
 | Download | Allowed |
 |---|---|
 | a GitHub release asset, a pinned tool | https only, to `github.com` and `*.githubusercontent.com`; an asset stops at the size GitHub announced |
-| an `--url` app, or a catalog (the built-in one included) | an https start, redirects to any host; a plain-http step is reported and needs a confirmation unless your `--sha256` matches; a size cap (1 GiB for apps by default, `--max-size`; 16 MiB for catalogs) and an exact `Content-Length` |
+| an `--url` app, or a catalog (the built-in one included) | an https start, redirects to any public host; a redirect to a private network address is refused unless your URL is itself on one or you pass `--allow-private-redirects`; a plain-http step is reported and needs a confirmation unless your `--sha256` matches; a size cap (1 GiB for apps by default, `--max-size`; 16 MiB for catalogs) and an exact `Content-Length` |
 
 An AppImage of any source may be at most 2 GiB. Credentials in URLs are refused everywhere. The small JSON answers of the GitHub API and the attestation bundles are
 fetched by appjail itself, as data with size limits: they are parsed, never run, and the bundles are trusted only once
@@ -73,12 +73,15 @@ and a hostile one can fill only its work directory.
 ## Connections
 
 - The jails are built from the same parts as the app jail: [Isolation](../isolation/index.md).
+- Decision: [Redirects to private addresses are refused](../../decisions/acquisition/private-redirects.md).
 - `pasta` is also what the `network` permission uses for apps: Decision [Network through pasta](../../decisions/desktop/network.md).
 - The tree digest is checked before every start: [the filesystem view](../isolation/filesystem.md#the-extracted-tree).
 - Decision: [Extract, never mount](../../decisions/isolation/extraction.md).
 
 ## Limits
 
+- A redirect's host is resolved when it is checked; a host name that resolves to another address a moment later (DNS
+  rebinding) is not caught.
 - Without `pasta`, the download jail can reach services on your own machine; it still sees no files of yours and keeps
   only what it downloaded into the staging directory.
 - The limits on size and entries refuse unusually large AppImages; they protect the disk, not the content.

@@ -205,18 +205,20 @@ class UrlServer:
         self.content, self.etag, self.ranges = content, etag, ranges
         self.last_modified = "Tue, 20 Oct 2026 08:00:00 GMT"
         self.http_hop = False
-        self.downloads, self.checks = 0, []
+        self.downloads, self.checks, self.private = 0, [], []
 
-    def download(self, url, stage, filename, max_size):
+    def download(self, url, stage, filename, max_size, private_redirects=False):
         self.downloads += 1
+        self.private.append(private_redirects)
         path = Path(stage) / filename
         path.write_bytes(self.content)
         return path, {"size": len(self.content), "final_url": url, "http_hop": self.http_hop, "etag": self.etag,
                       "last_modified": self.last_modified}
 
-    def check(self, url, stage, etag=None, last_modified=None):
+    def check(self, url, stage, etag=None, last_modified=None, private_redirects=False):
         from appjail import fetcher
         self.checks.append((etag, last_modified))
+        self.private.append(private_redirects)
         if etag and etag == self.etag:
             return {"status": "unchanged"}
         got = {"etag": self.etag, "last_modified": self.last_modified}

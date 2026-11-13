@@ -36,7 +36,9 @@ appjail add --url https://example.org/dl/Tool-x86_64.AppImage [--name tool] [--s
 
 Nothing identifies who published such a file, so the app is at evidence tier 5; give the hash the publisher lists with
 `--sha256` and it is tier 4 (a mismatch aborts). A URL must be https; it is downloaded in a jail, at most 1 GiB unless
-`--max-size` (up to 2 GiB, the limit for any AppImage); a redirect through plain http needs an extra confirmation unless the hash matches. A file is copied and
+`--max-size` (up to 2 GiB, the limit for any AppImage); a redirect through plain http needs an extra confirmation
+unless the hash matches. A redirect to a machine of your local network is refused, unless your URL is itself on your network or you pass
+`--allow-private-redirects` ([why](../decisions/acquisition/private-redirects.md)). A file is copied and
 the copy is checked; the original is untouched.
 
 ## Helper tools

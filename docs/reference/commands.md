@@ -21,6 +21,7 @@ appjail add --url URL [options]
 | `--url URL` | install the AppImage at this https URL instead of a GitHub release |
 | `--sha256 HEX` | with `--file` or `--url`: the hash the publisher gives; a mismatch aborts, a match makes it tier 4 |
 | `--max-size MIB` | with `--url`: refuse to download more than this (default 1024, at most 2048) |
+| `--allow-private-redirects` | with `--url`: also follow redirects to private network addresses (the LAN, loopback), refused by default |
 | `--name NAME` | the app's local name (default: from the repository or the file) |
 | `--prerelease` | allow pre-releases (the app then follows the `prerelease` channel) |
 | `--tag TAG` | install this release instead of the latest; the app is then pinned |
@@ -106,6 +107,8 @@ portal, or revoke one or all of them.
 | `--file PATH` | an app installed from a file: replace it with this AppImage (needs `APP`) |
 | `--sha256 HEX` | URL and file apps: the publisher's hash for the new content, which keeps or earns tier 4 (needs `APP`) |
 | `--verify` | URL apps: at the end of the quarantine, download the file again and compare it with the candidate |
+| `--pattern GLOB` | GitHub apps: the file-name pattern that selects the release asset from now on; saved once it selects a file of the latest release (needs `APP`) |
+| `--allow-private-redirects` | URL apps: also follow redirects to private network addresses, for this run (needs `APP`) |
 
 ## Menu entry
 
@@ -134,9 +137,9 @@ portal, or revoke one or all of them.
 
 | Command | Effect |
 |---|---|
-| `appjail index add NAME --url URL` or `--file FILE` | add a catalog source (an https URL, or a local file) |
+| `appjail index add NAME --url URL` or `--file FILE` | add a catalog source (an https URL, or a local file); `--allow-private-redirects` with `--url` |
 | `appjail index remove NAME` | remove a source you added (`appjail-db` cannot be removed) |
-| `appjail index update [NAME] [--commit COMMIT]` | refresh one source or all; `--commit` (40 hex digits, `appjail-db` only) fetches that commit |
+| `appjail index update [NAME] [--commit COMMIT] [--allow-private-redirects]` | refresh one source or all; `--commit` (40 hex digits, `appjail-db` only) fetches that commit |
 | `appjail index rollback [NAME]` | go back to the previous catalog of a source (default `appjail-db`); can itself be rolled back |
 | `appjail index status [--json]` | the sources, their revisions, commits and update times |
 

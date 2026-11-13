@@ -3,6 +3,7 @@
 
 """`appjail search` and `appjail index add|remove|update|rollback|status`."""
 
+import functools
 import hashlib
 import shutil
 from urllib.parse import urlsplit
@@ -59,6 +60,13 @@ def read_catalog_file(path):
         return real.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as e:
         raise IndexProblem(f"cannot read the catalog file: {e}") from e
+
+
+def with_private_redirects(download_url, args):
+    """download_url, following redirects to private network addresses when the user asked for it."""
+    if getattr(args, "allow_private_redirects", False):
+        return functools.partial(download_url, private_redirects=True)
+    return download_url
 
 
 def download_catalog(url, download_url, console):
@@ -160,6 +168,7 @@ def cmd_index_update(args, console, client=None, download_url=jail.download_url,
         if not github.COMMIT_RE.fullmatch(args.commit):
             raise Abort("--commit must be 40 lowercase hexadecimal digits")
     client = client or github.Client()
+    download_url = with_private_redirects(download_url, args)
     status = 0
     for name in names:
         source = indexstore.get(name)
@@ -184,11 +193,13 @@ def cmd_index_add(args, console, download_url=jail.download_url, now=None):
         source = indexstore.Source(name, "url", url)
         console.kv("Catalog URL", f"{url} (host {urlsplit(url).hostname})")
     else:
+        if args.allow_private_redirects:
+            raise Abort("--allow-private-redirects applies to --url only")
         real, _ = regular_file(args.file)
         source = indexstore.Source(name, "file", str(real))
         console.kv("Catalog file", real)
     console.warn("a catalog only suggests repositories; nothing in it is trusted or run")
-    text, _ = fetch_text(source, args, console, None, download_url)
+    text, _ = fetch_text(source, args, console, None, with_private_redirects(download_url, args))
     review_and_install_new(source, text, console, now)
 
 

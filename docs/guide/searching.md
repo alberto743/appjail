@@ -24,7 +24,8 @@ appjail index rollback mine     # back to the previous catalog of a source
 appjail index remove mine
 ```
 
-With several sources, each hit shows its source in brackets. A catalog is a JSON file in the
+With several sources, each hit shows its source in brackets. A catalog URL that redirects to a machine of your local
+network needs `--allow-private-redirects` on `index add` and `index update`. A catalog is a JSON file in the
 [catalog format](../reference/catalog-format.md); how catalogs are checked is explained in
 [Catalog](../understand/catalog/index.md).
 

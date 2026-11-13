@@ -18,7 +18,9 @@ window arithmetic, so both sides compute the same fingerprint).
 """
 
 import hashlib
+import ipaddress
 import json
+import socket
 import struct
 import sys
 import urllib.error
@@ -47,19 +49,58 @@ def allowed_any(url, first=False):
     return ok and bool(p.hostname) and p.username is None and "@" not in p.netloc
 
 
+PRIVATE_REFUSED = "redirect to a private network address refused"
+PRIVATE_SWITCH = "--allow-private-redirects"
+
+
+def _addresses(host):
+    """The IP addresses a host stands for: itself for an IP literal, else what it resolves to (empty when it does not)."""
+    try:
+        return {ipaddress.ip_address(host.strip("[]").split("%")[0])}
+    except ValueError:
+        pass
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError):
+        return set()
+    return {ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos}
+
+
+def private_host(host):
+    """Whether a host is, or resolves to, an address that is not on the public internet: the LAN, loopback, link-local,
+    carrier-grade NAT, unique-local IPv6, an IPv4 address written as IPv6 that is one of those."""
+    for address in _addresses(host or ""):
+        if address.version == 6 and address.ipv4_mapped:
+            address = address.ipv4_mapped
+        if not address.is_global:
+            return True
+    return False
+
+
 class _Guard(urllib.request.HTTPRedirectHandler):
+    """Every redirect is checked against the caller's URL policy. With `refuse_private`, a redirect may not lead to a
+    private network address (a server on the internet steering the download to a machine of the LAN)."""
     max_redirections = MAX_HOPS
 
-    def __init__(self, check=allowed):
-        self.check, self.http_hop = check, False
+    def __init__(self, check=allowed, refuse_private=False):
+        self.check, self.refuse_private, self.http_hop = check, refuse_private, False
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         newurl = urllib.parse.urljoin(req.full_url, newurl)
+        host = urllib.parse.urlsplit(newurl).hostname
         if not self.check(newurl):
-            raise urllib.error.URLError(f"redirect to a disallowed URL: {urllib.parse.urlsplit(newurl).hostname}")
+            raise urllib.error.URLError(f"redirect to a disallowed URL: {host}")
+        if self.refuse_private and private_host(host):
+            raise urllib.error.URLError(f"{PRIVATE_REFUSED}: {host} (allow it with {PRIVATE_SWITCH})")
         if urllib.parse.urlsplit(newurl).scheme == "http":
             self.http_hop = True
         return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def any_guard(url, private_ok=False):
+    """The redirect guard of an --any or --check request: redirects to private addresses are refused unless the caller
+    allows them or the URL the user gave is itself on a private address (an intranet server)."""
+    return _Guard(allowed_any, refuse_private=not private_ok and not private_host(urllib.parse.urlsplit(url).hostname))
 
 
 # -- the fingerprint ------------------------------------------------------------------------------
@@ -137,14 +178,13 @@ def _range(opener, url, start, length):
         return _read_exactly(resp, length)
 
 
-def check(url, etag=None, modified=None, opener=None):
+def check(url, etag=None, modified=None, opener=None, private_ok=False):
     """Result of the cheap test, as a dict:
     {"status": "unchanged"}                          the server answered 304 to the stored validators
     {"status": "fingerprint", "size", "chunks", "etag", "last_modified"}   what the server serves now
     {"status": "no-range", "etag", "last_modified"}  it does not support range requests: a full download is needed
     """
-    guard = _Guard(allowed_any)
-    opener = opener or urllib.request.build_opener(guard)
+    opener = opener or urllib.request.build_opener(any_guard(url, private_ok))
     headers = {"Range": f"bytes=0-{HEAD - 1}"}
     if etag:
         headers["If-None-Match"] = etag
@@ -174,9 +214,9 @@ def check(url, etag=None, modified=None, opener=None):
     return {"status": "fingerprint", "size": size, "chunks": combine(offset, hashes), **got}
 
 
-def download_any(url, out, cap, opener=None):
+def download_any(url, out, cap, opener=None, private_ok=False):
     """Download to `out` (exclusive create); returns what the server said, or raises ValueError past the cap."""
-    guard = _Guard(allowed_any)
+    guard = any_guard(url, private_ok)
     opener = opener or urllib.request.build_opener(guard)
     total = 0
     with _open(opener, url) as resp, open(out, "xb") as f:
@@ -208,20 +248,24 @@ def main(argv):
 
 def _run(argv):
     mode = argv[1] if len(argv) > 1 and argv[1].startswith("--") else None
+    private_ok = mode in ("--any", "--check") and len(argv) > 2 and argv[2] == PRIVATE_SWITCH
+    if private_ok:
+        argv = argv[:2] + argv[3:]
     if mode == "--any" and len(argv) == 5:
         if not allowed_any(argv[2], first=True):
             print("refusing URL", file=sys.stderr)
             return 2
-        print(json.dumps(download_any(argv[2], argv[3], int(argv[4]))))
+        print(json.dumps(download_any(argv[2], argv[3], int(argv[4]), private_ok=private_ok)))
         return 0
     if mode == "--check" and 3 <= len(argv) <= 5:
         if not allowed_any(argv[2], first=True):
             print("refusing URL", file=sys.stderr)
             return 2
-        print(json.dumps(check(argv[2], *argv[3:])))
+        print(json.dumps(check(argv[2], *argv[3:], private_ok=private_ok)))
         return 0
     if mode or len(argv) != 4:
-        print("usage: fetcher.py URL OUTFILE EXPECTED_SIZE | --any URL OUTFILE MAX_SIZE | --check URL [ETAG [LAST_MODIFIED]]",
+        print("usage: fetcher.py URL OUTFILE EXPECTED_SIZE | --any [--allow-private-redirects] URL OUTFILE MAX_SIZE | "
+              "--check [--allow-private-redirects] URL [ETAG [LAST_MODIFIED]]",
               file=sys.stderr)
         return 2
     url, out, expected = argv[1], argv[2], int(argv[3])

@@ -107,7 +107,7 @@ is a permission recorded in the manifest (such as `full_wayland`), not a warning
 interface runs the same commands and asks the same questions; it never answers them for you.
 
 A few commands act at once because they do exactly what you typed and change nothing an app may do: `update --channel`
-saves the new channel, `desktop --remove` and `--prune` delete appjail's own menu entries, and `index rollback` swaps
+saves the new channel, `update --pattern` the new file pattern (the file it selects is still reviewed and quarantined), `desktop --remove` and `--prune` delete appjail's own menu entries, and `index rollback` swaps
 back a catalog (and can be swapped again). `desktop NAME` asks with Yes as the default, since you just asked for the
 entry. `remove`, `perms`, `portals` and `desktop` accept `--yes` for scripts.
 

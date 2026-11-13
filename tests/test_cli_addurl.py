@@ -24,8 +24,9 @@ class Downloader:
     def __init__(self, content=FAKE_APPIMAGE, **kw):
         self.content, self.kw, self.calls = content, kw, []
 
-    def __call__(self, url, stage, filename, max_size):
+    def __call__(self, url, stage, filename, max_size, private_redirects=False):
         self.calls.append((url, max_size))
+        self.private = private_redirects
         path = Path(stage) / filename
         path.write_bytes(self.content)
         return path, info(**self.kw)
@@ -136,3 +137,22 @@ def test_an_unrecordable_download_installs_nothing(h):
         add_url(h, "--name", "x", download=Downloader(etag='"v1\x07"'))
     h.assert_nothing_installed("x")
     assert list(store.staging_root().iterdir()) == []
+
+
+def test_private_redirects_are_allowed_only_on_request(h):
+    dl = Downloader()
+    console = add_url(h, download=dl)
+    assert dl.private is False and "but not to a private network address" in console.text
+    dl = Downloader()
+    console = add_url(h, "--name", "other", "--allow-private-redirects", download=dl)
+    assert dl.private is True and "private network addresses included" in console.text
+
+
+@pytest.mark.parametrize("argv, message", [
+    (["add", "--file", "x.AppImage", "--allow-private-redirects"], "apply to --url only"),
+    (["add", "o/r", "--allow-private-redirects"], "--allow-private-redirects to --url only"),
+    (["index", "add", "mine", "--file", "apps.json", "--allow-private-redirects"], "applies to --url only"),
+])
+def test_private_redirects_switch_is_refused_where_it_does_not_apply(h, argv, message):
+    console = Script(())
+    assert cli.main(argv, console=console) == 1 and message in console.text

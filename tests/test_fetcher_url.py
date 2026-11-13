@@ -224,3 +224,41 @@ def test_check_follows_an_http_redirect(server):
 def test_fingerprint_hash_is_over_the_window_hashes():
     assert fetcher.combine(64, ["a", "b"]) == hashlib.sha256(b"64\na\nb").hexdigest()
 
+
+
+# -- redirects to private network addresses --------------------------------------------------------
+
+
+@pytest.mark.parametrize("host, private", [
+    ("192.168.1.10", True), ("10.0.0.1", True), ("172.16.5.4", True), ("127.0.0.1", True), ("169.254.1.1", True),
+    ("100.64.0.1", True), ("::1", True), ("[fe80::1]", True), ("fd00::1", True), ("::ffff:192.168.0.1", True),
+    ("0.0.0.0", True), ("93.184.215.14", False), ("2606:2800:21f:cb07:6820:80da:af6b:8b2c", False),
+    ("", False), ("name.that.does.not.resolve.invalid", False),
+])
+def test_private_host(host, private):
+    assert fetcher.private_host(host) is private
+
+
+def test_a_redirect_to_a_private_address_is_refused_when_the_guard_says_so(server, tmp_path):
+    guard = fetcher._Guard(fetcher.allowed_any, refuse_private=True)
+    with pytest.raises(urllib.error.URLError, match=fetcher.PRIVATE_REFUSED + ".*--allow-private-redirects"):
+        fetcher.download_any(server + "/redirect", str(tmp_path / "f"), 10 ** 7, urllib.request.build_opener(guard))
+    info = fetcher.download_any(server + "/file", str(tmp_path / "g"), 10 ** 7, urllib.request.build_opener(guard))
+    assert info["size"] == len(PAYLOAD)  # the URL the user gave is not judged, only where a redirect leads
+
+
+def test_private_redirects_are_refused_only_from_a_public_start_and_without_the_switch(monkeypatch):
+    monkeypatch.setattr(fetcher, "private_host", lambda host: host != "example.org")
+    assert fetcher.any_guard("https://example.org/a").refuse_private is True
+    assert fetcher.any_guard("https://example.org/a", private_ok=True).refuse_private is False
+    assert fetcher.any_guard("https://intranet.lan/a").refuse_private is False  # the user started inside the LAN
+
+
+def test_main_passes_the_switch(monkeypatch, capsys):
+    seen = []
+    monkeypatch.setattr(fetcher, "download_any", lambda url, out, cap, private_ok=False: seen.append((url, private_ok)) or {})
+    monkeypatch.setattr(fetcher, "check", lambda url, *a, private_ok=False: seen.append((url, private_ok)) or {})
+    assert fetcher.main(["f", "--any", "--allow-private-redirects", "https://e.test/x", "/o", "5"]) == 0
+    assert fetcher.main(["f", "--any", "https://e.test/y", "/o", "5"]) == 0
+    assert fetcher.main(["f", "--check", "--allow-private-redirects", "https://e.test/z", '"v1"']) == 0
+    assert seen == [("https://e.test/x", True), ("https://e.test/y", False), ("https://e.test/z", True)]

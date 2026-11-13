@@ -29,8 +29,8 @@ def add_file(h, path, *extra, answers=("y",), extract_ok=lambda: True):
 @pytest.mark.parametrize("argv, message", [
     (["--file", "x", "--tag", "v1"], "--tag and --prerelease apply to a GitHub release only"),
     (["--url", "https://example.org/x", "--prerelease"], "--tag and --prerelease apply to a GitHub release only"),
-    (["--file", "x", "--max-size", "5"], "--max-size applies to --url only"),
-    (["o/r", "--max-size", "0"], "--sha256 and --max-size apply to --file / --url only"),
+    (["--file", "x", "--max-size", "5"], "--max-size and --allow-private-redirects apply to --url only"),
+    (["o/r", "--max-size", "0"], "--sha256 and --max-size apply to --file / --url"),
     (["o/r", "--mime", "text/plain"], "need --desktop"),
     (["o/r", "--mime-all"], "need --desktop"),
     (["--file", "x", "--rw"], "need --desktop"),
@@ -146,7 +146,7 @@ def test_extraction_failure_keeps_nothing(h, image):
     (["add", "o/r", "--file", "x"], "give either"),
     (["add", "--file", "x", "--url", "https://x.org/a"], "give either"),
     (["add"], "owner/repo"),
-    (["add", "o/r", "--sha256", SHA], "apply to --file / --url only"),
+    (["add", "o/r", "--sha256", SHA], "apply to --file / --url"),
 ])
 def test_dispatch_rejects_bad_combinations(sandbox, argv, message):
     console = Script()

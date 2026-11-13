@@ -72,7 +72,9 @@ def build_parser():
     add.add_argument("--file", metavar="PATH", help="install this local AppImage instead of a GitHub release")
     add.add_argument("--url", metavar="URL", help="install the AppImage at this https URL instead of a GitHub release")
     add.add_argument("--sha256", metavar="HEX", help="with --file or --url: the hash the publisher gives; a mismatch aborts, a match makes it tier 4")
-    add.add_argument("--max-size", type=int, metavar="MIB", help="with --url: refuse to download more than this (default 1024)")
+    add.add_argument("--max-size", type=int, metavar="MIB", help="with --url: refuse to download more than this (default 1024, at most 2048)")
+    add.add_argument("--allow-private-redirects", action="store_true",
+                     help="with --url: also follow redirects to private network addresses (the LAN, loopback); refused by default")
     add.add_argument("--name", help="local app name (default: repo name)")
     add.add_argument("--prerelease", action="store_true", help="allow pre-releases")
     add.add_argument("--tag", help="use this release tag instead of the latest release")
@@ -107,11 +109,15 @@ def build_parser():
     upd = isub.add_parser("update", help="refresh the catalogs, review the changes, then accept them")
     upd.add_argument("name", nargs="?", help="one source (default: every source)")
     upd.add_argument("--commit", default="HEAD", help="appjail-db only: fetch this appjail-db commit (40 hex digits) instead of the latest")
+    upd.add_argument("--allow-private-redirects", action="store_true",
+                     help="also follow redirects to private network addresses (the LAN, loopback); refused by default")
     iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (see the README, Searching)")
     iadd.add_argument("name", help="a short name for the source")
     where = iadd.add_mutually_exclusive_group(required=True)
     where.add_argument("--url", help="an https URL serving the catalog")
     where.add_argument("--file", help="a local catalog file")
+    iadd.add_argument("--allow-private-redirects", action="store_true",
+                      help="with --url: also follow redirects to private network addresses (the LAN, loopback); refused by default")
     irm = isub.add_parser("remove", help="remove a source you added, with its catalogs")
     irm.add_argument("name")
     irb = isub.add_parser("rollback", help="go back to the previous catalog of a source")
@@ -127,6 +133,10 @@ def build_parser():
     upd_app.add_argument("--file", metavar="PATH", help="an app installed from a file: replace it with this AppImage")
     upd_app.add_argument("--sha256", metavar="HEX", help="url/file apps: the hash the publisher gives for the new content (keeps or earns tier 4)")
     upd_app.add_argument("--verify", action="store_true", help="url apps: at the end of the quarantine download the file again and compare it with the candidate")
+    upd_app.add_argument("--pattern", metavar="GLOB",
+                         help="GitHub apps: the file-name pattern (fnmatch) that selects the release asset, from now on")
+    upd_app.add_argument("--allow-private-redirects", action="store_true",
+                         help="url apps: also follow redirects to private network addresses (the LAN, loopback); refused by default")
     lst = sub.add_parser("list", help="list installed apps")
     lst.add_argument("-l", "--long", action="store_true", help="also show what each app is granted")
     lst.add_argument("--json", action="store_true", help="print the apps, with their permissions, as JSON")
@@ -195,14 +205,14 @@ def _add(args, client, console, app_args):
             raise Abort("give either a GitHub owner/repo, --file PATH or --url URL")
         if args.tag or args.prerelease:
             raise Abort("--tag and --prerelease apply to a GitHub release only")
-        if args.file and args.max_size is not None:
-            raise Abort("--max-size applies to --url only")
+        if args.file and (args.max_size is not None or args.allow_private_redirects):
+            raise Abort("--max-size and --allow-private-redirects apply to --url only")
         (cmd_add_file if args.file else cmd_add_url)(args, console)
         return
     if not args.source or not manifest.REPO_RE.fullmatch(args.source):
         raise Abort("source must be a GitHub owner/repo (or use --file / --url)")
-    if args.sha256 or args.max_size is not None:
-        raise Abort("--sha256 and --max-size apply to --file / --url only")
+    if args.sha256 or args.max_size is not None or args.allow_private_redirects:
+        raise Abort("--sha256 and --max-size apply to --file / --url, --allow-private-redirects to --url only")
     cmd_add(args, client or github.Client(), console)
 
 

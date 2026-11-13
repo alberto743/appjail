@@ -19,6 +19,7 @@ import threading
 import time
 from pathlib import Path
 
+from . import fetcher as fetcher_module
 from . import manifest, seccomp, store
 from .errors import JailError, RunError
 from .textsafe import clean
@@ -341,10 +342,15 @@ def _opt_str(data, key, limit=256):
     return (clean(value, limit) or None) if isinstance(value, str) else None  # nothing left after cleaning: no value
 
 
-def download_url(url, stage_dir, filename, max_size):
+def _private(private_redirects):
+    return [fetcher_module.PRIVATE_SWITCH] if private_redirects else []
+
+
+def download_url(url, stage_dir, filename, max_size, private_redirects=False):
     """Download any https URL (see fetcher.py --any). Returns (path, info) where info holds `size`, `final_url`,
-    `http_hop` (a redirect went through plain http), `etag` and `last_modified` as the server said them."""
-    data = _fetcher_json(["--any", url, f"/stage/{filename}", str(int(max_size))], stage_dir)
+    `http_hop` (a redirect went through plain http), `etag` and `last_modified` as the server said them. A redirect
+    to a private network address is refused unless `private_redirects` (or the URL itself is on one)."""
+    data = _fetcher_json(["--any", *_private(private_redirects), url, f"/stage/{filename}", str(int(max_size))], stage_dir)
     size = data.get("size")
     if type(size) is not int or size < 0:
         raise JailError("the fetcher gave no usable answer")
@@ -354,10 +360,10 @@ def download_url(url, stage_dir, filename, max_size):
     return Path(stage_dir) / filename, info
 
 
-def check_url(url, stage_dir, etag=None, last_modified=None):
+def check_url(url, stage_dir, etag=None, last_modified=None, private_redirects=False):
     """The cheap changed/unchanged test of fetcher.py --check, as a dict with a `status` of "unchanged",
-    "fingerprint" (plus `size`, `chunks`, `etag`, `last_modified`) or "no-range"."""
-    args = ["--check", url]
+    "fingerprint" (plus `size`, `chunks`, `etag`, `last_modified`) or "no-range". Redirects as for download_url."""
+    args = ["--check", *_private(private_redirects), url]
     if etag or last_modified:
         args.append(etag or "")
         if last_modified:

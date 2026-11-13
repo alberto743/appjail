@@ -61,6 +61,43 @@ file-manager scripts, and shell and editor startup files; and the toolkit settin
 There is no override. Grant a narrower folder: `~/.config/someapp` instead of `~/.config`, `~/Projects/site` instead of
 `~/Projects` if `~/Projects` holds a key.
 
+## Removable media (USB drives, SD cards)
+
+Where a drive appears depends on how your distribution builds **udisks**, the service that mounts removable media when
+you plug them in:
+
+| Distribution | A drive labelled `PHOTOS` appears at | Can be granted |
+|---|---|---|
+| Debian, Ubuntu (the supported systems) | `/media/USER/PHOTOS` | yes |
+| Fedora, Arch and others that keep udisks' default | `/run/media/USER/PHOTOS` | no |
+
+**Why `/run` is refused.** `/run` holds the runtime state of the whole system and of every logged-in user: under
+`/run/user/UID` are your session bus, your Wayland socket, your audio server, your keyring and the sockets of your
+agents. A grant of anything there would put those within reach, so appjail refuses `/run` as a whole, for folders and
+for single files alike, rather than judging which parts of it are harmless. On a system that mounts drives under
+`/run/media`, this means a folder on a USB drive cannot be granted, and opening a file from the drive through the app's
+menu entry or `run --file` is refused too.
+
+**What to do there.** Fedora and Arch are not among the supported systems, but appjail runs on them; these are the
+ways around it:
+
+- **Use the portal file chooser.** With `--allow portals`, an app that asks for a file through the portal can open one
+  from the drive: the document portal hands the app that file, wherever it is.
+- **Copy the files** into the app's home (`~/.local/share/appjail/apps/NAME/home`) or into a folder you have granted.
+- **Have udisks mount drives under `/media`.** udisks reads the device property `UDISKS_FILESYSTEM_SHARED`
+  ([udisks manual](https://storaged.org/doc/udisks2-api/latest/udisks.8.html)): when it is
+  `1`, a filesystem is mounted in the shared directory `/media/LABEL` instead of the private `/run/media/USER/LABEL`. A
+  udev rule sets it for every removable filesystem, for example in `/etc/udev/rules.d/99-udisks2-shared.rules`:
+
+  ```
+  ENV{ID_FS_USAGE}=="filesystem|other|crypto", ENV{UDISKS_FILESYSTEM_SHARED}="1"
+  ```
+
+  After `sudo udevadm control --reload` and replugging the drive, it appears at `/media/PHOTOS` and can be granted:
+  `appjail perms NAME --add-dir /media/PHOTOS`. Grant the drive, not `/media` itself, which would show the app every
+  drive you plug in. The trade-off: `/media` is a shared directory, so other users of the machine can see the mount
+  point; whether they can read the files depends on the filesystem's permissions.
+
 ## Alternatives
 
 - The **portal file chooser** (`--allow portals`) lets the app ask you for a file in a dialog it does not control; it

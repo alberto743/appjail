@@ -20,6 +20,8 @@ None pending.
 
 | When | What |
 |---|---|
+| After the next release tag | Decide how an app's terminal output is handled. An app started from a terminal shares it, so control sequences it prints reach the terminal (some terminals let them set the clipboard or the window title). Options: leave it documented ([untrusted text](../understand/acquisition/untrusted-text.md#limits)); start windowed apps with input from `/dev/null` and their output in a log; pass the output through a filter. Deferred by the maintainer until after the next tag. |
+| After the next release tag | Decide whether to make an exception for removable media under `/run/media/USER` (Fedora, Arch), which is refused today with the rest of `/run`, for folders and files ([removable media](../guide/files.md#removable-media-usb-drives-sd-cards)). An exception would be limited to the mount points below the user's own directory there. Deferred by the maintainer until after the next tag. |
 | December 2026 | Switch the workflows from `ubuntu-26.04` to `ubuntu-latest` once GitHub's move completes (planned to end 2026-11-19), and check CI ([workflows](project/workflows.md)). |
 | Each minor release | Re-check the facts on [related projects](project/related-projects.md) and the references cited on the concept pages. |
 

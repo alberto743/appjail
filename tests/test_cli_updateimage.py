@@ -389,7 +389,7 @@ def test_channel_is_refused_for_a_url_app(h):
     server = UrlServer()
     install_url(h, server)
     code, c = run(h, server, extra=("--channel", "pinned"))
-    assert code == 1 and "--channel applies to apps installed from a GitHub release" in c.text
+    assert code == 1 and "--channel and --pattern apply to apps installed from a GitHub release" in c.text
     assert mf().channel == "stable" and server.checks == []
 
 
@@ -397,7 +397,7 @@ def test_channel_is_refused_for_a_file_app(file_app):
     h, old, _new = file_app
     install_file(h, old)
     code, c = update(h, None, extra=("--channel", "stable"))
-    assert code == 1 and "--channel applies to apps installed from a GitHub release" in c.text
+    assert code == 1 and "--channel and --pattern apply to apps installed from a GitHub release" in c.text
 
 
 @pytest.mark.parametrize("extra, flag", [(("--channel", "pinned"), "--channel"), (("--sha256", "a" * 64), "--sha256")])

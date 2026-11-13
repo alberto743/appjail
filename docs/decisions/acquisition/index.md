@@ -10,3 +10,4 @@ who built them. How it works is explained in [Acquisition](../../understand/acqu
 | [Evidence tiers, without a GPG tier](evidence-tiers.md) | what each tier proves, and why tier 2 is not implemented |
 | [Attestations verified with a pinned `gh`](attestations.md) | Sigstore build attestations, and what their identity covers |
 | [Helper tools pinned in the source](pinned-tools.md) | `gh` and DwarFS, and how they are updated |
+| [Redirects to private addresses are refused](private-redirects.md) | URL downloads steered to a machine of your network |

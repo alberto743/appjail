@@ -14,6 +14,7 @@ from dataclasses import replace
 from urllib.parse import urlsplit
 
 from . import history, manifest, store, updater
+from .cmd_addimage import private_redirects
 from .console import INDENTED_LABEL, Abort, human_size
 from .errors import JailError
 from .imagesrc import (
@@ -130,7 +131,7 @@ def probe(run, pending):
     m = run.m
     which, etag, modified = reference(m, pending)
     with store.staging() as stage:
-        res = run.svc.check_url(m.target, stage, etag, modified)
+        res = run.svc.check_url(m.target, stage, etag, modified, **private_redirects(run.args))
     if res["status"] == "unchanged":
         return which, res
     if res["status"] == "no-range":
@@ -162,7 +163,8 @@ def fetch_candidate(run, stage, expected):
     """Download the URL in the jail into `stage`; returns (staged path, sha256, server info)."""
     m, console = run.m, run.console
     try:
-        staged, info = run.svc.download_url(m.target, stage, "download.AppImage", download_cap(m))
+        staged, info = run.svc.download_url(m.target, stage, "download.AppImage", download_cap(m),
+                                            **private_redirects(run.args))
     except JailError as e:
         raise Abort(str(e)) from e
     digest = store.sha256_file(staged)
