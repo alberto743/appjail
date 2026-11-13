@@ -1,6 +1,6 @@
 # Updates
 
-Decisions about replacing an installed version with a new one, and about keeping a record of what changed.
+Decisions about replacing an installed version with a new one, and about keeping a record of what changed. How it works is explained in [Updates](../../understand/updates/index.md).
 
 | Decision | Covers |
 |---|---|

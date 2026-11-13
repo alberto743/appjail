@@ -41,6 +41,8 @@ its manifest, and what appjail cannot enforce it refuses rather than ignores.
 | See how an app is fetched and checked | [Acquisition](understand/acquisition/index.md) |
 | See how an app is isolated | [Isolation](understand/isolation/index.md) |
 | See what an app can reach of your desktop | [Desktop access](understand/desktop/index.md) |
+| Know how updates are checked | [Updates](understand/updates/index.md) |
+| Know where search results come from | [Catalog](understand/catalog/index.md) |
 | Give an app access to something | [Permissions](guide/permissions.md) |
 | Know why a choice was made | [Decisions](decisions/index.md) |
 | Look up a permission | [Permission reference](reference/permissions.md) |

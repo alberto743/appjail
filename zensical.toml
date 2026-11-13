@@ -49,6 +49,14 @@ nav = [
       "understand/desktop/network.md",
       "understand/desktop/menu-entries.md",
     ] },
+    { "Updates" = [
+      "understand/updates/index.md",
+      "understand/updates/quarantine.md",
+      "understand/updates/blocks.md",
+      "understand/updates/url-and-file.md",
+      "understand/updates/history.md",
+    ] },
+    { "Catalog" = "understand/catalog/index.md" },
   ] },
   { "Guide" = [
     "guide/permissions.md",

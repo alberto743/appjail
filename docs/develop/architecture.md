@@ -87,6 +87,8 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 
 ## Updates
 
+Explained in [Updates](../understand/updates/index.md); decisions in [Updates](../decisions/updates/index.md).
+
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
 | **Update channels** | stable, prerelease, pinned | `cmd_update.apply_channel` | `test_cli_update.py` | `--channel`, `--tag` | |
@@ -97,6 +99,8 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | **Manifest history** | local git repo in a no-network jail; tamper evidence | `history.py` | `test_history.py` | `history`, run warning | not prevention |
 
 ## Catalog
+
+Explained in [Catalog](../understand/catalog/index.md); decisions in [Catalog](../decisions/catalog/index.md).
 
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
