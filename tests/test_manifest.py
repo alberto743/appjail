@@ -294,6 +294,21 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/.local/share/icons", "", False),
     ("~/.local/share/icons/hicolor", "rw", True),  # decoded by the desktop, cached by gtk-update-icon-cache
     ("~/.icons", "rw", True),
+    ("~/.config/gtk-3.0", "", False),  # sharing the look read-only is fine
+    ("~/.config/gtk-3.0", "rw", True),  # gtk.css applies to every GTK app of the user
+    ("~/.config/gtk-4.0/gtk.css", "rw", True),
+    ("~/.local/share/themes", "", False),
+    ("~/.local/share/themes/MyTheme", "rw", True),
+    ("~/.themes", "rw", True),
+    ("~/.config/fontconfig", "rw", True),
+    ("~/.local/share/fonts", "", False),
+    ("~/.local/share/fonts", "rw", True),  # parsed by the host's font loaders
+    ("~/.fonts", "rw", True),
+    ("~/.gtkrc-2.0", "rw", True),
+    ("~/.config/kdeglobals", "rw", True),
+    ("~/.config/kdeglobals", "", False),
+    ("~/.config/qt6ct", "rw", True),
+    ("~/.config/gtk-30", "rw", False),  # a prefix of a rule is not the rule
     ("~/.ssh", "", True),
     ("~/Documents", "rw", False),
     ("/mnt/data", "rw", False),

@@ -109,6 +109,13 @@ PERSIST_HOME_DIRS = (".local/bin", ".config/autostart", ".config/systemd", ".con
                      ".local/lib", ".local/share/thumbnailers", ".local/share/kio/servicemenus",
                      ".local/share/kservices5", ".local/share/nautilus/scripts", ".local/share/nemo/actions",
                      ".local/share/nemo/scripts", ".local/share/icons", ".icons")
+# Writable access would let the app change what the desktop's own apps show or decode outside the jail: GTK settings
+# and style sheets (gtk.css, applied to every GTK app of the user), KDE and Qt style settings, themes, fonts (parsed by the host's font loaders)
+# and the fontconfig configuration. Not code, but a way to spoof the interface of other apps or reach a parser outside
+# any jail. Read-only grants stay possible, to share the look.
+APPEARANCE_HOME_DIRS = (".config/gtk-2.0", ".gtkrc-2.0", ".config/gtk-3.0", ".config/gtk-4.0", ".local/share/themes",
+                        ".themes", ".config/fontconfig", ".local/share/fonts", ".fonts", ".config/kdeglobals",
+                        ".config/qt5ct", ".config/qt6ct", ".config/Kvantum")
 # Single files that run code outside the jail at login or shell start; never granted read-write.
 PERSIST_HOME_FILES = (".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".profile", ".zshrc", ".zshenv", ".zprofile",
                       ".zlogin", ".xprofile", ".xinitrc", ".xsession", ".xsessionrc", ".pam_environment", ".gitconfig", ".npmrc",
@@ -150,6 +157,10 @@ def sensitive_reason(path, mode):
             for d in PERSIST_HOME_DIRS:
                 if _within(rel, d) or (rel and _within(d, rel)):
                     return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or desktop startup)"
+            for d in APPEARANCE_HOME_DIRS:
+                if _within(rel, d) or (rel and _within(d, rel)):
+                    return (f"write access to ~/{rel} could change how your other apps look, or plant files the desktop "
+                            "decodes outside the jail (toolkit settings, themes, fonts)")
         return None
     for d in SYSTEM_PATHS:
         if _within(path, d):
