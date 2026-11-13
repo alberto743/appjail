@@ -37,7 +37,8 @@ packages; one that neither packages is not measured, and the rule decides it fro
 2. **Start it headless.** Add an entry to `probe.COMPOSITORS`: packages, command line, environment. Use its headless
    backend if it has one (`--headless`, `--virtual`, `WLR_BACKENDS=headless`, `AQ_BACKENDS=headless`). If it has none, run
    it nested as a window of a private Xvfb (`probe.XVFB`, as Muffin and Cinnamon do); weston is also measured as a window of
-   a headless sway. A shell that is a plugin of a compositor (GNOME Shell on Mutter, Cinnamon on Muffin) is its own entry.
+   a headless sway. A shell that is a plugin of a compositor (GNOME Shell on Mutter, Cinnamon on Muffin) is its own entry; so is a shell that
+   is a client of one (plasmashell beside KWin, with the activity manager it needs; `probe.SETTLE` gives it time to load).
 3. **Survey.** `probe.py --only NAME` on both guests. Read `full`, `restricted`, `functional` and `dbus`.
 4. **Classify every global it lists** that is in neither `wayland.PRIVILEGED` nor `wayland.ALLOWED`: read the protocol's XML
    and decide whether it acts only on the app's own windows, on input while the app has focus, or on its own buffers
@@ -76,6 +77,8 @@ packages; one that neither packages is not measured, and the rule decides it fro
   there (`probe.ENDS_COMPOSITOR`) and `cinnamon_dbus.py` makes it last, recording whether the shell survived.
 * **When a client never gets focus, check that the compositor is still there.** Hyprland 0.53.3 aborts when a window closes;
   that looked like a focus problem until `clipboard.py` asked the registry again.
+* **KWin reads each positional argument as a whole command line** (split like a shell would), and a child it starts
+  inherits its environment, `QT_QPA_PLATFORM=offscreen` included: start Plasma's shell beside KWin, not through it.
 * **Shells take their bus names after the socket appears.** Wait a few seconds after `wait_for_display` before listing them.
 * **GNOME Shell starts in its overview**, which takes the first click and keys: press Escape, wait, and retry the typing.
   **Mutter focuses a new window at the first key after a click** and does not deliver that key: send a Shift first.

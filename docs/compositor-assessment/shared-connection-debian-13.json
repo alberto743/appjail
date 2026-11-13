@@ -187,6 +187,87 @@
    "status": "ok",
    "tries": {},
    "version": "mutter 48.7-0+deb13u1"
+  },
+  "plasmashell": {
+   "names": [
+    "com.canonical.Unity",
+    "org.freedesktop.Notifications",
+    "org.freedesktop.a11y.Manager",
+    "org.kde.ActivityManager",
+    "org.kde.JobViewServer",
+    "org.kde.KWin",
+    "org.kde.KWin.Effect.WindowView1",
+    "org.kde.KWin.HighlightWindow",
+    "org.kde.KWin.NightLight",
+    "org.kde.KWin.ScreenShot2",
+    "org.kde.StatusNotifierHost-11357",
+    "org.kde.keyboard",
+    "org.kde.kglobalaccel",
+    "org.kde.klipper",
+    "org.kde.kuiserver",
+    "org.kde.plasmashell",
+    "org.kde.runners.activities"
+   ],
+   "status": "ok",
+   "tries": {
+    "com.canonical.Unity": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.kde.klipper"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.freedesktop.Notifications": {
+     "answer": "('2',)",
+     "appjail": {
+      "by_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "by_unique_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "outcome": "confined",
+      "service_call": {
+       "answer": "('Plasma', 'KDE', '6.3.6', '1.2')",
+       "reached": true
+      }
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.JobViewServer": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.kde.klipper"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.StatusNotifierHost-11357": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.kde.klipper"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.kuiserver": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.kde.klipper"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    }
+   },
+   "version": "plasma-workspace 4:6.3.6-2"
   }
  },
  "distro": {

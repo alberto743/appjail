@@ -218,6 +218,7 @@ def shared_connection_table(results):
     for label, comps in results:
         for comp, entry in comps.items():
             for name, tried in (entry.get("tries") or {}).items():
+                name = re.sub(r"-\d+$", "-PID", name)  # a per-process name (org.kde.StatusNotifierHost-1234)
                 seen.setdefault((comp, name, tried["call"]), {})[label] = ("yes" if tried["reached"] else "no",
                                                                             appjail_cell(tried.get("appjail")))
     rows = [[comp, f"`{name}`", f"`{'.'.join(call.split('.')[-2:])}`",

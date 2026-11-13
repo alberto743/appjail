@@ -3,7 +3,7 @@
 
 """Does granting one bus name reach every interface of the connection that owns it? *-compositors guests only:
 
-    python3 tests/compositors/shared_connection.py --out /tmp/shared-connection.json [--only gnome-shell,cinnamon]
+    python3 tests/compositors/shared_connection.py --out /tmp/shared-connection.json [--only gnome-shell,cinnamon,plasmashell]
 
 A compositor's shell owns many names on one connection: harmless-looking ones (notifications, a keyring prompter) next to
 the privileged ones appjail refuses. xdg-dbus-proxy started with `--filter --talk=NAME` filters by destination name, not by
@@ -38,6 +38,7 @@ from appjail.valid import ManifestError
 PRIVILEGED_CALL = {
     "org.gnome.Mutter.RemoteDesktop": ("/org/gnome/Mutter/RemoteDesktop", "org.gnome.Mutter.RemoteDesktop", "CreateSession", "()"),
     "org.Cinnamon": ("/org/Cinnamon", "org.Cinnamon", "Eval", "('1+1',)"),
+    "org.kde.plasmashell": ("/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "('print(1 + 1)',)"),
 }
 # The service's own side-effect-free call, which a confined grant must still reach (removing a notification that does not
 # exist changes nothing).
@@ -121,7 +122,7 @@ def evaluate(key):
             if probe.wait_for_display(proc, session.rt, before) is None:
                 result["status"] = "did not start"
                 return result
-            time.sleep(4.0)  # the shells take their bus names after the socket appears
+            time.sleep(max(4.0, probe.SETTLE.get(key, 0.0)))  # the shells take their bus names after the socket appears
             result["status"] = "ok"
             names = probe.owned_by(session, proc.pid)
             result["names"] = names
@@ -145,7 +146,7 @@ def evaluate(key):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True)
-    parser.add_argument("--only", default="gnome-shell,cinnamon")
+    parser.add_argument("--only", default="gnome-shell,cinnamon,plasmashell")
     args = parser.parse_args(argv)
     data = {"distro": probe.distro(), "compositors": {}}
     for key in args.only.split(","):

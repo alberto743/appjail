@@ -24,7 +24,10 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 "org.cinnamon.Muffin",
                 # measured on Cinnamon 6.4: its Eval runs any JavaScript in the shell for any client (a command, typing into
                 # other windows); the shell also answers org.gnome.Shell.Screenshot, refused above
-                "org.Cinnamon")
+                "org.Cinnamon",
+                # measured on Plasma 6.3 and 6.6: the shell's evaluateScript runs a desktop script for any client (it writes
+                # the user's configuration files), and klipper, in the same process, hands over the clipboard and its history
+                "org.kde.plasmashell", "org.kde.klipper")
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
 # Owning a name lets the app be the service behind it. Impersonating a desktop service (notifications, secrets,

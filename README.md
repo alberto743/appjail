@@ -380,7 +380,7 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 | labwc 0.8.3, 0.9.3 | restricted | none | runs | works |
 | Hyprland 0.55.2 | restricted | none | runs | works |
 | Hyprland 0.53.3 | restricted | virtual pointer, virtual keyboard, input method (a client can type) | refused | works one way; the test crashes it (Hyprland 0.53.3 aborts when a window closes) |
-| KDE: KWin 6.3.6, 6.6.6 | restricted | clipboard (data-control), layer shell, plasma shell, output management, desktop controls (screen power, brightness, virtual desktops, screen edges) | refused | works |
+| KDE: KWin 6.3.6, 6.6.6 (also with plasmashell 6.3.6, 6.6.6) | restricted | clipboard (data-control), layer shell, plasma shell, output management, desktop controls (screen power, brightness, virtual desktops, screen edges) | refused | works |
 | Wayfire 0.9.0, 0.10.0 | the compositor's own | capture, clipboard, input, windows | refused | works |
 | Cage 0.2.0, 0.2.1 | the compositor's own | capture, input, gamma and output | refused | works |
 | Weston 14.0.2 | the compositor's own | weston capture, input panel, desktop shell | refused | works |
@@ -412,6 +412,7 @@ KWin's own controls (screen power, brightness, virtual desktops, screen edges, t
 GNOME and KDE keep their privileged operations on D-Bus (Mutter's ScreenCast, RemoteDesktop and InputCapture, KWin's scripting
 and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant
 the names `org.gnome.Mutter*`, `org.cinnamon.Muffin*`, `org.Cinnamon*` (its `Eval` runs any script in the shell),
+`org.kde.plasmashell*` (its `evaluateScript` runs a desktop script), `org.kde.klipper*` (the clipboard history),
 `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
 and `org.kde.keyboard`.
 
@@ -435,7 +436,8 @@ and `org.kde.keyboard`.
   process serves all its names: a desktop shell owns ordinary names next to the privileged ones appjail refuses. Grants of
   known services (notifications, the secret service, MPRIS, the status-notifier watcher) are confined to that service's
   objects. Any other granted name reaches its whole owner, so `run` refuses it when its owner also owns a refused name
-  (on GNOME Shell and Cinnamon, the keyring prompter, the magnifier and other names of the shell). That check sees the
+  (on GNOME Shell, Cinnamon and Plasma, the keyring prompter, the magnifier, KIO's job server and other names of the
+  shell). That check sees the
   owners at launch only: a name nobody owns yet, or one a shell takes over while the app runs, is not caught
   ([details](docs/compositor-assessment/ASSESSMENT.md#one-granted-name-reaches-its-whole-connection)).
 - The private audio graph (`audio_mode = pipewire`) connects to the output and input that are your defaults when the app

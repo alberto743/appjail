@@ -83,6 +83,8 @@ CALLS = (
     ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon.Eval", "s", ["1+1"]),
     ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon.GetRunState", "", []),
     ("org.gnome.Magnifier", "/org/gnome/Magnifier", "org.gnome.Magnifier.isActive", "", []),
+    ("org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript", "s", ["print(1 + 1)"]),
+    ("org.kde.klipper", "/klipper", "org.kde.klipper.klipper.getClipboardContents", "", []),
 )
 # Calls not made when the compositor owns the second name, because they end it (cinnamon_dbus.py measures them on their own).
 ENDS_COMPOSITOR = {"org.gnome.Shell.Screenshot.SelectArea": "org.Cinnamon"}
@@ -155,6 +157,14 @@ class Session:
 RENDER_NODE = "/dev/dri/renderD128"  # wayfire and Hyprland insist on a DRM device even with a headless backend
 WLROOTS = {"WLR_BACKENDS": "headless", "WLR_LIBINPUT_NO_DEVICES": "1", "WLR_RENDERER": "pixman"}
 XVFB = ["xvfb-run", "-a", "-s", "-screen 0 1024x768x24"]
+# KWin on its own, then the activity manager and Plasma's shell as its Wayland clients (not on KWin's offscreen platform;
+# software rendering, as there is no GPU). plasmashell must be installed, or the script ends and the survey says so.
+PLASMA_START = ("command -v plasmashell >/dev/null || exit 1; "
+                "QT_QPA_PLATFORM=offscreen kwin_wayland --virtual --socket=probe-kwin --no-lockscreen --no-global-shortcuts & "
+                "sleep 4; export WAYLAND_DISPLAY=probe-kwin QT_QPA_PLATFORM=wayland; "
+                "$(ls /usr/lib/*/libexec/kactivitymanagerd | head -n 1) & sleep 2; "
+                "QT_QUICK_BACKEND=software LIBGL_ALWAYS_SOFTWARE=1 KDE_FULL_SESSION=true XDG_CURRENT_DESKTOP=KDE "
+                "plasmashell --no-respawn & wait")
 
 # name -> (packages whose version is recorded, argv builder(session) -> argv, extra environment)
 COMPOSITORS = {
@@ -174,7 +184,11 @@ COMPOSITORS = {
     "muffin": (("muffin",), lambda s: [*XVFB, "muffin", "--wayland", "--nested", "--no-x11"], {}),
     # Cinnamon's shell is a Muffin plugin, started the same way; --sm-disable: there is no cinnamon-session to register with.
     "cinnamon": (("cinnamon",), lambda s: [*XVFB, "cinnamon", "--wayland", "--nested", "--no-x11", "--sm-disable"], {}),
+    # Plasma's shell is a Wayland client of KWin, which it needs running with the activity manager (PLASMA_START).
+    "plasmashell": (("plasma-workspace",), lambda s: ["sh", "-c", PLASMA_START], {}),
 }
+# How long a shell takes to load and take its bus names after the socket answers.
+SETTLE = {"plasmashell": 25.0}
 
 
 def installed(argv):
@@ -439,6 +453,7 @@ def survey(key):
                 result["log_tail"] = (session.rt / "compositor.log").read_text(errors="replace")[-600:]
                 return result
             result["status"] = "ok"
+            time.sleep(SETTLE.get(key, 0.0))
             # D-Bus first: a client of the functional checks can crash the compositor (Muffin 6.4 dies of a floating-point
             # exception serving wl-copy and wl-paste), and its bus names go with it
             result["dbus"] = dbus_section(session, proc.pid, display)

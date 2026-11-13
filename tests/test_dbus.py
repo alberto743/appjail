@@ -21,7 +21,7 @@ NAMES = ("org.freedesktop.Notifications", "org.mpris.MediaPlayer2.*", "org.kde.S
 # -- name validation ----------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", NAMES + ("org.a11y.Bus", "org.gnome.Mutterly", "org.cinnamon.Muffinx", "org.Cinnamonx", "org.cinnamon.Example","org.freedesktop.a11yx", "org.example.App", "org.example.App.*", "org.gtkmm.Example", "org.freedesktop.FileManager1"))
+@pytest.mark.parametrize("name", NAMES + ("org.a11y.Bus", "org.gnome.Mutterly", "org.cinnamon.Muffinx", "org.Cinnamonx", "org.cinnamon.Example", "org.kde.plasmashellx", "org.kde.JobViewServer","org.freedesktop.a11yx", "org.example.App", "org.example.App.*", "org.gtkmm.Example", "org.freedesktop.FileManager1"))
 def test_ordinary_names_are_accepted(name):
     assert grants.check_dbus_name(name) == name
 
@@ -37,7 +37,7 @@ def test_ordinary_names_are_accepted(name):
     "org.freedesktop.a11y.Manager", "org.freedesktop.a11y.*", "org.gnome.ScreenSaver", "org.kde.kglobalaccel", "org.kde.keyboard",
     "org.cinnamon.Muffin.DisplayConfig", "org.cinnamon.Muffin.IdleMonitor", "org.cinnamon.Muffin.*",
     "org.Cinnamon", "org.Cinnamon.LookingGlass", "org.Cinnamon.AudioDeviceSelection", "org.Cinnamon.LookingGlass.*",
-    "org.gnome.Shell.Screenshot",
+    "org.gnome.Shell.Screenshot", "org.kde.plasmashell", "org.kde.klipper",
 ])
 def test_names_that_hand_over_the_host_are_refused(name):
     with pytest.raises(ManifestError):

@@ -154,6 +154,40 @@
     "ok": true
    }
   },
+  "plasmashell": {
+   "functional": {
+    "capture": false,
+    "clipboard": true,
+    "type": false
+   },
+   "left": {
+    "clipboard": [
+     "ext_data_control_manager_v1"
+    ],
+    "desktop": [
+     "kde_external_brightness_v1",
+     "kde_screen_edge_manager_v1",
+     "org_kde_kwin_dpms_manager",
+     "org_kde_kwin_keystate",
+     "org_kde_plasma_virtual_desktop_management"
+    ],
+    "windows": [
+     "kde_output_management_v2",
+     "org_kde_plasma_shell",
+     "zwlr_layer_shell_v1"
+    ]
+   },
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "plasma-workspace 4:6.6.6-0ubuntu0.1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
   "sway": {
    "functional": {
     "capture": false,

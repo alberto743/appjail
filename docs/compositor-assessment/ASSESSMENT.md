@@ -66,6 +66,8 @@ Cell format is capture / clipboard / typing, `yes` meaning a client succeeded.
 | muffin | ubuntu 26.04 | 6.4.1-1build1 | no | 1 | no/no/no | - |  |
 | mutter | debian 13 | 48.7-0+deb13u1 | no | 1 | no/no/no | - |  |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | no | 1 | no/no/no | - |  |
+| plasmashell | debian 13 | 4:6.3.6-2 | yes | 9 | no/yes/no | no/yes/no |  |
+| plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | yes | 10 | no/yes/no | no/yes/no |  |
 | sway | debian 13 | 1.10.1-2 | yes | 14 | yes/yes/yes | no/no/no |  |
 | sway | ubuntu 26.04 | 1.11-3 | yes | 17 | yes/yes/yes | no/no/no |  |
 | wayfire | debian 13 | 0.9.0-5 | no | 12 | no/yes/yes | - |  |
@@ -110,6 +112,14 @@ What the table shows:
    shell adds a dozen bus names on Muffin's connection, among them `org.Cinnamon`, whose `Eval` runs any JavaScript inside
    the shell for any client of the bus (GNOME Shell refuses that outside its unsafe mode), and `org.gnome.Shell.Screenshot`.
    What that gives is in the D-Bus section below.
+9. **Plasma's shell, plasmashell 6.3.6 and 6.6.6** (`plasma-workspace`, measured 2026-11-13): a Wayland client of a virtual
+   KWin, started with the activity manager it needs, so the Wayland socket is KWin's (point 6 and the rule's verdict for
+   KWin apply: `rule_a.py` refuses it like KWin; the clipboard was not rerun for it). On the bus, one plasmashell connection owns
+   `org.kde.plasmashell`, `org.kde.klipper`, `org.freedesktop.Notifications`, `org.kde.JobViewServer`, `org.kde.kuiserver`,
+   `com.canonical.Unity` and a `org.kde.StatusNotifierHost-PID` name. Two of its calls answer any client: the shell's
+   `org.kde.PlasmaShell.evaluateScript` runs a desktop script (in a manual check, a script wrote a file into the user's
+   configuration directory), and `org.kde.klipper.klipper.getClipboardContents` (and the history calls) returned text
+   another client had copied. Both names are refused (decision D).
 
 ## Results: option A and the clipboard, tried live
 
@@ -139,6 +149,8 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | muffin | ubuntu 26.04 | 6.4.1-1build1 | full | nothing | works | run |
 | mutter | debian 13 | 48.7-0+deb13u1 | full | nothing | works | run |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | nothing | works | run |
+| plasmashell | debian 13 | 4:6.3.6-2 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | sway | debian 13 | 1.10.1-2 | restricted | nothing | works | run |
 | sway | ubuntu 26.04 | 1.11-3 | restricted | nothing | works | run |
 | wayfire | debian 13 | 0.9.0-5 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; clipboard: zwlr_data_control_manager_v1; input: zwf_shell_manager_v2, zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_layer_shell_v1, zwlr_output_manager_v1, zwlr_output_power_manager_v1 | works | refuse |
@@ -227,6 +239,12 @@ checked the caller):
 | mutter | `RemoteDesktop.CreateSession` | allowed | allowed |
 | mutter | `ScreenCast.CreateSession` | allowed | allowed |
 | mutter | `ServiceChannel.OpenWaylandServiceConnection` | allowed | allowed |
+| plasmashell | `KeyboardMonitor.WatchKeyboard` | refused | refused |
+| plasmashell | `KGlobalAccel.allComponents` | allowed | allowed |
+| plasmashell | `KWin.supportInformation` | allowed | allowed |
+| plasmashell | `PlasmaShell.evaluateScript` | allowed | allowed |
+| plasmashell | `klipper.getClipboardContents` | allowed | allowed |
+| plasmashell | `Scripting.isScriptLoaded` | allowed | allowed |
 <!-- /generated -->
 
 * **GNOME**: Mutter's own `ScreenCast`, `RemoteDesktop` and `InputCapture` accept `CreateSession` from any client, and so do
@@ -293,8 +311,9 @@ appjail starts it (`--filter --talk=NAME`), filters by the destination name of a
 call to any name of a connection reaches every object of it. `tests/compositors/shared_connection.py` (2026-11-13; raw data
 `shared-connection-*.json`) starts the proxy with one allowed name at a time, connects through it as an app would, and sends
 the connection's privileged call to that allowed name: `org.gnome.Mutter.RemoteDesktop.CreateSession` on GNOME Shell (the
-session that types into other windows, above), `org.Cinnamon.Eval` of `1+1` on Cinnamon (the call that runs commands, above).
-Mutter, Muffin and KWin alone list no row: every name of their privileged connection is refused.
+session that types into other windows, above), `org.Cinnamon.Eval` of `1+1` on Cinnamon (the call that runs commands, above),
+`org.kde.PlasmaShell.evaluateScript` of `print(1 + 1)` on plasmashell (point 9). Mutter, Muffin and KWin alone list no row:
+every name of their privileged connection is refused.
 
 The "reached with `--talk`" columns are the hole: every allowed name of both shells reached the privileged call. The
 "appjail" columns are what `run` does now with the same grant (decision D):
@@ -319,6 +338,11 @@ The "reached with `--talk`" columns are the hole: every allowed name of both she
 | gnome-shell | `org.gnome.keyring.SystemPrompter` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch |
 | gnome-shell | `org.gtk.MountOperationHandler` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch |
 | gnome-shell | `org.gtk.Notifications` | `RemoteDesktop.CreateSession` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
+| plasmashell | `com.canonical.Unity` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.freedesktop.Notifications` | `PlasmaShell.evaluateScript` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
+| plasmashell | `org.kde.JobViewServer` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.kde.StatusNotifierHost-PID` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.kde.kuiserver` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
 <!-- /generated -->
 
 Every one reached the compositor. So on GNOME Shell, granting `org.gtk.Notifications` (where GTK applications send their
@@ -361,7 +385,8 @@ the registry anyway.
 
 **D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` and, after Muffin and Cinnamon were measured,
 `org.cinnamon.Muffin` and `org.Cinnamon` (every name of each family), `org.freedesktop.a11y`, `org.gnome.ScreenSaver`,
-`org.kde.kglobalaccel` and `org.kde.keyboard` are refused. Under A a GNOME or Cinnamon app has no privileged global on its
+`org.kde.kglobalaccel` and `org.kde.keyboard` are refused, and after plasmashell was measured `org.kde.plasmashell` and
+`org.kde.klipper`. Under A a GNOME or Cinnamon app has no privileged global on its
 socket, so these bus names are what keep it from capturing, injecting input, running commands through the shell or locking
 the screen. Refusing names is not enough where an allowed name shares the connection of a refused one (GNOME Shell,
 Cinnamon; found 2026-11-13, see "One granted name reaches its whole connection"), so the proxy confines the grants of known
@@ -392,6 +417,9 @@ know refuses the app (`wayland.ALLOWED`).
 * Muffin and Cinnamon were measured nested in Xvfb, without `cinnamon-session` and the daemons a real Cinnamon session
   starts (cinnamon-screensaver's `org.cinnamon.ScreenSaver`, the settings daemon); those names were not measured. In that
   setup the shell's virtual keyboard is the X11 backend's.
+* plasmashell was measured beside a virtual KWin with only the activity manager, without `plasma_session`, kded and the
+  other daemons of a real Plasma session (the status-notifier watcher, KWallet, the screen locker); their names were not
+  measured, and the end-to-end use of `evaluateScript` was checked by hand, not by a saved tool.
 * Hyprland needed a particular environment to start in the VM, and its 0.53 result may be a bug fixed later.
 
 ## Reproducing
@@ -410,7 +438,7 @@ On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `
     # the desktops' D-Bus, end to end, and what one granted name reaches through appjail's proxy:
     GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/mutter_dbus.py --out /tmp/mutter-dbus.json'
     GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/cinnamon_dbus.py --out /tmp/cinnamon-dbus.json'
-    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/shared_connection.py --only gnome-shell,mutter,cinnamon,kwin,muffin --out /tmp/shared-connection.json'
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/shared_connection.py --only gnome-shell,mutter,cinnamon,kwin,muffin,plasmashell --out /tmp/shared-connection.json'
 
 Copy each file to `docs/compositor-assessment/<prefix>-<distro>-<version>.json` and run `python3 tests/compositors/report.py
 --write` in a guest. Adding one compositor to existing results, and everything learned on the way: [the
