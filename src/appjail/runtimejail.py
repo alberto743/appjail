@@ -284,13 +284,19 @@ def _capture_nodes():
     return nodes
 
 
-def _camera_args():
+def _camera_args(sysfs=True):
     """The capture nodes, and for each only its own sysfs directory (tools resolve /sys/dev/char/MAJOR:MINOR to it, which
     is recreated as a symlink). The other video nodes, the media controller and the rest of sysfs are not bound. With no
-    camera present nothing is bound."""
+    camera present nothing is bound.
+
+    sysfs: false when `gpu` already binds the whole of /sys/dev/char and /sys/devices, where the symlink exists already
+    (bwrap refuses to replace it).
+    """
     args = []
     for node in _capture_nodes():
         args += ["--dev-bind", str(node), str(node)]
+        if not sysfs:
+            continue
         st = os.stat(node)
         link = f"/sys/dev/char/{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
         real = os.path.realpath(link)
@@ -366,7 +372,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
     if perms.gpu:
         args += _gpu_args()
     if perms.camera:
-        args += _camera_args()
+        args += _camera_args(sysfs=not perms.gpu)
     args += binds
     for k, v in env.items():
         args += ["--setenv", k, v]
