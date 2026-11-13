@@ -80,7 +80,12 @@ CALLS = (
     ("org.gnome.ScreenSaver", "/org/gnome/ScreenSaver", "org.gnome.ScreenSaver.GetActive", "", []),
     ("org.kde.kglobalaccel", "/kglobalaccel", "org.kde.KGlobalAccel.allComponents", "", []),
     ("org.kde.KWin.ScreenShot2", "/org/kde/KWin/ScreenShot2", "org.kde.KWin.ScreenShot2.CaptureActiveScreen", "a{sv}h", None),
+    ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon.Eval", "s", ["1+1"]),
+    ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon.GetRunState", "", []),
+    ("org.gnome.Magnifier", "/org/gnome/Magnifier", "org.gnome.Magnifier.isActive", "", []),
 )
+# Calls not made when the compositor owns the second name, because they end it (cinnamon_dbus.py measures them on their own).
+ENDS_COMPOSITOR = {"org.gnome.Shell.Screenshot.SelectArea": "org.Cinnamon"}
 
 
 def run(argv, **kw):
@@ -167,6 +172,8 @@ COMPOSITORS = {
                                                  "1024x768", "--wayland-display=probe-shell"], {}),
     # Muffin (Cinnamon's Mutter fork, 6.4) has no headless backend: it runs nested, as a window of a private Xvfb.
     "muffin": (("muffin",), lambda s: [*XVFB, "muffin", "--wayland", "--nested", "--no-x11"], {}),
+    # Cinnamon's shell is a Muffin plugin, started the same way; --sm-disable: there is no cinnamon-session to register with.
+    "cinnamon": (("cinnamon",), lambda s: [*XVFB, "cinnamon", "--wayland", "--nested", "--no-x11", "--sm-disable"], {}),
 }
 
 
@@ -390,6 +397,10 @@ def dbus_section(session, pid, display=None):
         section["service_channel"] = service_connections(session, display)
     for name, path, member, signature, args in CALLS:
         if name not in names or args is None:
+            continue
+        if ENDS_COMPOSITOR.get(member) in names:
+            section["calls"].append({"name": name, "member": member, "ok": None,
+                                     "answer": "not called: it ends this compositor (see cinnamon_dbus.py)"})
             continue
         iface, _, method = member.rpartition(".")
         out = busctl(session, "call", "--json=short", name, path, iface, method, signature, *args, timeout=15)

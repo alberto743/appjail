@@ -1,16 +1,18 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""The tables of docs/compositor-assessment/ASSESSMENT.md, generated from the saved results of probe.py, rule_a.py and clipboard.py.
+"""The tables of docs/compositor-assessment/ASSESSMENT.md, generated from the saved results of the tools in this directory.
 
     python3 tests/compositors/report.py            # print every table
     python3 tests/compositors/report.py --write    # rewrite the tables in ASSESSMENT.md
     python3 tests/compositors/report.py --check    # exit 1 if ASSESSMENT.md differs from the results (tests/test_assessment.py)
 
 In ASSESSMENT.md a table sits between `<!-- generated:NAME -->` and `<!-- /generated -->`; NAME is one of SECTIONS. Nothing is
-measured here: every cell is read from the results-*.json (probe.py), rule-a-*.json and clipboard-*.json files next to it.
+measured here: every cell is read from the results-*.json (probe.py), rule-a-*.json, clipboard-*.json, mutter-dbus-*.json,
+cinnamon-dbus-*.json and shared-connection-*.json files next to it.
 """
 
+import contextlib
 import json
 import re
 import sys
@@ -107,18 +109,30 @@ def clipboard_table(results):
     return table(head, rows)
 
 
+def call_outcome(call):
+    """`allowed`, `refused` or `not called`. An Eval that answers (false, ...) refused to run the script (GNOME Shell outside
+    its unsafe mode), although the call itself went through."""
+    if call["ok"] is None:
+        return "not called"
+    if call["ok"] and call["member"].endswith(".Eval"):
+        with contextlib.suppress(ValueError, KeyError, IndexError, TypeError):
+            if json.loads(call["answer"])["data"][0] is False:
+                return "refused"
+    return "allowed" if call["ok"] else "refused"
+
+
 def dbus_table(results):
     """Per compositor with D-Bus names: each call made as an ordinary client and whether the compositor allowed it."""
     seen = {}
     for label, comps in results:
         for name, entry in comps.items():
             for call in (entry.get("dbus") or {}).get("calls", []):
-                seen.setdefault((name, call["member"]), {})[label] = call["ok"]
+                seen.setdefault((name, call["member"]), {})[label] = call_outcome(call)
     labels = [label for label, _ in results]
     rows = []
     for (name, member), outcome in sorted(seen.items()):
         short = ".".join(member.split(".")[-2:])
-        rows.append([name, f"`{short}`", *["allowed" if outcome.get(label) else ("refused" if label in outcome else "-") for label in labels]])
+        rows.append([name, f"`{short}`", *[outcome.get(label, "-") for label in labels]])
     return table(["Compositor", "Call, as an ordinary client", *labels], rows)
 
 
@@ -164,12 +178,46 @@ def mutter_dbus_table(results):
     return table(head, rows)
 
 
+def cinnamon_dbus_table(results):
+    """What an ordinary client of the bus did through Cinnamon's own names (cinnamon_dbus.py)."""
+    head = ["Distribution", "Version", "Eval: a command run as the user", "Eval: keys typed into another client's window",
+            "Screenshot: the whole screen", "SelectArea: Cinnamon still running afterwards"]
+    rows = []
+    for label, comps in results:
+        entry = comps.get("cinnamon")
+        if not entry or entry["status"] != "ok":
+            rows.append([label, version(entry), (entry or {}).get("status", "not run"), "-", "-", "-"])
+            continue
+        typed, shot = entry["type"], entry["capture"]
+        rows.append([label, version(entry), yes(entry["command"]["ok"]),
+                     f"yes (`{typed['received']}`)" if typed["ok"] else "no",
+                     f"yes ({shot['width']}x{shot['height']}, the other client's window in it)" if shot["ok"] else "no",
+                     yes(entry["select_area"]["survived"])])
+    return table(head, rows)
+
+
+def shared_connection_table(results):
+    """Names appjail's policy allows, owned by the same connection as a refused privileged name: whether the privileged call,
+    sent to the allowed name through xdg-dbus-proxy started as appjail starts it, reached the compositor (shared_connection.py)."""
+    labels = [label for label, _ in results]
+    seen = {}
+    for label, comps in results:
+        for comp, entry in comps.items():
+            for name, tried in (entry.get("tries") or {}).items():
+                seen.setdefault((comp, name, tried["call"]), {})[label] = "yes" if tried["reached"] else "no"
+    rows = [[comp, f"`{name}`", f"`{'.'.join(call.split('.')[-2:])}`", *[got.get(label, "-") for label in labels]]
+            for (comp, name, call), got in sorted(seen.items())]
+    return table(["Compositor", "Granted name (allowed)", "Call sent to it", *[f"reached, {label}" for label in labels]], rows)
+
+
 def sections(directory=DIRECTORY):
     """{name: markdown table} for every table that can be generated from the files of this directory."""
     survey = load(directory, "results")
     return {"wayland": wayland_table(survey), "rule": rule_table(load(directory, "rule-a")),
             "clipboard": clipboard_table(load(directory, "clipboard")), "dbus": dbus_table(survey), "policy": policy_table(survey),
-            "mutter_dbus": mutter_dbus_table(load(directory, "mutter-dbus"))}
+            "mutter_dbus": mutter_dbus_table(load(directory, "mutter-dbus")),
+            "cinnamon_dbus": cinnamon_dbus_table(load(directory, "cinnamon-dbus")),
+            "shared_connection": shared_connection_table(load(directory, "shared-connection"))}
 
 
 def splice(document, tables):

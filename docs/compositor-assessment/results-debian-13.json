@@ -74,6 +74,293 @@
     "wayland_info_agrees": true
    }
   },
+  "cinnamon": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv}\",\"data\":[1,[[[\"LVDS1\",\"MetaProducts Inc.\",\"MetaMonitor\",\"0xC0FFEE-1\"],[[\"1600x920@60\",1600,920,6.000000000000000000000e+01,1.0000000000",
+      "member": "org.cinnamon.Muffin.DisplayConfig.GetCurrentState",
+      "name": "org.cinnamon.Muffin.DisplayConfig",
+      "ok": true
+     },
+     {
+      "answer": "not called: it ends this compositor (see cinnamon_dbus.py)",
+      "member": "org.gnome.Shell.Screenshot.SelectArea",
+      "name": "org.gnome.Shell.Screenshot",
+      "ok": null
+     },
+     {
+      "answer": "{\"type\":\"bs\",\"data\":[true,\"2\"]}",
+      "member": "org.Cinnamon.Eval",
+      "name": "org.Cinnamon",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"i\",\"data\":[2]}",
+      "member": "org.Cinnamon.GetRunState",
+      "name": "org.Cinnamon",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"b\",\"data\":[false]}",
+      "member": "org.gnome.Magnifier.isActive",
+      "name": "org.gnome.Magnifier",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.Cinnamon": [
+        "CloseEndSessionDialog",
+        "Eval",
+        "FlashArea",
+        "GetMonitorWorkRect",
+        "GetMonitors",
+        "GetRunState",
+        "GetRunningXletUUIDs",
+        "HideMonitorLabels",
+        "JumpToNewWorkspace",
+        "PushSubprocessResult",
+        "ReloadTheme",
+        "ReloadXlet",
+        "RemoveCurrentWorkspace",
+        "RestartCinnamon",
+        "Screenshot",
+        "ScreenshotArea",
+        "ScreenshotWindow",
+        "ShowEndSessionDialog",
+        "ShowExpo",
+        "ShowMonitorLabels",
+        "ShowOSD",
+        "ShowOverview",
+        "ToggleKeyboard",
+        "activateCallback",
+        "addPanelQuery",
+        "destroyDummyPanels",
+        "highlightPanel",
+        "highlightXlet",
+        "induceSegfault",
+        "leakMemory",
+        "switchWorkspaceDown",
+        "switchWorkspaceLeft",
+        "switchWorkspaceRight",
+        "switchWorkspaceUp",
+        "updateSetting"
+       ],
+       "org.Cinnamon.AudioDeviceSelection": [
+        "Close",
+        "Open"
+       ],
+       "org.Cinnamon.LookingGlass": [
+        "AddResult",
+        "Eval",
+        "FullGc",
+        "GetErrorStack",
+        "GetExtensionList",
+        "GetLatestWindowList",
+        "GetMemoryInfo",
+        "GetResults",
+        "Inspect",
+        "ReloadExtension",
+        "StartInspector"
+       ],
+       "org.cinnamon.Muffin.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "SetCrtcGamma"
+       ],
+       "org.cinnamon.Muffin.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.cinnamon.PortalHandlers": [
+        "GetAppStates"
+       ],
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.Notifications": [
+        "CloseNotification",
+        "GetCapabilities",
+        "GetServerInformation",
+        "Notify"
+       ],
+       "org.gnome.Caribou.Keyboard": [
+        "Hide",
+        "SetCursorLocation",
+        "SetEntryLocation",
+        "Show"
+       ],
+       "org.gnome.Magnifier": [
+        "addZoomRegion",
+        "clearAllZoomRegions",
+        "createZoomRegion",
+        "fullScreenCapable",
+        "getCrosswireClip",
+        "getCrosswireColor",
+        "getCrosswireLength",
+        "getCrosswireSize",
+        "getZoomRegions",
+        "hideCursor",
+        "isActive",
+        "setActive",
+        "setCrosswireClip",
+        "setCrosswireColor",
+        "setCrosswireLength",
+        "setCrosswireSize",
+        "showCursor"
+       ],
+       "org.gnome.Shell.Screenshot": [
+        "FlashArea",
+        "PickColor",
+        "Screenshot",
+        "ScreenshotArea",
+        "ScreenshotWindow",
+        "SelectArea"
+       ],
+       "org.gnome.keyring.internal.Prompter": [
+        "BeginPrompting",
+        "PerformPrompt",
+        "StopPrompting"
+       ]
+      },
+      "names": [
+       "org.Cinnamon",
+       "org.Cinnamon.AudioDeviceSelection",
+       "org.Cinnamon.LookingGlass",
+       "org.cinnamon.Muffin.DisplayConfig",
+       "org.cinnamon.Muffin.IdleMonitor",
+       "org.freedesktop.Notifications",
+       "org.gnome.Caribou.Keyboard",
+       "org.gnome.Magnifier",
+       "org.gnome.Panel",
+       "org.gnome.Shell.Screenshot",
+       "org.gnome.keyring.SystemPrompter",
+       "org.x.StatusIconMonitor.cinnamon_0"
+      ],
+      "privileged_looking": [
+       "org.cinnamon.Muffin.DisplayConfig",
+       "org.gnome.Shell.Screenshot"
+      ]
+     }
+    ],
+    "names": {
+     "org.Cinnamon": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.Cinnamon.AudioDeviceSelection": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.Cinnamon.LookingGlass": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.cinnamon.Muffin.DisplayConfig": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.DisplayConfig' is refused: it reaches org.cinnamon."
+     },
+     "org.cinnamon.Muffin.IdleMonitor": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.IdleMonitor' is refused: it reaches org.cinnamon.Mu"
+     },
+     "org.freedesktop.Notifications": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Caribou.Keyboard": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Magnifier": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Panel": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Shell.Screenshot": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.Screenshot' is refused: it reaches org.gnome.Shell, whi"
+     },
+     "org.gnome.keyring.SystemPrompter": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.x.StatusIconMonitor.cinnamon_0": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    }
+   },
+   "status": "ok",
+   "survived_clients": false,
+   "version": "cinnamon 6.4.10-2+deb13u1",
+   "wayland": {
+    "display": "wayland-0",
+    "full": {
+     "gtk_primary_selection_device_manager": 1,
+     "gtk_shell1": 3,
+     "gtk_text_input_manager": 1,
+     "wl_compositor": 4,
+     "wl_data_device_manager": 3,
+     "wl_output": 2,
+     "wl_seat": 5,
+     "wl_shell": 1,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 3,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 1,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_output_manager_v1": 3,
+     "zxdg_shell_v6": 1
+    },
+    "full_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "wl_registry#2: error 0: invalid version for global wl_output (3): have 2, wanted 3\ncompositor doesn't support wlr-screen",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: wl_display_dispatch: Broken pipe",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
   "gnome-shell": {
    "dbus": {
     "calls": [

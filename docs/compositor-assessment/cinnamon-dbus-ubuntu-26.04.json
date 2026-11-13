@@ -1,0 +1,55 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "capture": {
+    "answer": [
+     true,
+     "/tmp/cpj9p07slx/shot.png"
+    ],
+    "height": 600,
+    "ok": true,
+    "red": true,
+    "stage": "800x600",
+    "width": 800
+   },
+   "command": {
+    "answer": [
+     true,
+     "true"
+    ],
+    "ok": true
+   },
+   "select_area": {
+    "answer": "Call failed: Message recipient disconnected from message bus without replying",
+    "survived": false
+   },
+   "status": "ok",
+   "type": {
+    "answer": [
+     true,
+     "true"
+    ],
+    "ok": true,
+    "received": "appjail",
+    "victim_log": [
+     "active",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "cinnamon 6.4.13-2ubuntu0.2"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "ubuntu",
+  "kernel": "7.0.0-43-generic",
+  "name": "Ubuntu 26.04.1 LTS",
+  "version": "26.04"
+ }
+}

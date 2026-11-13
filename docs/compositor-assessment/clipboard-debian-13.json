@@ -7,6 +7,13 @@
    "status": "ok",
    "version": "cage 0.2.0-2"
   },
+  "cinnamon": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "cinnamon 6.4.10-2+deb13u1"
+  },
   "gnome-shell": {
    "app_socket": "full",
    "inbound": "ok",

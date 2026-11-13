@@ -1,0 +1,55 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "capture": {
+    "answer": [
+     true,
+     "/tmp/cpi92hwn4l/shot.png"
+    ],
+    "height": 600,
+    "ok": true,
+    "red": true,
+    "stage": "800x600",
+    "width": 800
+   },
+   "command": {
+    "answer": [
+     true,
+     "true"
+    ],
+    "ok": true
+   },
+   "select_area": {
+    "answer": "Call failed: Message recipient disconnected from message bus without replying",
+    "survived": false
+   },
+   "status": "ok",
+   "type": {
+    "answer": [
+     true,
+     "true"
+    ],
+    "ok": true,
+    "received": "appjail",
+    "victim_log": [
+     "active",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "cinnamon 6.4.10-2+deb13u1"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "debian",
+  "kernel": "6.12.116+deb13-amd64",
+  "name": "Debian GNU/Linux 13 (trixie)",
+  "version": "13"
+ }
+}
