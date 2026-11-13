@@ -9,6 +9,7 @@ import pytest
 
 from appjail import appimage, cli, github, manifest, store, updater
 from appjail.cli import Abort
+from appjail.services import Services
 
 from .helpers import (
     FAKE_APPIMAGE,
@@ -196,8 +197,8 @@ def test_update_all_reports_each_app_and_fails_if_one_does(h):
                 raise github.GitHubError("HTTP 500")
             return super().repo_info(source)
 
-    code = cli.cmd_update(args, Flaky(release_=release2()), console, download=h.download(NEW_IMAGE), now=T0,
-                          extract=h.extract, extract_ok=lambda: True)
+    svc = Services(download=h.download(NEW_IMAGE), extract=h.extract, extract_ok=lambda: True)
+    code = cli.cmd_update(args, Flaky(release_=release2()), console, svc, now=T0)
     assert code == 1 and "app    updated" in console.text and "other  failed" in console.text
 
 
@@ -429,8 +430,8 @@ def test_rate_limit_stops_the_run_instead_of_hammering_the_api(h):
     client = Limited(release_=release2())
     console = Script(["y"])
     args = cli.build_parser().parse_args(["update", "--quarantine", "0"])
-    code = cli.cmd_update(args, client, console, download=h.download(NEW_IMAGE), now=T0, extract=h.extract,
-                          extract_ok=lambda: True)
+    svc = Services(download=h.download(NEW_IMAGE), extract=h.extract, extract_ok=lambda: True)
+    code = cli.cmd_update(args, client, console, svc, now=T0)
     assert code == 1 and len(client.calls) == 1
     assert "other  not checked (rate limited)" in console.text and "third  not checked (rate limited)" in console.text
 

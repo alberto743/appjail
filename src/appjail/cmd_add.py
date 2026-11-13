@@ -3,7 +3,7 @@
 
 """`appjail add` (from a GitHub release; `add --file/--url` are in cmd_addimage)."""
 
-from . import appimage, attest, github, jail, manifest, store, tools
+from . import appimage, github, manifest, store, tools
 from .console import Abort, human_size
 from .install import (
     MAX_ASSET,
@@ -20,6 +20,7 @@ from .permargs import (
     require_network_isolation,
     show_permissions,
 )
+from .services import Services
 
 YOUNG_ACCOUNT_DAYS = 90
 FEW_STARS = 10
@@ -82,8 +83,8 @@ def show_asset_evidence(client, console, source, asset):
     return asset.base_tier
 
 
-def cmd_add(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-            extract_ok=appimage.have_unsquashfs, verify=attest.verify):
+def cmd_add(args, client, console, svc=None, now=None):
+    svc = svc or Services()
     name = new_app_name(args.name, args.source.partition("/")[2])
 
     perms = permissions_from_args(args)  # validates every option before any network access
@@ -99,7 +100,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     tier = show_asset_evidence(client, console, source, asset)
     show_permissions(console, perms)
 
-    fallback = ask_extractor(console, extract_ok)
+    fallback = ask_extractor(console, svc.extract_ok)
 
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail?"):
         raise Abort("cancelled")
@@ -107,9 +108,9 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     stage = store.new_staging_dir()
     try:
         console.out(f"Downloading {asset.name} ...")
-        staged, digest = download_verified(download, asset, stage)
+        staged, digest = download_verified(svc.download, asset, stage)
         console.out("Verifying and extracting ...")
-        tier, why = gather_evidence(client, info, staged, digest, tier, console, verify)
+        tier, why = gather_evidence(client, info, staged, digest, tier, console, svc.verify)
         if why:
             console.warn(f"attestation not counted: {why}")
         record = manifest.Manifest(
@@ -118,7 +119,7 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
             owner_id=info.owner_id, permissions=perms,
             channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")
         manifest.validate(record)
-        entries, size = swap_in(name, staged, stage, record, extract, fallback)
+        entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
     finally:
         appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)

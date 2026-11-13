@@ -7,6 +7,7 @@ import pytest
 
 from appjail import appimage, cli, cmd_addimage, manifest, store
 from appjail.cli import Abort
+from appjail.services import Services
 
 from .helpers import FAKE_APPIMAGE, NOW, SHA, Script
 
@@ -21,7 +22,7 @@ def image(tmp_path):
 def add_file(h, path, *extra, answers=("y",), extract_ok=lambda: True):
     console = Script(answers)
     args = cli.build_parser().parse_args(["add", "--file", str(path), *extra])
-    cmd_addimage.cmd_add_file(args, console, extract=h.extract, extract_ok=extract_ok, now=NOW)
+    cmd_addimage.cmd_add_file(args, console, Services(extract=h.extract, extract_ok=extract_ok), now=NOW)
     return console
 
 
@@ -137,7 +138,7 @@ def test_extraction_failure_keeps_nothing(h, image):
     console = Script(["y"])
     args = cli.build_parser().parse_args(["add", "--file", str(image), "--name", "x"])
     with pytest.raises(Abort, match="cannot extract"):
-        cmd_addimage.cmd_add_file(args, console, extract=broken, extract_ok=lambda: True, now=NOW)
+        cmd_addimage.cmd_add_file(args, console, Services(extract=broken, extract_ok=lambda: True), now=NOW)
     h.assert_nothing_installed("x")
 
 

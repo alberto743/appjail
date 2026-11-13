@@ -6,7 +6,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from . import appimage, attest, github, history, jail, manifest, store, updater
+from . import appimage, github, history, manifest, store, updater
 from .cmd_updateimage import update_file, update_url
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .errors import JailError
@@ -177,11 +177,8 @@ def update_app(name, args, client, console, svc, now):
     return update_github(name, m, args, client, console, svc, now)
 
 
-def cmd_update(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-               extract_ok=appimage.have_unsquashfs, verify=attest.verify, download_url=jail.download_url,
-               check_url=jail.check_url):
-    svc = Services(download=download, download_url=download_url, check_url=check_url, extract=extract,
-                   extract_ok=extract_ok, verify=verify)
+def cmd_update(args, client, console, svc=None, now=None):
+    svc = svc or Services()
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")
