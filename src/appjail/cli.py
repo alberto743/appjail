@@ -111,7 +111,7 @@ def build_parser():
     upd.add_argument("--commit", default="HEAD", help="appjail-db only: fetch this appjail-db commit (40 hex digits) instead of the latest")
     upd.add_argument("--allow-private-redirects", action="store_true",
                      help="also follow redirects to private network addresses (the LAN, loopback); refused by default")
-    iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (see the README, Searching)")
+    iadd = isub.add_parser("add", help="add a catalog in the appjail-catalog format (documentation: Reference, Catalog format)")
     iadd.add_argument("name", help="a short name for the source")
     where = iadd.add_mutually_exclusive_group(required=True)
     where.add_argument("--url", help="an https URL serving the catalog")
