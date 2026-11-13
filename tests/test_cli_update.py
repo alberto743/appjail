@@ -4,6 +4,7 @@
 import hashlib
 import json
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -577,3 +578,14 @@ def test_an_unrecordable_release_keeps_the_old_install(h):
     assert code == 1 and "app: cannot record this release: version is too long or contains control characters" in c.text
     assert path.read_text() == before and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
     assert list(store.staging_root().iterdir()) == []
+
+
+@pytest.mark.parametrize("sha256, says", [
+    ("ab" * 32, "no build attestation for this asset on GitHub"),
+    ("", "GitHub gives no digest for this asset, so its build attestation cannot be looked up"),
+])
+def test_a_tier1_block_says_why_the_attestation_is_missing(sha256, says):
+    m = SimpleNamespace(owner_id=7, evidence_tier=1)
+    reasons = updater.blocks(m, SimpleNamespace(owner_id=7), SimpleNamespace(sha256=sha256, base_tier=3 if sha256 else 4),
+                             attested=False)
+    assert reasons == [f"EVIDENCE DOWNGRADE: tier 1 → 3 or 4 ({says})"]

@@ -38,7 +38,7 @@ What the downloader may do is decided by appjail, never by the server:
 | a GitHub release asset, a pinned tool | https only, to `github.com` and `*.githubusercontent.com`; an asset stops at the size GitHub announced |
 | an `--url` app, or a catalog (the built-in one included) | an https start, redirects to any host; a plain-http step is reported and needs a confirmation unless your `--sha256` matches; a size cap (1 GiB for apps by default, `--max-size`; 16 MiB for catalogs) and an exact `Content-Length` |
 
-Credentials in URLs are refused everywhere. The small JSON answers of the GitHub API and the attestation bundles are
+An AppImage of any source may be at most 2 GiB. Credentials in URLs are refused everywhere. The small JSON answers of the GitHub API and the attestation bundles are
 fetched by appjail itself, as data with size limits: they are parsed, never run, and the bundles are trusted only once
 [verified](attestations.md).
 

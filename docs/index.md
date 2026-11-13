@@ -29,9 +29,9 @@ the publisher's digest, or only "first seen") is recorded as an *evidence tier* 
 version waits in quarantine and is shown to you as a difference before it replaces the old one.
 
 **Containment.** Every step that touches the untrusted bytes runs in a jail with only the access that step needs: the
-download has a network and nothing else, the extraction has neither network nor anything outside its work directory,
+download has a network (a private one, with `passt` installed) and no file of yours, the extraction has neither network nor anything outside its work directory,
 and the app itself gets a private home, a read-only system and a window. What it may reach beyond that is written in
-its manifest, and what appjail cannot enforce it refuses rather than ignores.
+its manifest, and a permission appjail cannot enforce is refused rather than ignored.
 
 ## Where to go next
 

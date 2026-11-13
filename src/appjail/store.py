@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Where appjail keeps its files. Nothing is written outside these two trees."""
+"""Where appjail keeps its files: the data and the configuration trees. Outside them it writes only the menu entries
+and icons the user asks for, and short-lived files in the runtime directory and the temporary directory."""
 
 import contextlib
 import hashlib

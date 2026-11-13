@@ -12,7 +12,7 @@ None pending.
 | Feature | Why not now | Revisit when | Reasoning |
 |---|---|---|---|
 | GPG tier (tier 2) | a signature proves a key, not its owner; it needs a per-app key pin, a jailed `gpgv` and update rules, while attestations and the quarantine hash already cover attested and unattested apps | a wanted app signs with GPG and has no attestation | [evidence tiers](acquisition/evidence-tiers.md) |
-| Resolvers for other forges (GitLab, Codeberg/Forgejo, SourceForge, vendor sites) | only GitHub is supported; other forges offer no per-asset digest or attestations, so tier 4 at best. The catalog lists 13 apps on GitLab or Forgejo and about 180 pointing to vendor sites | a wanted app is released only on another forge | [sources](acquisition/sources.md) |
+| Resolvers for other forges (GitLab, Codeberg/Forgejo, SourceForge, vendor sites) | only GitHub is supported; other forges offer no per-asset digest or attestations, so tier 4 at best. In November 2026 the appjail-db catalog listed 13 apps on GitLab or Forgejo and about 180 pointing to vendor sites | a wanted app is released only on another forge | [sources](acquisition/sources.md) |
 | An allowlisting proxy for the LAN | with `network`, other hosts on the LAN stay reachable; attacks on them are outside the threat model | host filtering for `network` is wanted | [network](desktop/network.md) |
 | Other architectures (arm64) | evaluated and **paused** by the maintainer: moderate code, expensive verification | the arm64 work is resumed | [platform](project/platform.md) |
 

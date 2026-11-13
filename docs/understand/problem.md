@@ -28,8 +28,8 @@ program does it, and that depends on who made it and on whether it is still what
 
 ## Who appjail defends against
 
-The **software itself**, malicious from the start or turned malicious later. Most AppImages are honest; appjail does
-not try to tell which ones are, it limits what any of them can do.
+The **software itself**, malicious from the start or turned malicious later. appjail does not try to tell good
+AppImages from bad ones; it limits what any of them can do.
 
 **Whoever can change what you download.** The usual attacks on software distribution need no flaw in the program:
 
@@ -48,7 +48,7 @@ escape sequences that rewrite what you see.
 **The tools that manage the software.** An installer that downloads and runs scripts, or updates itself from the
 network, can be compromised once and reach everyone who uses it. appjail was started after studying one such manager,
 [AM](https://github.com/ivan-hc/AM), which updates itself and runs install scripts fetched from its repository outside
-any sandbox, and whose scripts almost never check a hash or a signature.
+any sandbox, and whose install scripts, at the commit studied, almost never checked a hash or a signature (6 of 8,735).
 
 ## What appjail does
 
@@ -77,7 +77,7 @@ the untrusted bytes before anything about them is known. Containment cannot make
   programs appjail starts are trusted. A flaw in them can let an app out. appjail reduces how much of them an app
   can reach (fewer system calls, no nested namespaces, no privileged Wayland interfaces), but cannot fix them.
 - **It does not protect the local network.** An app with the `network` permission reaches the internet and the other
-  machines of your LAN; it does not reach the services of your own machine.
+  machines of your LAN, though not the services of your own machine; one with `network_host` reaches those too.
 - **It does not stop other programs of yours.** A process of your user that runs outside appjail can change appjail's
   files, including the manifests and the pins. appjail keeps a history of its manifests and warns when one was changed
   behind its back; that is evidence, not prevention.

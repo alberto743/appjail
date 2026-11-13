@@ -62,7 +62,7 @@ newer version.
   descriptors there; appjail opens them again inside that namespace and checks they are still the same files
   ([the filesystem view](filesystem.md#grants-are-bound-by-descriptor)).
 - Portals identify an app by the process id `bwrap` reports, which is why `--json-status-fd` is used.
-- Decision: [Unprivileged bubblewrap as the only sandbox engine](../../decisions/isolation/bubblewrap.md).
+- Decision: [bubblewrap, not Firejail or sas](../../decisions/isolation/bubblewrap.md).
 
 ## Limits
 
@@ -70,6 +70,8 @@ newer version.
   appjail's options, which is why they are built in one place and tested.
 - It cannot apply Landlock, and it has no notion of resource limits (memory, processes); an app can still exhaust
   memory or CPU.
+- The app shares the terminal it was started from (standard input, output and error): it can read what you type there
+  while it runs, and write control sequences to it ([untrusted text](../acquisition/untrusted-text.md#limits)).
 - The system directories are bound read-only, not hidden: the app can read the programs and libraries installed on
   your system, and their configuration under `/usr`.
 

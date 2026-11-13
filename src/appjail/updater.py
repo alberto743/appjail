@@ -42,7 +42,9 @@ def blocks(m, info, asset, attested=None):
         out.append(f"OWNER CHANGE: the repository is now owned by {info.owner} (account id {info.owner_id}), "
                    f"not the account pinned when it was added (id {m.owner_id})")
     if m.evidence_tier == 1 and not attested:
-        out.append("EVIDENCE DOWNGRADE: tier 1 → 3 or 4 (this release has no build attestation on GitHub)")
+        why = ("no build attestation for this asset on GitHub" if asset.sha256
+               else "GitHub gives no digest for this asset, so its build attestation cannot be looked up")
+        out.append(f"EVIDENCE DOWNGRADE: tier 1 → 3 or 4 ({why})")
         return out
     new_tier = asset.base_tier
     if m.evidence_tier > 1 and new_tier > m.evidence_tier:

@@ -23,8 +23,8 @@ on Wayland (and X11-only apps through a private Xwayland), and treats the softwa
 
 ## Why
 
-Package managers for AppImages typically download a release and run it with your full privileges. appjail is built
-around the opposite assumptions:
+The usual way to use an AppImage is to download it and run it with your full privileges, and most tools that manage
+AppImages do the same. appjail is built around the opposite assumptions:
 
 - **Nothing from the network is executed.** An app is a small TOML manifest: source, pinned hash, permissions. appjail
   runs no install scripts and does not update itself.

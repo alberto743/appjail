@@ -54,8 +54,9 @@ Some paths are never granted, whatever the mode:
 
 - **credentials and secrets**: `~/.ssh`, `~/.gnupg`, cloud and container credentials (`~/.aws`, `~/.kube`,
   `~/.docker`, ...), package-registry tokens, password stores and vaults, messaging sessions, browser profiles, mail,
-  shell histories, and files named like keys or password databases (`*.pem`, `*.key`, `*.kdbx`, ...), and any folder
-  that contains one of these (grant a subfolder instead);
+  shell histories, and files named like keys or password databases (`*.pem`, `*.key`, `*.kdbx`, ...); also any folder
+  above one of these locations, such as `~/.config`, which holds `~/.config/gh` (grant a subfolder instead). The check
+  is by path: appjail does not search a granted folder for secrets you keep elsewhere in it;
 - **too broad**: `/`, your home directory or any of its parents, `~/.config`, `~/.local`, `~/.cache`, and the system
   trees (`/etc`, `/usr`, `/proc`, `/sys`, `/dev`, `/run`, ...);
 - **shared temporary directories**: `/tmp` and `/var/tmp`. Programs keep their unix sockets there (the X server's,
@@ -100,9 +101,9 @@ reused by another file.
   and the app gets that file alone.
 - The [network namespace](namespaces.md) is why `/tmp` is not the only place sockets hide: abstract sockets live in
   the network namespace, which [Landlock](landlock.md) covers.
-- Decision: [Extract AppImages instead of mounting them](../../decisions/isolation/extraction.md).
-- Decision: [Paths that can never be granted, with no override](../../decisions/isolation/refused-paths.md).
-- Decision: [Granted paths are bound by descriptor](../../decisions/isolation/grants-by-descriptor.md).
+- Decision: [Extract, never mount](../../decisions/isolation/extraction.md).
+- Decision: [Paths that are never granted](../../decisions/isolation/refused-paths.md).
+- Decision: [Grants bound by descriptor](../../decisions/isolation/grants-by-descriptor.md).
 
 ## Limits
 
@@ -111,6 +112,10 @@ reused by another file.
 - A file granted read-write with `--file` cannot be replaced, only rewritten in place: apps that save by writing a new
   file and renaming it over the old one fail on such a file. Grant its folder, or use the portal file chooser.
 - A folder whose path contains `:` cannot be granted (the character separates the mode).
+- `/run` is a system tree, so removable media mounted under `/run/media/USER` cannot be granted; Debian and Ubuntu mount
+  them under `/media/USER`, which can.
+- A secret is recognised by where it is, not by what it is: a key file kept in an ordinary folder you grant is visible
+  to the app.
 - The private home is persistent and is deleted only by `appjail remove`; an app can keep state there between runs, as
   any app does.
 

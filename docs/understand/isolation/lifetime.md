@@ -45,7 +45,7 @@ grants nothing: it only changes when the jail ends.
 - The [PID namespace](namespaces.md) is what makes "every process of the jail" a well-defined set.
 - `pasta` and its private network namespace are why the lifeline exists.
 - [bubblewrap](bubblewrap.md)'s `--die-with-parent` and `--new-session` are the first two mechanisms above.
-- Decision: [The jail ends with its command; waiting for every process is opt-in](../../decisions/isolation/lifetime.md).
+- Decision: [The jail ends with its command](../../decisions/isolation/lifetime.md).
 
 ## Limits
 

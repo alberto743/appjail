@@ -20,7 +20,7 @@ appjail add --url URL [options]
 | `--file PATH` | install this local AppImage instead of a GitHub release |
 | `--url URL` | install the AppImage at this https URL instead of a GitHub release |
 | `--sha256 HEX` | with `--file` or `--url`: the hash the publisher gives; a mismatch aborts, a match makes it tier 4 |
-| `--max-size MIB` | with `--url`: refuse to download more than this (default 1024) |
+| `--max-size MIB` | with `--url`: refuse to download more than this (default 1024, at most 2048) |
 | `--name NAME` | the app's local name (default: from the repository or the file) |
 | `--prerelease` | allow pre-releases (the app then follows the `prerelease` channel) |
 | `--tag TAG` | install this release instead of the latest; the app is then pinned |

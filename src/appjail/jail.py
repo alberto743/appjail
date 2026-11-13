@@ -338,7 +338,7 @@ def _fetcher_json(args, stage_dir):
 
 def _opt_str(data, key, limit=256):
     value = data.get(key)
-    return clean(value, limit) if isinstance(value, str) and value else None
+    return (clean(value, limit) or None) if isinstance(value, str) else None  # nothing left after cleaning: no value
 
 
 def download_url(url, stage_dir, filename, max_size):

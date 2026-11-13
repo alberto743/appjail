@@ -60,7 +60,8 @@ A trailing `.*` covers the names below a prefix (`org.mpris.MediaPlayer2.*`), wi
 Notifications, the secret service, media players and the tray watcher are *confined*: the proxy lets the app reach only
 the interfaces their specifications define, on their own object. Any other granted name reaches everything the process
 behind it serves; if that process also serves a name appjail refuses (a desktop shell typically does), the app is
-refused at start with a message that names both
+refused at start with a message that names both. The same holds for a name the app may own, since owning includes
+talking to whoever holds the name now
 ([why](../decisions/desktop/dbus-connection.md)).
 
 ## Finding the names an app needs
