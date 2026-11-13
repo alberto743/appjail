@@ -24,6 +24,8 @@ pieces depend on each other.
 
 ## Acquisition
 
+Explained in [Acquisition](../understand/acquisition/index.md); decisions in [Acquisition](../decisions/acquisition/index.md).
+
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
 | **AppImage** (type 2: an ELF runtime followed by a SquashFS or DwarFS image; `AppRun` entry point; runtime normally FUSE-mounts itself) | never mounted, never run on the host; type-2 check (`AI\x02`); filesystem offset from the ELF section table; extracted, `AppRun` executed | `appimage.py` | `test_appimage.py` | `add`, `tools install dwarfs` | Mounting rejected (FUSE in user namespaces); type 1 unsupported |

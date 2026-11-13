@@ -38,6 +38,7 @@ its manifest, and what appjail cannot enforce it refuses rather than ignores.
 | You want to | Read |
 |---|---|
 | Understand why appjail is built this way | [The problem](understand/problem.md), then [the principles](understand/principles.md) |
+| See how an app is fetched and checked | [Acquisition](understand/acquisition/index.md) |
 | See how an app is isolated | [Isolation](understand/isolation/index.md) |
 | Give an app access to something | [Permissions](guide/permissions.md) |
 | Know why a choice was made | [Decisions](decisions/index.md) |

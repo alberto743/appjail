@@ -19,6 +19,16 @@ nav = [
   { "Understanding appjail" = [
     { "The problem" = "understand/problem.md" },
     { "Principles" = "understand/principles.md" },
+    { "Acquisition" = [
+      "understand/acquisition/index.md",
+      "understand/acquisition/appimage.md",
+      "understand/acquisition/sources.md",
+      "understand/acquisition/evidence.md",
+      "understand/acquisition/attestations.md",
+      "understand/acquisition/jailed-steps.md",
+      "understand/acquisition/untrusted-text.md",
+      "understand/acquisition/manifest.md",
+    ] },
     { "Isolation" = [
       "understand/isolation/index.md",
       "understand/isolation/namespaces.md",

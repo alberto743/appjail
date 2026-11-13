@@ -10,12 +10,10 @@ the jail the app itself runs in is the *app jail*.
 
 ## The layers
 
-<figure markdown="span">
+<figure>
 <svg viewBox="0 0 720 390" role="img" aria-labelledby="layers-title layers-desc" style="max-width:100%;height:auto;font-family:inherit">
   <title id="layers-title">The layers of the app jail</title>
-  <desc id="layers-desc">The app runs inside its own namespaces, which show it a read-only system, its tree, a private home and
-  a window. Around them, seccomp and Landlock restrict what the kernel does for it. Grants are the only openings, each through
-  a narrow channel.</desc>
+  <desc id="layers-desc">The app runs inside its own namespaces, which show it a read-only system, its tree, a private home and a window. Around them, seccomp and Landlock restrict what the kernel does for it. Grants are the only openings, each through a narrow channel.</desc>
   <style>
     .lj-box { fill: none; stroke: var(--md-default-fg-color--light, #888); stroke-width: 1.5; }
     .lj-band { fill: var(--md-code-bg-color, #f5f5f5); stroke: var(--md-default-fg-color--lighter, #bbb); }

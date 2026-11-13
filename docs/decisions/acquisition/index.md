@@ -1,7 +1,7 @@
 # Acquisition
 
 Decisions about getting an app: where it may come from, how its bytes are checked, and what evidence is kept about
-who built them.
+who built them. How it works is explained in [Acquisition](../../understand/acquisition/index.md).
 
 | Decision | Covers |
 |---|---|

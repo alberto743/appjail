@@ -13,6 +13,10 @@ The build is strict: a link to a missing page or anchor fails it. The tooling is
 `.github/requirements-docs.txt` and never becomes a dependency of appjail. The site loads nothing from other servers:
 no web fonts, no CDN scripts, no emoji images, no maths renderer; keep it that way (diagrams are inline SVG).
 
+An inline SVG goes in a plain `<figure>` (no `markdown` attribute), with no blank line inside it and its `<desc>` on one
+line: Markdown processing would otherwise insert a `<br />`, and a `<br>` inside SVG makes the browser close the SVG,
+so nothing is drawn. Colours come from the theme's CSS variables, so the diagram follows light and dark mode.
+
 The logo in `docs/assets/` is a copy of `assets/logo-light.svg` (`logo.svg`, used in the header and on light pages) and
 `assets/logo-dark.svg`; the colours in `docs/stylesheets/appjail.css` are the logo's. Change them together.
 
