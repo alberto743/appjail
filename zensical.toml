@@ -38,6 +38,17 @@ nav = [
       "understand/isolation/landlock.md",
       "understand/isolation/lifetime.md",
     ] },
+    { "Desktop access" = [
+      "understand/desktop/index.md",
+      "understand/desktop/wayland.md",
+      "understand/desktop/xwayland.md",
+      "understand/desktop/dbus.md",
+      "understand/desktop/portals.md",
+      "understand/desktop/audio.md",
+      "understand/desktop/devices.md",
+      "understand/desktop/network.md",
+      "understand/desktop/menu-entries.md",
+    ] },
   ] },
   { "Guide" = [
     "guide/permissions.md",

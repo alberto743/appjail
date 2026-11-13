@@ -1,7 +1,7 @@
 # Desktop access
 
 Decisions about what an app may reach of your desktop: the display, the session bus and its portals, sound, devices,
-the network, and the menu.
+the network, and the menu. How it works is explained in [Desktop access](../../understand/desktop/index.md).
 
 | Decision | Covers |
 |---|---|

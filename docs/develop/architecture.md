@@ -64,6 +64,8 @@ Explained in [Isolation](../understand/isolation/index.md); decisions in [Isolat
 
 ## Desktop access
 
+Explained in [Desktop access](../understand/desktop/index.md); decisions in [Desktop access](../decisions/desktop/index.md).
+
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
 | **Wayland** (client/compositor, registry of globals, protocols as interfaces) | the app gets a Wayland socket as its only display | `wayland.py`, `runtimejail._wayland_args` | `test_wayland.py` | `display = wayland` | |
