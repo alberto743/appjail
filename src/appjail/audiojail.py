@@ -47,7 +47,7 @@ DAEMONS = "pipewire & until pw-dump >/dev/null 2>&1; do sleep 0.05; done; wirepl
 
 
 class AudioUnavailable(Exception):
-    """The private graph cannot be used; the message says why (the caller falls back to the host's Pulse socket)."""
+    """The private graph cannot be used; the message says why (audiomode.fallback decides what the app gets instead)."""
 
 
 def _in_jail_system(path):

@@ -432,3 +432,37 @@ def test_launch_runs_the_app_on_its_private_graph(sandbox, host, monkeypatch):
     if peak((kw["home"] / "m.wav").read_bytes()) <= 1000:
         assert reference and reference[0] <= 1000, f"the app recorded silence while the host source played (peak {reference})"
         pytest.skip("the test host's own source was silent in that window: nothing to compare the private graph with")
+
+
+@integration
+def test_a_launch_with_every_device_grant_behind_pasta(sandbox, host, monkeypatch):
+    """audio with mic, camera, gpu, network, linger and userns at once: the private graph's sockets, the device nodes and
+    pasta's namespace must all reach the jail, which is set up inside pasta's namespace."""
+    if not shutil.which("pasta"):
+        pytest.skip("needs passt")
+    perms = {"audio": True, "mic": True, "camera": True, "gpu": True, "network": True, "linger": True, "userns": True,
+             "display": "none"}
+    kw = build(sandbox, sandbox / "rt", **perms)
+    (sandbox / "rt").mkdir(exist_ok=True)
+    (kw["root"] / "AppRun").write_text(
+        "#!/bin/sh\n/usr/bin/python3 -c \"import json, os, socket; print(json.dumps({"
+        "'rt': sorted(os.listdir(os.environ['XDG_RUNTIME_DIR'])), 'pulse': os.environ.get('PULSE_SERVER'), "
+        "'dev': sorted(os.listdir('/dev')), 'ifaces': sorted(n for _, n in socket.if_nameindex())}))\" > /home/app/facts.json\n"
+        "/usr/bin/pw-dump | /usr/bin/python3 -c \"import json,sys; print(sorted(o['info']['props']['node.name'] for o in json.load(sys.stdin) "
+        "if o['type'].endswith('Node')))\" > /home/app/nodes.txt\n")
+    (kw["root"] / "AppRun").chmod(0o755)
+    m = Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", permissions=Permissions(**perms))
+    monkeypatch.setattr(runner, "prepare", lambda *a, **k: (m, kw["root"], kw["home"], kw["etc_dir"]))
+    said = []
+    code = runner.launch("app", host_env=dict(host.env), say=said.append, warn=said.append, **COMPOSITOR)
+    assert code == 0, "\n".join(said)
+    assert not [line for line in said if "audio_mode" in line], said  # the private graph, no fallback
+    facts = json.loads((kw["home"] / "facts.json").read_text())
+    assert {"pipewire-0", "pulse"} <= set(facts["rt"]) and facts["pulse"], facts
+    assert "app-mic" in (kw["home"] / "nodes.txt").read_text()
+    assert len(facts["ifaces"]) > 1, facts  # pasta's interface besides lo
+    if os.path.isdir("/dev/dri"):
+        assert "dri" in facts["dev"], facts
+    if runtimejail._capture_nodes():
+        assert any(d.startswith("video") for d in facts["dev"]), facts
+    assert not list(host.rt.glob("appjail-audio-*"))

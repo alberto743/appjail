@@ -125,8 +125,9 @@ DBUS_SEND = "/usr/bin/dbus-send"
 _STRING = re.compile(r'^\s*string "([^"\\]*)"\s*$', re.MULTILINE)
 
 
-def bus_owners(bus, timeout=5.0):
-    """{well-known name: unique name of its owner} of the session bus at `bus`, read with `dbus-send` outside any jail."""
+def bus_owners(bus, wanted=None, timeout=5.0):
+    """{well-known name: unique name of its owner} of the session bus at `bus`, read with `dbus-send` outside any jail: of
+    every name, or of those `wanted(name)` accepts (one call per name, so only the names the check needs are asked)."""
     env = {"PATH": "/usr/bin:/bin", "DBUS_SESSION_BUS_ADDRESS": f"unix:path={bus}"}
 
     def call(member, *args):
@@ -144,7 +145,7 @@ def bus_owners(bus, timeout=5.0):
         raise RunError("cannot check who owns the granted D-Bus names: " + (listed.stderr.strip().splitlines() or ["?"])[-1])
     owners = {}
     for name in _STRING.findall(listed.stdout):
-        if name.startswith(":") or not grants.DBUS_NAME_RE.fullmatch(name):
+        if name.startswith(":") or not grants.DBUS_NAME_RE.fullmatch(name) or (wanted and not wanted(name)):
             continue
         r = call("GetNameOwner", f"string:{name}")
         found = _STRING.findall(r.stdout) if r.returncode == 0 else []
@@ -159,13 +160,16 @@ def check_owners(perms, bus, owners=bus_owners):
     granted = talk_names(perms)
     if not granted:
         return
-    clash = shared_owners(granted, owners(bus))
+
+    def needed(name):  # the refused names and the granted ones: the others cannot clash
+        return _refused(name) or any(_covers(g, name) for g in granted)
+    clash = shared_owners(granted, owners(bus, needed))
     if clash:
         entry, name, refused = clash[0]
         shown = name if name == entry else f"{name} (from {entry})"
         raise RunError(f"dbus_filter entry {shown} is owned by the same process as {refused}, which is refused: a call to "
                        f"one name reaches every object of the process that owns it, so granting it would reach {refused}. "
-                       "Remove the entry (perms APP --rm-dbus NAME)")
+                       f"Remove the entry (appjail perms APP --rm-dbus {entry})")
 
 
 def proxy_args(bus, sockdir, perms, sync_fd, identity=None, seccomp_fd=None):

@@ -4,7 +4,7 @@ Status: measurements complete for Debian 13 and Ubuntu 26.04. Decided: option A 
 socket the app will get), KWin is refused by default, and the D-Bus names that hand over the desktop are refused as a family.
 The implementation follows in `src/appjail/wayland.py`, `grants.py` and `dbusproxy.py`; this document keeps the evidence. A
 granted D-Bus name used to reach every interface of the connection that owns it, which defeated the refused names on GNOME
-Shell and Cinnamon; appjail now confines known services and refuses the other grants that share a refused name's owner
+Shell, Cinnamon and Plasma's shell; appjail now confines known services and refuses the other grants that share a refused name's owner
 (see "One granted name reaches its whole connection").
 
 ## Why this exists
@@ -36,8 +36,8 @@ Where a desktop keeps its privileged operations on D-Bus, a second tool shows wh
 through them, end to end: `mutter_dbus.py` (Mutter, GNOME Shell) and `cinnamon_dbus.py` (Cinnamon). How to assess a
 compositor that is not here yet, step by step, and what went wrong on the way: [the method](../assessing-compositors.md).
 
-Raw results: `results-*.json` (probe.py), `rule-a-*.json` (rule_a.py), `clipboard-*.json` (clipboard.py), `mutter-dbus-*.json`
-and `cinnamon-dbus-*.json`, one file per distribution, in this directory. Every table between `generated` markers is written by `tests/compositors/report.py --write`
+Raw results: `results-*.json` (probe.py), `rule-a-*.json` (rule_a.py), `clipboard-*.json` (clipboard.py), `mutter-dbus-*.json`,
+`cinnamon-dbus-*.json` and `shared-connection-*.json` (shared_connection.py), one file per distribution, in this directory. Every table between `generated` markers is written by `tests/compositors/report.py --write`
 from those files and checked against them by `tests/test_assessment.py`; edit the results or the tool, not the table. Both
 guests ran identical code. Nothing here comes from a third party. The survey (`results-*.json`) was taken before the
 decisions: its `appjail_policy_*` fields and its privileged counts describe appjail's D-Bus name policy and rule as they

@@ -57,6 +57,14 @@ def test_a_capture_node_and_its_own_sysfs_directory_are_bound(sandbox, runtime, 
     assert ("/sys/devices", "/sys/devices") not in pairs(args, "--ro-bind")  # not the whole device tree
 
 
+def test_with_gpu_the_sysfs_of_the_camera_is_already_there(sandbox, runtime, monkeypatch):
+    monkeypatch.setattr(runtimejail, "_capture_nodes", lambda: [Path("/dev/null")])
+    args = runtimejail.runtime_args(**build(sandbox, runtime, camera=True, gpu=True))
+    assert ("/dev/null", "/dev/null") in pairs(args, "--dev-bind")
+    assert ("/sys/dev/char", "/sys/dev/char") in pairs(args, "--ro-bind")
+    assert not pairs(args, "--symlink") or all(not p[1].startswith("/sys/") for p in pairs(args, "--symlink"))
+
+
 def test_no_camera_present_binds_nothing(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(runtimejail, "_capture_nodes", list)
     on = runtimejail.runtime_args(**build(sandbox, runtime, camera=True))
@@ -199,3 +207,13 @@ def test_a_jailed_app_captures_a_real_frame_from_the_webcam_like_source(sandbox,
     width, height, colours = png_info((sandbox / "home" / "frame.png").read_bytes())
     assert width >= 320 and height >= 240, (width, height)
     assert colours >= 6, colours
+
+
+@integration
+def test_camera_and_gpu_together_capture_a_frame(sandbox, vivid):
+    """`gpu` binds /sys/dev/char whole, read-only; the camera's symlink in it must not stop the jail from starting."""
+    proc = run(sandbox, CAPTURE, camera=True, gpu=True)
+    assert proc.returncode == 0, proc.stderr
+    assert (sandbox / "home" / "f.raw").stat().st_size > 0
+    proc = run(sandbox, ["/usr/bin/v4l2-ctl", "-d", "/dev/video0", "--all"], camera=True, gpu=True)
+    assert proc.returncode == 0 and "vivid" in proc.stdout, proc.stderr
