@@ -62,7 +62,7 @@ newer version.
   descriptors there; appjail opens them again inside that namespace and checks they are still the same files
   ([the filesystem view](filesystem.md#grants-are-bound-by-descriptor)).
 - Portals identify an app by the process id `bwrap` reports, which is why `--json-status-fd` is used.
-- Decision: [Unprivileged bubblewrap as the only sandbox engine](../../decisions/isolation/bubblewrap.md).
+- Decision: [bubblewrap, not Firejail or sas](../../decisions/isolation/bubblewrap.md).
 
 ## Limits
 

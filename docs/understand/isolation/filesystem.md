@@ -101,9 +101,9 @@ reused by another file.
   and the app gets that file alone.
 - The [network namespace](namespaces.md) is why `/tmp` is not the only place sockets hide: abstract sockets live in
   the network namespace, which [Landlock](landlock.md) covers.
-- Decision: [Extract AppImages instead of mounting them](../../decisions/isolation/extraction.md).
-- Decision: [Paths that can never be granted, with no override](../../decisions/isolation/refused-paths.md).
-- Decision: [Granted paths are bound by descriptor](../../decisions/isolation/grants-by-descriptor.md).
+- Decision: [Extract, never mount](../../decisions/isolation/extraction.md).
+- Decision: [Paths that are never granted](../../decisions/isolation/refused-paths.md).
+- Decision: [Grants bound by descriptor](../../decisions/isolation/grants-by-descriptor.md).
 
 ## Limits
 

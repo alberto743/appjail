@@ -82,7 +82,7 @@ without it; with it, the jail is weaker against kernel bugs.
   shares yours, and [Landlock](landlock.md) closes the one door that opens.
 - [seccomp](seccomp.md) refuses the system calls that would create nested namespaces.
 - [Process lifetime](lifetime.md): the PID namespace's first process is what keeps the jail alive.
-- Decision: [Unprivileged bubblewrap as the only sandbox engine](../../decisions/isolation/bubblewrap.md).
+- Decision: [bubblewrap, not Firejail or sas](../../decisions/isolation/bubblewrap.md).
 
 ## Limits
 

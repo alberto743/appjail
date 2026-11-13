@@ -57,7 +57,7 @@ than x86-64 appjail refuses to start an app at all rather than run it unfiltered
 - The `userns` permission removes exactly the namespace rows of the table; everything else stays.
 - [Landlock](landlock.md) is the other kernel restriction appjail adds: seccomp filters *calls*, Landlock filters
   *access to objects*.
-- Decision: [A seccomp deny list modelled on Flatpak's](../../decisions/isolation/seccomp.md).
+- Decision: [A seccomp deny list](../../decisions/isolation/seccomp.md).
 
 ## Limits
 
