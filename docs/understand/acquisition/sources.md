@@ -44,8 +44,9 @@ from a repository whose owner id changed is blocked: the name now belongs to som
   `x86_64` or `amd64` win over names that say nothing. If several remain, you choose; if none, the install stops.
 - appjail derives a pattern from the chosen file name, replacing the version with `*`, and records it as
   `asset_pattern`, so later updates pick the same file.
-- GitHub's per-asset **digest** (a SHA-256 computed by GitHub when the file was uploaded) is read, and the presence of a
-  build attestation is looked up. Both are shown before you are asked to download.
+- GitHub's per-asset **digest** (a SHA-256 computed by GitHub when the file was uploaded) is read and, when there is one,
+  the presence of a build attestation is looked up by it. Both are shown before you are asked to download; an asset
+  without a digest gets a warning that it can reach tier 4 at most, unless an attestation verifies after the download.
 
 ### Talking to GitHub
 
@@ -76,6 +77,10 @@ installed. Nothing identifies the publisher in either case, which the [evidence 
   lower evidence tier.
 - The review gives you facts, not a verdict: an established account can still be compromised.
 - Asset selection by name relies on publishers naming their files; an unusual name may need you to choose.
+- The pattern replaces the version only when the release tag appears in the file name. Otherwise it is the exact file
+  name, and a later release whose file is named differently matches nothing: `update` stops and lists the release's
+  files. The way out is to edit `asset_pattern` in the manifest (which `run` then reports as an edit made outside
+  appjail).
 
 ## References
 

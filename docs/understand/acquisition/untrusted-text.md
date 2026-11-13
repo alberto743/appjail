@@ -41,6 +41,11 @@ unescaped can also become a command.
 
 ## Limits
 
+- What appjail prints is cleaned; what an *app* prints is not. An app started from a terminal (`appjail run`) shares that
+  terminal for its input and output, as command-line tools must: control sequences it writes reach the terminal, and
+  some terminals let them set the window title, create hyperlinks or write to the clipboard. The jail stops it from
+  pushing keystrokes into your shell (`TIOCSTI` is refused, and the app runs in a session of its own). Start untrusted
+  graphical apps from the menu, or use a terminal that ignores clipboard and title sequences.
 - Cleaning removes what changes the display; it does not stop a misleading but plain text, such as a description that
   claims to be something it is not, or a lookalike name. The review shows the facts (account id, age) that such a text
   cannot change.

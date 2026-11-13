@@ -12,7 +12,7 @@ against the pin.
 A hash says nothing about *who* made the bytes. That needs evidence from outside the file:
 
 - a **digest published by the host**: GitHub computes the SHA-256 of every release asset when it is uploaded and shows
-  it next to the file. A download that matches it is the file the repository's owner uploaded, unchanged on the way;
+  it next to the file. A download that matches it is the file that was uploaded to that release, unchanged on the way;
 - a **build attestation**: a signed statement that a file with this hash was built by a given workflow of a given
   repository ([build attestations](attestations.md));
 - a **hash you obtained yourself**, for example from the publisher's website;
@@ -36,8 +36,8 @@ the pin was made:
 |---|---|---|
 | 1 | a build attestation verified against the downloaded bytes | built by GitHub Actions for this repository, owned by the pinned account |
 | 2 | *(reserved: a signature by a pinned GPG key; not implemented)* | |
-| 3 | GitHub's per-asset digest matched the download | the file the repository's owner uploaded, unchanged |
-| 4 | a GitHub asset without a digest, anchored by the pinned owner account; or a URL or file whose hash you gave with `--sha256` | the first copy, from the same account; or the copy whose hash you obtained elsewhere |
+| 3 | GitHub's per-asset digest matched the download | the file uploaded to this repository's release (by any account with write access to it), unchanged |
+| 4 | a GitHub asset without a digest, anchored by the pinned owner account; or a URL or file whose hash you gave with `--sha256` | the first copy, from a repository still owned by the pinned account; or the copy whose hash you obtained elsewhere |
 | 5 | a URL or file, nothing else | the first copy |
 
 How the pin is used afterwards:
@@ -47,8 +47,8 @@ How the pin is used afterwards:
 - **On every update**, the candidate's evidence is compared with the installed tier. A lower tier blocks the update,
   with no option to override it: a release that suddenly lacks the digest or the attestation its predecessors had is a
   classic sign of a compromised publisher.
-- **For tier 4 GitHub apps**, where no digest identifies a candidate, `update` downloads it once when first seen, only
-  to hash it, and refuses to install it at the end of the quarantine unless it still hashes the same.
+- **For tier 4 GitHub apps**, where no digest identifies a candidate, `update` offers to download it once when first
+  seen, only to hash it, and refuses to install it at the end of the quarantine unless it still hashes the same.
 - **For URL and file apps**, `update APP --sha256 HEX` raises a tier 5 app to tier 4 when the hash matches; a tier 4 app
   stays tier 4 only if every new version comes with a matching hash.
 

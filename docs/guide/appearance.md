@@ -28,10 +28,10 @@ Give the app the portals:
 appjail perms NAME --allow portals
 ```
 
-The portals' safe set includes Settings, which answers the `color-scheme` preference (dark, light or none). Toolkits
-that read it follow your desktop's choice: GTK 4 and libadwaita apps, Qt 6 apps, Chromium and Electron apps, Firefox.
-appjail's tests check that the Settings portal answers through the jail's proxy; whether an app follows the answer is
-up to its toolkit. The same permission also gives the app the file chooser and notifications through the portals.
+The portals' safe set includes Settings, which answers the `color-scheme` preference (dark, light or none). Apps whose
+toolkit reads it follow your desktop's choice: libadwaita apps do, and recent versions of other toolkits and browsers
+read it too. appjail's tests check that the Settings portal answers through the jail's proxy; whether a given app
+follows the answer is up to its toolkit and version. The same permission also gives the app the file chooser and notifications through the portals.
 
 For an app whose toolkit does not read the portal, set the preference in its own configuration, in its private home
 (next section).

@@ -58,7 +58,7 @@ Explained in [Isolation](../understand/isolation/index.md); decisions in [Isolat
 | **seccomp** (classic BPF) | default allow; deny list as Flatpak; socket families; personality; `io_uring` ENOSYS; nested-namespace calls unless `userns`; x86-64 only | `seccomp.py` | `test_seccomp.py` | `userns` permission | arch refusal |
 | **Nested user namespaces** | denied by default; `userns` for Chromium/Electron sandboxes | `seccomp`, `runtimejail` | `test_seccomp.py` | `--allow userns` | weakens isolation |
 | **Landlock** | only `LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET` (ABI 6), wrapper before bwrap, not behind pasta | `landlock.py` | `test_landlock.py` | `network_host` needs it | FS/net rules not used |
-| **Abstract unix sockets** | belong to the network namespace, not the filesystem; the X server's `@/tmp/.X11-unix/X0` | Landlock, pasta | `test_landlock.py` | | why `network_host` needs Landlock |
+| **Abstract unix sockets** | belong to the network namespace, not the filesystem; the X server's `@/tmp/.X11-unix/X0` | `landlock.py`, `jail.net_wrap` | `test_landlock.py` | | why `network_host` needs Landlock |
 | **Integrity at launch** | image hash, tree marker and tree digest checked; manifest compared to its last history commit | `runner.prepare`, `history.modified` | tamper tests | warnings | |
 | **Process lifetime** | own session; signals forwarded to the group; lifeline FIFO behind pasta; `linger` supervisor (subreaper) | `runner._wait_group`, `jail.Lifeline`, `linger.py` | `test_runner.py` | `--allow linger` | waiting always rejected |
 
@@ -72,7 +72,7 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | **Privileged Wayland protocols** (screencopy, virtual input, data-control, foreign toplevel, layer shell, ...) | registry rule: refuse privileged or unknown globals unless `full_wayland`; `PRIVILEGED` and `ALLOWED` lists | `wayland.privileged` | `test_wayland.py` (replayed registries) | `--allow full_wayland`, refusal messages | measured on nine compositors; KWin refused |
 | **`wp_security_context_v1`** | restricted socket per app with engine `appjail` and app id | `wayland.RestrictedSocket` | `test_wayland.py` | | not sufficient alone (KWin, Hyprland 0.53) |
 | **Compositor assessment** | measured registries and real clients; saved results drive tests | `tests/compositors/` | `test_assessment.py` | Wayland compositors page | headless only |
-| **X11 and its lack of isolation** | host X socket never bound | | | | Flatpak-style X socket rejected |
+| **X11 and its lack of isolation** | host X socket never bound; private `/tmp` | `runtimejail.runtime_args` | `test_runner_jail.py` | | Flatpak-style X socket rejected |
 | **Private Xwayland** (rootless, rootful + openbox) | Xwayland started inside the jail as a client of the app's Wayland socket | `runtimejail.xwayland_command` | `test_xwayland_e2e.py` | `display = xwayland|xwayland-rootful` | mutter only manages its own Xwayland |
 | **D-Bus** (session bus, names, unique names, objects, interfaces, activation) | no bus by default | `dbusproxy.py` | `test_dbus.py` | `--dbus`, `--add-dbus` | |
 | **Filtering D-Bus proxy** (`xdg-dbus-proxy`) | proxy in its own jail; `--filter`; confined known services (`--call`/`--broadcast`), others `--talk` + owner check at launch; refused names; unownable namespaces | `dbusproxy.py`, `grants.py` | `test_dbus.py`, `shared_connection.py` | `--dbus-own` | one name reaches its whole connection; owner changes after launch |
@@ -83,7 +83,6 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | **Network namespace and pasta** | private namespace with outbound only, no host loopback; DNS forwarder; required for `network` | `jail.net_wrap` | `test_jail.py`, `test_runner_jail.py` | `--allow network` | LAN reachable; allowlisting proxy deferred |
 | **Host network** | `network_host` with Landlock scope | `runner.launch` | `test_landlock.py` | `--allow network_host` | |
 | **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults, no URL handlers |
-| **Output and consent** | Console vocabulary; stdout/stderr; prompts default No | `console.py`, `gui/` | `test_console_format.py`, `test_gui_*.py` | every command, GUI | |
 
 ## Updates
 
@@ -92,7 +91,7 @@ Explained in [Updates](../understand/updates/index.md); decisions in [Updates](.
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
 | **Update channels** | stable, prerelease, pinned | `cmd_update.apply_channel` | `test_cli_update.py` | `--channel`, `--tag` | |
-| **Quarantine** | candidate key; first-seen clock in `pending.json`; default 7 days | `updater.py` | `test_cli_update.py`, `test_update_e2e.py` | `--quarantine` | why a delay helps against fast compromises |
+| **Quarantine** | candidate key; first-seen clock in `pending.json`; default 7 days | `updater.py` | `test_cli_update.py`, `test_update_e2e.py` | `--quarantine` | security fixes wait too; a swapped tier 4 asset needs the hash download |
 | **Blocks and cautions** | owner change, tier downgrade block; rename, archive caution | `updater.blocks/cautions` | `test_cli_update.py` | update results | no override by design |
 | **URL fingerprint** | conditional + ranged requests on fixed windows | `fetcher.check`, `cmd_updateimage.py` | `test_cli_updateimage.py` | `update` of url apps, `--verify` | change detection, not integrity |
 | **Atomic swap and rollback** | staging, extract, swap image/tree/markers/manifest last; restore on failure | `install.swap_in`, `store.staging` | `test_cli_update.py` | | |
@@ -109,6 +108,16 @@ Explained in [Catalog](../understand/catalog/index.md); decisions in [Catalog](.
 | **appjail-db** | builds the catalog from AM and AppImageHub, weekly, with size and shrink checks | sister project | | | conversion moved off the client |
 | **Search** | ranking over every source; suggestions only | `index.py` | `test_cmd_index.py` | `search` | |
 
+## Interface
+
+Decisions in [Project](../decisions/project/index.md).
+
+| Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
+|---|---|---|---|---|---|
+| **Output and consent** | Console vocabulary; stdout/stderr; prompts default No | `console.py`, `gui/` | `test_console_format.py`, `test_gui_*.py` | every command, GUI | |
+| **Command line** | one parser and command table; one module per command | `cli.py`, `cmd_*.py` | `test_cli_usage.py`, `test_docs.py` | every command | options that do not apply are refused, never ignored |
+| **Window** | tkinter; builds command lines and runs the same CLI | `gui/` | `test_gui_*.py` | `appjail-gui` | never adds `--yes` |
+
 ## How the pieces depend on each other
 
 - **Provenance chain**: source (P3) → resolver → owner id → asset digest / attestation → hash pin → tier → quarantine →
@@ -116,8 +125,10 @@ Explained in [Catalog](../understand/catalog/index.md); decisions in [Catalog](.
 - **Two kinds of jail share one builder**: helper jails (`jail.common_args`) and the app jail (`runtimejail`) share the
   seccomp filter, `--disable-userns` and the read-only system; the app jail adds grants. The `--appimage-extract` fallback
   is why the extraction jail must be as tight as the app jail.
-- **`network`** = network namespace + pasta + DNS forwarder + uid restore + seccomp filter as a file + `reopen.py` for
-  grants + lifeline FIFO for SIGKILL. pasta closing inherited descriptors is the cause of three of these.
+- **`network`** = network namespace + pasta + DNS forwarder + seccomp filter as a file + `reopen.py` for grants + FIFOs
+  for the portal's pipes + uid restore + lifeline FIFO for SIGKILL. pasta closing inherited descriptors is why the
+  filter, the grants and the portal pipes are reopened inside its namespace; pasta running its command as root of a
+  user namespace is why the ids are restored; `--die-with-parent` not reaching past pasta is why the lifeline exists.
 - **`network_host`** = host namespace → host abstract sockets reachable → Landlock abstract scope required → refused
   without ABI 6. Landlock is not applied behind pasta because pasta refuses `no_new_privs`.
 - **Display**: Wayland socket → registry rule (privileged and unknown globals) → `full_wayland`; Xwayland runs *on* that

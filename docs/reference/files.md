@@ -2,7 +2,9 @@
 
 ## Where appjail keeps its files
 
-Nothing is written outside these two trees, except the menu entries and icons you ask for.
+Besides these two trees, appjail writes only the menu entries and icons you ask for (and refreshes the desktop's icon
+and menu caches), and short-lived files: sockets and identity files in the runtime directory while an app runs, and
+temporary files in `/tmp` (the seccomp filter of an app behind `pasta`, an icon being converted).
 
 | Path | Holds |
 |---|---|

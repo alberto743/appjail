@@ -44,8 +44,8 @@ Two details of `--file`:
 These are refused in every mode, with a message:
 
 - credentials and secrets: `~/.ssh`, `~/.gnupg`, cloud, container and package-registry credentials, password stores,
-  browser profiles, mail, shell histories, files named like keys or password databases, and any folder that contains
-  one of these;
+  browser profiles, mail, shell histories, files named like keys or password databases, and any folder above one of
+  these locations (appjail checks paths; it does not search a folder you grant for key files kept elsewhere in it);
 - your whole home, any folder above it, `/`, the broad `~/.config`, `~/.local` and `~/.cache`, and system trees such as
   `/etc`, `/usr` or `/dev`;
 - `/tmp`, `/var/tmp` and anything below them (other programs' sockets live there; a single regular file there can still

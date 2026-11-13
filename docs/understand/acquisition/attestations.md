@@ -21,7 +21,7 @@ the one expected.
 
 ## Why it matters
 
-A digest proves the file is what the repository's owner uploaded. An attestation proves more: that it came out of the
+A digest proves the file is what was uploaded to the release. An attestation proves more: that it came out of the
 repository's own build system rather than from someone's laptop. A file uploaded by hand, even with the owner's
 credentials, has no valid attestation; producing one requires running a workflow in the repository. It is the strongest
 evidence a GitHub release can carry.
