@@ -20,14 +20,11 @@ import pytest
 
 from appjail import jail, runtimejail, seccomp
 
+from . import pwsources
 from .helpers import build, integration, wait_for
 
 CAMERA = "appjail-test-camera"
-DROP_IN = f"""context.spa-libs = {{ videotestsrc = videotestsrc/libspa-videotestsrc }}
-context.objects = [
-  {{ factory = adapter args = {{ factory.name = videotestsrc node.name = {CAMERA} media.class = Video/Source }} }}
-]
-"""
+DROP_IN = pwsources.camera(CAMERA)
 CONNECT_PULSE = ("import os, socket; s = socket.socket(socket.AF_UNIX); "
                  "s.connect(os.environ['PULSE_SERVER'].removeprefix('unix:')); print('pulse ok')")
 

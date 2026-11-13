@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Run a command (or open a shell) in the appjail test guest (GUEST=debian|ubuntu).
+# Run a command (or open a shell) in the appjail test guest (GUEST=debian|ubuntu|fedora).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/guest.sh"

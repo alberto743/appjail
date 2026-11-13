@@ -4,19 +4,22 @@
 
 # Bring a running guest to the state tests expect (idempotent; needs the guest up).
 # Installs tests/vm/packages.txt, the pinned ruff (install-ruff.sh), switches from the cloud kernel (no DRM) to the regular one
-# (linux-image-amd64 on Debian, linux-image-virtual on Ubuntu; guest.sh) and gives the test user the video and render groups
-# (access to /dev/dri). Reboots the guest when the kernel changed. GUEST=debian|ubuntu|debian-pulse (which also makes PulseAudio the
+# (linux-image-amd64 on Debian, linux-image-virtual on Ubuntu; guest.sh; Fedora's cloud kernel has them) and gives the test user the video and render groups
+# (access to /dev/dri). Reboots the guest when the kernel changed. GUEST=debian|ubuntu|fedora|debian-pulse (which also makes PulseAudio the
 # host's sound server, with a sine source as the microphone).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/guest.sh"
-pk="$("$here/packages.sh" | grep -v '^linux-image' | tr '\n' ' ') $kernel_pkg"
+pk="$("$here/packages.sh" | grep -v '^linux-image\|^kernel$' | tr '\n' ' ') $kernel_pkg"
 ssh_() { "$here/ssh.sh" "$@"; }
 
-case $GUEST in *-compositors)  # the GNOME stack recommends plymouth, whose initramfs hook fails in a VM and leaves the kernel unconfigured
+case $GUEST in debian-compositors|ubuntu-compositors)  # the GNOME stack recommends plymouth, whose initramfs hook fails in a VM and leaves the kernel unconfigured
 	ssh_ 'sudo mkdir -p /etc/initramfs-tools/hooks && printf "#!/bin/sh\n[ \"\$1\" = prereqs ] && echo\nexit 0\n" | sudo tee /etc/initramfs-tools/hooks/plymouth >/dev/null && sudo chmod +x /etc/initramfs-tools/hooks/plymouth' ;;
 esac
-ssh_ "sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $pk"
+case $GUEST in
+fedora*) ssh_ "sudo dnf install -y -q $pk" ;;
+*) ssh_ "sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $pk" ;;
+esac
 if [ "$GUEST" = debian-compositors ]; then  # Hyprland is only in backports, whose dependencies apt takes only on request; best effort
 	ssh_ 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -t trixie-backports hyprland' || echo "hyprland: not installed (backports)"
 fi
@@ -34,7 +37,7 @@ if [ "$GUEST" = debian-pulse ]; then  # PulseAudio proper is the host's sound se
 		systemctl --user restart pulseaudio.socket'
 fi
 ssh_ 'sudo usermod -aG video,render tester'
-if ssh_ 'dpkg -l | grep -q "^ii  linux-image-.*'$cloud_kernel'"'; then
+if [ "$cloud_kernel" != none ] && ssh_ 'dpkg -l | grep -q "^ii  linux-image-.*'$cloud_kernel'"'; then
 	ssh_ 'sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq $(dpkg -l | awk "/^ii  linux-image-.*'$cloud_kernel'/{print \$2}") && sudo update-grub'
 fi
 reboot_guest() {

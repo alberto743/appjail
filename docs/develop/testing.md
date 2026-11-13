@@ -10,19 +10,23 @@ in a disposable qemu-kvm guest built from tracked files; the host only edits fil
 |---|---|---|---|
 | `debian` (default) | Debian 13 | the reference | 2222 |
 | `ubuntu` | Ubuntu 26.04 | the CI runner's system, to reproduce runner-only failures | 2223 |
+| `fedora` | Fedora 45, SELinux enforcing | the system with a different layout (`/usr/lib64`, `/etc/pki`), another mandatory access control and newer PipeWire | 2227 |
 | `debian-pulse` | Debian 13 with PulseAudio as the sound server | `tests/test_pulseaudio.py` | 2224 |
-| `debian-compositors`, `ubuntu-compositors` | the base guest plus the compositors of `tests/vm/packages-compositors.txt` | `tests/compositors/` | 2225, 2226 |
+| `debian-compositors`, `ubuntu-compositors`, `fedora-compositors` | the base guest plus the compositors of `tests/vm/packages-compositors.txt` | `tests/compositors/` | 2225, 2226, 2228 |
 
 The variants reuse their base's image. Each guest has its own directory `vm/<guest>/run` (overlay disk, ssh key, known
 hosts, console log), which is ignored by git and can be deleted and rebuilt. The packages a guest needs are listed in
-`tests/vm/packages.txt`, one commented line each; change requirements there, never by hand in a guest.
+`tests/vm/packages.txt`, one commented line each; change requirements there, never by hand in a guest. The Fedora guests
+install the same packages under their Fedora names, listed in `tests/vm/packages-fedora.map`.
 
 Host requirements (Debian 13): qemu with KVM, `qemu-img`, `cloud-localds`, `genisoimage`, OVMF, `curl`, and access to
 `/dev/kvm`.
 
-The images are the distributions' cloud images: Debian 13 genericcloud (about 340 MB, verified against `SHA512SUMS`)
-and Ubuntu 26.04 `resolute-server-cloudimg-amd64.img` (about 860 MB, verified against `SHA256SUMS`). Provisioning
-replaces the cloud kernel with the regular one (`linux-image-amd64`, `linux-image-virtual`) so that `/dev/dri` exists,
+The images are the distributions' cloud images: Debian 13 genericcloud (about 340 MB, verified against `SHA512SUMS`),
+Ubuntu 26.04 `resolute-server-cloudimg-amd64.img` (about 860 MB, verified against `SHA256SUMS`) and Fedora 45 Cloud Base
+(about 580 MB, verified against its `CHECKSUM` file; the build is pinned in `guest.sh`). Provisioning
+replaces the cloud kernel of Debian and Ubuntu with the regular one (`linux-image-amd64`, `linux-image-virtual`) so that
+`/dev/dri` exists (Fedora's kernel has it),
 and adds `tester` to the `video` and `render` groups; the guest has passwordless sudo inside it only. The camera tests
 load the kernel's `vivid` virtual camera with `sudo modprobe` inside the guest and skip where they cannot.
 `tests/vm/guest.sh` holds the differences between the guests.
@@ -45,10 +49,11 @@ To resume work: `start.sh`, wait for ssh, `provision.sh` if `packages.txt` chang
 ```sh
 tests/vm/test.sh                    # the full suite on Debian 13
 GUEST=ubuntu tests/vm/test.sh       # and on Ubuntu 26.04
+GUEST=fedora tests/vm/test.sh       # and on Fedora 45
 tests/vm/test.sh -k appimage -x     # any pytest arguments
 ```
 
-Both minimum systems must pass before a commit and before a push: a pass on one is not a pass. Tests that start real
+Every supported system must pass before a commit and before a push: a pass on one is not a pass. Tests that start real
 jails run only with `APPJAIL_INTEGRATION=1`, which `test.sh` sets. Opt-in suites download from the network and are run
 by hand, one group at a time:
 

@@ -7,15 +7,15 @@
 #
 # Host packages (Debian 13): qemu-system-x86 qemu-utils cloud-image-utils
 # Downloads one binary per guest: GUEST=debian (default) the Debian 13 cloud image (~340 MB), GUEST=ubuntu the Ubuntu 26.04
-# cloud image (~860 MB). The checksum is verified against the distribution's own SHA512SUMS / SHA256SUMS (fetched over TLS) before
-# use. Run it only when you agree to that download.
+# cloud image (~860 MB), GUEST=fedora the Fedora 45 cloud image (~580 MB). The checksum is verified against the distribution's
+# own SHA512SUMS / SHA256SUMS / CHECKSUM file (fetched over TLS) before use. Run it only when you agree to that download.
 #
 # Env: GUEST, VM_DIR (default <project>/vm), PACKAGES (guest packages, default tests/vm/packages.txt without the kernel line;
 # provision.sh installs the kernel).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/guest.sh"
-packages=${PACKAGES:-$("$here/packages.sh" | grep -v '^linux-image' | tr '\n' ' ' | sed 's/ $//')}
+packages=${PACKAGES:-$("$here/packages.sh" | grep -v '^linux-image\|^kernel$' | tr '\n' ' ' | sed 's/ $//')}
 force=0; [ "${1:-}" = --force ] && force=1
 
 mkdir -p "$dl" "$vm/run"
@@ -23,7 +23,7 @@ mkdir -p "$dl" "$vm/run"
 if [ ! -f "$dl/$img" ]; then
 	curl -fsSL -o "$dl/$sums" "$base_url/$sums"
 	curl -fsSL -o "$dl/$img" "$base_url/$img"
-	(cd "$dl" && grep "[ *]$img\$" "$sums" | "$sumtool" -c -)
+	(cd "$dl" && grep "[ *(]$img[) ]\|[ *(]$img\$" "$sums" | "$sumtool" -c -)  # "hash  file" or the BSD style "SHA256 (file) = hash"
 fi
 
 if [ "$force" = 1 ] || [ ! -f "$vm/run/disk.qcow2" ]; then
