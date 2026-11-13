@@ -129,3 +129,10 @@ def test_jail_failure_is_reported_and_leaves_nothing(h):
 def test_name_comes_from_the_url_path(h):
     add_url(h, url="https://example.org/dl/Some%20Tool.AppImage?token=1")
     assert store.manifest_path("some-tool").exists()
+
+
+def test_an_unrecordable_download_installs_nothing(h):
+    with pytest.raises(Abort, match="cannot record this download: fingerprint.etag is too long or contains control"):
+        add_url(h, "--name", "x", download=Downloader(etag='"v1\x07"'))
+    h.assert_nothing_installed("x")
+    assert list(store.staging_root().iterdir()) == []

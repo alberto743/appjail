@@ -13,6 +13,7 @@ from .errors import JailError
 from .install import (
     MAX_ASSET,
     NEED_SQUASHFS,
+    check_record,
     choose_asset,
     download_verified,
     finish_update,
@@ -107,7 +108,7 @@ def install_release(run, client, info, release, asset, key):
                 return "declined"
         record = replace(m, version=release.tag, sha256=digest, published_at=release.published_at,
                          evidence_tier=tier, source=manifest.github_source(info.full_name), owner_id=info.owner_id)
-        manifest.validate(record)
+        check_record(record, "this release")
         entries, size = swap_in(name, staged, stage, record, svc.extract, False)
     return finish_update(run, record, entries, size)
 

@@ -28,7 +28,14 @@ from .imagesrc import (
     url_fingerprint,
     version_of,
 )
-from .install import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
+from .install import (
+    MAX_ASSET,
+    ask_extractor,
+    check_record,
+    finish_add,
+    new_app_name,
+    swap_in,
+)
 from .permargs import (
     permissions_from_args,
     require_network_isolation,
@@ -72,10 +79,7 @@ def cmd_add_file(args, console, svc=None, now=None):
         record = manifest.Manifest(
             name=name, source=f"file:{real.name}", version=version_of(digest), sha256=digest, evidence_tier=tier,
             published_at=timestamp(now), permissions=perms)
-        try:
-            manifest.validate(record)
-        except manifest.ManifestError as e:
-            raise Abort(f"cannot record this file: {e}") from e
+        check_record(record, "this file")
         entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
     finish_add(console, args, record, entries, size)
 
@@ -120,9 +124,6 @@ def cmd_add_url(args, console, svc=None, now=None):
         record = manifest.Manifest(
             name=name, source=f"url:{url}", version=version_of(digest), sha256=digest, evidence_tier=tier,
             published_at=timestamp(now), fingerprint=url_fingerprint(staged, info), permissions=perms)
-        try:
-            manifest.validate(record)
-        except manifest.ManifestError as e:
-            raise Abort(f"cannot record this download: {e}") from e
+        check_record(record, "this download")
         entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
     finish_add(console, args, record, entries, size)

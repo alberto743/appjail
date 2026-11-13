@@ -75,6 +75,15 @@ def gather_evidence(client, info, staged, digest, base_tier, console, verify=att
     return 1, None
 
 
+def check_record(record, what):
+    """`record` if it is a valid manifest; otherwise an Abort that says what could not be recorded ("this release",
+    "this file", "this download"), before anything is installed."""
+    try:
+        return manifest.validate(record)
+    except manifest.ManifestError as e:
+        raise Abort(f"cannot record {what}: {e}") from e
+
+
 def ask_extractor(console, extract_ok):
     """Whether to fall back to the AppImage's own extractor (no unsquashfs); aborts when the user declines."""
     if extract_ok():

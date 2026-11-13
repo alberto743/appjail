@@ -305,3 +305,10 @@ def test_display_none_is_accepted_and_has_no_window(h):
     h.add(extra=["--display", "none"])
     p = manifest.load(store.manifest_path("app")).permissions
     assert p.display == "none" and not p.windowed and not p.xwayland
+
+
+def test_an_unrecordable_release_installs_nothing(h):
+    with pytest.raises(Abort, match="cannot record this release: version is too long or contains control characters"):
+        h.add(FakeClient(release_=release(asset(), tag="v1\x07")))
+    h.assert_nothing_installed()
+    assert list(store.staging_root().iterdir()) == []

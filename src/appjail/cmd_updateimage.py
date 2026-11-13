@@ -30,6 +30,7 @@ from .imagesrc import (
 from .install import (
     MAX_ASSET,
     NEED_SQUASHFS,
+    check_record,
     finish_update,
     show_change,
     show_quarantine,
@@ -105,7 +106,7 @@ def update_file(run):
             return "declined"
         record = replace(m, source=f"file:{real.name}", version=version_of(digest), sha256=digest,
                          published_at=timestamp(run.now), evidence_tier=tier)
-        manifest.validate(record)
+        check_record(record, "this file")
         return install(run, staged, stage, record)
 
 
@@ -280,5 +281,5 @@ def conclude(run, stage, staged, digest, info, expected, ask=True):
         return "declined"
     record = replace(run.m, version=version_of(digest), sha256=digest, published_at=timestamp(run.now), evidence_tier=tier,
                      fingerprint=url_fingerprint(staged, info))
-    manifest.validate(record)
+    check_record(record, "this download")
     return install(run, staged, stage, record)

@@ -568,3 +568,12 @@ def test_update_and_run_refuse_an_invalid_app_name_before_touching_any_path(h, n
         update(h, None, app=name)
     with pytest.raises(manifest.ManifestError, match="invalid app name"):
         runner.prepare(name, say=lambda *_: None)
+
+
+def test_an_unrecordable_release_keeps_the_old_install(h):
+    path = installed(h)
+    before = path.read_text()
+    code, c = update(h, FakeClient(release_=release2(tag="v2\x07")), days=0)
+    assert code == 1 and "app: cannot record this release: version is too long or contains control characters" in c.text
+    assert path.read_text() == before and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
+    assert list(store.staging_root().iterdir()) == []

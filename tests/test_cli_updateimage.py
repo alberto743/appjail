@@ -406,3 +406,26 @@ def test_options_about_one_app_need_its_name(h, extra, flag):
     with pytest.raises(Abort, match=f"{flag} needs an app name"):
         update(h, FakeClient(), app=None, extra=extra)
     assert mf().channel == "stable"
+
+
+def test_an_unrecordable_file_name_keeps_the_old_install(file_app, tmp_path):
+    h, old, _new = file_app
+    install_file(h, old)
+    before = store.manifest_path("app").read_text()
+    odd = tmp_path / "new\x07.AppImage"
+    odd.write_bytes(NEW_IMAGE)
+    code, c = update(h, None, extra=("--file", str(odd)))
+    assert code == 1 and "app: cannot record this file: source is too long or contains control characters" in c.text
+    assert store.manifest_path("app").read_text() == before and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
+    assert list(store.staging_root().iterdir()) == []
+
+
+def test_an_unrecordable_download_keeps_the_old_install(h):
+    server = UrlServer()
+    install_url(h, server)
+    before = store.manifest_path("app").read_text()
+    server.content, server.etag = NEW_IMAGE, '"e2\x07"'
+    code, c = run(h, server, days=0, answers=("y", "y"))
+    assert code == 1 and "app: cannot record this download: fingerprint.etag is too long or contains control" in c.text
+    assert store.manifest_path("app").read_text() == before and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
+    assert list(store.staging_root().iterdir()) == []

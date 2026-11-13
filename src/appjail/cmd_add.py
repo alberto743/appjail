@@ -8,6 +8,7 @@ from .console import Abort, human_size
 from .install import (
     MAX_ASSET,
     ask_extractor,
+    check_record,
     choose_asset,
     download_verified,
     finish_add,
@@ -117,6 +118,6 @@ def cmd_add(args, client, console, svc=None, now=None):
             version=release.tag, sha256=digest, evidence_tier=tier, published_at=release.published_at,
             owner_id=info.owner_id, permissions=perms,
             channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")
-        manifest.validate(record)
+        check_record(record, "this release")
         entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
     finish_add(console, args, record, entries, size)

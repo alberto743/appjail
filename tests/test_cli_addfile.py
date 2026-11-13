@@ -161,3 +161,12 @@ def test_a_failure_after_extraction_removes_the_whole_new_app(h, image, monkeypa
     with pytest.raises(OSError, match="disk full"):
         add_file(h, image, "--name", "x")
     h.assert_nothing_installed("x")
+
+
+def test_an_unrecordable_file_name_installs_nothing(h, tmp_path):
+    image = tmp_path / "App\x07.AppImage"
+    image.write_bytes(FAKE_APPIMAGE)
+    with pytest.raises(Abort, match="cannot record this file: source is too long or contains control characters"):
+        add_file(h, image, "--name", "x")
+    h.assert_nothing_installed("x")
+    assert list(store.staging_root().iterdir()) == []
