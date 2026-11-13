@@ -10,6 +10,7 @@ import pytest
 
 from appjail import attest, cli, github, jail, manifest, snappy, store, tools
 from appjail.github import Client, GitHubError
+from appjail.services import Services
 
 from .helpers import (
     NEW_IMAGE,
@@ -213,8 +214,8 @@ def fake_verify(ok=True):
 
 def add_with(h, client, verify, **kw):
     console = Script(["y"])
-    cli.cmd_add(cli.build_parser().parse_args(["add", "o/App"]), client, console, download=h.download(), now=NOW,
-                extract=h.extract, extract_ok=lambda: True, verify=verify)
+    svc = Services(download=h.download(), extract=h.extract, extract_ok=lambda: True, verify=verify)
+    cli.cmd_add(cli.build_parser().parse_args(["add", "o/App"]), client, console, svc, now=NOW)
     return console
 
 
@@ -240,8 +241,8 @@ def test_add_without_bundles_never_calls_the_verifier(h):
 def run_update(h, client, verify, answers=("y",), days=0):
     console = Script(answers)
     args = cli.build_parser().parse_args(["update", "app", "--quarantine", str(days)])
-    code = cli.cmd_update(args, client, console, download=h.download(NEW_IMAGE), now=T0, extract=h.extract,
-                          extract_ok=lambda: True, verify=verify)
+    svc = Services(download=h.download(NEW_IMAGE), extract=h.extract, extract_ok=lambda: True, verify=verify)
+    code = cli.cmd_update(args, client, console, svc, now=T0)
     return code, console
 
 

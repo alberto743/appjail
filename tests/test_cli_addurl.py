@@ -7,6 +7,7 @@ import pytest
 
 from appjail import cli, cmd_addimage, fetcher, jail, manifest, store
 from appjail.cli import Abort
+from appjail.services import Services
 
 from .helpers import FAKE_APPIMAGE, NOW, SHA, Script
 
@@ -33,8 +34,8 @@ class Downloader:
 def add_url(h, *extra, url=URL, answers=("y",), download=None):
     console = Script(answers)
     args = cli.build_parser().parse_args(["add", "--url", url, *extra])
-    cmd_addimage.cmd_add_url(args, console, download_url=download or Downloader(), extract=h.extract,
-                             extract_ok=lambda: True, now=NOW)
+    svc = Services(download_url=download or Downloader(), extract=h.extract, extract_ok=lambda: True)
+    cmd_addimage.cmd_add_url(args, console, svc, now=NOW)
     return console
 
 

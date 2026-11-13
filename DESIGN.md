@@ -78,7 +78,7 @@ Tier 1 means a Sigstore build attestation covers the exact downloaded bytes and 
 - Owner pinning: `add` records the owner's account id (`owner_id`); `update` blocks when it changes, which catches a repository deleted and re-registered under the same name. A manifest without an id gets a warning and the id is pinned once the user approves.
 - Only GitHub is supported. A second forge would sit behind the same interface (`repo_info`, `latest_release`, assets with size and optional digest) and could reach tier 4 at best.
 
-### `add owner/repo` (`cmd_add.py`, `jail.py`, `fetcher.py`)
+### `add owner/repo` (`cmd_add.py`, `install.py`, `jail.py`, `fetcher.py`)
 `add owner/repo [--name N] [--prerelease] [--tag TAG] [--dir PATH[:ro|:rw]] [--dbus NAME] [--dbus-own NAME] [--allow network|network_host|audio|mic|gpu|camera|portals|userns|linger|full_wayland] [--audio-mode pipewire|pulse] [--portal NAME] [--display wayland|xwayland|xwayland-rootful|none [--display-size WxH]] [--desktop [--mime TYPE]... [--mime-all] [--rw]]`. The review warns about every risky grant, as `perms` does. `--tag` pins a release: the manifest records the version and the channel `pinned`, so `update` leaves it alone. An option that does not apply to the chosen source (`--tag` with `--file`, `--max-size` without `--url`, `--mime` without `--desktop`, ...) is refused, never ignored.
 1. Refuse early if the name exists. Show the review: owner, id, account age, stars, fork/archived/renamed warnings.
 2. Resolve the release and select the AppImage. Show the digest and whether an attestation exists.
@@ -112,7 +112,7 @@ fingerprint = { size = 48211968, etag = "\"abc123\"", last_modified = "Tue, 20 O
 - Local file: must be a regular file (a symlink is resolved and the target must be regular). It is copied into the staging directory, size and sha256 are computed on the copy, then the type-2 check and the install steps of `add`. The original is untouched.
 - URL: downloaded by `fetcher.py` in the network-only jail; https start, no credentials. Redirects may go to any host and also to plain http; any http hop without a matching `--sha256` prints a warning and needs an extra confirmation. There is no announced size, so a hard cap applies (default 1 GiB, `--max-size`) and a `Content-Length`, when present, must equal the bytes received. The fetcher's redirect policy comes from the caller (GitHub hosts for `add owner/repo`, anything for `--url`), never from the server.
 
-## Updating (`cmd_update.py`, `updater.py`, `services.py`)
+## Updating (`cmd_update.py`, `install.py`, `updater.py`, `services.py`)
 `update [APP]` flow: resolve the new release; download in a throwaway jail and verify the evidence; show a diff (hashes, tier, permissions, release link); enforce the quarantine; ask the user; install. The manifest is rewritten and recorded in the history. Permissions are never changed by an update. A tier downgrade or an owner change blocks it.
 
 - Without an app, every installed app is checked in name order (three API requests each, two for a pinned app, one more for a tier 1 app and one more for each release installed); one failure does not stop the others; the exit status is 1 if any was blocked or failed. A GitHub rate limit stops the whole run, and the rest are listed as "not checked (rate limited)".

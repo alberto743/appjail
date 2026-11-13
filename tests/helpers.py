@@ -29,6 +29,7 @@ from appjail import (
 from appjail.cli import Abort
 from appjail.console import error_text
 from appjail.manifest import Manifest, Permissions
+from appjail.services import Services
 
 
 def stub(extra=b""):
@@ -99,8 +100,8 @@ class Harness:
             source="o/App"):
         console = Script(answers)
         parsed = cli.build_parser().parse_args(["add", source, *extra])
-        cli.cmd_add(parsed, client or FakeClient(), console, download=download or self.download(), now=NOW,
-                    extract=extract or self.extract, extract_ok=extract_ok)
+        svc = Services(download=download or self.download(), extract=extract or self.extract, extract_ok=extract_ok)
+        cli.cmd_add(parsed, client or FakeClient(), console, svc, now=NOW)
         return console
 
     def assert_nothing_installed(self, name="app"):
@@ -192,8 +193,8 @@ def update(h, client, answers=("y",), days=7, now=T0, app="app", extra=(), downl
            extract_ok=lambda: True, **kw):
     console = Script(answers)
     args = cli.build_parser().parse_args(["update", *([app] if app else []), "--quarantine", str(days), *extra])
-    code = cli.cmd_update(args, client, console, download=download or h.download(NEW_IMAGE), now=now,
-                          extract=extract or h.extract, extract_ok=extract_ok, **kw)
+    svc = Services(download=download or h.download(NEW_IMAGE), extract=extract or h.extract, extract_ok=extract_ok, **kw)
+    code = cli.cmd_update(args, client, console, svc, now=now)
     return code, console
 
 
@@ -239,7 +240,8 @@ def install_url(h, server, *extra, answers=("y",)):
     from appjail import cmd_addimage
     console = Script(answers)
     args = cli.build_parser().parse_args(["add", "--url", URL_APP, "--name", "app", *extra])
-    cmd_addimage.cmd_add_url(args, console, download_url=server.download, extract=h.extract, extract_ok=lambda: True, now=NOW)
+    svc = Services(download_url=server.download, extract=h.extract, extract_ok=lambda: True)
+    cmd_addimage.cmd_add_url(args, console, svc, now=NOW)
     server.downloads = 0  # counts what the update does
     return console
 
@@ -248,7 +250,7 @@ def install_file(h, path, *extra, answers=("y",)):
     from appjail import cmd_addimage
     console = Script(answers)
     args = cli.build_parser().parse_args(["add", "--file", str(path), "--name", "app", *extra])
-    cmd_addimage.cmd_add_file(args, console, extract=h.extract, extract_ok=lambda: True, now=NOW)
+    cmd_addimage.cmd_add_file(args, console, Services(extract=h.extract, extract_ok=lambda: True), now=NOW)
     return console
 
 

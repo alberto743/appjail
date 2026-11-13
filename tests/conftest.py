@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from appjail import appimage, history, portal
+from appjail import history, portal, store
 from appjail.errors import RunError
 
 from .helpers import Harness
@@ -48,7 +48,7 @@ def sandbox(monkeypatch):
     monkeypatch.setenv("APPJAIL_DATA_DIR", str(base / "data"))
     monkeypatch.setenv("APPJAIL_CONFIG_DIR", str(base / "config"))
     yield base
-    appimage.remove_tree(base)
+    store.remove_tree(base)
 
 
 @pytest.fixture

@@ -8,6 +8,7 @@ import pytest
 
 from appjail import appimage, cli, cmd_addimage, manifest, store, updater
 from appjail.console import Abort
+from appjail.services import Services
 
 from .helpers import (
     FAKE_APPIMAGE,
@@ -359,7 +360,7 @@ def test_all_apps_run_checks_mixed_kinds(h, tmp_path):
     old = tmp_path / "f.AppImage"
     old.write_bytes(FAKE_APPIMAGE)
     cmd_addimage.cmd_add_file(cli.build_parser().parse_args(["add", "--file", str(old), "--name", "other"]), Script(["y"]),
-                              extract=h.extract, extract_ok=lambda: True, now=NOW)
+                              Services(extract=h.extract, extract_ok=lambda: True), now=NOW)
     code, c = update(h, None, app=None, **server.kw)
     assert code == 0 and "app    current" in c.text and "other  current" in c.text
 

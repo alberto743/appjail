@@ -6,29 +6,37 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from . import appimage, attest, github, history, jail, manifest, store, updater
-from .cmd_add import (
+from . import github, history, manifest, store, updater
+from .cmd_updateimage import update_file, update_url
+from .console import INDENTED_LABEL, Abort, human_size
+from .errors import JailError
+from .install import (
     MAX_ASSET,
     NEED_SQUASHFS,
+    choose_asset,
     download_verified,
+    finish_update,
     gather_evidence,
-    pick_asset,
+    show_change,
+    show_quarantine,
     swap_in,
 )
-from .cmd_updateimage import finish_update, update_file, update_url
-from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
-from .errors import JailError
-from .permargs import granted_summary
 from .services import Services, UpdateRun
+
+
+def pick_asset(console, release, pattern):
+    """The release asset the manifest's pattern selects (ask when several match)."""
+    found = [a for a in github.match_assets(release, pattern) if a.name.lower().endswith(".appimage")]
+    if not found:
+        names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
+        raise Abort(f"no asset in {release.tag} matches '{pattern}' ({names})")
+    return choose_asset(console, found, "Several assets match the pattern; choose one:")
 
 
 def hash_candidate(asset, download):
     """Download the candidate in the jail only to learn its sha256 (nothing is installed); the stage is removed."""
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         return download_verified(download, asset, stage)[1]
-    finally:
-        appimage.remove_tree(stage)
 
 
 def apply_channel(name, m, args, console):
@@ -50,16 +58,12 @@ def describe_candidate(console, m, release, asset):
     console.kv("  candidate", f"{release.tag}, published {release.published_at}" + ("  (pre-release)" if release.prerelease else ""), INDENTED_LABEL)
     console.kv("", release.html_url, INDENTED_LABEL)
     console.kv("  asset", f"{asset.name} ({human_size(asset.size)})", INDENTED_LABEL)
-    console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{ARROW_NB}{asset.sha256 or 'unknown until downloaded (no GitHub digest)'}", INDENTED_LABEL)
-    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {asset.base_tier}", INDENTED_LABEL)
-    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
+    show_change(console, m, asset.sha256 or "unknown until downloaded (no GitHub digest)", asset.base_tier)
 
 
 def wait_in_quarantine(run, asset, key, first, due):
     name, console = run.name, run.console
-    console.kv("  quarantine", f"first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
-               f"({run.args.quarantine} days; --quarantine DAYS to change)", INDENTED_LABEL)
+    show_quarantine(console, first, due, run.args.quarantine)
     pending = updater.load_pending(name)
     if not asset.sha256 and not (pending and pending.get("sha256")):
         # no GitHub digest to catch a swapped asset: fix its hash now, compare it when installing
@@ -82,8 +86,7 @@ def install_release(run, client, info, release, asset, key):
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail and install {release.tag}?"):
         return "declined"
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged, digest = download_verified(svc.download, asset, stage)
         pending = updater.load_pending(name)
         if not asset.sha256 and pending and pending["key"] == key and pending.get("sha256") not in (None, digest):
@@ -106,8 +109,6 @@ def install_release(run, client, info, release, asset, key):
                          evidence_tier=tier, source=manifest.github_source(info.full_name), owner_id=info.owner_id)
         manifest.validate(record)
         entries, size = swap_in(name, staged, stage, record, svc.extract, False)
-    finally:
-        appimage.remove_tree(stage)
     return finish_update(run, record, entries, size)
 
 
@@ -167,11 +168,8 @@ def update_app(name, args, client, console, svc, now):
     return update_github(name, m, args, client, console, svc, now)
 
 
-def cmd_update(args, client, console, download=jail.download, now=None, extract=appimage.extract,
-               extract_ok=appimage.have_unsquashfs, verify=attest.verify, download_url=jail.download_url,
-               check_url=jail.check_url):
-    svc = Services(download=download, download_url=download_url, check_url=check_url, extract=extract,
-                   extract_ok=extract_ok, verify=verify)
+def cmd_update(args, client, console, svc=None, now=None):
+    svc = svc or Services()
     now = now or datetime.now(UTC)
     if args.quarantine < 0:
         raise Abort("--quarantine must be 0 or more days")

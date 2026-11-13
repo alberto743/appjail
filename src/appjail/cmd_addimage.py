@@ -13,8 +13,7 @@ from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
-from . import appimage, jail, manifest, store
-from .cmd_add import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
+from . import manifest, store
 from .console import Abort, human_size
 from .errors import JailError
 from .imagesrc import (
@@ -29,18 +28,21 @@ from .imagesrc import (
     url_fingerprint,
     version_of,
 )
+from .install import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
 from .permargs import (
     permissions_from_args,
     require_network_isolation,
     show_permissions,
 )
+from .services import Services
 
 
 def app_name(args, basename):
     return new_app_name(args.name, re.sub(r"\.appimage$", "", basename, flags=re.IGNORECASE))
 
 
-def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.have_unsquashfs, now=None):
+def cmd_add_file(args, console, svc=None, now=None):
+    svc = svc or Services()
     expected = parse_sha256(args.sha256)
     real, st = regular_file(args.file)
     name = app_name(args, real.name)
@@ -54,12 +56,11 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
                f"{datetime.fromtimestamp(st.st_mtime, UTC).strftime('%Y-%m-%d %H:%M')} UTC")
     console.warn(NO_ORIGIN)
     show_permissions(console, perms)
-    fallback = ask_extractor(console, extract_ok)
+    fallback = ask_extractor(console, svc.extract_ok)
     if not console.confirm(f"Copy {real.name} into appjail's store as '{name}'?"):
         raise Abort("cancelled")
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
         if staged.stat().st_size != st.st_size:
@@ -75,9 +76,7 @@ def cmd_add_file(args, console, extract=appimage.extract, extract_ok=appimage.ha
             manifest.validate(record)
         except manifest.ManifestError as e:
             raise Abort(f"cannot record this file: {e}") from e
-        entries, size = swap_in(name, staged, stage, record, extract, fallback)
-    finally:
-        appimage.remove_tree(stage)
+        entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
     finish_add(console, args, record, entries, size)
 
 
@@ -86,8 +85,8 @@ def url_basename(url):
     return unquote(PurePosixPath(parts.path).name) or parts.hostname
 
 
-def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.extract,
-                extract_ok=appimage.have_unsquashfs, now=None):
+def cmd_add_url(args, console, svc=None, now=None):
+    svc = svc or Services()
     expected = parse_sha256(args.sha256)
     try:
         url = manifest.check_url(args.url)
@@ -104,14 +103,13 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
     console.kv("Limit", f"{human_size(max_mib * 1024 ** 2)}; redirects may go to any host, also over plain http")
     console.warn(NO_ORIGIN)
     show_permissions(console, perms)
-    fallback = ask_extractor(console, extract_ok)
+    fallback = ask_extractor(console, svc.extract_ok)
     if not console.confirm(f"Download {urlsplit(url).hostname} in a network-only jail?"):
         raise Abort("cancelled")
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         try:
-            staged, info = download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
+            staged, info = svc.download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
         except JailError as e:
             raise Abort(str(e)) from e
         digest = store.sha256_file(staged)
@@ -126,7 +124,5 @@ def cmd_add_url(args, console, download_url=jail.download_url, extract=appimage.
             manifest.validate(record)
         except manifest.ManifestError as e:
             raise Abort(f"cannot record this download: {e}") from e
-        entries, size = swap_in(name, staged, stage, record, extract, fallback)
-    finally:
-        appimage.remove_tree(stage)
+        entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
     finish_add(console, args, record, entries, size)

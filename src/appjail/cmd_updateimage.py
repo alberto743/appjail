@@ -13,10 +13,8 @@ import shutil
 from dataclasses import replace
 from urllib.parse import urlsplit
 
-from . import appimage, history, manifest, store, updater
-from .cmd_add import MAX_ASSET, NEED_SQUASHFS, swap_in
-from .cmd_desktop import refresh_after_update
-from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
+from . import history, manifest, store, updater
+from .console import INDENTED_LABEL, Abort, human_size
 from .errors import JailError
 from .imagesrc import (
     DEFAULT_MAX_MIB,
@@ -29,7 +27,14 @@ from .imagesrc import (
     url_fingerprint,
     version_of,
 )
-from .permargs import granted_summary
+from .install import (
+    MAX_ASSET,
+    NEED_SQUASHFS,
+    finish_update,
+    show_change,
+    show_quarantine,
+    swap_in,
+)
 
 DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 → 5 (this app was added with a matching --sha256, the new content has none). "
              "Pass --sha256 HEX with the hash the publisher gives for the new file to keep tier 4.")
@@ -57,23 +62,6 @@ def confirm_installed_hash(run, expected):
     return True
 
 
-def show_diff(console, m, digest, tier, size=None):
-    console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{ARROW_NB}{digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
-    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {tier}", INDENTED_LABEL)
-    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
-
-
-def finish_update(run, record, entries, size):
-    """After the new version is in place: forget the pending candidate, record the change, report, refresh the menu entry."""
-    name, m = run.name, run.m
-    updater.clear_pending(name)
-    history.record(f"update {name} {m.version} -> {record.version} (tier {record.evidence_tier})")
-    run.console.out(f"  updated {name}: {m.version} → {record.version}, sha256 {record.sha256}, {entries} entries, {human_size(size)}")
-    refresh_after_update(name, run.console)
-    return "updated"
-
-
 def install(run, staged, stage, record):
     """Extract and swap in `staged`; the previous version is restored if anything fails."""
     name = run.name
@@ -98,8 +86,7 @@ def update_file(run):
     real, st = regular_file(args.file)
     if not 0 < st.st_size <= MAX_ASSET:
         raise Abort(f"unexpected file size ({st.st_size} bytes)")
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
         digest = store.sha256_file(staged)
@@ -113,15 +100,13 @@ def update_file(run):
             return "blocked"
         tier = check_expected(digest, expected)
         console.kv("  file", real, INDENTED_LABEL)
-        show_diff(console, m, digest, tier, st.st_size)
+        show_change(console, m, digest, tier, st.st_size)
         if not console.confirm(f"Replace {name} with this file?"):
             return "declined"
         record = replace(m, source=f"file:{real.name}", version=version_of(digest), sha256=digest,
                          published_at=timestamp(run.now), evidence_tier=tier)
         manifest.validate(record)
         return install(run, staged, stage, record)
-    finally:
-        appimage.remove_tree(stage)
 
 
 # -- url: ----------------------------------------------------------------------------------------
@@ -143,11 +128,8 @@ def reference(m, pending):
 def probe(run, pending):
     m = run.m
     which, etag, modified = reference(m, pending)
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         res = run.svc.check_url(m.target, stage, etag, modified)
-    finally:
-        appimage.remove_tree(stage)
     if res["status"] == "unchanged":
         return which, res
     if res["status"] == "no-range":
@@ -175,26 +157,20 @@ def download_cap(m):
     return min(MAX_ASSET, max(DEFAULT_MAX_MIB * 1024 ** 2, 2 * m.fingerprint.size))
 
 
-def fetch_candidate(run, expected):
-    """Download the URL in the jail into a new stage; returns (stage, staged path, sha256, server info)."""
+def fetch_candidate(run, stage, expected):
+    """Download the URL in the jail into `stage`; returns (staged path, sha256, server info)."""
     m, console = run.m, run.console
-    stage = store.new_staging_dir()
     try:
         staged, info = run.svc.download_url(m.target, stage, "download.AppImage", download_cap(m))
     except JailError as e:
-        appimage.remove_tree(stage)
         raise Abort(str(e)) from e
-    try:
-        digest = store.sha256_file(staged)
-        console.kv("  downloaded", f"{human_size(info['size'])}, sha256 {digest}", INDENTED_LABEL)
-        if expected is not None and digest != expected:
-            raise Abort(f"sha256 mismatch: the download is {digest}, --sha256 says {expected}")
-        check_appimage(staged)
-        check_download_info(console, m.target, info, 4 if expected is not None else 5)
-    except BaseException:
-        appimage.remove_tree(stage)
-        raise
-    return stage, staged, digest, info
+    digest = store.sha256_file(staged)
+    console.kv("  downloaded", f"{human_size(info['size'])}, sha256 {digest}", INDENTED_LABEL)
+    if expected is not None and digest != expected:
+        raise Abort(f"sha256 mismatch: the download is {digest}, --sha256 says {expected}")
+    check_appimage(staged)
+    check_download_info(console, m.target, info, 4 if expected is not None else 5)
+    return staged, digest, info
 
 
 def report_waiting(console, pending, due, why):
@@ -244,8 +220,8 @@ def download_and_decide(run, pending, where, expected):
     if not console.confirm(f"Download {'the candidate' if comparing else 'the file'} from {urlsplit(m.target).hostname} "
                            "in a network-only jail" + (" to compare it with the one recorded during the quarantine?" if comparing else "?")):
         return "declined"
-    stage, staged, digest, info = fetch_candidate(run, expected)
-    try:
+    with store.staging() as stage:
+        staged, digest, info = fetch_candidate(run, stage, expected)
         if digest == m.sha256:
             updater.clear_pending(run.name)
             refresh_validators(run, info)
@@ -260,23 +236,20 @@ def download_and_decide(run, pending, where, expected):
             console.warn(f"CHANGED DURING QUARANTINE: the file hashed {pending['sha256']} when first seen but is "
                          f"{digest} now. Nothing was installed; the quarantine starts again for the new content.")
         return start_quarantine(run, stage, staged, digest, info, expected)
-    finally:
-        appimage.remove_tree(stage)
 
 
 def start_quarantine(run, stage, staged, digest, info, expected):
     """A new candidate: keep it on disk, start its clock, and install at once only when the quarantine is 0."""
     fp = url_fingerprint(staged, info)
     tier = check_expected(digest, expected)
-    show_diff(run.console, run.m, digest, tier, info["size"])
+    show_change(run.console, run.m, digest, tier, info["size"])
     updater.clear_pending(run.name)
     shutil.copyfile(staged, updater.pending_image(run.name))
     updater.record_url_candidate(run.name, version_of(digest), run.now, digest, fp, info["etag"], info["last_modified"])
     days = run.args.quarantine
     if days > 0:
         due = updater.quarantine_ends(run.now.replace(microsecond=0), days)
-        run.console.kv("  quarantine", f"first seen {updater.stamp(run.now)}; can be installed from {updater.stamp(due)} "
-                       f"({days} days; --quarantine DAYS to change)", INDENTED_LABEL)
+        show_quarantine(run.console, run.now, due, days)
         return "waiting"
     return conclude(run, stage, staged, digest, info, expected)
 
@@ -289,21 +262,18 @@ def install_pending(run, pending, expected):
         raise Abort("the stored candidate does not match its recorded hash; it was dropped, run update again")
     if not run.console.confirm(f"Install {pending['tag']} (kept since {pending['first_seen']})?"):
         return "declined"
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged = stage / "download.AppImage"
         shutil.copyfile(image, staged)
         info = {"etag": pending.get("etag"), "last_modified": pending.get("last_modified")}
         return conclude(run, stage, staged, pending["sha256"], info, expected, ask=False)
-    finally:
-        appimage.remove_tree(stage)
 
 
 def conclude(run, stage, staged, digest, info, expected, ask=True):
     tier = check_expected(digest, expected)
     if run.args.quarantine < updater.DEFAULT_QUARANTINE_DAYS:
         run.console.warn(f"quarantine shortened to {run.args.quarantine} days")
-    show_diff(run.console, run.m, digest, tier)
+    show_change(run.console, run.m, digest, tier)
     if tier == 5:
         run.console.out("  trust on first use (tier 5): nothing outside the download confirms these bytes")
     if ask and not run.console.confirm("Install this version?"):

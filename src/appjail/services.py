@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""The things `update` does to the outside world, gathered in one place so tests can replace them."""
+"""The things `add` and `update` do to the outside world, gathered in one place so tests can replace them."""
 
 from collections.abc import Callable
 from dataclasses import dataclass

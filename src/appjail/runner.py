@@ -76,7 +76,7 @@ def prepare(name, extract=appimage.extract, say=print, warn=None):
             _warner(say, warn)(f"the extracted tree of {name} is missing its record or was modified; extracting it again from the verified image")
     if not valid:
         say(f"Extracting {name} (no valid extracted tree)…")
-        appimage.remove_tree(root)
+        store.remove_tree(root)
         try:
             extract(image, root, False)
         except appimage.EXTRACT_ERRORS as e:
