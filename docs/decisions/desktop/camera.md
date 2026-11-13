@@ -17,6 +17,8 @@ in later appears at the next start. The nodes are opened briefly at every start 
 Tested with the `vivid` virtual camera (frames through GStreamer and raw ioctls, one camera, two, none); not yet with a
 real USB webcam, whose sysfs path is deeper, nor with hot-unplugging. Through the portal, the test camera's node never
 became usable because of a PipeWire bug with one of its test controls (fixed upstream, unreleased); an ordinary webcam
-has no such control, so a real camera through the portal remains a manual check.
+has no such control, so a real camera through the portal remains a manual check. The measurements are on
+[Camera and audio measurements](../../develop/camera-audio-evidence.md).
 
-**Revisit when** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted.
+**Revisit when** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted, or a PipeWire release
+carries the fix (then the portal camera test can let the session manager link the test camera instead of `pw-link`).

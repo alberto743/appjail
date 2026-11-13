@@ -22,6 +22,8 @@ No planned code work is pending (`docs/decisions/deferred.md`). Everything else 
 - Paused by the user: arm64 support. Deferred by the user: the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN (`docs/decisions/deferred.md`).
 - Scheduled, after the next release tag: decide how an app's terminal output is handled (it shares the terminal it was started from; options in `docs/decisions/deferred.md`, Scheduled).
 - Scheduled, after the next release tag: decide whether to allow grants under `/run/media/USER` (removable media on Fedora and Arch, refused today with the rest of `/run`; `docs/decisions/deferred.md`, Scheduled).
+- Scheduled, when a PipeWire release after 1.6.2 carries the V4L2 fixes: re-run the Camera portal measurement (`docs/decisions/deferred.md`, Scheduled).
+- The user's call, not decided: whether to report upstream the crashes found while measuring (Muffin and Cinnamon on `wl-copy`/`wl-paste`, Hyprland 0.53.3 when a window closes; `docs/compositor-assessment/ASSESSMENT.md`).
 - Scheduled, December 2026: switch the workflows from `ubuntu-26.04` to `ubuntu-latest` (GitHub's move ends 2026-11-19) and check CI.
 
 ## Docs
