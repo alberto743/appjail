@@ -32,7 +32,8 @@ is built around the opposite assumptions:
   app is fetched from, whatever an AppImage's embedded update information says.
 - **Downloads are jailed.** The download, the extraction and the verification tools run in throwaway sandboxes
   with only the access they need (a private network namespace for downloads, none for extraction).
-- **Everything is denied by default.** An app starts with a private home and a restricted Wayland socket, nothing else.
+- **Everything is denied by default.** An app starts with a private home and a window on a Wayland socket that lists no
+  privileged interface, nothing else.
   Audio, GPU, network, directories, D-Bus names, portals and the rest are explicit grants you can inspect and change.
 - **Updates are reviewed.** A new release waits in quarantine (7 days by default), is shown to you as a diff, and
   is blocked outright if its evidence gets weaker or the repository changes owner.
@@ -53,7 +54,7 @@ is built around the opposite assumptions:
   - `xwayland`: X11-only apps, through a private rootless Xwayland. Compositors that manage the X windows themselves (sway, KDE) show them; GNOME's mutter does not.
   - `openbox`, together with `xwayland`: the `xwayland-rootful` display mode, which shows X11-only apps in one window that holds the whole X screen, with `openbox` as the window manager inside the jail; for GNOME. `--display-size WxH` sets the window size (default 1280x800).
   - `git`: the manifest history.
-  - `dbus-bin` (`dbus-send`): starting the document portal and revoking its grants. `libnotify-bin` (`notify-send`): the error notice when a file opened from the menu fails.
+  - `dbus-bin` (`dbus-send`): checking who owns a granted D-Bus name, starting the document portal and revoking its grants. `libnotify-bin` (`notify-send`): the error notice when a file opened from the menu fails.
   - `librsvg2-bin` (`rsvg-convert`): the menu icon of an app that ships only an SVG; without it the entry has no icon
     (`appjail desktop APP --show` says so). `libgtk-3-bin` (`gtk-update-icon-cache`) makes new icons appear in the
     menu at once; `desktop-file-utils` registers the file types.
@@ -131,7 +132,7 @@ out again. Only a menu entry created that way is ever replaced or deleted.
 
 **From a GitHub release.** `appjail add owner/repo` shows the repository owner, account age, stars and fork or archive
 status before it downloads anything, and asks if several release assets match. By default an app gets a window
-(a restricted Wayland socket) and nothing else: pass `--allow audio`, `--allow mic`, `--allow gpu` or `--allow camera` for those, and `--display none`
+(a Wayland socket without privileged interfaces) and nothing else: pass `--allow audio`, `--allow mic`, `--allow gpu` or `--allow camera` for those, and `--display none`
 for an app that needs no window.
 
 | Option | Effect |
@@ -350,8 +351,9 @@ owner change.
 | bwrap fails with `Operation not permitted` or `setting up uid map: Permission denied` | Unprivileged user namespaces are blocked. On Ubuntu, AppArmor can restrict them (`kernel.apparmor_restrict_unprivileged_userns`); the project's CI relaxes it with `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. That changes a system-wide protection, so decide for yourself whether to do it, or give bubblewrap its own AppArmor profile. |
 | An app exits after a few seconds with code 0 and no window | Its launcher starts the real app detached and exits, and the jail ends with it (VSCodium does this). `appjail perms APP --allow linger` keeps the jail until every process in it has exited; or pass the app's own wait option, e.g. `appjail run vscodium -- --wait`. |
 | `no usable Wayland session` or `Wayland socket not found` | `run` needs a Wayland compositor and `WAYLAND_DISPLAY`/`XDG_RUNTIME_DIR` in the environment (not available over a plain ssh login). Command-line apps need no window: `perms APP --display none` runs them without a Wayland session at all. Apps that only speak X11 use `perms APP --display xwayland` (needs `xwayland`), or `xwayland-rootful` (needs `xwayland` and `openbox`) when no window appears, as on GNOME. |
-| `run` refuses an app, saying its Wayland socket lists privileged interfaces | The socket the app would get lets a client capture the screen, inject input, read the clipboard without focus or control other windows or the desktop (the message names which). Run it on a compositor whose socket lists none (GNOME, sway, labwc, Hyprland 0.55), or accept that with `appjail perms APP --allow full_wayland`. Copy and paste in the app's own window is not affected. |
+| `run` refuses an app, saying its Wayland socket lists privileged interfaces | The socket the app would get lets a client capture the screen, inject input, read the clipboard without focus or control other windows or the desktop (the message names which). Run it on a compositor whose socket lists none (GNOME, Cinnamon, sway, labwc, Hyprland 0.55), or accept that with `appjail perms APP --allow full_wayland`. Copy and paste in the app's own window is not affected. |
 | `run` refuses an app, saying its socket lists interfaces "not known to it" | The compositor offers an interface appjail has not classified (a compositor that was not measured, or a new version of one that was), so appjail cannot say what it allows. Accept it with `appjail perms APP --allow full_wayland`, and please report the interface name and the compositor version so it can be classified. |
+| `run` refuses an app, saying a `dbus_filter` entry "is owned by the same process as" a refused name | The service behind that name runs in a process that also serves names appjail refuses (a desktop shell, typically), and a granted name reaches every object of its process. Remove the entry (`appjail perms APP --rm-dbus NAME`); the known services (notifications, the secret service, MPRIS, the status-notifier watcher) are confined and never refused this way. |
 | An app with `network` is refused, naming `passt` | Install `passt`; the app is never put on the host network silently. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12 or later, with Landlock enabled). Use `network` instead, which keeps the app in a private network namespace. |
 | `GitHub API rate limit reached` | Unauthenticated requests are limited to 60 per hour per address. Set `GITHUB_TOKEN`. |
@@ -410,8 +412,8 @@ KWin's own controls (screen power, brightness, virtual desktops, screen edges, t
 "desktop"; KWin is refused for data-control anyway.
 
 GNOME and KDE keep their privileged operations on D-Bus (Mutter's ScreenCast, RemoteDesktop and InputCapture, KWin's scripting
-and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant
-the names `org.gnome.Mutter*`, `org.cinnamon.Muffin*`, `org.Cinnamon*` (its `Eval` runs any script in the shell),
+and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant,
+among others, the names `org.gnome.Mutter*`, `org.cinnamon.Muffin*`, `org.Cinnamon*` (its `Eval` runs any script in the shell),
 `org.kde.plasmashell*` (its `evaluateScript` runs a desktop script), `org.kde.klipper*` (the clipboard history),
 `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
 and `org.kde.keyboard`.
@@ -452,8 +454,9 @@ and `org.kde.keyboard`.
   have, under headless weston; the portal dialogs themselves are not driven). Real internet IPv6 under `pasta` is
   untested; IPv6 forwarding is tested in a fake network.
 - `display = xwayland-rootful` shows the app in one window and worked on GNOME in a brief test; clipboard and drag-and-drop through
-  that window, and GPU acceleration through Xwayland, have not been verified. Real desktop D-Bus services (notification
-  daemon, MPRIS players) and tray icons that need a `-<pid>` bus name are untested too.
+  that window, and GPU acceleration through Xwayland, have not been verified. Of the real desktop D-Bus services only the notification
+  servers of headless GNOME Shell, Cinnamon and Plasma shells were reached through the proxy; MPRIS players and tray
+  icons that need a `-<pid>` bus name are untested.
 - Stopping `appjail run` with SIGINT, SIGTERM or SIGHUP stops the whole jail, including `pasta`. If appjail is killed
   with SIGKILL, an app with `network` is stopped about a second later by a watcher inside its network namespace; small
   `appjail-*` directories and files (sockets, a FIFO, the seccomp filter) stay in the runtime directory until logout.

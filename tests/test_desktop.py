@@ -338,7 +338,7 @@ def test_svg_icon_is_rendered_to_png_inside_a_jail(h, xdg):
     h.add(extract=extract)
     out = run(["desktop", "app", "--yes"]).text
     icon = xdg / "icons/hicolor/256x256/apps/appjail-app.png"
-    assert desktop.png_size(icon.read_bytes()) == (256, 256), out
+    assert pngclean.sanitize(icon.read_bytes(), *desktop.ICON_SIZE_RANGE)[1] == (256, 256), out
 
 
 def test_a_menu_entry_is_refused_for_an_app_without_a_window(h, xdg):

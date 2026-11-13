@@ -232,12 +232,6 @@ def _is_svg(data):
     return b"<svg" in data[:4096].lower()
 
 
-def png_size(data):
-    """(width, height) of a PNG that `pngclean.sanitize` accepts, else None."""
-    clean_png = pngclean.sanitize(data, *ICON_SIZE_RANGE)
-    return clean_png[1] if clean_png else None
-
-
 def find_icon(root, fields):
     """Bytes of the app's icon (PNG or SVG) read from the tree without leaving it, or None."""
     names = []
