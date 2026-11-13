@@ -14,7 +14,7 @@ from dataclasses import replace
 from urllib.parse import urlsplit
 
 from . import history, manifest, store, updater
-from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
+from .console import INDENTED_LABEL, Abort, human_size
 from .errors import JailError
 from .imagesrc import (
     DEFAULT_MAX_MIB,
@@ -27,8 +27,14 @@ from .imagesrc import (
     url_fingerprint,
     version_of,
 )
-from .install import MAX_ASSET, NEED_SQUASHFS, finish_update, swap_in
-from .permargs import granted_summary
+from .install import (
+    MAX_ASSET,
+    NEED_SQUASHFS,
+    finish_update,
+    show_change,
+    show_quarantine,
+    swap_in,
+)
 
 DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 → 5 (this app was added with a matching --sha256, the new content has none). "
              "Pass --sha256 HEX with the hash the publisher gives for the new file to keep tier 4.")
@@ -54,13 +60,6 @@ def confirm_installed_hash(run, expected):
     else:
         run.console.out("  --sha256 matches the installed file")
     return True
-
-
-def show_diff(console, m, digest, tier, size=None):
-    console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{ARROW_NB}{digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
-    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {tier}", INDENTED_LABEL)
-    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
 
 
 def install(run, staged, stage, record):
@@ -101,7 +100,7 @@ def update_file(run):
             return "blocked"
         tier = check_expected(digest, expected)
         console.kv("  file", real, INDENTED_LABEL)
-        show_diff(console, m, digest, tier, st.st_size)
+        show_change(console, m, digest, tier, st.st_size)
         if not console.confirm(f"Replace {name} with this file?"):
             return "declined"
         record = replace(m, source=f"file:{real.name}", version=version_of(digest), sha256=digest,
@@ -243,15 +242,14 @@ def start_quarantine(run, stage, staged, digest, info, expected):
     """A new candidate: keep it on disk, start its clock, and install at once only when the quarantine is 0."""
     fp = url_fingerprint(staged, info)
     tier = check_expected(digest, expected)
-    show_diff(run.console, run.m, digest, tier, info["size"])
+    show_change(run.console, run.m, digest, tier, info["size"])
     updater.clear_pending(run.name)
     shutil.copyfile(staged, updater.pending_image(run.name))
     updater.record_url_candidate(run.name, version_of(digest), run.now, digest, fp, info["etag"], info["last_modified"])
     days = run.args.quarantine
     if days > 0:
         due = updater.quarantine_ends(run.now.replace(microsecond=0), days)
-        run.console.kv("  quarantine", f"first seen {updater.stamp(run.now)}; can be installed from {updater.stamp(due)} "
-                       f"({days} days; --quarantine DAYS to change)", INDENTED_LABEL)
+        show_quarantine(run.console, run.now, due, days)
         return "waiting"
     return conclude(run, stage, staged, digest, info, expected)
 
@@ -275,7 +273,7 @@ def conclude(run, stage, staged, digest, info, expected, ask=True):
     tier = check_expected(digest, expected)
     if run.args.quarantine < updater.DEFAULT_QUARANTINE_DAYS:
         run.console.warn(f"quarantine shortened to {run.args.quarantine} days")
-    show_diff(run.console, run.m, digest, tier)
+    show_change(run.console, run.m, digest, tier)
     if tier == 5:
         run.console.out("  trust on first use (tier 5): nothing outside the download confirms these bytes")
     if ask and not run.console.confirm("Install this version?"):

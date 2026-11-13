@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from . import github, history, manifest, store, updater
 from .cmd_updateimage import update_file, update_url
-from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
+from .console import INDENTED_LABEL, Abort, human_size
 from .errors import JailError
 from .install import (
     MAX_ASSET,
@@ -17,9 +17,10 @@ from .install import (
     download_verified,
     finish_update,
     gather_evidence,
+    show_change,
+    show_quarantine,
     swap_in,
 )
-from .permargs import granted_summary
 from .services import Services, UpdateRun
 
 
@@ -57,16 +58,12 @@ def describe_candidate(console, m, release, asset):
     console.kv("  candidate", f"{release.tag}, published {release.published_at}" + ("  (pre-release)" if release.prerelease else ""), INDENTED_LABEL)
     console.kv("", release.html_url, INDENTED_LABEL)
     console.kv("  asset", f"{asset.name} ({human_size(asset.size)})", INDENTED_LABEL)
-    console.kv("  sha256", m.sha256, INDENTED_LABEL)
-    console.kv("", f"{ARROW_NB}{asset.sha256 or 'unknown until downloaded (no GitHub digest)'}", INDENTED_LABEL)
-    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {asset.base_tier}", INDENTED_LABEL)
-    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
+    show_change(console, m, asset.sha256 or "unknown until downloaded (no GitHub digest)", asset.base_tier)
 
 
 def wait_in_quarantine(run, asset, key, first, due):
     name, console = run.name, run.console
-    console.kv("  quarantine", f"first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
-               f"({run.args.quarantine} days; --quarantine DAYS to change)", INDENTED_LABEL)
+    show_quarantine(console, first, due, run.args.quarantine)
     pending = updater.load_pending(name)
     if not asset.sha256 and not (pending and pending.get("sha256")):
         # no GitHub digest to catch a swapped asset: fix its hash now, compare it when installing

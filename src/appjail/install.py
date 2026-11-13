@@ -9,7 +9,8 @@ import re
 
 from . import appimage, attest, github, history, manifest, store, updater
 from .cmd_desktop import install_entry, refresh_after_update
-from .console import Abort, human_size
+from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
+from .permargs import granted_summary
 
 MAX_ASSET = 2 * 1024 ** 3
 NEED_SQUASHFS = "install squashfs-tools (apt install squashfs-tools) and retry"
@@ -153,3 +154,16 @@ def finish_update(run, record, entries, size):
     run.console.out(f"  updated {name}: {m.version} → {record.version}, sha256 {record.sha256}, {entries} entries, {human_size(size)}")
     refresh_after_update(name, run.console)
     return "updated"
+
+
+def show_change(console, m, new_sha256, tier, size=None):
+    """The hash and evidence an update would change, and the permissions it keeps."""
+    console.kv("  sha256", m.sha256, INDENTED_LABEL)
+    console.kv("", f"{ARROW_NB}{new_sha256}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
+    console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {tier}", INDENTED_LABEL)
+    console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
+
+
+def show_quarantine(console, first, due, days):
+    console.kv("  quarantine", f"first seen {updater.stamp(first)}; can be installed from {updater.stamp(due)} "
+               f"({days} days; --quarantine DAYS to change)", INDENTED_LABEL)
