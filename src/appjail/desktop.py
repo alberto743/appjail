@@ -147,7 +147,8 @@ def split_mimes(raw):
 def launcher_argv():
     """How the entry starts appjail: the installed command, or the interpreter running this package."""
     found = shutil.which("appjail")
-    # abspath, not realpath: the python of a virtual environment is a symlink to one that does not have appjail
+    # The installed script is resolved to its real path. The interpreter is not: the python of a virtual environment is
+    # a symlink to one that does not have appjail, so its own path (abspath) is kept.
     return [os.path.realpath(found)] if found else [os.path.abspath(sys.executable), "-m", "appjail"]
 
 
