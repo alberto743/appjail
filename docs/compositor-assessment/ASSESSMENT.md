@@ -214,9 +214,25 @@ checked the caller):
 * **appjail's name policy, when surveyed** (the `appjail_policy_*` fields of `results-*.json`) allowed `org.gnome.Mutter.*`
   (every one of the names above), `org.freedesktop.a11y.Manager`, `org.kde.keyboard` and `org.kde.kglobalaccel`, and refused
   `org.gnome.Shell*` and `org.kde.KWin*`. That was the gap: a user who granted `org.gnome.Mutter.ScreenCast` or
-  `org.gnome.Mutter.RemoteDesktop` gave the app the ability to open those sessions with no prompt (`CreateSession` was shown
-  to work; a complete capture or injected keystroke was not attempted). It is closed: decision D below refuses all of these
-  names, and an app has no bus at all by default.
+  `org.gnome.Mutter.RemoteDesktop` gave the app the ability to capture the screen and type into other apps with no prompt
+  (shown below). It is closed: decision D below refuses all of these names, and an app has no bus at all by default.
+
+**A complete capture and keystroke** (`tests/compositors/mutter_dbus.py`, measured later, 2026-11-13; raw data
+`mutter-dbus-*.json`): an ordinary client of the bus opens a `RemoteDesktop` session, clicks and types into the window of
+another client (a GTK 4 window that logs the keys it receives), and opens a `ScreenCast` session on the monitor, whose PipeWire
+stream it reads with GStreamer (a private PipeWire and WirePlumber in the compositor's runtime directory). The frame holds
+the other client's red window. No portal and no prompt are involved. GNOME Shell starts in its overview, which takes the
+first click and keys; the tool presses Escape first and tries the typing up to three times. Twelve runs (three on each of
+the four versions) all succeeded; one GNOME Shell 48.7 run needed a second try.
+
+<!-- generated:mutter_dbus -->
+| Compositor | Distribution | Version | RemoteDesktop: keys typed into another client's window | ScreenCast: a whole frame of the screen |
+| --- | --- | --- | --- | --- |
+| gnome-shell | debian 13 | 48.7-0+deb13u2 | yes (`appjail`) | yes (786432 pixels, 2159 colours) |
+| gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | yes (`appjail`) | yes (786432 pixels, 499 colours) |
+| mutter | debian 13 | 48.7-0+deb13u1 | yes (`appjail`) | yes (786432 pixels, 427 colours) |
+| mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | yes (`appjail`) | yes (786432 pixels, 411 colours) |
+<!-- /generated -->
 
 ## What it means for the security model
 

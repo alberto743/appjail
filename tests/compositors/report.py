@@ -143,11 +143,33 @@ def policy_table(results):
     return table(["Compositor", "Bus names on a connection with privileged-looking interfaces", "appjail policy when surveyed"], rows)
 
 
+def mutter_dbus_table(results):
+    """A complete keystroke into another client's window and a complete screen capture, through Mutter's own D-Bus API as an
+    ordinary client of the bus (mutter_dbus.py)."""
+    names = sorted({k for _, comps in results for k in comps})
+    head = ["Compositor", "Distribution", "Version", "RemoteDesktop: keys typed into another client's window",
+            "ScreenCast: a whole frame of the screen"]
+    rows = []
+    for name in names:
+        for label, comps in results:
+            entry = comps.get(name)
+            if not entry or entry["status"] != "ok":
+                rows.append([name, label, version(entry), "-", (entry or {}).get("status", "not run")])
+                continue
+            typed, shot = entry["type"], entry["capture"]
+            rows.append([name, label, version(entry),
+                         f"yes (`{typed['received']}`)" if typed["ok"] else f"no ({typed.get('error') or 'nothing received'})",
+                         f"yes ({shot['bytes'] // 3} pixels, {shot['colours']} colours)" if shot["ok"]
+                         else f"no ({shot.get('error') or shot.get('gst_error') or 'no frame'})"])
+    return table(head, rows)
+
+
 def sections(directory=DIRECTORY):
     """{name: markdown table} for every table that can be generated from the files of this directory."""
     survey = load(directory, "results")
     return {"wayland": wayland_table(survey), "rule": rule_table(load(directory, "rule-a")),
-            "clipboard": clipboard_table(load(directory, "clipboard")), "dbus": dbus_table(survey), "policy": policy_table(survey)}
+            "clipboard": clipboard_table(load(directory, "clipboard")), "dbus": dbus_table(survey), "policy": policy_table(survey),
+            "mutter_dbus": mutter_dbus_table(load(directory, "mutter-dbus"))}
 
 
 def splice(document, tables):

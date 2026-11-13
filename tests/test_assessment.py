@@ -29,7 +29,7 @@ def test_the_generated_tables_are_what_the_saved_results_give():
 def test_every_table_the_document_names_can_be_generated_and_none_is_missing():
     module = report()
     named = {m.group(2) for m in module.BLOCK.finditer(DOCUMENT.read_text())}
-    assert named == {"wayland", "rule", "clipboard", "dbus"}
+    assert named == {"wayland", "rule", "clipboard", "dbus", "mutter_dbus"}
     assert named <= set(module.sections())
 
 
