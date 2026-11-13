@@ -34,7 +34,7 @@ private Xvfb) in a private runtime directory and on a private session bus, and r
 
 Where a desktop keeps its privileged operations on D-Bus, a second tool shows what an ordinary client of the bus gets
 through them, end to end: `mutter_dbus.py` (Mutter, GNOME Shell) and `cinnamon_dbus.py` (Cinnamon). How to assess a
-compositor that is not here yet, step by step, and what went wrong on the way: [the method](../assessing-compositors.md).
+compositor that is not here yet, step by step, and what went wrong on the way: [the method](../develop/assessing-compositors.md).
 
 Raw results: `results-*.json` (probe.py), `rule-a-*.json` (rule_a.py), `clipboard-*.json` (clipboard.py), `mutter-dbus-*.json`,
 `cinnamon-dbus-*.json` and `shared-connection-*.json` (shared_connection.py), one file per distribution, in this directory. Every table between `generated` markers is written by `tests/compositors/report.py --write`
@@ -324,7 +324,7 @@ The "reached with `--talk`" columns are the hole: every allowed name of both she
   its owner's unique name, and the service's own call still worked (`GetServerInformation`, `RemoveNotification`).
 * **Refused at launch:** any other granted name gets `--talk`, so `run` first asks the bus who owns it and stops when that
   owner also owns a refused name. The check sees the owners at launch only: a name that nobody owns yet, or that changes
-  owner while the app runs, is not caught (README, Limits).
+  owner while the app runs, is not caught ([D-Bus and the filtering proxy](../understand/desktop/dbus.md), Limits).
 
 <!-- generated:shared_connection -->
 | Compositor | Granted name (allowed) | Call sent to it | reached with `--talk`, debian 13 | appjail, debian 13 | reached with `--talk`, ubuntu 26.04 | appjail, ubuntu 26.04 |
@@ -351,7 +351,7 @@ on Cinnamon, granting `org.freedesktop.Notifications` (the example of a `dbus_fi
 of the shell gives it `Eval`, that is, the user's account. Mutter, Muffin and KWin on their own own no allowed name on that
 connection, so nothing reached there. In a real GNOME session the shell may own `org.freedesktop.Notifications` too; the
 headless shell did not, so that is not measured. This is a hole in appjail's D-Bus grants, not in the compositors; the
-possible fixes are in DECISIONS.md (D-Bus names refused beyond the shell and portals).
+possible fixes are in [One granted name reaches its whole connection](../decisions/desktop/dbus-connection.md).
 
 ## What it means for the security model
 
@@ -442,4 +442,4 @@ On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `
 
 Copy each file to `docs/compositor-assessment/<prefix>-<distro>-<version>.json` and run `python3 tests/compositors/report.py
 --write` in a guest. Adding one compositor to existing results, and everything learned on the way: [the
-method](../assessing-compositors.md).
+method](../develop/assessing-compositors.md).

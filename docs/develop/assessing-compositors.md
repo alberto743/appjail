@@ -2,7 +2,7 @@
 
 How appjail's compositor assessment is made, so that a compositor, a new version of one, or a whole desktop can be added
 the same way. The results and the decisions taken from them are in
-[compositor-assessment/ASSESSMENT.md](compositor-assessment/ASSESSMENT.md); the rules they feed are `wayland.PRIVILEGED`
+[compositor-assessment/ASSESSMENT.md](../compositor-assessment/ASSESSMENT.md); the rules they feed are `wayland.PRIVILEGED`
 and `wayland.ALLOWED` (`src/appjail/wayland.py`) and `grants.DBUS_BLOCKED` (`src/appjail/grants.py`).
 
 ## The question
@@ -65,8 +65,9 @@ packages; one that neither packages is not measured, and the rule decides it fro
    the files back, run `report.py --write` in a guest, add the new `generated` blocks to ASSESSMENT.md and to
    `tests/test_assessment.py`.
 10. **Decide and document.** Change `wayland.PRIVILEGED` or `ALLOWED`, `grants.DBUS_BLOCKED` and `tests/test_dbus.py` as the
-    results require; update ASSESSMENT.md (what the table shows, decision D, the limits), DECISIONS.md (why), DESIGN.md
-    (the refused names), README.md (the compositor table and the refused names); run the full suite on both guests.
+    results require; update ASSESSMENT.md (what the table shows, decision D, the limits), the decision pages under
+    `docs/decisions/desktop/` (why), `docs/understand/desktop/` (the refused names), and the compositor table in
+    `docs/guide/compositors.md`; regenerate `docs/reference/policy.md`; run the full suite on both guests.
 
 ## Lessons from the measurements
 
@@ -87,7 +88,7 @@ packages; one that neither packages is not measured, and the rule decides it fro
 * **Measure against the compositor's own idea of the screen.** Nested in Xvfb, Cinnamon's output is 800x600 on a 1024x768
   Xvfb screen; compare a capture with the shell's stage size.
 * **A test device can be the bug.** WirePlumber never showed the `vivid` camera because PipeWire misreads one of vivid's
-  test controls (DECISIONS.md, Camera portal); check the device before blaming the code under test.
+  test controls ([Camera: the capture nodes only](../decisions/desktop/camera.md)); check the device before blaming the code under test.
 * **Names are case-sensitive.** `org.Cinnamon` (the shell) and `org.cinnamon.Muffin` (the compositor) are different
   families; a blocklist entry covers only its own spelling.
 * **The bus filter works on names; the risk is per connection.** One process owns many names on one connection, and a call

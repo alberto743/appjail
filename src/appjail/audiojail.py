@@ -9,7 +9,7 @@ ask `pipewire-pulse` to load modules (`pactl load-module`), and a tunnel module 
 the microphone; so `pipewire-pulse` is configured with `pulse.allow-module-loading = false`. The only nodes in their graph are tunnels to
 the host's Pulse server: a sink always, a source only with `mic`. The app jail gets this graph's sockets and nothing of
 the host's PipeWire, so it sees neither the host's devices, nor cameras, nor other apps' streams, and without `mic` it
-has no microphone at all. The tunnels follow the host's default devices only at connection time (see DECISIONS.md).
+has no microphone at all. The tunnels follow the host's default devices only at connection time (see docs/decisions/desktop/audio-graph.md).
 """
 
 import collections

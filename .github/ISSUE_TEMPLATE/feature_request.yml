@@ -1,0 +1,32 @@
+name: Feature request
+description: Something appjail should do that it does not.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        appjail follows a few [principles](https://alberto743.github.io/appjail/understand/principles/) (nothing from the network is
+        executed, you name the source, nothing is granted by default, ...). A request that would change one is welcome, but say so.
+        Deferred features are listed in [Deferred and planned work](https://alberto743.github.io/appjail/decisions/deferred/).
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and why it is hard or impossible now.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations:
+      required: true
+  - type: textarea
+    id: principles
+    attributes:
+      label: How it fits the principles
+      description: Does it widen what an app can reach, or what appjail trusts? What would protect against misuse?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

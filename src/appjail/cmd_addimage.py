@@ -4,7 +4,7 @@
 """`appjail add --file PATH` and `appjail add --url URL`: install an AppImage that has no GitHub release behind it.
 
 There is no owner, digest or attestation to check, so the evidence is the sha256 of the bytes the user supplied:
-tier 4 when `--sha256` was given and matched, tier 5 (trust on first use) otherwise. See DESIGN.md.
+tier 4 when `--sha256` was given and matched, tier 5 (trust on first use) otherwise. See docs/understand/acquisition/evidence.md.
 """
 
 import re

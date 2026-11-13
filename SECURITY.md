@@ -1,7 +1,8 @@
 # Security policy
 
 appjail exists to run untrusted software with less access, so reports about its isolation and verification are welcome.
-It is maintained by one person, unaudited, and handled on a best-effort basis (see "Limits" in the README).
+It is maintained by one person, unaudited, and handled on a best-effort basis (see
+[what appjail does not do](https://alberto743.github.io/appjail/understand/problem/#what-appjail-does-not-do)).
 
 ## Supported versions
 
@@ -29,9 +30,10 @@ they prefer not to be.
 
 ## Out of scope
 
-- What the README documents as limits: for example an app granted `full_wayland` running although its Wayland socket
-  lists privileged or unknown interfaces, the Wayland interfaces the README allows after a decision (such as idle
-  notification), or reaching the LAN with `network`. An interface in appjail's allowed list that lets an app act on other
+- What the documentation states as limits (the Limits section of each page, and
+  [the problem](https://alberto743.github.io/appjail/understand/problem/#what-appjail-does-not-do)): for example an app granted `full_wayland` running although its Wayland socket
+  lists privileged or unknown interfaces, the Wayland interfaces allowed after a decision (such as idle notification; see
+  [Unknown Wayland interfaces are refused](https://alberto743.github.io/appjail/decisions/desktop/wayland-allowlist/)), or reaching the LAN with `network`. An interface in appjail's allowed list that lets an app act on other
   apps is in scope. A granted D-Bus name outside appjail's confined services reaching the other objects of a process
   that took it over after the app started is a documented limit; reaching another process's objects, a confined service's
   other objects, or a refused name's owner that owned it at launch is in scope.
@@ -46,5 +48,6 @@ they prefer not to be.
 
 Test on your own machine and accounts only. Reproducing an issue never needs root.
 
-The design and its trust model are described in [DESIGN.md](https://github.com/alberto743/appjail/blob/main/DESIGN.md)
-and the README's "Trust and updates" and "Limits" sections.
+The threat model, the trust model and every mechanism are described in the documentation:
+[Understanding appjail](https://alberto743.github.io/appjail/understand/problem/), with the exact policy lists in the
+[reference](https://alberto743.github.io/appjail/reference/policy/).

@@ -201,7 +201,7 @@ def test_the_lists_do_not_overlap_and_every_kind_says_what_it_allows():
 @pytest.mark.parametrize("name", ["ext_idle_notifier_v1", "wp_drm_lease_device_v1", "zwp_pointer_constraints_v1",
                                   "zwp_keyboard_shortcuts_inhibit_manager_v1", "ext_output_image_capture_source_manager_v1"])
 def test_the_globals_allowed_after_a_decision_stay_allowed(name):
-    """README.md, "Wayland compositors", names these; moving one means changing the docs and refusing compositors."""
+    """docs/decisions/desktop/wayland-allowlist.md names these; moving one means changing the docs and refusing compositors."""
     assert name in wayland.ALLOWED
 
 

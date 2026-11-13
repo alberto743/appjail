@@ -5,7 +5,7 @@
 
 The host side is a private stack with a test microphone (a tone), a second microphone, a speaker (a null sink) and a camera
 stand-in. The app side is the real appjail graph (audiojail.PrivateAudio) and a real app jail. Besides what the graph does,
-the tests record what it does not do: the limits listed in DECISIONS.md.
+the tests record what it does not do: the limits listed in docs/decisions/desktop/audio-graph.md.
 """
 
 import json
@@ -330,7 +330,7 @@ def test_the_host_sees_a_stream_named_after_the_app(host):
         assert stream.startswith("Tunnel for ") and stream.endswith("@notes-app"), stream
 
 
-# -- limits (DECISIONS.md): what the graph does not do ---------------------------------------
+# -- limits (docs/decisions/desktop/audio-graph.md): what the graph does not do ---------------------------------------
 
 
 @integration

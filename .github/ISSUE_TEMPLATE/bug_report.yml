@@ -1,0 +1,68 @@
+name: Bug
+description: appjail does something wrong, crashes, or a message is misleading.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove your home path, user name and host name from everything you paste (`~` is fine).
+  - type: input
+    id: version
+    attributes:
+      label: appjail version
+      description: Output of `appjail version`.
+      placeholder: appjail 0.5.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and kernel
+      description: For example `Debian 13, 6.12.48` (`uname -r` gives the kernel).
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop or compositor, with its version
+      placeholder: GNOME 48.7 / KWin 6.3.6 / sway 1.10.1
+  - type: input
+    id: bwrap
+    attributes:
+      label: bubblewrap version
+      description: Output of `bwrap --version`.
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed from
+      options:
+        - PyPI (pipx or pip)
+        - a clone of the repository
+        - other
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The command you ran.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened, with the full output
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: perms
+    attributes:
+      label: The app's permissions, if an app is involved
+      description: Output of `appjail perms APP`.
+      render: text
