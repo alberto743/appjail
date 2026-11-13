@@ -45,7 +45,8 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
   rest of that connection is unreachable.
 - **The owner check.** Any other granted name reaches its whole connection. Before starting the proxy, `run` asks the bus
   who owns each granted name and each refused one, and refuses to start when one connection owns both, naming them. It
-  fails closed when the owners cannot be read.
+  fails closed when the owners cannot be read. Names the app may *own* are checked the same way: the proxy's own policy
+  includes talking to whoever owns the name at the moment.
 - **Refused names.** Names that hand over the desktop are refused when you grant them and when a manifest is loaded: the
   bus itself, systemd, the desktop shells and compositors, the session manager, `dconf`, GVfs, the accessibility bus,
   global shortcuts, the screensaver, the clipboard manager, the portals' own names. Wildcards need at least three name

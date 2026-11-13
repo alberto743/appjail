@@ -136,6 +136,15 @@ def test_owner_check_refuses_shared_talk_names_and_skips_confined_ones():
                            lambda bus, wanted: pytest.fail("no talk name, so the bus is not asked"))
 
 
+def test_owner_check_covers_owned_names():
+    """The proxy's own policy includes talking to the name's current owner, so an owned name shared with a refused one
+    is refused like a talk name."""
+    owners = lambda bus, wanted: {n: o for n, o in SHELL_OWNERS.items() if wanted(n)}
+    with pytest.raises(RunError, match=r"dbus_own entry org.example.Family.one is owned by the same process as org.Cinnamon.*--rm-dbus-own"):
+        dbusproxy.check_owners(Permissions(dbus_own=("org.example.Family.one",)), "/bus", owners)
+    dbusproxy.check_owners(Permissions(dbus_own=("org.example.Alone",)), "/bus", owners)
+
+
 def test_dbus_own_without_proxy_socket_is_refused(sandbox, runtime):
     with pytest.raises(RunError, match="filtered bus socket"):
         runtimejail.runtime_args(**build(sandbox, runtime, dbus_own=("org.example.A",)))

@@ -18,7 +18,9 @@ must be known. (c) Both: rules for the known services, the owner check for every
 the status-notifier watcher) get `--call` and `--broadcast` rules for the interfaces their specifications define, on
 their object path only; whoever owns them, the proxy refuses everything else. Every other granted name keeps `--talk`,
 and before starting the proxy `run` reads the owners of the granted and refused names and stops if one connection
-owns both, failing closed when the owners cannot be read. Checked on a private bus with a fake shell, and on GNOME
+owns both, failing closed when the owners cannot be read. Owned names (`dbus_own`) go through the same check, since
+the proxy's own policy also lets the app talk to the name's current owner; they were left out at first, which let an
+ownable name held by a shell's connection around the check. Checked on a private bus with a fake shell, and on GNOME
 Shell, Cinnamon and Plasma's shell: every allowed name was either confined or refused at launch.
 
 **Rejected for now.** Rules written by the user in the manifest (a format change, and wrong rules fail silently);

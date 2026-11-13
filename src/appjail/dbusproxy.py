@@ -157,7 +157,10 @@ def bus_owners(bus, wanted=None, timeout=5.0):
 def check_owners(perms, bus, owners=bus_owners):
     """Refuse to start when a granted, unconfined name is owned by the process that owns a refused one: through the proxy
     it would reach that process's refused objects. Only the owners at launch are seen (docs/understand/desktop/dbus.md)."""
-    granted = talk_names(perms)
+    # An owned name is checked too: the proxy's own policy includes talking to whoever owns the name now, and that
+    # reaches every object of its connection, like an unconfined talk name.
+    owned = list(perms.dbus_own)
+    granted = talk_names(perms) + [n for n in owned if n not in perms.dbus_filter]
     if not granted:
         return
 
@@ -167,9 +170,10 @@ def check_owners(perms, bus, owners=bus_owners):
     if clash:
         entry, name, refused = clash[0]
         shown = name if name == entry else f"{name} (from {entry})"
-        raise RunError(f"dbus_filter entry {shown} is owned by the same process as {refused}, which is refused: a call to "
+        key, option = ("dbus_own", "--rm-dbus-own") if entry in owned else ("dbus_filter", "--rm-dbus")
+        raise RunError(f"{key} entry {shown} is owned by the same process as {refused}, which is refused: a call to "
                        f"one name reaches every object of the process that owns it, so granting it would reach {refused}. "
-                       f"Remove the entry (appjail perms APP --rm-dbus {entry})")
+                       f"Remove the entry (appjail perms APP {option} {entry})")
 
 
 def proxy_args(bus, sockdir, perms, sync_fd, identity=None, seccomp_fd=None):
