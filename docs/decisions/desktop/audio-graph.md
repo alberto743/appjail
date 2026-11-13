@@ -25,6 +25,11 @@ withhold the microphone; `add` and `perms` say so.
 an app with `mic` gets the host's Pulse socket with a warning, and an app without `mic` gets no sound, with a warning:
 missing sound is visible and harmless, a silently open microphone is not.
 
+**Start order.** PipeWire starts first; WirePlumber and `pipewire-pulse` start only once `pw-dump` gets an answer from
+it. WirePlumber connects once: started in parallel, on a loaded machine it could try before the socket existed and stay
+up without a connection, so the graph never completed. Found by reproducing an intermittent CI failure in the Ubuntu
+guest under load (1 run in 15); with the order fixed, 60 loaded runs had no failure.
+
 **Rejected.** A filtering proxy in front of the Pulse socket: blocking recording still let a client load modules and
 mute the microphone, and a safe one needs an allow list of the whole protocol, parsed in Python. Rebuilding the tunnel
 when devices change: `pw-cli` crashed unloading it, and restarting the daemons drops the app's connection.

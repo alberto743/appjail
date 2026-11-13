@@ -22,7 +22,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/alberto743/appjail"
 Issues = "https://github.com/alberto743/appjail/issues"
-Design = "https://github.com/alberto743/appjail/blob/main/DESIGN.md"
+Documentation = "https://alberto743.github.io/appjail/"
 
 [project.scripts]
 appjail = "appjail.cli:main"

@@ -1,0 +1,65 @@
+name: Docs
+
+# The documentation site (https://alberto743.github.io/appjail/), built from docs/ with Zensical, pinned with hashes in
+# .github/requirements-docs.txt. Every push and pull request builds it in strict mode (a broken link or anchor fails);
+# a version tag (vX.Y.Z), after the CI gate, and a manual run publish it to GitHub Pages, so the site describes the
+# released version. The site loads nothing from other servers.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]*.[0-9]*.[0-9]*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the pinned documentation tooling
+        run: |
+          python3 -m venv "$RUNNER_TEMP/docs-venv"
+          "$RUNNER_TEMP/docs-venv/bin/pip" install --no-input --require-hashes --only-binary=:all: \
+            -r .github/requirements-docs.txt
+      - name: Build (strict)
+        run: '"$RUNNER_TEMP/docs-venv/bin/zensical" build --strict --clean'
+      - name: Nothing is loaded from other servers
+        run: |
+          if grep -rhoE '<(link|script|img)[^>]*(href|src)="https?://' site | grep -v 'rel="canonical"'; then
+            echo "the site loads a resource from another server" >&2
+            exit 1
+          fi
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  ci:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/ci-gate.yml
+    permissions:
+      actions: read
+      contents: read
+
+  deploy:
+    needs: [build, ci]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      pages: write  # publish to GitHub Pages; only this job
+      id-token: write  # the Pages deployment's OIDC token; only this job
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

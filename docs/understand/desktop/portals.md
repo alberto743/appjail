@@ -34,7 +34,10 @@ offer the dialogs its backend implements.
   wallpaper, running in the background, USB devices. Spawning commands on the host and installing launchers are never
   available.
 - **An identity the portal understands.** appjail writes a Flatpak-style identity for each running app: the file the
-  portal reads, with the application id `app.appjail.NAME`, and the jail's process id taken from bubblewrap. It goes
+  portal reads, with the application id `app.appjail.NAME`, and the jail's process id taken from bubblewrap. The id is the portal's
+  whole notion of who the app is, so two apps must never share one: in each dot-separated part of the name, `_` becomes
+  `_u`, `-` becomes `_h`, an empty part becomes `_e`, and a part starting with a digit gets a leading `_` (`my-app` is
+  `app.appjail.my_happ`, `7zip` is `app.appjail._7zip`). It goes
   into the *proxy's* jail, because the proxy's connection is what the portal sees as the caller, never into the app's,
   so the app can neither read nor forge it. Nothing depends on Flatpak; this is a compatibility shim.
 - **The document portal** is started if needed, and only the app's own view of it is bound into the jail.

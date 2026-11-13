@@ -74,6 +74,7 @@ nav = [
   ] },
   { "Decisions" = [
     "decisions/index.md",
+    "decisions/deferred.md",
     { "Acquisition" = [
       "decisions/acquisition/index.md",
       "decisions/acquisition/sources.md",
@@ -140,10 +141,16 @@ nav = [
     "reference/catalog-format.md",
     "reference/output.md",
     "reference/files.md",
+    "reference/policy.md",
   ] },
   { "Development" = [
     "develop/architecture.md",
     "develop/source-tour.md",
+    "develop/testing.md",
+    "develop/ci-release.md",
+    "develop/contributing.md",
+    "develop/assessing-compositors.md",
+    { "Compositor assessment" = "compositor-assessment/ASSESSMENT.md" },
     "develop/writing-docs.md",
   ] },
 ]

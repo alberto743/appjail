@@ -14,7 +14,8 @@ Nothing is written outside these two trees, except the menu entries and icons yo
 | `~/.local/share/appjail/apps/NAME/etc/` | the generated `passwd` and `group` of the jail |
 | `~/.local/share/appjail/apps/NAME/pending.json` | a candidate in quarantine (and `pending.AppImage` for URL apps) |
 | `~/.local/share/appjail/tools/` | the pinned helper tools |
-| `~/.local/share/appjail/index/` | the catalog sources, with the current and previous catalog of each |
+| `~/.local/share/appjail/index/sources.json` | the registered catalog sources |
+| `~/.local/share/appjail/index/NAME/` | per source: `current.json`, `previous.json` (for `index rollback`) and `state.json` (hash, revision, update time and, for appjail-db, the commit) |
 | `~/.local/share/appjail/staging/` | temporary directories, removed when the step ends |
 | `${XDG_DATA_HOME:-~/.local/share}/applications/appjail-NAME.desktop` | an app's menu entry |
 | `${XDG_DATA_HOME:-~/.local/share}/icons/hicolor/*/apps/appjail-NAME.png` | its icon |
@@ -34,3 +35,15 @@ Nothing is written outside these two trees, except the menu entries and icons yo
 | `LANG` | passed to the app; `TZ` too when set |
 
 No other variable of yours reaches an app: the jail's environment is cleared and rebuilt from a fixed list.
+
+## The environment inside the app jail
+
+| Variable | Value |
+|---|---|
+| `HOME`, `USER`, `LOGNAME`, `SHELL` | `/home/app`, `app`, `app`, `/bin/sh` |
+| `PATH` | `/app/usr/bin:/usr/local/bin:/usr/bin:/bin` |
+| `LANG`, `TZ` | yours (`C.UTF-8` when `LANG` is unset; `TZ` only when set) |
+| `TMPDIR`, `XDG_RUNTIME_DIR` | `/tmp`, the jail's runtime directory |
+| `APPDIR`, `APPIMAGE_EXTRACT_AND_RUN` | `/app`, `1` |
+| `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE` and toolkit hints (`GDK_BACKEND`, `QT_QPA_PLATFORM`, `MOZ_ENABLE_WAYLAND`, `ELECTRON_OZONE_PLATFORM_HINT`, `SDL_VIDEODRIVER`) | for a Wayland app; X11 values and `DISPLAY` for an Xwayland app; none with `display = none` |
+| `DBUS_SESSION_BUS_ADDRESS`, `PULSE_SERVER`, `GTK_USE_PORTAL` | only with the grants that need them |

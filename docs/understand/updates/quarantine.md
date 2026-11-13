@@ -47,3 +47,9 @@ that has been public, unchanged, for the whole period.
   publication time is then not seen.
 - A quarantine helps against compromises that are found; it does nothing against a publisher who is malicious from the
   start. Containment is for that.
+
+## References
+
+- SLSA, [Supply chain threats](https://slsa.dev/spec/v1.0/threats-overview): compromised builds and releases.
+- NIST NVD, [CVE-2024-3094](https://nvd.nist.gov/vuln/detail/CVE-2024-3094): the backdoor in xz releases, found
+  weeks after they were published, an example of a compromise the wider community eventually notices.

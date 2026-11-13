@@ -20,3 +20,17 @@ on HTTPS, on who can write to appjail-db, on the strict parser and on the review
 
 **Revisit when** appjail-db is no longer maintained (any other catalog can be added with `index add`), or signing the
 catalog with a key pinned in appjail becomes worthwhile.
+
+## Facts about AM this rests on
+
+Analysed for appjail-db, which now does the conversion; appjail itself no longer reads AM.
+
+- AM's `appman` is a stub that downloads the manager from AM's `main` branch; AM updates itself and runs install and
+  updater scripts from `main` outside any sandbox. At the commit analysed, 6 of 8,735 install scripts mentioned a checksum
+  or a signature (AM's own release notes later count about 3,600 unique apps; recount before quoting). Its own sandbox
+  option wraps `sas` or `aisap`.
+- The list `programs/x86_64-appimages` has lines `◆ name : description`; `programs/x86_64/APP` holds the scripts. 8,247
+  scripts set `SITE="owner/repo"`, about 224 point elsewhere. The first `SITE=` assignment counts, matched as text, never
+  sourced.
+- Of the last 200 commits at the analysed state, 139 carried a PGP signature (GitHub's web-flow key), 2 an SSH signature
+  and 59 none; the maintainer's own commits are unsigned. Commit signatures cannot prove the maintainer's authorship.

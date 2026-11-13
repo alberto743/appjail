@@ -25,5 +25,6 @@ the project itself:
 | [Catalog](catalog/index.md) | appjail-db, the catalog format |
 | [Project](project/index.md) | supported systems, the window, output, security reports, releases and CI, related projects |
 
-Deferred features and rejected tools are recorded in the group they belong to. When a decision changes, its page is
+Deferred features, planned and scheduled work, and what is not yet verified are collected in
+[Deferred and planned work](deferred.md); rejected tools are recorded in the group they belong to. When a decision changes, its page is
 updated in the same change as the code, and the old reasoning stays in the project's history.

@@ -36,4 +36,4 @@ classified.
 ## Compositors not measured
 
 niri, river, COSMIC, Mir and others are decided by what their socket lists when the app starts. How a compositor is
-measured: [assessing a compositor](../assessing-compositors.md).
+measured: [assessing a compositor](../develop/assessing-compositors.md).

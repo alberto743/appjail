@@ -33,7 +33,13 @@ path exist in its world?", and for an app in a jail it does not. The same holds 
 own PID namespace cannot name your browser's process to send it a signal; a process in its own network namespace with
 no interface but loopback cannot open a connection at all.
 
-## User namespaces, and why appjail needs them unprivileged
+## How appjail uses it
+
+Every jail unshares all the namespaces bubblewrap offers: those of the table above but time, and the network one only
+when the app has no `network_host`. Two of them need more
+explanation: the user namespace, which makes the rest possible, and the nested ones an app might create.
+
+### User namespaces, and why appjail needs them unprivileged
 
 Creating most namespaces normally needs the `CAP_SYS_ADMIN` capability, which ordinary users do not have. The **user
 namespace** is the exception: since Linux 3.8 an ordinary user can create one, and inside it the process holds a full
@@ -53,7 +59,7 @@ grant belong to you, and drops every capability (`--cap-drop ALL`): the app hold
 namespace. The jail's `/etc/passwd` and `/etc/group` are generated and list only `root` and the app's user `app`, so the
 names of the other accounts on the machine are not visible either.
 
-## Nested user namespaces
+### Nested user namespaces
 
 A process in a user namespace may normally create a further one inside it, and with it new mount and network
 namespaces of its own. appjail forbids that by default, in two ways: bubblewrap's `--disable-userns` stops the processes in the jail from

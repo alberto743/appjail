@@ -40,7 +40,7 @@ One term per idea, used everywhere. Current inconsistencies in brackets.
 
 | Term | Meaning | Avoid / current variants |
 |---|---|---|
-| **jail** | a bubblewrap sandbox started by appjail | "sandbox" is fine in prose for newcomers, once, then "jail" (README mixes both) |
+| **jail** | a bubblewrap sandbox started by appjail | "sandbox" is fine in prose for newcomers, once, then "jail" (the old README mixed both) |
 | **app jail** / **helper jail** | the jail an app runs in / a jail for one step (download, extraction, git, icon, proxy, audio daemons) | "network-only jail" = the download helper jail; keep that name for it only |
 | **grant** (noun and verb) / **permission** | permission = the manifest key; grant = what the user gives | keep both, defined once |
 | **evidence tier** | 1-5 | not "trust tier" |

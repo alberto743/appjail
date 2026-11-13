@@ -10,6 +10,9 @@ Supporting older systems would mean workarounds in exactly the code that must be
 systems, and Python 3.12 or later. No workarounds for older systems. On another architecture `run` refuses rather
 than run without its seccomp filter.
 
+**Older systems.** On Ubuntu 24.04 the real-portal tests fail (xdg-desktop-portal 1.18 does not export `FileChooser`
+with the tests' fake backend; the cause was not investigated) and its `reuse` cannot read `REUSE.toml`.
+
 **arm64: evaluated, paused.** Feasible and moderate in code, expensive to verify. The architecture is hard-wired in the
 seccomp table (other numbers, no x32, missing legacy calls), in the asset selection by name, in the two pinned tools and
 in the catalog. A wrong system-call number either leaves a hole or denies a needed call, so every name must be checked

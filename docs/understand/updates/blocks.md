@@ -41,3 +41,10 @@ An update never changes permissions: the new manifest keeps the old one's grants
 
 - A project that moves to another account on purpose, or stops attesting its releases, needs a `remove` and `add`,
   which also deletes the app's private home.
+
+## References
+
+- SLSA, [Supply chain threats](https://slsa.dev/spec/v1.0/threats-overview): source and distribution threats, among them
+  changes of ownership and replaced artifacts.
+- GitHub Docs, [Renaming a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository):
+  how renamed repositories are redirected, which is why the account id, not the name, is pinned.

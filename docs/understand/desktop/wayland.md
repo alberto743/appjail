@@ -68,7 +68,7 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
   the display defence.
 - X11-only apps run on a private Xwayland that is itself a client of this socket, so the rule covers them too:
   [X11 and the private Xwayland](xwayland.md).
-- How a compositor is measured: [Assessing a compositor](../../assessing-compositors.md).
+- How a compositor is measured: [Assessing a compositor](../../develop/assessing-compositors.md).
 - Decisions: [The Wayland socket is judged by what it lists](../../decisions/desktop/wayland-registry.md),
   [Unknown Wayland interfaces are refused](../../decisions/desktop/wayland-allowlist.md).
 
