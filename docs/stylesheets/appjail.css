@@ -1,0 +1,24 @@
+/* SPDX-FileCopyrightText: 2026 Alberto P */
+/* SPDX-License-Identifier: MPL-2.0 */
+/* The colours of the appjail logo (assets/logo-light.svg and logo-dark.svg). */
+:root,
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #1f2937;
+  --md-primary-fg-color--light: #374151;
+  --md-primary-fg-color--dark: #111827;
+  --md-primary-bg-color: #f9fafb;
+  --md-accent-fg-color: #0284c7;
+  --md-typeset-a-color: #0369a1;
+}
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #111827;
+  --md-primary-fg-color--light: #1f2937;
+  --md-primary-fg-color--dark: #030712;
+  --md-primary-bg-color: #f9fafb;
+  --md-accent-fg-color: #38bdf8;
+  --md-typeset-a-color: #7dd3fc;
+}
+.md-header__button.md-logo img { height: 1.8rem; width: 1.8rem; }
+.aj-hero { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1rem; }
+.aj-hero img { width: 96px; height: 96px; flex: none; }
+.aj-hero p { margin: 0; font-size: 1.05rem; }

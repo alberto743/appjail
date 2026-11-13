@@ -1,0 +1,22 @@
+# Attestations verified with a pinned `gh`
+
+*Decision on [acquisition](index.md).*
+
+**Context.** GitHub artifact attestations are Sigstore bundles that bind a file's digest to the workflow run that built
+it. Verifying one means checking a certificate chain, a transparency-log entry and the signature, against Sigstore's
+trusted root. There is no verifier in Python's standard library, and appjail adds no Python dependencies.
+
+**Options.** Implement Sigstore verification in appjail; depend on a Python library; use the GitHub CLI's verifier.
+
+**Decision.** The GitHub CLI (`gh attestation verify --bundle`), installed only when the user asks
+(`appjail tools install gh`), pinned in appjail's source by URL, size and hash, and re-hashed before every use. appjail
+fetches the bundles itself (bounded in size, decoded by a small Snappy decoder), so no token is handed to `gh`, and runs
+`gh` in a jail that has a network and sees only the file, the bundles and a scratch directory. It then reads the
+certificate again: the issuer must be GitHub Actions, the source repository must be the app's, and the owner's account
+id must be the pinned one. Verification runs on the downloaded bytes, after the download, so tier 1 does not depend on
+GitHub publishing a digest.
+
+**Consequences.** Without `gh`, an attestation is reported as "present, cannot be verified" and the tier stays 3 or 4.
+A failed verification never aborts an `add`, but for an app at tier 1 it blocks the update. The identity verified is
+the repository and its owner, not a particular workflow or branch: a compromised repository can still produce a
+tier 1 release, which is what the quarantine is for.

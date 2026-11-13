@@ -1,0 +1,154 @@
+# SPDX-FileCopyrightText: 2026 Alberto P
+# SPDX-License-Identifier: MPL-2.0
+#
+# The documentation site (https://alberto743.github.io/appjail/). Built by tests/vm/docs.sh in the guest and by
+# .github/workflows/docs.yml, always with `zensical build --strict` (a missing page or anchor fails the build).
+# The site loads nothing from other servers: no web fonts, no CDN scripts, no emoji images, no math renderer.
+
+[project]
+site_name = "appjail"
+site_description = "AppImages from sources you name, pinned by hash, each in its own bubblewrap jail."
+site_url = "https://alberto743.github.io/appjail/"
+repo_url = "https://github.com/alberto743/appjail"
+repo_name = "alberto743/appjail"
+copyright = "appjail is free software under the MPL-2.0"
+extra_css = ["stylesheets/appjail.css"]
+
+nav = [
+  { "Home" = "index.md" },
+  { "Understanding appjail" = [
+    { "The problem" = "understand/problem.md" },
+    { "Principles" = "understand/principles.md" },
+    { "Isolation" = [
+      "understand/isolation/index.md",
+      "understand/isolation/namespaces.md",
+      "understand/isolation/bubblewrap.md",
+      "understand/isolation/filesystem.md",
+      "understand/isolation/seccomp.md",
+      "understand/isolation/landlock.md",
+      "understand/isolation/lifetime.md",
+    ] },
+  ] },
+  { "Guide" = [
+    "guide/permissions.md",
+    "guide/files.md",
+    "guide/dbus.md",
+    "guide/appearance.md",
+  ] },
+  { "Decisions" = [
+    "decisions/index.md",
+    { "Acquisition" = [
+      "decisions/acquisition/index.md",
+      "decisions/acquisition/sources.md",
+      "decisions/acquisition/owner-pinning.md",
+      "decisions/acquisition/evidence-tiers.md",
+      "decisions/acquisition/attestations.md",
+      "decisions/acquisition/pinned-tools.md",
+    ] },
+    { "Isolation" = [
+      "decisions/isolation/index.md",
+      "decisions/isolation/bubblewrap.md",
+      "decisions/isolation/extraction.md",
+      "decisions/isolation/default-grants.md",
+      "decisions/isolation/refused-paths.md",
+      "decisions/isolation/grants-by-descriptor.md",
+      "decisions/isolation/seccomp.md",
+      "decisions/isolation/landlock.md",
+      "decisions/isolation/lifetime.md",
+    ] },
+    { "Desktop access" = [
+      "decisions/desktop/index.md",
+      "decisions/desktop/wayland-registry.md",
+      "decisions/desktop/wayland-allowlist.md",
+      "decisions/desktop/xwayland-rootful.md",
+      "decisions/desktop/dbus-refused.md",
+      "decisions/desktop/dbus-connection.md",
+      "decisions/desktop/portal-identity.md",
+      "decisions/desktop/audio-graph.md",
+      "decisions/desktop/pulseaudio.md",
+      "decisions/desktop/camera.md",
+      "decisions/desktop/network.md",
+      "decisions/desktop/menu-entries.md",
+      "decisions/desktop/icons.md",
+    ] },
+    { "Updates" = [
+      "decisions/updates/index.md",
+      "decisions/updates/quarantine.md",
+      "decisions/updates/blocks.md",
+      "decisions/updates/url-check.md",
+      "decisions/updates/history.md",
+    ] },
+    { "Catalog" = [
+      "decisions/catalog/index.md",
+      "decisions/catalog/appjail-db.md",
+      "decisions/catalog/strict-data.md",
+    ] },
+    { "Project" = [
+      "decisions/project/index.md",
+      "decisions/project/platform.md",
+      "decisions/project/gui.md",
+      "decisions/project/output.md",
+      "decisions/project/security-reports.md",
+      "decisions/project/build-pins.md",
+      "decisions/project/workflows.md",
+      "decisions/project/release-notes.md",
+      "decisions/project/commit-hygiene.md",
+      "decisions/project/related-projects.md",
+    ] },
+  ] },
+  { "Reference" = [
+    "reference/permissions.md",
+  ] },
+  { "Development" = [
+    "develop/architecture.md",
+    "develop/writing-docs.md",
+  ] },
+]
+
+[project.theme]
+language = "en"
+font = false
+logo = "assets/logo.svg"
+favicon = "assets/logo.svg"
+features = [
+  "content.code.copy",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.details = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.inlinehilite = {}
+pymdownx.superfences = {}
