@@ -16,7 +16,7 @@ A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinn
 - Licensing: MPL-2.0, REUSE-compliant at every commit. Every code file starts with `SPDX-FileCopyrightText: 2026 Alberto P` and `SPDX-License-Identifier: MPL-2.0` (after a shebang if any); other files (Markdown, config, templates) are covered by `REUSE.toml`. New file types need a header or a `REUSE.toml` entry in the same commit.
 
 ## Open items
-Planned code work waits for a decision (`DECISIONS.md`, Planned code work): a granted D-Bus name reaches every object of the connection that owns it, which defeats the refused names on GNOME Shell and Cinnamon. Everything else needs a decision or an app/session the user approves.
+No planned code work is pending (`DECISIONS.md`, Planned code work). Everything else needs a decision or an app/session the user approves.
 - Assessing a compositor: follow `docs/assessing-compositors.md`.
 - Manual checks on the user's machine: the GNOME and KDE portal backends; the Camera portal with a real V4L2 camera; IPv6 on a real internet route; `display = xwayland-rootful` on GNOME, so far only briefly tested (clipboard, drag-and-drop and GPU acceleration still to check).
 - Paused by the user: arm64 support (`DECISIONS.md`).

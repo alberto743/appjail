@@ -196,18 +196,35 @@ def cinnamon_dbus_table(results):
     return table(head, rows)
 
 
+def appjail_cell(outcome):
+    """What appjail now does with the grant: refused at launch, or the proxy rules it runs with and what they let through."""
+    if not outcome:
+        return "-"
+    if outcome["outcome"] == "refused at launch":
+        return "refused at launch"
+    reached = outcome["by_name"]["reached"] or outcome["by_unique_name"]["reached"]
+    text = f"{outcome['outcome']}: privileged call {'reached' if reached else 'blocked'}"
+    if "service_call" in outcome:
+        text += ", the service's own call " + ("works" if outcome["service_call"]["reached"] else "blocked")
+    return text
+
+
 def shared_connection_table(results):
     """Names appjail's policy allows, owned by the same connection as a refused privileged name: whether the privileged call,
-    sent to the allowed name through xdg-dbus-proxy started as appjail starts it, reached the compositor (shared_connection.py)."""
+    sent to the allowed name through xdg-dbus-proxy with `--talk=NAME`, reached the compositor, and what appjail does with
+    the grant now (shared_connection.py)."""
     labels = [label for label, _ in results]
     seen = {}
     for label, comps in results:
         for comp, entry in comps.items():
             for name, tried in (entry.get("tries") or {}).items():
-                seen.setdefault((comp, name, tried["call"]), {})[label] = "yes" if tried["reached"] else "no"
-    rows = [[comp, f"`{name}`", f"`{'.'.join(call.split('.')[-2:])}`", *[got.get(label, "-") for label in labels]]
+                seen.setdefault((comp, name, tried["call"]), {})[label] = ("yes" if tried["reached"] else "no",
+                                                                            appjail_cell(tried.get("appjail")))
+    rows = [[comp, f"`{name}`", f"`{'.'.join(call.split('.')[-2:])}`",
+             *[got.get(label, ("-", "-"))[i] for label in labels for i in (0, 1)]]
             for (comp, name, call), got in sorted(seen.items())]
-    return table(["Compositor", "Granted name (allowed)", "Call sent to it", *[f"reached, {label}" for label in labels]], rows)
+    head = [f"{what}, {label}" for label in labels for what in ("reached with `--talk`", "appjail")]
+    return table(["Compositor", "Granted name (allowed)", "Call sent to it", *head], rows)
 
 
 def sections(directory=DIRECTORY):
