@@ -379,7 +379,7 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 | sway 1.10.1, 1.11 | restricted | none | runs | works |
 | labwc 0.8.3, 0.9.3 | restricted | none | runs | works |
 | Hyprland 0.55.2 | restricted | none | runs | works |
-| Hyprland 0.53.3 | restricted | virtual pointer, virtual keyboard, input method (a client can type) | refused | works (intermittent focus problem in the test) |
+| Hyprland 0.53.3 | restricted | virtual pointer, virtual keyboard, input method (a client can type) | refused | works one way; the test crashes it (Hyprland 0.53.3 aborts when a window closes) |
 | KDE: KWin 6.3.6, 6.6.6 | restricted | clipboard (data-control), layer shell, plasma shell, output management, desktop controls (screen power, brightness, virtual desktops, screen edges) | refused | works |
 | Wayfire 0.9.0, 0.10.0 | the compositor's own | capture, clipboard, input, windows | refused | works |
 | Cage 0.2.0, 0.2.1 | the compositor's own | capture, input, gamma and output | refused | works |

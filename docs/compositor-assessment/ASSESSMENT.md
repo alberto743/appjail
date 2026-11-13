@@ -150,7 +150,7 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | ok | ok |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | ok | ok |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | ok | ok |
-| hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | ok | untestable (a window never got keyboard focus) |
+| hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | ok | untestable (the compositor stopped answering: it crashed) |
 | kwin | debian 13 | 4:6.3.6-1 | restricted | ok | ok |
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | ok | ok |
 | labwc | debian 13 | 0.8.3-1 | restricted | ok | ok |
@@ -168,7 +168,11 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 <!-- /generated -->
 
 `untestable` means a window never got keyboard focus, so nothing could be copied or pasted: it is not a failure of the clipboard.
-On Hyprland 0.53 the outbound direction was `ok` in some runs and `untestable` in others (cause unknown); the table shows the saved one.
+On Hyprland 0.53.3 the cause is a crash, found on 2026-11-13: Hyprland aborts (SIGABRT, in `CWindow::unmapWindow`, looking for
+the next window to focus, `CReservedArea`) when a window closes, depending on what is left on the screen, so the next window
+has no compositor. Any client can therefore end a Hyprland 0.53.3 session by closing a window; 0.55.2 did not crash in these
+runs. The outbound direction is the one that hits it in this test, so it was `ok` only when an earlier run had not crashed
+it. `clipboard.py` now checks that the compositor still answers and says when it crashed.
 
 So ordinary copy and paste works wherever an app is allowed to run: the core clipboard (`wl_data_device`) needs focus and
 is unaffected by hiding data-control. What the KWin refusal prevents is an app reading the clipboard without focus.

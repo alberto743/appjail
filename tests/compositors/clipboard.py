@@ -74,7 +74,19 @@ def verdict(copier_lines, paster_lines):
 
 
 def direction(session, work, label, copy_on, paste_on):
-    """Copy on one socket, then paste on another (each is (directory, name)); the paster starts after the copy happened."""
+    """Copy on one socket, then paste on another (each is (directory, name)); the paster starts after the copy happened.
+    A window that never gets focus may mean the compositor is gone (Hyprland 0.53.3 aborts when a window closes): then the
+    result says so."""
+    found = copy_paste(session, work, label, copy_on, paste_on)
+    if found.startswith("untestable"):
+        try:
+            probe.registry(session.rt, session.display)
+        except (OSError, RunError):
+            return "untestable (the compositor stopped answering: it crashed)"
+    return found
+
+
+def copy_paste(session, work, label, copy_on, paste_on):
     copy_out, paste_out = work / f"{label}-copy", work / f"{label}-paste"
     copier = start(session, *copy_on, "copy", copy_out, SECRET)
     try:
