@@ -101,7 +101,7 @@ class Manifest:
     evidence_tier: int
     published_at: str  # UTC, YYYY-MM-DDTHH:MM:SSZ
     asset_pattern: str = None  # github only: fnmatch pattern for the release asset name
-    fingerprint: "Fingerprint" = None  # url only: cheap "has it changed" evidence (see DESIGN.md)
+    fingerprint: "Fingerprint" = None  # url only: cheap "has it changed" evidence (docs/understand/updates/url-and-file.md)
     owner_id: int = None  # GitHub account id of the owner; pins the account, not just the name
     channel: str = "stable"  # which releases `update` follows: stable, prerelease, or pinned (never)
     permissions: Permissions = field(default_factory=Permissions)

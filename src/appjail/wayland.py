@@ -42,7 +42,7 @@ TIMEOUT = 5.0
 #   privileged global: appjail cannot say what it allows. tests/test_wayland.py checks that every measured name is in one
 #   of the lists, so new measurements have to be classified.
 #
-# Allowed after a decision (README.md, "Wayland compositors"): ext_idle_notifier_v1 and org_kde_kwin_idle (they tell an app
+# Allowed after a decision (docs/decisions/desktop/wayland-allowlist.md): ext_idle_notifier_v1 and org_kde_kwin_idle (they tell an app
 # whether the user is idle, a privacy signal, not control; sway and Hyprland list the first), wp_drm_lease_device_v1
 # (leases an output the desktop does not use, such as a VR headset; GNOME lists it),
 # zwp_keyboard_shortcuts_inhibit_manager_v1 and zwp_pointer_constraints_v1 (they act while the app has the focus), the

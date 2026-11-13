@@ -156,7 +156,7 @@ def bus_owners(bus, wanted=None, timeout=5.0):
 
 def check_owners(perms, bus, owners=bus_owners):
     """Refuse to start when a granted, unconfined name is owned by the process that owns a refused one: through the proxy
-    it would reach that process's refused objects. Only the owners at launch are seen (DESIGN.md, D-Bus)."""
+    it would reach that process's refused objects. Only the owners at launch are seen (docs/understand/desktop/dbus.md)."""
     granted = talk_names(perms)
     if not granted:
         return
