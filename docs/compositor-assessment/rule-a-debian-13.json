@@ -26,6 +26,19 @@
     "ok": true
    }
   },
+  "cinnamon": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "cinnamon 6.4.10-2+deb13u1",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
   "gnome-shell": {
    "left": {},
    "security_context": false,

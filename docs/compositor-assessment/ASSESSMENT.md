@@ -2,7 +2,9 @@
 
 Status: measurements complete for Debian 13 and Ubuntu 26.04. Decided: option A below (the rule reads the registry of the
 socket the app will get), KWin is refused by default, and the D-Bus names that hand over the desktop are refused as a family.
-The implementation follows in `src/appjail/wayland.py` and `grants.py`; this document keeps the evidence.
+The implementation follows in `src/appjail/wayland.py` and `grants.py`; this document keeps the evidence. Open: a granted
+D-Bus name reaches every interface of the connection that owns it, which defeats the refused names on GNOME Shell and
+Cinnamon (see "One granted name reaches its whole connection").
 
 ## Why this exists
 
@@ -17,8 +19,8 @@ the claim with measurements and sets out what a correct rule has to rest on.
 
 `tests/compositors/probe.py` runs, unchanged, in a guest per distribution (`GUEST=debian-compositors`,
 `GUEST=ubuntu-compositors`, see `tests/vm/guest.sh`; the packages are in `tests/vm/packages-compositors.txt`). For every
-compositor it starts the compositor headless (Muffin, which has no headless backend, as a window of a private Xvfb) in a
-private runtime directory and on a private session bus, and records:
+compositor it starts the compositor headless (Muffin and the Cinnamon shell, which have no headless backend, as a window of a
+private Xvfb) in a private runtime directory and on a private session bus, and records:
 
 * **Wayland registry** on the compositor's own socket, read with appjail's own protocol code and, as a second reader, with
   `wayland-info` (the two agreed for every compositor); whether `wp_security_context_manager_v1` is offered; and, when it is,
@@ -29,8 +31,12 @@ private runtime directory and on a private session bus, and records:
   client; for GNOME, what Mutter's service channel hands out (via GLib); and what appjail's own D-Bus name policy
   (`grants.check_dbus_name`) does with each name.
 
-Raw results: `results-*.json` (probe.py), `rule-a-*.json` (rule_a.py) and `clipboard-*.json` (clipboard.py), one file per
-distribution, in this directory. Every table between `generated` markers is written by `tests/compositors/report.py --write`
+Where a desktop keeps its privileged operations on D-Bus, a second tool shows what an ordinary client of the bus gets
+through them, end to end: `mutter_dbus.py` (Mutter, GNOME Shell) and `cinnamon_dbus.py` (Cinnamon). How to assess a
+compositor that is not here yet, step by step, and what went wrong on the way: [the method](../assessing-compositors.md).
+
+Raw results: `results-*.json` (probe.py), `rule-a-*.json` (rule_a.py), `clipboard-*.json` (clipboard.py), `mutter-dbus-*.json`
+and `cinnamon-dbus-*.json`, one file per distribution, in this directory. Every table between `generated` markers is written by `tests/compositors/report.py --write`
 from those files and checked against them by `tests/test_assessment.py`; edit the results or the tool, not the table. Both
 guests ran identical code. Nothing here comes from a third party. The survey (`results-*.json`) was taken before the
 decisions: its `appjail_policy_*` fields and its privileged counts describe appjail's D-Bus name policy and rule as they
@@ -45,6 +51,8 @@ Cell format is capture / clipboard / typing, `yes` meaning a client succeeded.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | cage | debian 13 | 0.2.0-2 | no | 6 | yes/yes/yes | - |  |
 | cage | ubuntu 26.04 | 0.2.1-1 | no | 6 | yes/yes/yes | - |  |
+| cinnamon | debian 13 | 6.4.10-2+deb13u1 | no | 1 | no/no/no | - |  |
+| cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | no | 1 | no/no/no | - |  |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | no | 1 | no/no/no | - |  |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | no | 1 | no/no/no | - |  |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | yes | 20 | no/yes/yes | no/no/no |  |
@@ -95,8 +103,12 @@ What the table shows:
    connect, so any client can end the session; that is Muffin's bug, and it is why the probe reads D-Bus before running the
    clients. Its D-Bus name `org.cinnamon.Muffin.DisplayConfig` answers any client of the bus and offers
    `ApplyMonitorsConfig`, `ChangeBacklight` and `SetCrtcGamma`; `org.cinnamon.Muffin` is refused as a family, like
-   `org.gnome.Mutter`. Measured standalone, not inside a Cinnamon session (the `cinnamon` shell adds its own bus names,
-   which were not measured).
+   `org.gnome.Mutter`. Measured standalone here; the Cinnamon shell on top of it is point 8.
+8. **Cinnamon 6.4.10 and 6.4.13** (the shell, a Muffin plugin, `cinnamon --wayland --nested`; measured 2026-11-13): the same
+   Wayland socket as Muffin (the same globals, the same crash on `wl-copy` and `wl-paste`), so the rule runs apps on it. The
+   shell adds a dozen bus names on Muffin's connection, among them `org.Cinnamon`, whose `Eval` runs any JavaScript inside
+   the shell for any client of the bus (GNOME Shell refuses that outside its unsafe mode), and `org.gnome.Shell.Screenshot`.
+   What that gives is in the D-Bus section below.
 
 ## Results: option A and the clipboard, tried live
 
@@ -112,6 +124,8 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | --- | --- | --- | --- | --- | --- | --- |
 | cage | debian 13 | 0.2.0-2 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cage | ubuntu 26.04 | 0.2.1-1 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
+| cinnamon | debian 13 | 6.4.10-2+deb13u1 | full | nothing | works | run |
+| cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | full | nothing | works | run |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | nothing | works | run |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | nothing | works | run |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | nothing | works | run |
@@ -147,6 +161,8 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 | --- | --- | --- | --- | --- | --- |
 | cage | debian 13 | 0.2.0-2 | full | ok | ok |
 | cage | ubuntu 26.04 | 0.2.1-1 | full | ok | ok |
+| cinnamon | debian 13 | 6.4.10-2+deb13u1 | full | ok | ok |
+| cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | full | ok | ok |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | ok | ok |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | ok | ok |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | ok | ok |
@@ -185,13 +201,18 @@ checked the caller):
 <!-- generated:dbus -->
 | Compositor | Call, as an ordinary client | debian 13 | ubuntu 26.04 |
 | --- | --- | --- | --- |
+| cinnamon | `Cinnamon.Eval` | allowed | allowed |
+| cinnamon | `Cinnamon.GetRunState` | allowed | allowed |
+| cinnamon | `DisplayConfig.GetCurrentState` | allowed | allowed |
+| cinnamon | `Magnifier.isActive` | allowed | allowed |
+| cinnamon | `Screenshot.SelectArea` | not called | not called |
 | gnome-shell | `KeyboardMonitor.WatchKeyboard` | refused | refused |
 | gnome-shell | `DisplayConfig.GetCurrentState` | allowed | allowed |
 | gnome-shell | `InputCapture.CreateSession` | allowed | allowed |
 | gnome-shell | `RemoteDesktop.CreateSession` | allowed | allowed |
 | gnome-shell | `ScreenCast.CreateSession` | allowed | allowed |
 | gnome-shell | `ServiceChannel.OpenWaylandServiceConnection` | allowed | allowed |
-| gnome-shell | `Shell.Eval` | allowed | allowed |
+| gnome-shell | `Shell.Eval` | refused | refused |
 | gnome-shell | `Introspect.GetWindows` | refused | refused |
 | gnome-shell | `Screenshot.SelectArea` | refused | refused |
 | kwin | `KeyboardMonitor.WatchKeyboard` | refused | refused |
@@ -238,6 +259,63 @@ the four versions) all succeeded; one GNOME Shell 48.7 run needed a second try.
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | yes (`appjail`) | yes (786432 pixels, 411 colours) |
 <!-- /generated -->
 
+**Cinnamon** (`tests/compositors/cinnamon_dbus.py`, 2026-11-13; raw data `cinnamon-dbus-*.json`). Cinnamon has no
+ScreenCast or RemoteDesktop of its own; it does not need them. `org.Cinnamon.Eval` runs the JavaScript it is sent inside the
+shell, with the shell's privileges and every GObject library the shell has, and returns the result, to any client of the bus.
+As an ordinary client, the tool:
+
+* runs a command as the user (the script calls `GLib.spawn_command_line_async`, which creates a file);
+* types into another client's window (the script activates the window and types with a virtual keyboard of the shell's own
+  input stack; nested in Xvfb this is the X11 backend's virtual device, in a real session it would be the native one);
+* takes a picture of the whole screen with `org.gnome.Shell.Screenshot.Screenshot`, which Cinnamon owns and answers for any
+  client; the picture is the size of the shell's stage and holds the other client's red window;
+* calls `org.gnome.Shell.Screenshot.SelectArea`, after which Cinnamon is gone (a GTK error: in this nested setup the shell has
+  no display for the selection; in a real session it may show the selection instead). probe.py skips this call on Cinnamon
+  for that reason.
+
+Three runs on each distribution, all with the same result. `org.Cinnamon` also has `induceSegfault`, `RestartCinnamon` and
+`ShowEndSessionDialog`, which were not called. Granting `org.Cinnamon` would therefore hand over the user's account, so
+`org.Cinnamon` is refused as a family (decision D); `org.gnome.Shell.Screenshot` already was, under `org.gnome.Shell`.
+
+<!-- generated:cinnamon_dbus -->
+| Distribution | Version | Eval: a command run as the user | Eval: keys typed into another client's window | Screenshot: the whole screen | SelectArea: Cinnamon still running afterwards |
+| --- | --- | --- | --- | --- | --- |
+| debian 13 | 6.4.10-2+deb13u1 | yes | yes (`appjail`) | yes (800x600, the other client's window in it) | no |
+| ubuntu 26.04 | 6.4.13-2ubuntu0.2 | yes | yes (`appjail`) | yes (800x600, the other client's window in it) | no |
+<!-- /generated -->
+
+### One granted name reaches its whole connection
+
+A desktop shell owns many names on **one** bus connection: next to the privileged names appjail refuses, it owns ordinary
+ones a user may well grant (notifications, the keyring prompter, a mount-operation handler). xdg-dbus-proxy, started as
+appjail starts it (`--filter --talk=NAME`), filters by the destination name of a call, not by its object or interface, and a
+call to any name of a connection reaches every object of it. `tests/compositors/shared_connection.py` (2026-11-13; raw data
+`shared-connection-*.json`) starts the proxy with one allowed name at a time, connects through it as an app would, and sends
+the connection's privileged call to that allowed name: `org.gnome.Mutter.RemoteDesktop.CreateSession` on GNOME Shell (the
+session that types into other windows, above), `org.Cinnamon.Eval` of `1+1` on Cinnamon (the call that runs commands, above).
+
+<!-- generated:shared_connection -->
+| Compositor | Granted name (allowed) | Call sent to it | reached, debian 13 | reached, ubuntu 26.04 |
+| --- | --- | --- | --- | --- |
+| cinnamon | `org.freedesktop.Notifications` | `Cinnamon.Eval` | yes | yes |
+| cinnamon | `org.gnome.Caribou.Keyboard` | `Cinnamon.Eval` | yes | yes |
+| cinnamon | `org.gnome.Magnifier` | `Cinnamon.Eval` | yes | yes |
+| cinnamon | `org.gnome.Panel` | `Cinnamon.Eval` | yes | yes |
+| cinnamon | `org.gnome.keyring.SystemPrompter` | `Cinnamon.Eval` | yes | yes |
+| cinnamon | `org.x.StatusIconMonitor.cinnamon_0` | `Cinnamon.Eval` | yes | yes |
+| gnome-shell | `org.gnome.keyring.SystemPrompter` | `RemoteDesktop.CreateSession` | yes | yes |
+| gnome-shell | `org.gtk.MountOperationHandler` | `RemoteDesktop.CreateSession` | yes | yes |
+| gnome-shell | `org.gtk.Notifications` | `RemoteDesktop.CreateSession` | yes | yes |
+<!-- /generated -->
+
+Every one reached the compositor. So on GNOME Shell, granting `org.gtk.Notifications` (where GTK applications send their
+notifications), `org.gnome.keyring.SystemPrompter` or `org.gtk.MountOperationHandler` gives an app Mutter's remote desktop;
+on Cinnamon, granting `org.freedesktop.Notifications` (the example of a `dbus_filter` entry in DESIGN.md) or any other name
+of the shell gives it `Eval`, that is, the user's account. Mutter, Muffin and KWin on their own own no allowed name on that
+connection, so nothing reached there. In a real GNOME session the shell may own `org.freedesktop.Notifications` too; the
+headless shell did not, so that is not measured. This is a hole in appjail's D-Bus grants, not in the compositors; the
+possible fixes are in DECISIONS.md (D-Bus names refused beyond the shell and portals).
+
 ## What it means for the security model
 
 The question appjail has to answer is "can an app with default permissions capture the screen, snoop or inject input, read
@@ -247,7 +325,7 @@ another app's clipboard or take over the desktop?". The compositors answer it in
 |---|---|---|---|
 | Restricted socket | sway, labwc, Hyprland (0.55) | the compositor hides privileged globals from clients of a security context | use the restricted socket (done) |
 | Mixed | KWin | the restricted socket hides almost nothing; KWin gates sensitive interfaces by authorisation, but data-control (clipboard) stays visible | use the restricted socket and decide whether the clipboard exposure is acceptable |
-| Nothing privileged on Wayland; D-Bus instead | GNOME | the socket has no privileged global; the privileged APIs are on D-Bus and are only as protected as the bus | keep the app off those bus names (filter, denylist), keep portals consent-based |
+| Nothing privileged on Wayland; D-Bus instead | GNOME, Cinnamon | the socket has no privileged global; the privileged APIs are on D-Bus and are only as protected as the bus | keep the app off those bus names (filter, denylist), keep portals consent-based |
 | Nothing restricts it | Wayfire, Cage (and any compositor without the protocol that offers wlroots-style interfaces) | nothing | refuse, or accept knowingly (`full_wayland`) |
 
 So the security-context test ("does the compositor offer the protocol") is neither necessary (GNOME is safe on the socket
@@ -268,10 +346,12 @@ terminal warning is not a decision.
 **C. A table of compositors.** Rejected: right for the nine measured, stale with every release, silent on the rest; A reads
 the registry anyway.
 
-**D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` and, after Muffin was measured, `org.cinnamon.Muffin`
-(every name of each family), `org.freedesktop.a11y`,
-`org.gnome.ScreenSaver`, `org.kde.kglobalaccel` and `org.kde.keyboard` are refused. Under A a GNOME app has no privileged
-global on its socket, so these bus names are what keep it from capturing, injecting input or locking the screen.
+**D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` and, after Muffin and Cinnamon were measured,
+`org.cinnamon.Muffin` and `org.Cinnamon` (every name of each family), `org.freedesktop.a11y`, `org.gnome.ScreenSaver`,
+`org.kde.kglobalaccel` and `org.kde.keyboard` are refused. Under A a GNOME or Cinnamon app has no privileged global on its
+socket, so these bus names are what keep it from capturing, injecting input, running commands through the shell or locking
+the screen. **Open (found 2026-11-13, see "One granted name reaches its whole connection"):** refusing names is not enough
+where an allowed name shares the connection of a refused one (GNOME Shell, Cinnamon); the fix needs a decision.
 
 **KWin.** Its restricted socket hides only the protocol manager, so data-control stays visible and a client reads another
 client's clipboard. Accepting that for KWin alone would give the same capability as `full_wayland` without asking, so KWin is
@@ -293,8 +373,11 @@ know refuses the app (`wayland.ALLOWED`).
   compositors; a real session adds clipboard managers and extensions that were not tried.
 * One client per capability, on a quiet compositor. Xwayland, GPU, camera and audio were not part of this.
 * Only the versions the two distributions package (and Hyprland from Debian backports). niri, river, COSMIC and Miriway are
-  not packaged in either, so they were not measured here. Muffin was measured standalone and nested in Xvfb, not as the
-  compositor of a Cinnamon session.
+  not packaged in either, so they were not measured here. Packaged but left out by decision (2026-11-13): Mir's demo shells
+  (`mir-demos`), phoc (Phosh), gnome-kiosk, gamescope (Ubuntu only) and kylin-wayland-compositor (Ubuntu only).
+* Muffin and Cinnamon were measured nested in Xvfb, without `cinnamon-session` and the daemons a real Cinnamon session
+  starts (cinnamon-screensaver's `org.cinnamon.ScreenSaver`, the settings daemon); those names were not measured. In that
+  setup the shell's virtual keyboard is the X11 backend's.
 * Hyprland needed a particular environment to start in the VM, and its 0.53 result may be a bug fixed later.
 
 ## Reproducing
@@ -310,3 +393,11 @@ On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `
     # option A and the focused clipboard, each with its own results file:
     GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/rule_a.py --out /tmp/rule-a.json'
     GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/clipboard.py --out /tmp/clipboard.json'
+    # the desktops' D-Bus, end to end, and what one granted name reaches through appjail's proxy:
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/mutter_dbus.py --out /tmp/mutter-dbus.json'
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/cinnamon_dbus.py --out /tmp/cinnamon-dbus.json'
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/shared_connection.py --only gnome-shell,mutter,cinnamon,kwin,muffin --out /tmp/shared-connection.json'
+
+Copy each file to `docs/compositor-assessment/<prefix>-<distro>-<version>.json` and run `python3 tests/compositors/report.py
+--write` in a guest. Adding one compositor to existing results, and everything learned on the way: [the
+method](../assessing-compositors.md).

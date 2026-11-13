@@ -21,7 +21,10 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 "org.kde.kglobalaccel", "org.kde.keyboard",
                 # measured on Muffin 6.4: its DisplayConfig answers any client and can apply a monitor layout, the backlight and
                 # the gamma ramps
-                "org.cinnamon.Muffin")
+                "org.cinnamon.Muffin",
+                # measured on Cinnamon 6.4: its Eval runs any JavaScript in the shell for any client (a command, typing into
+                # other windows); the shell also answers org.gnome.Shell.Screenshot, refused above
+                "org.Cinnamon")
 DBUS_SENSITIVE = ("org.freedesktop.secrets", "org.gnome.keyring", "org.kde.kwalletd5", "org.kde.kwalletd6")
 DBUS_MIN_WILDCARD_PARTS = 3
 # Owning a name lets the app be the service behind it. Impersonating a desktop service (notifications, secrets,

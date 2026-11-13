@@ -375,7 +375,7 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 | Compositor (tested versions) | The app's socket | Privileged interfaces left on it | Without `full_wayland` | Copy and paste with the app |
 |---|---|---|---|---|
 | GNOME: Mutter and GNOME Shell 48.7, 50.1 | the compositor's own (no `wp_security_context_v1`) | none | runs | works |
-| Cinnamon's Muffin 6.4.1 (standalone, not a full Cinnamon session) | the compositor's own (no `wp_security_context_v1`) | none | runs | works |
+| Cinnamon 6.4.10, 6.4.13 (the shell on Muffin 6.4.1; also Muffin alone) | the compositor's own (no `wp_security_context_v1`) | none | runs | works |
 | sway 1.10.1, 1.11 | restricted | none | runs | works |
 | labwc 0.8.3, 0.9.3 | restricted | none | runs | works |
 | Hyprland 0.55.2 | restricted | none | runs | works |
@@ -387,8 +387,9 @@ between windows with keyboard focus (GTK 4). The method, the raw results and the
 
 On KWin the restricted socket hides only the protocol manager, so another app's clipboard can be read without focus; that
 is why KWin is refused, not copy and paste, which uses the core clipboard and needs focus. Plasma users therefore need
-`full_wayland` for each app until KWin hides data-control on restricted sockets. Muffin crashes when some ordinary clients
-connect (`wl-copy`, `wl-paste`), so on Cinnamon any app given a window can end the session; appjail cannot prevent that.
+`full_wayland` for each app until KWin hides data-control on restricted sockets. Muffin, and so Cinnamon, crashes when some
+ordinary clients connect (`wl-copy`, `wl-paste`), so on Cinnamon any app given a window can end the session; appjail cannot
+prevent that.
 Compositors not measured (niri, river, COSMIC, Mir, Louvre, GameScope) are decided by their registry when the app starts.
 
 appjail keeps two lists of interface names (`src/appjail/wayland.py`): the privileged ones, and the ones checked to act only
@@ -410,7 +411,8 @@ KWin's own controls (screen power, brightness, virtual desktops, screen edges, t
 
 GNOME and KDE keep their privileged operations on D-Bus (Mutter's ScreenCast, RemoteDesktop and InputCapture, KWin's scripting
 and screenshots), which any client of a session bus can reach. An app has no bus by default, and appjail refuses to grant
-the names `org.gnome.Mutter*`, `org.cinnamon.Muffin*`, `org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
+the names `org.gnome.Mutter*`, `org.cinnamon.Muffin*`, `org.Cinnamon*` (its `Eval` runs any script in the shell),
+`org.freedesktop.a11y*`, `org.gnome.ScreenSaver`, `org.gnome.Shell`, `org.kde.KWin`, `org.kde.kglobalaccel`
 and `org.kde.keyboard`.
 
 ## Limits
@@ -429,6 +431,12 @@ and `org.kde.keyboard`.
   only seen by a full download.
 - A sandboxed app can still do whatever its grants allow. An app with `network` can reach other machines on your LAN.
 - Granting a directory, a portal or a D-Bus name widens what a compromised app can do.
+- **A granted D-Bus name reaches everything its owner serves.** The proxy filters by name, and a desktop shell owns
+  ordinary names on the same connection as the privileged ones appjail refuses. Measured: on GNOME Shell, granting
+  `org.gtk.Notifications`, `org.gnome.keyring.SystemPrompter` or `org.gtk.MountOperationHandler` reaches Mutter's remote
+  desktop (typing into other apps); on Cinnamon, granting `org.freedesktop.Notifications` or any other name of the shell
+  reaches its `Eval` (commands as you). Until this is fixed, grant no name a desktop shell owns
+  ([details](docs/compositor-assessment/ASSESSMENT.md#one-granted-name-reaches-its-whole-connection)).
 - The private audio graph (`audio_mode = pipewire`) connects to the output and input that are your defaults when the app
   starts. If you later make a headset the default, the app plays on both and its microphone mixes both inputs; if you
   unplug a device the app was using, the sound stops for good (restart the app); nothing re-attaches by itself, and the
