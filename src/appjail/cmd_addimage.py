@@ -14,7 +14,6 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 from . import appimage, jail, manifest, store
-from .cmd_add import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
 from .console import Abort, human_size
 from .errors import JailError
 from .imagesrc import (
@@ -29,6 +28,7 @@ from .imagesrc import (
     url_fingerprint,
     version_of,
 )
+from .install import MAX_ASSET, ask_extractor, finish_add, new_app_name, swap_in
 from .permargs import (
     permissions_from_args,
     require_network_isolation,

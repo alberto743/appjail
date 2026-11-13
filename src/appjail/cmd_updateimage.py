@@ -14,8 +14,6 @@ from dataclasses import replace
 from urllib.parse import urlsplit
 
 from . import appimage, history, manifest, store, updater
-from .cmd_add import MAX_ASSET, NEED_SQUASHFS, swap_in
-from .cmd_desktop import refresh_after_update
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .errors import JailError
 from .imagesrc import (
@@ -29,6 +27,7 @@ from .imagesrc import (
     url_fingerprint,
     version_of,
 )
+from .install import MAX_ASSET, NEED_SQUASHFS, finish_update, swap_in
 from .permargs import granted_summary
 
 DOWNGRADE = ("EVIDENCE DOWNGRADE: tier 4 → 5 (this app was added with a matching --sha256, the new content has none). "
@@ -62,16 +61,6 @@ def show_diff(console, m, digest, tier, size=None):
     console.kv("", f"{ARROW_NB}{digest}" + (f"  ({human_size(size)})" if size else ""), INDENTED_LABEL)
     console.kv("  evidence", f"tier {m.evidence_tier} {ARROW} {tier}", INDENTED_LABEL)
     console.kv("  permissions", f"unchanged ({granted_summary(m.permissions) or 'none'})", INDENTED_LABEL)
-
-
-def finish_update(run, record, entries, size):
-    """After the new version is in place: forget the pending candidate, record the change, report, refresh the menu entry."""
-    name, m = run.name, run.m
-    updater.clear_pending(name)
-    history.record(f"update {name} {m.version} -> {record.version} (tier {record.evidence_tier})")
-    run.console.out(f"  updated {name}: {m.version} → {record.version}, sha256 {record.sha256}, {entries} entries, {human_size(size)}")
-    refresh_after_update(name, run.console)
-    return "updated"
 
 
 def install(run, staged, stage, record):

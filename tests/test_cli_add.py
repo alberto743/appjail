@@ -6,7 +6,16 @@ from unittest import mock
 
 import pytest
 
-from appjail import appimage, cli, cmd_add, github, manifest, runtimejail, store
+from appjail import (
+    appimage,
+    cli,
+    cmd_add,
+    github,
+    install,
+    manifest,
+    runtimejail,
+    store,
+)
 from appjail.cli import Abort
 
 from .helpers import (
@@ -230,7 +239,7 @@ def test_terminal_escapes_in_api_text_are_neutralised():
 
 @pytest.mark.parametrize("repo,name", [("My_App.v2", "my_app.v2"), ("App Name!", "app-name-"), ("___", "")])
 def test_default_names(repo, name):
-    assert cmd_add.default_name(repo) == name
+    assert install.default_name(repo) == name
 
 
 def test_main_rejects_bad_source(h):

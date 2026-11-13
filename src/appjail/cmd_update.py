@@ -7,19 +7,29 @@ from dataclasses import replace
 from datetime import UTC, datetime
 
 from . import appimage, attest, github, history, jail, manifest, store, updater
-from .cmd_add import (
-    MAX_ASSET,
-    NEED_SQUASHFS,
-    download_verified,
-    gather_evidence,
-    pick_asset,
-    swap_in,
-)
-from .cmd_updateimage import finish_update, update_file, update_url
+from .cmd_updateimage import update_file, update_url
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .errors import JailError
+from .install import (
+    MAX_ASSET,
+    NEED_SQUASHFS,
+    choose_asset,
+    download_verified,
+    finish_update,
+    gather_evidence,
+    swap_in,
+)
 from .permargs import granted_summary
 from .services import Services, UpdateRun
+
+
+def pick_asset(console, release, pattern):
+    """The release asset the manifest's pattern selects (ask when several match)."""
+    found = [a for a in github.match_assets(release, pattern) if a.name.lower().endswith(".appimage")]
+    if not found:
+        names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
+        raise Abort(f"no asset in {release.tag} matches '{pattern}' ({names})")
+    return choose_asset(console, found, "Several assets match the pattern; choose one:")
 
 
 def hash_candidate(asset, download):

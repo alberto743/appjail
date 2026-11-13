@@ -1,38 +1,28 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`appjail add`, and the install steps `update` shares with it."""
+"""`appjail add` (from a GitHub release; `add --file/--url` are in cmd_addimage)."""
 
-import os
-import re
-
-from . import appimage, attest, github, history, jail, manifest, store, tools
-from .cmd_desktop import install_entry
+from . import appimage, attest, github, jail, manifest, store, tools
 from .console import Abort, human_size
+from .install import (
+    MAX_ASSET,
+    ask_extractor,
+    choose_asset,
+    download_verified,
+    finish_add,
+    gather_evidence,
+    new_app_name,
+    swap_in,
+)
 from .permargs import (
     permissions_from_args,
     require_network_isolation,
     show_permissions,
 )
 
-MAX_ASSET = 2 * 1024 ** 3
 YOUNG_ACCOUNT_DAYS = 90
 FEW_STARS = 10
-
-
-def default_name(repo):
-    name = re.sub(r"[^a-z0-9._-]", "-", repo.lower()).lstrip("._-")[:64]
-    return name if manifest.NAME_RE.fullmatch(name or "!") else ""
-
-
-def new_app_name(given, derive_from):
-    """The name of an app about to be added: --name, or one made from `derive_from`. It must be free."""
-    name = given or default_name(derive_from)
-    if not manifest.NAME_RE.fullmatch(name or "!"):
-        raise Abort("cannot derive a valid app name; pass --name")
-    if store.manifest_path(name).exists() or store.app_dir(name).exists():
-        raise Abort(f"'{name}' is already added")
-    return name
 
 
 def show_review(console, info, now=None):
@@ -54,53 +44,6 @@ def show_review(console, info, now=None):
         console.warn(f"the owner account is only {days} days old")
     if info.stars < FEW_STARS:
         console.warn("the repository has very few stars")
-
-
-def download_verified(download, asset, stage):
-    """Download the asset in the jail and check what can be checked: the announced size, GitHub's digest if
-    there is one, and that it is a type-2 AppImage. Returns (staged path, sha256)."""
-    staged = download(asset.url, stage, "download.AppImage", asset.size)
-    if staged.stat().st_size != asset.size:
-        raise Abort("downloaded size differs from the size GitHub announced")
-    digest = store.sha256_file(staged)
-    if asset.sha256 and digest != asset.sha256:
-        raise Abort(f"sha256 mismatch: downloaded {digest}, GitHub digest {asset.sha256}")
-    try:
-        appimage.appimage_type(staged)
-    except appimage.NotAnAppImage as e:
-        raise Abort(f"downloaded file is not a usable AppImage: {e}") from e
-    return staged, digest
-
-
-def gather_evidence(client, info, staged, digest, base_tier, console, verify=attest.verify):
-    """Tier for the downloaded file: 1 when a build attestation verifies, else base_tier.
-
-    Returns (tier, reason); reason explains why an existing attestation did not count (None when
-    there was none or it verified).
-    """
-    try:
-        bundles = client.attestation_bundles(info.full_name, digest)
-    except github.GitHubError as e:
-        return base_tier, f"attestation lookup failed: {e}"
-    if not bundles:
-        return base_tier, None
-    try:
-        v = verify(staged, info.full_name, bundles, info.owner_id)
-    except attest.AttestError as e:
-        return base_tier, str(e)
-    console.out(f"  attestation verified: signed by {v.workflow} (run {v.run_url or 'unknown'})")
-    return 1, None
-
-
-NEED_SQUASHFS = "install squashfs-tools (apt install squashfs-tools) and retry"
-
-
-def choose_asset(console, assets, prompt):
-    """The only asset, or the one the user picks from several."""
-    if len(assets) == 1:
-        return assets[0]
-    console.out(prompt)
-    return assets[console.choose("Asset", [f"{a.name} ({human_size(a.size)})" for a in assets])]
 
 
 def choose_release_asset(client, console, source, args):
@@ -179,83 +122,3 @@ def cmd_add(args, client, console, download=jail.download, now=None, extract=app
     finally:
         appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)
-
-
-def ask_extractor(console, extract_ok):
-    """Whether to fall back to the AppImage's own extractor (no unsquashfs); aborts when the user declines."""
-    if extract_ok():
-        return False
-    if not console.confirm("unsquashfs is not installed. Run the AppImage's own extractor "
-                           "(--appimage-extract) inside a jail with no network instead?"):
-        raise Abort(NEED_SQUASHFS)
-    return True
-
-
-def finish_add(console, args, record, entries, size):
-    """The report after an install, the history entry and the optional menu entry."""
-    name = record.name
-    console.kv("Extracted", f"{entries} entries, {human_size(size)}")
-    history.record(f"add {name} {record.version} (tier {record.evidence_tier})")
-    console.out(f"Added '{name}' {record.version}: sha256 {record.sha256}, evidence tier {record.evidence_tier}")
-    console.kv("Manifest", store.manifest_path(name))
-    if args.desktop:
-        try:
-            install_entry(name, console, args, yes=True)
-        except Abort as e:
-            console.out(f"menu entry not created: {e} (`appjail desktop {name}` retries)")
-
-
-def pick_asset(console, release, pattern):
-    """The release asset the manifest's pattern selects (ask when several match)."""
-    found = [a for a in github.match_assets(release, pattern) if a.name.lower().endswith(".appimage")]
-    if not found:
-        names = ", ".join(a.name for a in release.assets[:15]) or "no assets"
-        raise Abort(f"no asset in {release.tag} matches '{pattern}' ({names})")
-    return choose_asset(console, found, "Several assets match the pattern; choose one:")
-
-
-def swap_in(name, staged, stage, record, extract, fallback):
-    """Extract `staged` inside `stage`, then put image, tree, markers and manifest (last) in place.
-
-    A new app (no app directory yet) is removed again if anything fails; for an update the previous image and tree
-    are kept aside until everything worked and are restored on failure. Returns (entries, size) of the tree."""
-    try:
-        entries, size = extract(staged, stage / "root", fallback)
-    except appimage.EXTRACT_ERRORS as e:
-        raise Abort(f"cannot extract the AppImage: {e}") from e
-    app, dest, root = store.app_dir(name), store.appimage_path(name), store.root_path(name)
-    marks = (store.root_marker(name), store.tree_marker(name))
-    fresh = not app.exists()
-    old_image, old_root = stage / "old.AppImage", stage / "old-root"
-    old_marks = [m.read_text() if m.is_file() else None for m in marks]
-    os.chmod(staged, 0o600)
-    placed, backups = [], []  # new things in place, and (original path, where the original went)
-    try:
-        if fresh:
-            store.make_private(app)
-        else:
-            if root.exists():
-                os.replace(root, old_root)
-                backups.append((root, old_root))
-            os.replace(dest, old_image)
-            backups.append((dest, old_image))
-        os.replace(stage / "root", root)
-        placed.append(root)
-        os.replace(staged, dest)
-        placed.append(dest)
-        store.atomic_write(marks[0], record.sha256 + "\n")
-        store.atomic_write(marks[1], appimage.tree_digest(root) + "\n")
-        manifest.dump(store.manifest_path(name), record)
-    except BaseException:
-        if fresh:
-            appimage.remove_tree(app)
-        else:
-            for path in placed:
-                appimage.remove_tree(path) if path.is_dir() else path.unlink(missing_ok=True)
-            for original, backup in reversed(backups):
-                os.replace(backup, original)
-            for mark, text in zip(marks, old_marks, strict=True):
-                if text is not None:
-                    store.atomic_write(mark, text)
-        raise
-    return entries, size
