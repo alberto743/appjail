@@ -8,7 +8,6 @@ from dataclasses import replace
 from pathlib import Path
 
 from . import (
-    appimage,
     desktop,
     grants,
     history,
@@ -147,7 +146,7 @@ def cmd_remove(args, console):
     if not args.yes and not console.confirm(f"Remove {name}?"):
         raise Abort("cancelled")
     revoke_portal_grants(name, mpath, console)
-    appimage.remove_tree(adir)
+    store.remove_tree(adir)
     mpath.unlink(missing_ok=True)
     history.record(f"remove {name}")
     console.out(f"Removed {name}.")

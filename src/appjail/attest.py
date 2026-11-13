@@ -14,7 +14,6 @@ owner account id: a name is not enough, an account id is.
 """
 
 import json
-import shutil
 from dataclasses import dataclass
 
 from . import jail, store, tools
@@ -74,8 +73,7 @@ def verify(subject, full_name, bundles, owner_id=None, run=jail.run):
         gh = tools.require("gh")
     except tools.ToolError as e:
         raise AttestError(str(e)) from e
-    work = store.new_staging_dir("attest-")
-    try:
+    with store.staging("attest-") as work:
         bundle_file = work / "bundle.jsonl"
         bundle_file.write_text("".join(json.dumps(b) + "\n" for b in bundles), encoding="utf-8")
         scratch = work / "scratch"
@@ -93,5 +91,3 @@ def verify(subject, full_name, bundles, owner_id=None, run=jail.run):
         except ValueError as e:
             raise AttestError("verification output was not understood") from e
         return check_results(results, full_name, owner_id)
-    finally:
-        shutil.rmtree(work, ignore_errors=True)

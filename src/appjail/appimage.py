@@ -9,7 +9,7 @@ import shutil
 import stat
 from pathlib import Path
 
-from . import fetcher, jail, tools
+from . import fetcher, jail, store, tools
 from .textsafe import clean
 
 ELF_MAGIC = b"\x7fELF"
@@ -178,18 +178,6 @@ def resolve_entry(root, rel="AppRun", executable=True):
     return final
 
 
-def remove_tree(path):
-    """Delete a tree that may contain read-only directories. Never follows symlinks."""
-    path = str(path)
-    for dirpath, _, _ in os.walk(path, followlinks=False):
-        try:
-            if stat.S_ISDIR(os.lstat(dirpath).st_mode):
-                os.chmod(dirpath, 0o700)
-        except OSError:
-            pass
-    shutil.rmtree(path, ignore_errors=True)
-
-
 def _extract_to(dest, build):
     """Extract into a private work directory next to `dest` (which must not exist), validate, then move into place.
 
@@ -198,7 +186,7 @@ def _extract_to(dest, build):
     if dest.exists():
         raise ExtractError(f"{dest} already exists")
     work = dest.with_name(dest.name + ".tmp")
-    remove_tree(work)
+    store.remove_tree(work)
     work.mkdir(mode=0o700)
     try:
         args, tree = build(work)
@@ -212,7 +200,7 @@ def _extract_to(dest, build):
         os.replace(tree, dest)
         return stats
     finally:
-        remove_tree(work)
+        store.remove_tree(work)
 
 
 def extract_dwarfs(appimage, dest, offset):

@@ -9,7 +9,7 @@ from unittest import mock
 
 import pytest
 
-from appjail import appimage, jail
+from appjail import appimage, jail, store
 from appjail.appimage import ExtractError, UnsafeTree, UnsupportedImage
 
 from .helpers import stub, write_image
@@ -59,7 +59,7 @@ def tree(tmp_path):
     app.write_text("#!/bin/sh\n")
     app.chmod(0o755)
     yield root
-    appimage.remove_tree(tmp_path)
+    store.remove_tree(tmp_path)
 
 
 def test_apprun_regular_file(tree):
@@ -155,7 +155,7 @@ def test_remove_tree_handles_readonly_dirs(tree):
     d.mkdir()
     (d / "f").write_text("x")
     d.chmod(0o555)
-    appimage.remove_tree(tree)
+    store.remove_tree(tree)
     assert not tree.exists()
 
 
@@ -236,7 +236,7 @@ def lab(tmp_path):
     for p in src.rglob("*"):
         if p.is_dir() and not p.is_symlink():
             p.chmod(0o755)
-    appimage.remove_tree(tmp_path)
+    store.remove_tree(tmp_path)
 
 
 @needs_tools

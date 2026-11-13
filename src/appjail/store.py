@@ -3,9 +3,12 @@
 
 """Where appjail keeps its files. Nothing is written outside these two trees."""
 
+import contextlib
 import hashlib
 import os
 import secrets
+import shutil
+import stat
 from pathlib import Path
 
 
@@ -71,10 +74,32 @@ def make_private(path):
 
 
 def new_staging_dir(prefix=""):
-    """A new private directory under the staging root (the caller removes it)."""
+    """A new private directory under the staging root (the caller removes it; `staging` does that for it)."""
     stage = staging_root() / (prefix + secrets.token_hex(8))
     make_private(stage)
     return stage
+
+
+@contextlib.contextmanager
+def staging(prefix=""):
+    """A new staging directory, removed with all it holds when the block ends."""
+    stage = new_staging_dir(prefix)
+    try:
+        yield stage
+    finally:
+        remove_tree(stage)
+
+
+def remove_tree(path):
+    """Delete a tree that may contain read-only directories. Never follows symlinks."""
+    path = str(path)
+    for dirpath, _, _ in os.walk(path, followlinks=False):
+        try:
+            if stat.S_ISDIR(os.lstat(dirpath).st_mode):
+                os.chmod(dirpath, 0o700)
+        except OSError:
+            pass
+    shutil.rmtree(path, ignore_errors=True)
 
 
 def root_path(name):

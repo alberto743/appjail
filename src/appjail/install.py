@@ -118,10 +118,10 @@ def swap_in(name, staged, stage, record, extract, fallback):
         manifest.dump(store.manifest_path(name), record)
     except BaseException:
         if fresh:
-            appimage.remove_tree(app)
+            store.remove_tree(app)
         else:
             for path in placed:
-                appimage.remove_tree(path) if path.is_dir() else path.unlink(missing_ok=True)
+                store.remove_tree(path) if path.is_dir() else path.unlink(missing_ok=True)
             for original, backup in reversed(backups):
                 os.replace(backup, original)
             for mark, text in zip(marks, old_marks, strict=True):

@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
-from . import appimage, manifest, store
+from . import manifest, store
 from .console import Abort, human_size
 from .errors import JailError
 from .imagesrc import (
@@ -60,8 +60,7 @@ def cmd_add_file(args, console, svc=None, now=None):
     if not console.confirm(f"Copy {real.name} into appjail's store as '{name}'?"):
         raise Abort("cancelled")
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
         if staged.stat().st_size != st.st_size:
@@ -78,8 +77,6 @@ def cmd_add_file(args, console, svc=None, now=None):
         except manifest.ManifestError as e:
             raise Abort(f"cannot record this file: {e}") from e
         entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
-    finally:
-        appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)
 
 
@@ -110,8 +107,7 @@ def cmd_add_url(args, console, svc=None, now=None):
     if not console.confirm(f"Download {urlsplit(url).hostname} in a network-only jail?"):
         raise Abort("cancelled")
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         try:
             staged, info = svc.download_url(url, stage, "download.AppImage", max_mib * 1024 ** 2)
         except JailError as e:
@@ -129,6 +125,4 @@ def cmd_add_url(args, console, svc=None, now=None):
         except manifest.ManifestError as e:
             raise Abort(f"cannot record this download: {e}") from e
         entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
-    finally:
-        appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)

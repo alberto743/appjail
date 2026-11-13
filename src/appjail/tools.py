@@ -100,8 +100,7 @@ def _unpack(tool, archive, stage):
 def install(name, download=jail.download):
     """Download the tool in the network-only jail and keep it only if size and sha256 match the pins."""
     tool = TOOLS[name]
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged = download(tool.url, stage, name, tool.size)
         if staged.stat().st_size != tool.size or sha256_file(staged) != tool.sha256:
             raise ToolError(f"the downloaded {name} does not match its pinned size and sha256; nothing was kept")
@@ -111,6 +110,4 @@ def install(name, download=jail.download):
         dest = path(name)
         store.make_private(dest.parent)
         os.replace(staged, dest)
-    finally:
-        shutil.rmtree(stage, ignore_errors=True)
     return path(name)

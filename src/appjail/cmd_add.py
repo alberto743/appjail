@@ -3,7 +3,7 @@
 
 """`appjail add` (from a GitHub release; `add --file/--url` are in cmd_addimage)."""
 
-from . import appimage, github, manifest, store, tools
+from . import github, manifest, store, tools
 from .console import Abort, human_size
 from .install import (
     MAX_ASSET,
@@ -105,8 +105,7 @@ def cmd_add(args, client, console, svc=None, now=None):
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail?"):
         raise Abort("cancelled")
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         console.out(f"Downloading {asset.name} ...")
         staged, digest = download_verified(svc.download, asset, stage)
         console.out("Verifying and extracting ...")
@@ -120,6 +119,4 @@ def cmd_add(args, client, console, svc=None, now=None):
             channel="pinned" if args.tag else "prerelease" if args.prerelease else "stable")
         manifest.validate(record)
         entries, size = swap_in(name, staged, stage, record, svc.extract, fallback)
-    finally:
-        appimage.remove_tree(stage)
     finish_add(console, args, record, entries, size)

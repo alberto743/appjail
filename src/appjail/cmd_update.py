@@ -6,7 +6,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from . import appimage, github, history, manifest, store, updater
+from . import github, history, manifest, store, updater
 from .cmd_updateimage import update_file, update_url
 from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .errors import JailError
@@ -34,11 +34,8 @@ def pick_asset(console, release, pattern):
 
 def hash_candidate(asset, download):
     """Download the candidate in the jail only to learn its sha256 (nothing is installed); the stage is removed."""
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         return download_verified(download, asset, stage)[1]
-    finally:
-        appimage.remove_tree(stage)
 
 
 def apply_channel(name, m, args, console):
@@ -92,8 +89,7 @@ def install_release(run, client, info, release, asset, key):
     if not console.confirm(f"Download {asset.name} from github.com in a network-only jail and install {release.tag}?"):
         return "declined"
 
-    stage = store.new_staging_dir()
-    try:
+    with store.staging() as stage:
         staged, digest = download_verified(svc.download, asset, stage)
         pending = updater.load_pending(name)
         if not asset.sha256 and pending and pending["key"] == key and pending.get("sha256") not in (None, digest):
@@ -116,8 +112,6 @@ def install_release(run, client, info, release, asset, key):
                          evidence_tier=tier, source=manifest.github_source(info.full_name), owner_id=info.owner_id)
         manifest.validate(record)
         entries, size = swap_in(name, staged, stage, record, svc.extract, False)
-    finally:
-        appimage.remove_tree(stage)
     return finish_update(run, record, entries, size)
 
 
