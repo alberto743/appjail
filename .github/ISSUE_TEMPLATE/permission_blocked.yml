@@ -1,0 +1,99 @@
+name: Blocked permission or missing access
+description: An app works outside the jail but not inside it (a D-Bus service, a portal, a device, a folder, the network, the display).
+labels: [permissions]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nothing is granted by default, so first check the [permissions guide](https://alberto743.github.io/appjail/guide/permissions/),
+        [D-Bus and portals](https://alberto743.github.io/appjail/guide/dbus/) and [files and folders](https://alberto743.github.io/appjail/guide/files/).
+        Some grants are refused on purpose; this form is for access an app needs that appjail cannot grant, or grants that do not work.
+  - type: markdown
+    attributes:
+      value: |
+        Remove your home path, user name and host name from everything you paste (`~` is fine).
+  - type: input
+    id: version
+    attributes:
+      label: appjail version
+      description: Output of `appjail version`.
+      placeholder: appjail 0.5.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and kernel
+      description: For example `Debian 13, 6.12.48` (`uname -r` gives the kernel).
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop or compositor, with its version
+      placeholder: GNOME 48.7 / KWin 6.3.6 / sway 1.10.1
+  - type: input
+    id: bwrap
+    attributes:
+      label: bubblewrap version
+      description: Output of `bwrap --version`.
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed from
+      options:
+        - PyPI (pipx or pip)
+        - a clone of the repository
+        - other
+  - type: input
+    id: app
+    attributes:
+      label: App
+      description: Its repository or download page.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is blocked
+      options:
+        - a D-Bus name is refused or does not work
+        - a portal (file chooser, screen cast, camera, ...)
+        - a file or folder
+        - a device (GPU, camera, audio, microphone)
+        - the network
+        - the display (Wayland, Xwayland)
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: perms
+    attributes:
+      label: The app's permissions
+      description: Output of `appjail perms APP`.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: The refusal or error message
+      description: From appjail, or from the app when run in a terminal with `appjail run APP`.
+      render: text
+  - type: textarea
+    id: needed
+    attributes:
+      label: What the app needs, and for what
+      description: |
+        For D-Bus: the name it asks for (the app's error message usually names it; `busctl --user monitor` or `dbus-monitor --session`
+        on your side shows the calls that do get through), and what the feature is. For a portal: the interface name.
+        For a device: which one, and whether it works with the related permission granted.
+    validations:
+      required: true
+  - type: checkboxes
+    id: read
+    attributes:
+      label: Checked
+      options:
+        - label: I read the permission and troubleshooting pages linked above.
+          required: true

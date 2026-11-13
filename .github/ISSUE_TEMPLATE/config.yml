@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability (private)
+    url: https://github.com/alberto743/appjail/security/advisories/new
+    about: Security problems are reported privately, never in a public issue. See SECURITY.md for the scope.
+  - name: Troubleshooting
+    url: https://alberto743.github.io/appjail/guide/troubleshooting/
+    about: Common messages and their fixes, before opening an issue.

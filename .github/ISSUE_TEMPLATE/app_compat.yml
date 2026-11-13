@@ -1,0 +1,76 @@
+name: App does not install or run
+description: An AppImage fails to add, extract or start in its jail (DwarFS, X11-only, a launcher that exits, ...).
+labels: [app-compat]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove your home path, user name and host name from everything you paste (`~` is fine).
+  - type: input
+    id: version
+    attributes:
+      label: appjail version
+      description: Output of `appjail version`.
+      placeholder: appjail 0.5.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and kernel
+      description: For example `Debian 13, 6.12.48` (`uname -r` gives the kernel).
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop or compositor, with its version
+      placeholder: GNOME 48.7 / KWin 6.3.6 / sway 1.10.1
+  - type: input
+    id: bwrap
+    attributes:
+      label: bubblewrap version
+      description: Output of `bwrap --version`.
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed from
+      options:
+        - PyPI (pipx or pip)
+        - a clone of the repository
+        - other
+  - type: input
+    id: app
+    attributes:
+      label: App
+      description: The GitHub repository, or the URL of the AppImage.
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where it fails
+      options:
+        - add (resolving, downloading, verifying)
+        - extraction
+        - starting (no window, exits at once)
+        - while running
+    validations:
+      required: true
+  - type: input
+    id: tier
+    attributes:
+      label: Evidence tier shown by add or list
+  - type: textarea
+    id: output
+    attributes:
+      label: Commands and full output
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: perms
+    attributes:
+      label: The app's permissions
+      description: Output of `appjail perms APP`.
+      render: text

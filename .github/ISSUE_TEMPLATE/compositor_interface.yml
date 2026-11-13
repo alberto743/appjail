@@ -1,0 +1,67 @@
+name: Wayland interface refused
+description: run refuses an app because its Wayland socket lists privileged interfaces, or interfaces "not known to it".
+labels: [compositor]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        An unknown interface is refused until it is classified; `appjail perms APP --allow full_wayland` lets the app run
+        meanwhile ([why](https://alberto743.github.io/appjail/guide/compositors/)). Reporting the interface lets it be classified.
+  - type: markdown
+    attributes:
+      value: |
+        Remove your home path, user name and host name from everything you paste (`~` is fine).
+  - type: input
+    id: version
+    attributes:
+      label: appjail version
+      description: Output of `appjail version`.
+      placeholder: appjail 0.5.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and kernel
+      description: For example `Debian 13, 6.12.48` (`uname -r` gives the kernel).
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop or compositor, with its version
+      placeholder: GNOME 48.7 / KWin 6.3.6 / sway 1.10.1
+  - type: input
+    id: bwrap
+    attributes:
+      label: bubblewrap version
+      description: Output of `bwrap --version`.
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed from
+      options:
+        - PyPI (pipx or pip)
+        - a clone of the repository
+        - other
+  - type: textarea
+    id: message
+    attributes:
+      label: The message of appjail run
+      description: It names the interfaces.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: compositor
+    attributes:
+      label: Compositor and exact version
+      description: For example `niri 25.08` (from your package manager).
+    validations:
+      required: true
+  - type: textarea
+    id: registry
+    attributes:
+      label: The compositor's interface list (optional)
+      description: Output of `wayland-info` (package `wayland-utils`), if you have it.
+      render: text
