@@ -111,6 +111,7 @@ nav = [
   ] },
   { "Development" = [
     "develop/architecture.md",
+    "develop/source-tour.md",
     "develop/writing-docs.md",
   ] },
 ]

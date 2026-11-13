@@ -4,7 +4,7 @@ appjail is a Python package using only the standard library (`src/appjail/`), pl
 it drives (bubblewrap, `unsquashfs`, `pasta`, `xdg-dbus-proxy`, Xwayland, PipeWire, `git`, ...). This page maps the
 code onto the topics of "Understanding appjail": for each concept, the mechanism, the modules that implement it, the
 tests that prove it, what users see of it, and the decisions and limits that go with it. The last section shows how the
-pieces depend on each other.
+pieces depend on each other. To follow the code itself, command by command, read [Reading the source](source-tour.md).
 
 ## Layout
 
