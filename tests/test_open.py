@@ -95,3 +95,12 @@ def test_a_removed_app_deletes_its_dangling_entry(h, launched, tmp_path):
     console = Script()
     assert open_(["open", "gone", "--", "x"], console) == 1
     assert not path.exists() and "was removed" in console.text
+
+
+def test_the_notice_carries_no_markup(monkeypatch):
+    """A file name is shown in the notice; servers with body markup would turn <a href> into a link."""
+    sent = []
+    monkeypatch.setattr(cmd_open.shutil, "which", lambda tool: "/usr/bin/notify-send")
+    monkeypatch.setattr(cmd_open.subprocess, "run", lambda argv, **kw: sent.append(argv))
+    cmd_open.notify('not a regular file: <a href="https://example.test">x</a> & <img src="y">\x1b[2J')
+    assert sent[0][-1] == 'not a regular file: a href="https://example.test"x/a  img src="y"'

@@ -32,10 +32,10 @@ def main(argv):
             fd = os.open(path, os.O_PATH | os.O_CLOEXEC)
             st = os.fstat(fd)
         except OSError as e:
-            print(f"appjail: granted path {path} changed before the jail started: {e.strerror}", file=sys.stderr)
+            print(f"appjail: granted path {path!r} changed before the jail started: {e.strerror}", file=sys.stderr)
             return REFUSED
         if (st.st_dev, st.st_ino) != (int(dev), int(ino)):
-            print(f"appjail: granted path {path} changed before the jail started; refused", file=sys.stderr)
+            print(f"appjail: granted path {path!r} changed before the jail started; refused", file=sys.stderr)
             return REFUSED
         os.dup2(fd, int(number))
         os.set_inheritable(int(number), True)

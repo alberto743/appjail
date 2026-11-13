@@ -24,11 +24,17 @@ def file_spec(path, rw):
     return f"{os.path.normpath(Path.cwd() / path)}:{'rw' if rw else 'ro'}"
 
 
+# Notification servers that support body markup read a subset of HTML (<a href>, <img>, <b>): a file name could become a
+# link or an image. Escaping would show "&lt;" on servers without markup, so the characters are dropped instead.
+NO_MARKUP = str.maketrans("", "", "<>&")
+
+
 def notify(text):
     tool = shutil.which("notify-send")
     if tool:
+        body = clean(text, 300).translate(NO_MARKUP)
         with contextlib.suppress(OSError, subprocess.SubprocessError):
-            subprocess.run([tool, "--app-name=appjail", "appjail", clean(text, 300)], capture_output=True, check=False, timeout=10)
+            subprocess.run([tool, "--app-name=appjail", "appjail", body], capture_output=True, check=False, timeout=10)
 
 
 def cmd_open(args, files, console):
