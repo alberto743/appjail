@@ -431,11 +431,12 @@ and `org.kde.keyboard`.
   only seen by a full download.
 - A sandboxed app can still do whatever its grants allow. An app with `network` can reach other machines on your LAN.
 - Granting a directory, a portal or a D-Bus name widens what a compromised app can do.
-- **A granted D-Bus name reaches everything its owner serves.** The proxy filters by name, and a desktop shell owns
-  ordinary names on the same connection as the privileged ones appjail refuses. Measured: on GNOME Shell, granting
-  `org.gtk.Notifications`, `org.gnome.keyring.SystemPrompter` or `org.gtk.MountOperationHandler` reaches Mutter's remote
-  desktop (typing into other apps); on Cinnamon, granting `org.freedesktop.Notifications` or any other name of the shell
-  reaches its `Eval` (commands as you). Until this is fixed, grant no name a desktop shell owns
+- **A granted D-Bus name of an unknown service reaches everything its owner serves.** The proxy filters by name, and one
+  process serves all its names: a desktop shell owns ordinary names next to the privileged ones appjail refuses. Grants of
+  known services (notifications, the secret service, MPRIS, the status-notifier watcher) are confined to that service's
+  objects. Any other granted name reaches its whole owner, so `run` refuses it when its owner also owns a refused name
+  (on GNOME Shell and Cinnamon, the keyring prompter, the magnifier and other names of the shell). That check sees the
+  owners at launch only: a name nobody owns yet, or one a shell takes over while the app runs, is not caught
   ([details](docs/compositor-assessment/ASSESSMENT.md#one-granted-name-reaches-its-whole-connection)).
 - The private audio graph (`audio_mode = pipewire`) connects to the output and input that are your defaults when the app
   starts. If you later make a headset the default, the app plays on both and its microphone mixes both inputs; if you

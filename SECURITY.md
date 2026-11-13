@@ -32,8 +32,9 @@ they prefer not to be.
 - What the README documents as limits: for example an app granted `full_wayland` running although its Wayland socket
   lists privileged or unknown interfaces, the Wayland interfaces the README allows after a decision (such as idle
   notification), or reaching the LAN with `network`. An interface in appjail's allowed list that lets an app act on other
-  apps is in scope. A granted D-Bus name reaching the other objects of the process that owns it is a known limit with a
-  fix pending; another refused name or object reached that way is in scope.
+  apps is in scope. A granted D-Bus name outside appjail's confined services reaching the other objects of a process
+  that took it over after the app started is a documented limit; reaching another process's objects, a confined service's
+  other objects, or a refused name's owner that owned it at launch is in scope.
 - What a granted permission allows, and what a tier means: tiers 3 to 5 prove "unchanged", not "safe".
 - Flaws in the installed apps, or in bubblewrap, the kernel, pasta, `gh` or DwarFS themselves. Report those upstream; if
   appjail's use of them makes the flaw reachable, report that here.
