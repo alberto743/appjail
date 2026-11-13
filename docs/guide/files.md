@@ -54,7 +54,9 @@ These are refused in every mode, with a message:
 
 These are refused **read-write** only, because something outside the jail would later run or decode what the app writes
 there: `~/.local/bin`, `~/.local/lib`, autostart and systemd user folders, menu entries, icon themes, thumbnailers,
-file-manager scripts, and shell and editor startup files.
+file-manager scripts, and shell and editor startup files; and the toolkit settings, themes and fonts your other apps use
+(`~/.config/gtk-3.0`, `~/.config/gtk-4.0`, `~/.config/kdeglobals`, `~/.local/share/themes`, `~/.local/share/fonts`,
+`~/.config/fontconfig`, ...), where a written file would change how they look.
 
 There is no override. Grant a narrower folder: `~/.config/someapp` instead of `~/.config`, `~/Projects/site` instead of
 `~/Projects` if `~/Projects` holds a key.

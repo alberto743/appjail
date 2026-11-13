@@ -69,9 +69,10 @@ appjail perms NAME --add-dir ~/.local/share/themes     # GTK themes (or ~/.theme
 appjail perms NAME --add-dir ~/.local/share/icons      # icon and cursor themes (or ~/.icons)
 ```
 
-They appear at the same place in the app's home, where the toolkits look for them. Keep them read-only: write access
-to the icon folders is refused, because the desktop decodes icons outside any jail. Granting `~/.config/gtk-3.0` itself
-is possible but also shows the app your bookmarked folders; prefer the copy above.
+They appear at the same place in the app's home, where the toolkits look for them. They can only be granted read-only:
+write access to themes, fonts, icons and toolkit settings is refused, because your other apps apply them and the
+desktop decodes them outside any jail. Granting `~/.config/gtk-3.0` read-only is possible but also shows the app your
+bookmarked folders; prefer the copy above.
 
 ## Scaling and cursor
 

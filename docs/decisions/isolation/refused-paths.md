@@ -7,7 +7,7 @@ to share one application's settings also grants every other application's tokens
 
 **Decision.** A fixed policy refuses credentials and secrets, folders that contain them, over-broad folders, system
 trees, shared temporary directories and appjail's own files in every mode, and places where a written file would later
-run or be decoded outside the jail in read-write mode ([the filesystem view](../../understand/isolation/filesystem.md)).
+run or be decoded outside the jail, or change how your other apps look, in read-write mode ([the filesystem view](../../understand/isolation/filesystem.md)).
 There is no option to override it.
 
 **Consequences.** Some legitimate grants need a narrower path. An override would turn every refusal into a question of
