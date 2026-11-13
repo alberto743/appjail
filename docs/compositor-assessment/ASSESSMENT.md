@@ -150,7 +150,7 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | ok | ok |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | ok | ok |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | ok | ok |
-| hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | ok | untestable (a window never got keyboard focus) |
+| hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | ok | untestable (the compositor stopped answering: it crashed) |
 | kwin | debian 13 | 4:6.3.6-1 | restricted | ok | ok |
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | ok | ok |
 | labwc | debian 13 | 0.8.3-1 | restricted | ok | ok |
@@ -168,7 +168,11 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 <!-- /generated -->
 
 `untestable` means a window never got keyboard focus, so nothing could be copied or pasted: it is not a failure of the clipboard.
-On Hyprland 0.53 the outbound direction was `ok` in some runs and `untestable` in others (cause unknown); the table shows the saved one.
+On Hyprland 0.53.3 the cause is a crash, found on 2026-11-13: Hyprland aborts (SIGABRT, in `CWindow::unmapWindow`, looking for
+the next window to focus, `CReservedArea`) when a window closes, depending on what is left on the screen, so the next window
+has no compositor. Any client can therefore end a Hyprland 0.53.3 session by closing a window; 0.55.2 did not crash in these
+runs. The outbound direction is the one that hits it in this test, so it was `ok` only when an earlier run had not crashed
+it. `clipboard.py` now checks that the compositor still answers and says when it crashed.
 
 So ordinary copy and paste works wherever an app is allowed to run: the core clipboard (`wl_data_device`) needs focus and
 is unaffected by hiding data-control. What the KWin refusal prevents is an app reading the clipboard without focus.
@@ -214,9 +218,25 @@ checked the caller):
 * **appjail's name policy, when surveyed** (the `appjail_policy_*` fields of `results-*.json`) allowed `org.gnome.Mutter.*`
   (every one of the names above), `org.freedesktop.a11y.Manager`, `org.kde.keyboard` and `org.kde.kglobalaccel`, and refused
   `org.gnome.Shell*` and `org.kde.KWin*`. That was the gap: a user who granted `org.gnome.Mutter.ScreenCast` or
-  `org.gnome.Mutter.RemoteDesktop` gave the app the ability to open those sessions with no prompt (`CreateSession` was shown
-  to work; a complete capture or injected keystroke was not attempted). It is closed: decision D below refuses all of these
-  names, and an app has no bus at all by default.
+  `org.gnome.Mutter.RemoteDesktop` gave the app the ability to capture the screen and type into other apps with no prompt
+  (shown below). It is closed: decision D below refuses all of these names, and an app has no bus at all by default.
+
+**A complete capture and keystroke** (`tests/compositors/mutter_dbus.py`, measured later, 2026-11-13; raw data
+`mutter-dbus-*.json`): an ordinary client of the bus opens a `RemoteDesktop` session, clicks and types into the window of
+another client (a GTK 4 window that logs the keys it receives), and opens a `ScreenCast` session on the monitor, whose PipeWire
+stream it reads with GStreamer (a private PipeWire and WirePlumber in the compositor's runtime directory). The frame holds
+the other client's red window. No portal and no prompt are involved. GNOME Shell starts in its overview, which takes the
+first click and keys; the tool presses Escape first and tries the typing up to three times. Twelve runs (three on each of
+the four versions) all succeeded; one GNOME Shell 48.7 run needed a second try.
+
+<!-- generated:mutter_dbus -->
+| Compositor | Distribution | Version | RemoteDesktop: keys typed into another client's window | ScreenCast: a whole frame of the screen |
+| --- | --- | --- | --- | --- |
+| gnome-shell | debian 13 | 48.7-0+deb13u2 | yes (`appjail`) | yes (786432 pixels, 2159 colours) |
+| gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | yes (`appjail`) | yes (786432 pixels, 499 colours) |
+| mutter | debian 13 | 48.7-0+deb13u1 | yes (`appjail`) | yes (786432 pixels, 427 colours) |
+| mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | yes (`appjail`) | yes (786432 pixels, 411 colours) |
+<!-- /generated -->
 
 ## What it means for the security model
 

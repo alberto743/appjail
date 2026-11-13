@@ -1,0 +1,76 @@
+{
+ "compositors": {
+  "gnome-shell": {
+   "capture": {
+    "bytes": 2359296,
+    "colours": 2159,
+    "connector": "Meta-0",
+    "gst_error": "",
+    "gst_ok": true,
+    "node": 44,
+    "ok": true,
+    "red": true,
+    "whole_frame": true
+   },
+   "status": "ok",
+   "type": {
+    "attempts": 1,
+    "ok": true,
+    "received": "appjail",
+    "typed": "appjail",
+    "victim_log": [
+     "active",
+     "active",
+     "key:Shift_L",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "gnome-shell 48.7-0+deb13u2"
+  },
+  "mutter": {
+   "capture": {
+    "bytes": 2359296,
+    "colours": 427,
+    "connector": "Meta-0",
+    "gst_error": "",
+    "gst_ok": true,
+    "node": 43,
+    "ok": true,
+    "red": true,
+    "whole_frame": true
+   },
+   "status": "ok",
+   "type": {
+    "attempts": 1,
+    "ok": true,
+    "received": "appjail",
+    "typed": "appjail",
+    "victim_log": [
+     "active",
+     "key:Shift_L",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "mutter 48.7-0+deb13u1"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "debian",
+  "kernel": "6.12.116+deb13-amd64",
+  "name": "Debian GNU/Linux 13 (trixie)",
+  "version": "13"
+ }
+}

@@ -1,0 +1,76 @@
+{
+ "compositors": {
+  "gnome-shell": {
+   "capture": {
+    "bytes": 2359296,
+    "colours": 499,
+    "connector": "Meta-0",
+    "gst_error": "",
+    "gst_ok": true,
+    "node": 44,
+    "ok": true,
+    "red": true,
+    "whole_frame": true
+   },
+   "status": "ok",
+   "type": {
+    "attempts": 1,
+    "ok": true,
+    "received": "appjail",
+    "typed": "appjail",
+    "victim_log": [
+     "active",
+     "active",
+     "key:Shift_L",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "gnome-shell 50.1-0ubuntu1.5"
+  },
+  "mutter": {
+   "capture": {
+    "bytes": 2359296,
+    "colours": 411,
+    "connector": "Meta-0",
+    "gst_error": "",
+    "gst_ok": true,
+    "node": 43,
+    "ok": true,
+    "red": true,
+    "whole_frame": true
+   },
+   "status": "ok",
+   "type": {
+    "attempts": 1,
+    "ok": true,
+    "received": "appjail",
+    "typed": "appjail",
+    "victim_log": [
+     "active",
+     "key:Shift_L",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "mutter 50.1-0ubuntu2.5"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "ubuntu",
+  "kernel": "7.0.0-43-generic",
+  "name": "Ubuntu 26.04.1 LTS",
+  "version": "26.04"
+ }
+}
