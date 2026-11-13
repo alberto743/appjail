@@ -59,10 +59,18 @@ nav = [
     { "Catalog" = "understand/catalog/index.md" },
   ] },
   { "Guide" = [
+    "guide/getting-started.md",
+    "guide/installing.md",
     "guide/permissions.md",
     "guide/files.md",
     "guide/dbus.md",
     "guide/appearance.md",
+    "guide/menu-entry.md",
+    "guide/updates.md",
+    "guide/searching.md",
+    "guide/gui.md",
+    "guide/compositors.md",
+    "guide/troubleshooting.md",
   ] },
   { "Decisions" = [
     "decisions/index.md",
@@ -126,7 +134,12 @@ nav = [
     ] },
   ] },
   { "Reference" = [
+    "reference/commands.md",
     "reference/permissions.md",
+    "reference/manifest.md",
+    "reference/catalog-format.md",
+    "reference/output.md",
+    "reference/files.md",
   ] },
   { "Development" = [
     "develop/architecture.md",

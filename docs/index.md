@@ -37,6 +37,7 @@ its manifest, and what appjail cannot enforce it refuses rather than ignores.
 
 | You want to | Read |
 |---|---|
+| Install appjail and a first app | [Getting started](guide/getting-started.md) |
 | Understand why appjail is built this way | [The problem](understand/problem.md), then [the principles](understand/principles.md) |
 | See how an app is fetched and checked | [Acquisition](understand/acquisition/index.md) |
 | See how an app is isolated | [Isolation](understand/isolation/index.md) |
@@ -45,7 +46,8 @@ its manifest, and what appjail cannot enforce it refuses rather than ignores.
 | Know where search results come from | [Catalog](understand/catalog/index.md) |
 | Give an app access to something | [Permissions](guide/permissions.md) |
 | Know why a choice was made | [Decisions](decisions/index.md) |
-| Look up a permission | [Permission reference](reference/permissions.md) |
+| Look up a command or a permission | [Commands](reference/commands.md), [permissions](reference/permissions.md) |
+| Fix a problem | [Troubleshooting](guide/troubleshooting.md) |
 | Work on appjail | [Architecture](develop/architecture.md) |
 
 The source code, issues and releases are on [GitHub](https://github.com/alberto743/appjail); appjail is published on
