@@ -2,9 +2,10 @@
 
 Status: measurements complete for Debian 13 and Ubuntu 26.04. Decided: option A below (the rule reads the registry of the
 socket the app will get), KWin is refused by default, and the D-Bus names that hand over the desktop are refused as a family.
-The implementation follows in `src/appjail/wayland.py` and `grants.py`; this document keeps the evidence. Open: a granted
-D-Bus name reaches every interface of the connection that owns it, which defeats the refused names on GNOME Shell and
-Cinnamon (see "One granted name reaches its whole connection").
+The implementation follows in `src/appjail/wayland.py`, `grants.py` and `dbusproxy.py`; this document keeps the evidence. A
+granted D-Bus name used to reach every interface of the connection that owns it, which defeated the refused names on GNOME
+Shell and Cinnamon; appjail now confines known services and refuses the other grants that share a refused name's owner
+(see "One granted name reaches its whole connection").
 
 ## Why this exists
 
@@ -293,19 +294,31 @@ call to any name of a connection reaches every object of it. `tests/compositors/
 `shared-connection-*.json`) starts the proxy with one allowed name at a time, connects through it as an app would, and sends
 the connection's privileged call to that allowed name: `org.gnome.Mutter.RemoteDesktop.CreateSession` on GNOME Shell (the
 session that types into other windows, above), `org.Cinnamon.Eval` of `1+1` on Cinnamon (the call that runs commands, above).
+Mutter, Muffin and KWin alone list no row: every name of their privileged connection is refused.
+
+The "reached with `--talk`" columns are the hole: every allowed name of both shells reached the privileged call. The
+"appjail" columns are what `run` does now with the same grant (decision D):
+
+* **Confined:** a name of a known service (`dbusproxy.CONFINED`: notifications, `org.gtk.Notifications`, the secret
+  service, MPRIS, the status-notifier watcher) gets `--call` and `--broadcast` rules limited to its specified interfaces and
+  object path instead of `--talk`. The privileged call was refused by the proxy whether it was addressed to the name or to
+  its owner's unique name, and the service's own call still worked (`GetServerInformation`, `RemoveNotification`).
+* **Refused at launch:** any other granted name gets `--talk`, so `run` first asks the bus who owns it and stops when that
+  owner also owns a refused name. The check sees the owners at launch only: a name that nobody owns yet, or that changes
+  owner while the app runs, is not caught (README, Limits).
 
 <!-- generated:shared_connection -->
-| Compositor | Granted name (allowed) | Call sent to it | reached, debian 13 | reached, ubuntu 26.04 |
-| --- | --- | --- | --- | --- |
-| cinnamon | `org.freedesktop.Notifications` | `Cinnamon.Eval` | yes | yes |
-| cinnamon | `org.gnome.Caribou.Keyboard` | `Cinnamon.Eval` | yes | yes |
-| cinnamon | `org.gnome.Magnifier` | `Cinnamon.Eval` | yes | yes |
-| cinnamon | `org.gnome.Panel` | `Cinnamon.Eval` | yes | yes |
-| cinnamon | `org.gnome.keyring.SystemPrompter` | `Cinnamon.Eval` | yes | yes |
-| cinnamon | `org.x.StatusIconMonitor.cinnamon_0` | `Cinnamon.Eval` | yes | yes |
-| gnome-shell | `org.gnome.keyring.SystemPrompter` | `RemoteDesktop.CreateSession` | yes | yes |
-| gnome-shell | `org.gtk.MountOperationHandler` | `RemoteDesktop.CreateSession` | yes | yes |
-| gnome-shell | `org.gtk.Notifications` | `RemoteDesktop.CreateSession` | yes | yes |
+| Compositor | Granted name (allowed) | Call sent to it | reached with `--talk`, debian 13 | appjail, debian 13 | reached with `--talk`, ubuntu 26.04 | appjail, ubuntu 26.04 |
+| --- | --- | --- | --- | --- | --- | --- |
+| cinnamon | `org.freedesktop.Notifications` | `Cinnamon.Eval` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
+| cinnamon | `org.gnome.Caribou.Keyboard` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gnome.Magnifier` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gnome.Panel` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gnome.keyring.SystemPrompter` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.x.StatusIconMonitor.cinnamon_0` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
+| gnome-shell | `org.gnome.keyring.SystemPrompter` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch |
+| gnome-shell | `org.gtk.MountOperationHandler` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch |
+| gnome-shell | `org.gtk.Notifications` | `RemoteDesktop.CreateSession` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
 <!-- /generated -->
 
 Every one reached the compositor. So on GNOME Shell, granting `org.gtk.Notifications` (where GTK applications send their
@@ -350,8 +363,9 @@ the registry anyway.
 `org.cinnamon.Muffin` and `org.Cinnamon` (every name of each family), `org.freedesktop.a11y`, `org.gnome.ScreenSaver`,
 `org.kde.kglobalaccel` and `org.kde.keyboard` are refused. Under A a GNOME or Cinnamon app has no privileged global on its
 socket, so these bus names are what keep it from capturing, injecting input, running commands through the shell or locking
-the screen. **Open (found 2026-11-13, see "One granted name reaches its whole connection"):** refusing names is not enough
-where an allowed name shares the connection of a refused one (GNOME Shell, Cinnamon); the fix needs a decision.
+the screen. Refusing names is not enough where an allowed name shares the connection of a refused one (GNOME Shell,
+Cinnamon; found 2026-11-13, see "One granted name reaches its whole connection"), so the proxy confines the grants of known
+services to their own objects, and `run` refuses any other grant whose owner also owns a refused name.
 
 **KWin.** Its restricted socket hides only the protocol manager, so data-control stays visible and a client reads another
 client's clipboard. Accepting that for KWin alone would give the same capability as `full_wayland` without asking, so KWin is

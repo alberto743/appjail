@@ -19,31 +19,66 @@
    "tries": {
     "org.freedesktop.Notifications": {
      "answer": "(True, '2')",
+     "appjail": {
+      "by_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "by_unique_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "outcome": "confined",
+      "service_call": {
+       "answer": "('cinnamon', 'GNOME', '6.4.10', '1.2')",
+       "reached": true
+      }
+     },
      "call": "org.Cinnamon.Eval",
      "reached": true
     },
     "org.gnome.Caribou.Keyboard": {
      "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
      "call": "org.Cinnamon.Eval",
      "reached": true
     },
     "org.gnome.Magnifier": {
      "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
      "call": "org.Cinnamon.Eval",
      "reached": true
     },
     "org.gnome.Panel": {
      "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
      "call": "org.Cinnamon.Eval",
      "reached": true
     },
     "org.gnome.keyring.SystemPrompter": {
      "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
      "call": "org.Cinnamon.Eval",
      "reached": true
     },
     "org.x.StatusIconMonitor.cinnamon_0": {
      "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
      "call": "org.Cinnamon.Eval",
      "reached": true
     }
@@ -76,16 +111,39 @@
    "tries": {
     "org.gnome.keyring.SystemPrompter": {
      "answer": "('/org/gnome/Mutter/RemoteDesktop/Session/u1',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.a11y.Manager"
+     },
      "call": "org.gnome.Mutter.RemoteDesktop.CreateSession",
      "reached": true
     },
     "org.gtk.MountOperationHandler": {
      "answer": "('/org/gnome/Mutter/RemoteDesktop/Session/u2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.a11y.Manager"
+     },
      "call": "org.gnome.Mutter.RemoteDesktop.CreateSession",
      "reached": true
     },
     "org.gtk.Notifications": {
      "answer": "('/org/gnome/Mutter/RemoteDesktop/Session/u3',)",
+     "appjail": {
+      "by_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "by_unique_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "outcome": "confined",
+      "service_call": {
+       "answer": "()",
+       "reached": true
+      }
+     },
      "call": "org.gnome.Mutter.RemoteDesktop.CreateSession",
      "reached": true
     }

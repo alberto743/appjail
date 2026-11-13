@@ -6,10 +6,15 @@
     python3 tests/compositors/shared_connection.py --out /tmp/shared-connection.json [--only gnome-shell,cinnamon]
 
 A compositor's shell owns many names on one connection: harmless-looking ones (notifications, a keyring prompter) next to
-the privileged ones appjail refuses. xdg-dbus-proxy, as appjail starts it (`--filter --talk=NAME`), filters by destination
-name, not by object or interface. For every name the compositor's privileged connection owns that appjail's policy allows,
-the tool starts the proxy with only that name, connects through it as the app would, and sends the privileged call of
-that connection to the allowed name (side-effect free: a session created and not started, or `Eval` of `1+1`).
+the privileged ones appjail refuses. xdg-dbus-proxy started with `--filter --talk=NAME` filters by destination name, not by
+object or interface. For every name the compositor's privileged connection owns that appjail's name policy allows, the
+tool sends the privileged call of that connection (side-effect free: a session created and not started, or `Eval` of
+`1+1`) through a proxy that grants only that name:
+
+* `reached`: with `--talk=NAME`, the plain proxy rule (what appjail did before confining names);
+* `appjail`: what appjail does now. Either its launch check refuses the grant (`dbusproxy.shared_owners`, fed with the
+  owners this bus lists), or the proxy runs with appjail's own rules (`dbusproxy.rules`): the privileged call is sent to the
+  name and to its owner's unique name, and, for a service with a known harmless call (`SERVICE_CALL`), that call too.
 """
 
 import argparse
@@ -25,13 +30,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import probe
 
-from appjail import grants
+from appjail import dbusproxy, grants
+from appjail.manifest import Permissions
 from appjail.valid import ManifestError
 
 # (object path, interface, method, GVariant text of the arguments), by the refused name that marks the connection.
 PRIVILEGED_CALL = {
     "org.gnome.Mutter.RemoteDesktop": ("/org/gnome/Mutter/RemoteDesktop", "org.gnome.Mutter.RemoteDesktop", "CreateSession", "()"),
     "org.Cinnamon": ("/org/Cinnamon", "org.Cinnamon", "Eval", "('1+1',)"),
+}
+# The service's own side-effect-free call, which a confined grant must still reach (removing a notification that does not
+# exist changes nothing).
+SERVICE_CALL = {
+    "org.freedesktop.Notifications": ("/org/freedesktop/Notifications", "org.freedesktop.Notifications", "GetServerInformation", "()"),
+    "org.gtk.Notifications": ("/org/gtk/Notifications", "org.gtk.Notifications", "RemoveNotification",
+                              "('appjail.test', 'none')"),
 }
 
 
@@ -50,8 +63,8 @@ def allowed(name):
     return True
 
 
-def through_proxy(session, name, call):
-    """Start xdg-dbus-proxy with `--filter --talk=name`, connect through it and send `call` to `name`."""
+def through_proxy(session, rules, calls):
+    """Start xdg-dbus-proxy with `--filter` and `rules`, connect through it and send each (destination, call)."""
     import gi
 
     gi.require_version("Gio", "2.0")
@@ -59,7 +72,7 @@ def through_proxy(session, name, call):
 
     with tempfile.TemporaryDirectory(dir=session.rt) as tmp:
         sock = Path(tmp) / "bus"
-        proxy = subprocess.Popen(["xdg-dbus-proxy", session.address, str(sock), "--filter", f"--talk={name}"],
+        proxy = subprocess.Popen(["xdg-dbus-proxy", session.address, str(sock), "--filter", *rules],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         try:
             for _ in range(50):
@@ -68,15 +81,31 @@ def through_proxy(session, name, call):
                 time.sleep(0.1)
             flags = Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION
             conn = Gio.DBusConnection.new_for_address_sync(f"unix:path={sock}", flags, None, None)
-            path, iface, method, args = call
-            try:
-                reply = conn.call_sync(name, path, iface, method, GLib.Variant.parse(None, args, None, None), None,
-                                       Gio.DBusCallFlags.NONE, 8000, None)
-                return {"reached": True, "answer": str(reply.unpack())[:120]}
-            except GLib.Error as e:
-                return {"reached": False, "answer": e.message[:160]}
+            out = []
+            for dest, (path, iface, method, args) in calls:
+                try:
+                    reply = conn.call_sync(dest, path, iface, method, GLib.Variant.parse(None, args, None, None), None,
+                                           Gio.DBusCallFlags.NONE, 8000, None)
+                    out.append({"reached": True, "answer": str(reply.unpack())[:120]})
+                except GLib.Error as e:
+                    out.append({"reached": False, "answer": e.message[:160]})
+            return out
         finally:
             probe.stop(proxy)
+
+
+def appjail_outcome(session, name, call, owner):
+    """What appjail does with a grant of `name` on this bus: refuse it at launch, or confine it through the proxy."""
+    perms = Permissions(dbus_filter=(name,))
+    clash = dbusproxy.shared_owners(dbusproxy.talk_names(perms), connections(session))
+    if clash:
+        return {"outcome": "refused at launch", "shares_owner_with": clash[0][2]}
+    calls = [(name, call), (owner, call)] + ([(name, SERVICE_CALL[name])] if name in SERVICE_CALL else [])
+    got = through_proxy(session, dbusproxy.rules(perms)[1:], calls)
+    result = {"outcome": "confined" if dbusproxy.confined(name) else "talk", "by_name": got[0], "by_unique_name": got[1]}
+    if name in SERVICE_CALL:
+        result["service_call"] = got[2]
+    return result
 
 
 def evaluate(key):
@@ -103,7 +132,9 @@ def evaluate(key):
                     continue
                 for name in names:
                     if allowed(name) and owner.get(name) == owner[marker]:
-                        result["tries"][name] = {"call": f"{call[1]}.{call[2]}", **through_proxy(session, name, call)}
+                        talk = through_proxy(session, [f"--talk={name}"], [(name, call)])[0]
+                        result["tries"][name] = {"call": f"{call[1]}.{call[2]}", **talk,
+                                                 "appjail": appjail_outcome(session, name, call, owner[name])}
         except Exception as e:  # noqa: BLE001
             result["status"] = f"error: {type(e).__name__}: {e}"
         finally:

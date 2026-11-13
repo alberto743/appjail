@@ -83,15 +83,57 @@ def test_dbus_own_round_trips_and_is_checked_when_loading():
 # -- argument building (pure) ---------------------------------------------------------------
 
 
-def test_rules_see_nothing_and_talk_to_the_listed_names():
-    r = dbusproxy.rules(Permissions(dbus_filter=NAMES))
-    assert r[0] == "--filter" and r[1:] == [f"--talk={n}" for n in NAMES]
+def test_rules_see_nothing_and_talk_to_unknown_names():
+    r = dbusproxy.rules(Permissions(dbus_filter=("org.example.A", "org.example.Family.*")))
+    assert r == ["--filter", "--talk=org.example.A", "--talk=org.example.Family.*"]
+
+
+def test_known_services_are_confined_to_their_own_objects():
+    r = dbusproxy.rules(Permissions(dbus_filter=("org.freedesktop.Notifications",)))
+    assert "--talk=org.freedesktop.Notifications" not in r
+    assert "--call=org.freedesktop.Notifications=org.freedesktop.Notifications.*@/org/freedesktop/Notifications" in r
+    assert "--call=org.freedesktop.Notifications=org.freedesktop.DBus.Properties.*@/org/freedesktop/Notifications" in r
+    assert ("--broadcast=org.freedesktop.Notifications=org.freedesktop.Notifications.*@/org/freedesktop/Notifications"
+            in r)
+    assert all(a.startswith(("--filter", "--call=org.freedesktop.Notifications=", "--broadcast=org.freedesktop.Notifications="))
+               and a.endswith(("--filter", "@/org/freedesktop/Notifications")) for a in r)
+
+
+@pytest.mark.parametrize(("name", "path"), [("org.mpris.MediaPlayer2.*", "/org/mpris/MediaPlayer2"),
+                                            ("org.mpris.MediaPlayer2.vlc", "/org/mpris/MediaPlayer2"),
+                                            ("org.freedesktop.secrets", "/org/freedesktop/secrets/*"),
+                                            ("org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher"),
+                                            ("org.gtk.Notifications", "/org/gtk/Notifications")])
+def test_every_confined_rule_names_the_service_path(name, path):
+    r = dbusproxy.name_rules(name)
+    assert r and all(a.startswith((f"--call={name}=", f"--broadcast={name}=")) and a.endswith("@" + path) for a in r)
+    assert dbusproxy.talk_names(Permissions(dbus_filter=(name,))) == []
 
 
 def test_rules_add_own_policy_and_a_bus_is_needed():
-    perms = Permissions(dbus_filter=NAMES[:1], dbus_own=("org.mpris.MediaPlayer2.*",))
-    assert dbusproxy.rules(perms) == ["--filter", f"--talk={NAMES[0]}", "--own=org.mpris.MediaPlayer2.*"]
+    perms = Permissions(dbus_filter=("org.example.A",), dbus_own=("org.mpris.MediaPlayer2.*",))
+    assert dbusproxy.rules(perms) == ["--filter", "--talk=org.example.A", "--own=org.mpris.MediaPlayer2.*"]
     assert dbusproxy.needed(Permissions(dbus_own=("org.example.A",)))
+
+
+SHELL_OWNERS = {"org.freedesktop.DBus": "org.freedesktop.DBus", ":1.9": ":1.9", "org.Cinnamon": ":1.5", "org.gnome.Panel": ":1.5",
+                "org.freedesktop.Notifications": ":1.5", "org.example.Family.one": ":1.5", "org.example.Alone": ":1.9"}
+
+
+def test_a_talk_name_sharing_the_owner_of_a_refused_one_is_found():
+    assert dbusproxy.shared_owners(["org.gnome.Panel"], SHELL_OWNERS) == [("org.gnome.Panel", "org.gnome.Panel", "org.Cinnamon")]
+    assert dbusproxy.shared_owners(["org.example.Family.*"], SHELL_OWNERS) == [
+        ("org.example.Family.*", "org.example.Family.one", "org.Cinnamon")]
+    assert dbusproxy.shared_owners(["org.example.Alone", "org.example.Missing"], SHELL_OWNERS) == []
+
+
+def test_owner_check_refuses_shared_talk_names_and_skips_confined_ones():
+    owners = lambda bus: SHELL_OWNERS
+    with pytest.raises(RunError, match="org.gnome.Panel is owned by the same process as org.Cinnamon"):
+        dbusproxy.check_owners(Permissions(dbus_filter=("org.gnome.Panel",)), "/bus", owners)
+    dbusproxy.check_owners(Permissions(dbus_filter=("org.freedesktop.Notifications", "org.example.Alone")), "/bus", owners)
+    dbusproxy.check_owners(Permissions(dbus_filter=("org.freedesktop.Notifications",)), "/bus",
+                           lambda bus: pytest.fail("no talk name, so the bus is not asked"))
 
 
 def test_dbus_own_without_proxy_socket_is_refused(sandbox, runtime):
@@ -133,7 +175,7 @@ def test_proxy_runs_in_its_own_jail_without_network_or_home(tmp_path):
     assert args[args.index("--") + 1] == dbusproxy.PROXY
     tail = args[args.index("--") + 1:]
     assert tail[1:3] == ["unix:path=/run/user/1/bus", f"{tmp_path}/bus"] and "--fd=7" in tail
-    assert tail[-2:] == ["--filter", "--talk=org.freedesktop.Notifications"]
+    assert tail[tail.index("--filter"):] == dbusproxy.rules(Permissions(dbus_filter=NAMES[:1]))
 
 
 def test_app_jail_gets_only_the_filtered_socket(sandbox, runtime):
@@ -287,3 +329,149 @@ def test_owning_a_granted_name_end_to_end(sandbox, runtime, session_bus):
     assert r["owned"] == "ok" and r["wild"] == "ok"
     assert "AccessDenied" in r["other"] or "not allowed" in r["other"].lower() or "Error" in r["other"]
     assert r["other"] != "ok" and r["notif"] != "ok"
+
+
+# -- one process owning a refused name and ordinary ones, as a desktop shell does (guest) ----------
+
+FAKE_SHELL = """#!/usr/bin/python3
+import sys, dbus, dbus.service, dbus.mainloop.glib
+from gi.repository import GLib
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SessionBus()
+names = [dbus.service.BusName(n, bus) for n in sys.argv[1:]]
+
+class Obj(dbus.service.Object):
+    def __init__(self, path, iface):
+        super().__init__(bus, path)
+        self.iface = iface
+
+    @dbus.service.method("org.Cinnamon", in_signature="s", out_signature="s")
+    def Eval(self, code):
+        return "ran"
+
+    @dbus.service.method("org.freedesktop.Notifications", out_signature="ssss")
+    def GetServerInformation(self):
+        return ("fake", "test", "1", "1.2")
+
+    @dbus.service.method("org.freedesktop.Notifications", in_signature="u")
+    def CloseNotification(self, nid):
+        self.NotificationClosed(nid, 3)
+
+    @dbus.service.signal("org.freedesktop.Notifications", signature="uu")
+    def NotificationClosed(self, nid, reason):
+        pass
+
+    @dbus.service.method("org.freedesktop.Secret.Service", out_signature="s")
+    def ServiceProbe(self):
+        return "service"
+
+    @dbus.service.method("org.freedesktop.Secret.Collection", out_signature="s")
+    def CollectionProbe(self):
+        return "collection"
+
+    @dbus.service.method("org.example.Plain", out_signature="s")
+    def Ping(self):
+        return "pong"
+
+objs = [Obj(p, None) for p in ("/org/Cinnamon", "/org/freedesktop/Notifications", "/org/freedesktop/secrets",
+                                "/org/freedesktop/secrets/collection/login", "/org/example/Plain")]
+print(bus.get_unique_name(), flush=True)
+GLib.MainLoop().run()
+"""
+
+CLIENT = """#!/usr/bin/python3
+import json, sys, dbus, dbus.mainloop.glib
+from gi.repository import GLib
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.bus.BusConnection(sys.argv[1])
+unique = sys.argv[2]
+def call(dest, path, iface, member, *args):
+    try:
+        return str(bus.call_blocking(dest, path, iface, member, "u" if args else "", args, timeout=5))
+    except dbus.DBusException as e:
+        return "error: " + (e.get_dbus_name() or "")
+got = []
+bus.add_signal_receiver(lambda *a: got.append(int(a[0])), "NotificationClosed", "org.freedesktop.Notifications")
+out = {}
+for label, dest in (("name", sys.argv[3]), ("unique", unique)):
+    out[label] = {
+        "eval": call(dest, "/org/Cinnamon", "org.Cinnamon", "Eval"),
+        "notify_info": call(dest, "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "GetServerInformation"),
+        "notify_close": call(dest, "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "CloseNotification", dbus.UInt32(7)),
+        "notify_wrong_path": call(dest, "/org/Cinnamon", "org.freedesktop.Notifications", "GetServerInformation"),
+        "secret_service": call(dest, "/org/freedesktop/secrets", "org.freedesktop.Secret.Service", "ServiceProbe"),
+        "secret_collection": call(dest, "/org/freedesktop/secrets/collection/login", "org.freedesktop.Secret.Collection", "CollectionProbe"),
+        "plain": call(dest, "/org/example/Plain", "org.example.Plain", "Ping"),
+    }
+loop = GLib.MainLoop()
+GLib.timeout_add(1500, loop.quit)
+loop.run()
+out["signals"] = got
+print(json.dumps(out))
+"""
+
+needs_python_dbus = pytest.mark.skipif(
+    not shutil.which("python3") or subprocess.run(["python3", "-c", "import dbus, gi"]).returncode != 0,
+    reason="needs python3-dbus and python3-gi (run provision.sh)")
+
+
+@pytest.fixture
+def fake_shell(runtime, session_bus, tmp_path):
+    """A process that owns org.Cinnamon (refused) next to ordinary names, on the private session bus."""
+    script = tmp_path / "shell.py"
+    script.write_text(FAKE_SHELL)
+    env = {"PATH": "/usr/bin:/bin", "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
+    proc = subprocess.Popen(["python3", str(script), "org.Cinnamon", "org.freedesktop.Notifications", "org.freedesktop.secrets",
+                             "org.example.Plain"], stdout=subprocess.PIPE, text=True, env=env)
+    unique = proc.stdout.readline().strip()
+    yield unique
+    proc.terminate()
+    proc.wait()
+
+
+def through(runtime, session_bus, tmp_path, unique, name):
+    env = {"XDG_RUNTIME_DIR": str(runtime), "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
+    client = tmp_path / "client.py"
+    client.write_text(CLIENT)
+    with dbusproxy.Proxy(Permissions(dbus_filter=(name,)), env) as sock:
+        r = subprocess.run(["python3", str(client), f"unix:path={sock}", unique, name], capture_output=True, text=True,
+                           timeout=60, env={"PATH": "/usr/bin:/bin"})
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+@integration
+@needs_proxy
+@needs_python_dbus
+def test_a_confined_name_reaches_only_its_own_objects(runtime, session_bus, tmp_path, fake_shell):
+    r = through(runtime, session_bus, tmp_path, fake_shell, "org.freedesktop.Notifications")
+    for label in ("name", "unique"):  # the rules hold whether the app names the service or its owner's unique name
+        got = r[label]
+        assert "fake" in got["notify_info"] and got["notify_close"] == "None", label
+        for denied in ("eval", "notify_wrong_path", "secret_service", "secret_collection", "plain"):
+            assert got[denied] == "error: org.freedesktop.DBus.Error.AccessDenied", (label, denied)
+    assert r["signals"] == [7, 7]  # the service's own signals still reach the app
+
+
+@integration
+@needs_proxy
+@needs_python_dbus
+def test_secrets_reach_their_subtree_only(runtime, session_bus, tmp_path, fake_shell):
+    r = through(runtime, session_bus, tmp_path, fake_shell, "org.freedesktop.secrets")
+    for label in ("name", "unique"):
+        got = r[label]
+        assert got["secret_service"] == "service" and got["secret_collection"] == "collection", label
+        for denied in ("eval", "notify_info", "plain"):
+            assert got[denied] == "error: org.freedesktop.DBus.Error.AccessDenied", (label, denied)
+    assert r["signals"] == []
+
+
+@integration
+@needs_proxy
+@needs_python_dbus
+def test_a_talk_name_of_a_refused_owner_is_refused_at_launch(runtime, session_bus, fake_shell):
+    env = {"XDG_RUNTIME_DIR": str(runtime), "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
+    with (pytest.raises(RunError, match="org.example.Plain is owned by the same process as org.Cinnamon"),
+          dbusproxy.Proxy(Permissions(dbus_filter=("org.example.Plain",)), env)):
+        pass
+    assert [p for p in runtime.iterdir() if p.name.startswith("appjail-")] == []

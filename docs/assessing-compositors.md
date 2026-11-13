@@ -27,7 +27,7 @@ packages; one that neither packages is not measured, and the rule decides it fro
 | `rule_a.py` | appjail's rule: the socket the app gets, the privileged globals left on it, a real window client there, the verdict | `rule-a-*.json` |
 | `clipboard.py` | ordinary copy and paste with keyboard focus, both directions, between a window outside and one on the app's socket | `clipboard-*.json` |
 | `mutter_dbus.py`, `cinnamon_dbus.py` | a desktop's privileged D-Bus API used end to end as an ordinary client: keys typed into another client's window, a whole screen captured with that window in it, a command run | `mutter-dbus-*.json`, `cinnamon-dbus-*.json` |
-| `shared_connection.py` | for every name appjail allows that is owned by the connection of a refused one: whether the privileged call, sent to the allowed name through xdg-dbus-proxy started as appjail starts it, reaches the compositor | `shared-connection-*.json` |
+| `shared_connection.py` | for every name appjail allows that is owned by the connection of a refused one: whether the privileged call, sent to the allowed name through xdg-dbus-proxy with `--talk`, reaches the compositor, and what appjail does with that grant (refused at launch, or confined: the privileged call by name and by unique name, the service's own call) | `shared-connection-*.json` |
 | `report.py` | the tables of ASSESSMENT.md from the results (`--write`; `tests/test_assessment.py` checks them) | |
 
 ## Adding a compositor
@@ -52,8 +52,10 @@ packages; one that neither packages is not measured, and the rule decides it fro
    keys it receives (`mutter_dbus.py window`) is the victim; a capture must hold its red pixels and be the size of the whole
    screen; a command must leave a file. Run it three times per distribution.
 7. **Check the connection, not just the name.** Run `shared_connection.py` with the compositor added to `PRIVILEGED_CALL`
-   (its refused name and its privileged call). A name appjail allows on the same connection reaches everything that
-   connection serves.
+   (its refused name and its privileged call). With `--talk`, a name appjail allows on the same connection reaches
+   everything that connection serves; every row's `appjail` outcome must be "refused at launch" or "confined" with the
+   privileged call blocked. A name the compositor owns that apps need (a service of its own) goes in `dbusproxy.CONFINED`
+   with its specified interfaces and path, and in `SERVICE_CALL` with a harmless call of its own.
 8. **Rule and clipboard.** `rule_a.py --only NAME` and `clipboard.py --only NAME`. `clipboard.py` needs a keyboard on the
    headless seat: a persistent `wtype` where the virtual-keyboard protocol exists, Mutter's RemoteDesktop for Mutter and GNOME
    Shell, a nested run otherwise.
