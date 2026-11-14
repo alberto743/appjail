@@ -44,8 +44,16 @@ most command-line tools, converters and editors render fine without a GPU.
 
 - Every capture device present at start is visible; there is no per-camera choice, and a camera plugged in later appears
   at the next start.
-- Tested with the kernel's `vivid` virtual camera; a real USB webcam, unplugging while the app runs, and a real camera
-  through the portal are still to check.
+- An app that finds its camera by listing `/dev` and filtering on the file type sees none. bwrap builds `/dev` as a
+  tmpfs and mounts each granted node over a placeholder file, so a directory listing reports the node as a regular file,
+  while `stat` and `open` on its path see the device. Apps that open `/dev/video0` by path work; Webcamoid's V4L2 plugin,
+  which lists `/dev` with Qt's `QDir::System` filter, finds nothing (measured with a real laptop camera: it finds both
+  nodes once the host's `/dev` is bound whole). appjail does not bind the whole of `/dev` to work around it. The Camera
+  portal does not help: it is for apps that connect to PipeWire through the portal, and Webcamoid's PipeWire plugin
+  neither calls it nor loads in the AppImage tested.
+- Tested with the kernel's `vivid` virtual camera and, for V4L2 capture, one real laptop camera (Webcamoid, the listing
+  problem above); a real USB webcam, unplugging while the app runs, and a real camera through the portal are still to
+  check.
 
 ## References
 

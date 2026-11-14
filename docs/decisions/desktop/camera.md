@@ -20,5 +20,12 @@ became usable because of a PipeWire bug with one of its test controls (fixed ups
 has no such control, so a real camera through the portal remains a manual check. The measurements are on
 [Camera and audio measurements](../../develop/camera-audio-evidence.md).
 
+**Known limit.** The nodes are bound over placeholder files in bwrap's tmpfs `/dev`, so listing `/dev` reports them as
+regular files. Apps that enumerate `/dev` by file type (Webcamoid's V4L2 plugin) find no camera, though opening by path
+works. Rejected: binding the host's `/dev` whole (every device, including input and sound nodes, becomes visible; the
+narrow bind is the point of this decision) and masking everything else in it (a deny list that new devices escape). The
+Camera portal is no substitute: it hands a PipeWire connection to apps that ask for it, and these apps do not. The cure is
+in the app, which should open or `stat` the nodes instead of trusting the listing.
+
 **Revisit when** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted, or a PipeWire release
 carries the fix (then the portal camera test can let the session manager link the test camera instead of `pw-link`).

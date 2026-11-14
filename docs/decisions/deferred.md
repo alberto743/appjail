@@ -14,6 +14,7 @@ None pending.
 | GPG tier (tier 2) | a signature proves a key, not its owner; it needs a per-app key pin, a jailed `gpgv` and update rules, while attestations and the quarantine hash already cover attested and unattested apps | a wanted app signs with GPG and has no attestation | [evidence tiers](acquisition/evidence-tiers.md) |
 | Resolvers for other forges (GitLab, Codeberg/Forgejo, SourceForge, vendor sites) | only GitHub is supported; other forges offer no per-asset digest or attestations, so tier 4 at best. In November 2026 the appjail-db catalog listed 13 apps on GitLab or Forgejo and about 180 pointing to vendor sites | a wanted app is released only on another forge | [sources](acquisition/sources.md) |
 | An allowlisting proxy for the LAN | with `network`, other hosts on the LAN stay reachable; attacks on them are outside the threat model | host filtering for `network` is wanted | [network](desktop/network.md) |
+| A restricted camera connection for apps that use PipeWire without the portal | an app that reaches its camera through PipeWire but never calls the Camera portal sees only the private audio graph, which has no camera. appjail could call the portal for it and give it the restricted connection as its `pipewire-0`; that needs a relay (the portal returns a connected descriptor, not a socket path) and a way to merge it with the private graph, and nothing measured shows an app that needs it. Webcamoid is not one: its V4L2 plugin works and its PipeWire plugin does not load | a wanted app needs a PipeWire camera and does not use the portal | [camera](desktop/camera.md) |
 | Other architectures (arm64) | evaluated and **paused** by the maintainer: moderate code, expensive verification | the arm64 work is resumed | [platform](project/platform.md) |
 
 ## Scheduled
@@ -36,7 +37,7 @@ machine.
 - Compositors: a full desktop session (GNOME, Plasma, Cinnamon) with its daemons, the bus names they add and the Wayland
   globals they list; only headless or nested compositors were measured
   ([what the assessment does not cover](../develop/assessing-compositors.md#what-this-does-not-cover)).
-- Camera: a real V4L2 webcam, unplugging while the app runs, and a real camera through the Camera portal.
+- Camera: whether Webcamoid fixes its device listing (its V4L2 plugin lists `/dev` by file type, see [GPU and camera](../understand/desktop/devices.md#limits)); a real V4L2 webcam, unplugging while the app runs, and a real camera through the Camera portal.
 - Xwayland: GPU acceleration; clipboard and drag and drop through the `xwayland-rootful` window (briefly tested on
   GNOME).
 - D-Bus: real MPRIS players and tray icons with process-id names.
