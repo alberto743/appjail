@@ -36,6 +36,7 @@ def test_ordinary_names_are_accepted(name):
     "org.gnome.Mutter.DisplayConfig", "org.gnome.Mutter.ServiceChannel", "org.gnome.Mutter.*",
     "org.freedesktop.a11y.Manager", "org.freedesktop.a11y.*", "org.gnome.ScreenSaver", "org.kde.kglobalaccel", "org.kde.keyboard",
     "org.cinnamon.Muffin.DisplayConfig", "org.cinnamon.Muffin.IdleMonitor", "org.cinnamon.Muffin.*",
+    "org.cinnamon.Screenshot", "org.cinnamon.ScreenSaver", "org.cinnamon.Screenshot.*",
     "org.Cinnamon", "org.Cinnamon.LookingGlass", "org.Cinnamon.AudioDeviceSelection", "org.Cinnamon.LookingGlass.*",
     "org.gnome.Shell.Screenshot", "org.kde.plasmashell", "org.kde.klipper",
 ])

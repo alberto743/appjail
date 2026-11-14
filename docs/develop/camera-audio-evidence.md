@@ -14,16 +14,17 @@ Versions in the environment table are those of the time of writing.
 
 ## Environment of the measurements
 
-| | Guest (Debian 13) | CI runner (Ubuntu 26.04) |
-|---|---|---|
-| Kernel | 6.12.115 | 7.0.0-azure |
-| PipeWire | 1.4.2 | 1.6.2 |
-| WirePlumber | 0.5.8 | 0.5.13 |
-| bubblewrap | 0.12 | 0.11.1 |
-| Other | sway 1.10.1, `vivid` virtual camera, `snd-aloop` | xdg-desktop-portal 1.21.1, Python 3.14.4, no `vivid` |
+| | Guest (Debian 13) | CI runner (Ubuntu 26.04) | Guest (Fedora 45) |
+|---|---|---|---|
+| Kernel | 6.12.115 | 7.0.0-azure | 7.3.3 |
+| PipeWire | 1.4.2 | 1.6.2 | 1.6.11 |
+| WirePlumber | 0.5.8 | 0.5.13 | 0.5.19 |
+| bubblewrap | 0.12 | 0.11.1 | 0.13.1 |
+| Other | sway 1.10.1, `vivid` virtual camera, `snd-aloop` | xdg-desktop-portal 1.21.1, Python 3.14.4, no `vivid` | SELinux enforcing, Python 3.15.0, `vivid` |
 
 Test devices: the `vivid` kernel module (`video0` capture, `video1` output, `video2`/`video3` metadata), PipeWire's
-`videotestsrc` and `audiotestsrc`, a null sink as the speaker. There is no real camera, microphone or headset.
+`videotestsrc` and `audiotestsrc` (Fedora does not package them: a null node that claims to be a `Video/Source`, and a
+pipe-tunnel source fed with a 440 Hz tone, stand in; `tests/pwsources.py`), a null sink as the speaker. There is no real camera, microphone or headset.
 
 ## How frames reach an app
 
@@ -101,6 +102,20 @@ WirePlumber 0.5.13, same result; `vivid` with `n_devs=1 node_types=0x1`):
 So the missing node is an artefact of the test camera with these PipeWire releases, not of WirePlumber or appjail. An
 ordinary webcam (UVC) has no INTEGER array controls, so its node would be activated; a real camera through the portal is
 still a manual check. `vimc`, another virtual camera without such controls, is not in Debian's kernel.
+
+## Fedora 45 (measured 2026-11-14)
+
+The camera, portal, audio and private-graph tests pass on Fedora with SELinux enforcing and no denial recorded. What differed:
+
+| Observation | Result |
+|---|---|
+| Where PipeWire keeps its modules | `/usr/lib64/pipewire-0.3`; the graph's check looked only under `/usr/lib` and fell back to the host's Pulse socket (fixed, `audiojail.module_dirs`) |
+| The test sources | `videotestsrc` and `audiotestsrc` are not packaged; the substitutes above give the same results in the tests that use them |
+| The host default changes to a new device (a null sink as headset) | PipeWire 1.4.2 and 1.6.2: the tunnel gains links to the new sink and source and keeps the old. PipeWire 1.6.11 with WirePlumber 0.5.19: the playback links are added, the microphone link moves to the new source |
+| The device is unplugged | PipeWire 1.4.2 and 1.6.2: the tunnel stays, linked to nothing, and the app is not told. PipeWire 1.6.11: the tunnel nodes disappear from the app's graph (`pw-dump` in the jail lists only `auto_null`), so the app has no audio device; nothing re-attaches |
+| The `vivid` camera (`n_devs=1 node_types=0x1`), PipeWire 1.6.11 and WirePlumber 0.5.19, the V4L2 fixes of the schedule in `deferred.md` | no V4L2 device or node reached the registry: `pw-dump` and `wpctl status` list none, although udev reports `vivid` with `ID_V4L_CAPABILITIES=:capture:` and WirePlumber loads its V4L2 hooks. The cause was not investigated, so the Camera portal measurement was not repeated |
+
+Both audio differences keep the property the graph is for: nothing of the host's devices is reachable from the jail.
 
 ## Playback (`audio`, `audio_mode = pipewire`)
 

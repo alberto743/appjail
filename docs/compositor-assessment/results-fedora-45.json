@@ -1,0 +1,2979 @@
+{
+ "compositors": {
+  "cage": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "cage 0.3.1-2.fc45",
+   "wayland": {
+    "display": "wayland-0",
+    "full": {
+     "ext_idle_notifier_v1": 2,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 5,
+     "xwayland_shell_v1": 1,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "input": [
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_output_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "cinnamon": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv}\",\"data\":[1,[[[\"LVDS1\",\"MetaProducts Inc.\",\"MetaMonitor\",\"0xC0FFEE-1\"],[[\"1600x920@60\",1600,920,6.000000000000000000000e+01,1.0000000000",
+      "member": "org.cinnamon.Muffin.DisplayConfig.GetCurrentState",
+      "name": "org.cinnamon.Muffin.DisplayConfig",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"b\",\"data\":[false]}",
+      "member": "org.cinnamon.ScreenSaver.GetActive",
+      "name": "org.cinnamon.ScreenSaver",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"bs\",\"data\":[true,\"2\"]}",
+      "member": "org.Cinnamon.Eval",
+      "name": "org.Cinnamon",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"i\",\"data\":[1]}",
+      "member": "org.Cinnamon.GetRunState",
+      "name": "org.Cinnamon",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"b\",\"data\":[false]}",
+      "member": "org.gnome.Magnifier.isActive",
+      "name": "org.gnome.Magnifier",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.Cinnamon": [
+        "ActivateInputSourceIndex",
+        "CloseEndSessionDialog",
+        "DismissInternalModals",
+        "Eval",
+        "GetInputSources",
+        "GetMonitorWorkRect",
+        "GetMonitors",
+        "GetRunState",
+        "GetRunningXletUUIDs",
+        "HideMonitorLabels",
+        "JumpToNewWorkspace",
+        "PushSubprocessResult",
+        "ReloadTheme",
+        "ReloadXlet",
+        "RemoveCurrentWorkspace",
+        "RestartCinnamon",
+        "ShowEndSessionDialog",
+        "ShowExpo",
+        "ShowMonitorLabels",
+        "ShowOSD",
+        "ShowOverview",
+        "ToggleKeyboard",
+        "activateCallback",
+        "addPanelQuery",
+        "destroyDummyPanels",
+        "highlightPanel",
+        "highlightXlet",
+        "induceSegfault",
+        "leakMemory",
+        "switchWorkspaceDown",
+        "switchWorkspaceLeft",
+        "switchWorkspaceRight",
+        "switchWorkspaceUp",
+        "updateSetting"
+       ],
+       "org.Cinnamon.LookingGlass": [
+        "AddResult",
+        "Eval",
+        "FullGc",
+        "GetErrorStack",
+        "GetExtensionList",
+        "GetLatestWindowList",
+        "GetMemoryInfo",
+        "GetResults",
+        "Inspect",
+        "ReloadExtension",
+        "StartInspector"
+       ],
+       "org.Gtk.MountOperationHandler": [
+        "AskPassword",
+        "AskQuestion",
+        "Close",
+        "ShowProcesses"
+       ],
+       "org.cinnamon.Muffin.Debug": [
+        "ListWindows"
+       ],
+       "org.cinnamon.Muffin.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "ResetMonitorsConfig",
+        "SetCrtcGamma"
+       ],
+       "org.cinnamon.Muffin.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.cinnamon.Muffin.RemoteDesktop": [
+        "CreateSession"
+       ],
+       "org.cinnamon.Muffin.ScreenCast": [
+        "CreateSession"
+       ],
+       "org.cinnamon.PortalHandlers": [
+        "GetAppStates"
+       ],
+       "org.cinnamon.ScreenSaver": [
+        "GetActive",
+        "GetActiveTime",
+        "Lock",
+        "Quit",
+        "SetActive",
+        "SimulateUserActivity"
+       ],
+       "org.cinnamon.Screenshot": [
+        "PickColor",
+        "Screenshot",
+        "ScreenshotArea",
+        "ScreenshotWindow",
+        "ScreenshotWindowById",
+        "SelectArea",
+        "SelectWindow"
+       ],
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.Notifications": [
+        "CloseNotification",
+        "GetCapabilities",
+        "GetServerInformation",
+        "Notify"
+       ],
+       "org.gnome.Magnifier": [
+        "addZoomRegion",
+        "clearAllZoomRegions",
+        "createZoomRegion",
+        "fullScreenCapable",
+        "getCrosswireClip",
+        "getCrosswireColor",
+        "getCrosswireLength",
+        "getCrosswireSize",
+        "getZoomRegions",
+        "hideCursor",
+        "isActive",
+        "setActive",
+        "setCrosswireClip",
+        "setCrosswireColor",
+        "setCrosswireLength",
+        "setCrosswireSize",
+        "showCursor"
+       ],
+       "org.gnome.keyring.internal.Prompter": [
+        "BeginPrompting",
+        "PerformPrompt",
+        "StopPrompting"
+       ]
+      },
+      "names": [
+       "org.Cinnamon",
+       "org.Cinnamon.LookingGlass",
+       "org.cinnamon.Muffin.Debug",
+       "org.cinnamon.Muffin.DisplayConfig",
+       "org.cinnamon.Muffin.IdleMonitor",
+       "org.cinnamon.Muffin.RemoteDesktop",
+       "org.cinnamon.Muffin.ScreenCast",
+       "org.cinnamon.ScreenSaver",
+       "org.cinnamon.Screenshot",
+       "org.freedesktop.Notifications",
+       "org.gnome.Caribou.Keyboard",
+       "org.gnome.Magnifier",
+       "org.gnome.Panel",
+       "org.gnome.keyring.SystemPrompter",
+       "org.gtk.MountOperationHandler",
+       "org.x.StatusIconMonitor.cinnamon_0"
+      ],
+      "privileged_looking": [
+       "org.cinnamon.Muffin.DisplayConfig",
+       "org.cinnamon.Muffin.RemoteDesktop",
+       "org.cinnamon.Muffin.ScreenCast",
+       "org.cinnamon.ScreenSaver",
+       "org.cinnamon.Screenshot"
+      ]
+     },
+     {
+      "interfaces": {},
+      "names": [
+       "org.freedesktop.IBus"
+      ],
+      "privileged_looking": []
+     }
+    ],
+    "names": {
+     "org.Cinnamon": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.Cinnamon' is refused: it reaches org.Cinnamon, which can control th"
+     },
+     "org.Cinnamon.LookingGlass": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.Cinnamon.LookingGlass' is refused: it reaches org.Cinnamon, which c"
+     },
+     "org.cinnamon.Muffin.Debug": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.Debug' is refused: it reaches org.cinnamon.Muffin, "
+     },
+     "org.cinnamon.Muffin.DisplayConfig": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.DisplayConfig' is refused: it reaches org.cinnamon."
+     },
+     "org.cinnamon.Muffin.IdleMonitor": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.IdleMonitor' is refused: it reaches org.cinnamon.Mu"
+     },
+     "org.cinnamon.Muffin.RemoteDesktop": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.RemoteDesktop' is refused: it reaches org.cinnamon."
+     },
+     "org.cinnamon.Muffin.ScreenCast": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Muffin.ScreenCast' is refused: it reaches org.cinnamon.Muf"
+     },
+     "org.cinnamon.ScreenSaver": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.ScreenSaver' is refused: it reaches org.cinnamon.ScreenSav"
+     },
+     "org.cinnamon.Screenshot": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.cinnamon.Screenshot' is refused: it reaches org.cinnamon.Screenshot"
+     },
+     "org.freedesktop.IBus": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.freedesktop.Notifications": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Caribou.Keyboard": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Magnifier": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.Panel": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gnome.keyring.SystemPrompter": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.gtk.MountOperationHandler": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.x.StatusIconMonitor.cinnamon_0": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    }
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "cinnamon 6.8.0-1.fc45",
+   "wayland": {
+    "display": "wayland-0",
+    "full": {
+     "ext_idle_notifier_v1": 1,
+     "gtk_shell1": 6,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 5,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xapp_shell_v1": 1,
+     "xdg_activation_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 5,
+     "xdg_wm_dialog_v1": 1,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 3,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "shell": [
+      "xapp_shell_v1"
+     ],
+     "windows": [
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "gnome-shell": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/ScreenCast/Session/u1\"]}",
+      "member": "org.gnome.Mutter.ScreenCast.CreateSession",
+      "name": "org.gnome.Mutter.ScreenCast",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/RemoteDesktop/Session/u1\"]}",
+      "member": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+      "name": "org.gnome.Mutter.RemoteDesktop",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/InputCapture/Session/u1\"]}",
+      "member": "org.gnome.Mutter.InputCapture.CreateSession",
+      "name": "org.gnome.Mutter.InputCapture",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv}\",\"data\":[2,[[[\"Meta-0\",\"MetaVendor\",\"MetaVirtualMonitor\",\"0x00\"],[[\"1024x768@60.000\",1024,768,6.000000000000000000000e+01,1.00000000000",
+      "member": "org.gnome.Mutter.DisplayConfig.GetCurrentState",
+      "name": "org.gnome.Mutter.DisplayConfig",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"bs\",\"data\":[false,\"\"]}",
+      "member": "org.gnome.Shell.Eval",
+      "name": "org.gnome.Shell",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"h\",\"data\":[{\"fd\":5,\"path\":\"socket:[270989]\",\"stat\":{\"dev\":{\"major\":0,\"minor\":10},\"inode\":270989,\"type\":\"sock\",\"mode\":\"0777\",\"linkCount\":1,\"uid\":1000,\"gid\":1000,\"size\":0,\"blockSize\":4096,\"bloc",
+      "member": "org.gnome.Mutter.ServiceChannel.OpenWaylandServiceConnection",
+      "name": "org.gnome.Mutter.ServiceChannel",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.freedesktop.a11y.PointerLocator": [
+        "QueryPointer"
+       ],
+       "org.gnome.Mutter.ColorManager": [
+        "CalibrateMonitor"
+       ],
+       "org.gnome.Mutter.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "SetBacklight",
+        "SetCrtcGamma",
+        "SetOutputCTM"
+       ],
+       "org.gnome.Mutter.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.gnome.Mutter.InputCapture": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.InputMapping": [
+        "GetDeviceMapping"
+       ],
+       "org.gnome.Mutter.RemoteDesktop": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ScreenCast": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ServiceChannel": [
+        "OpenWaylandConnection",
+        "OpenWaylandServiceConnection"
+       ],
+       "org.gnome.Shell": [
+        "Eval",
+        "FocusApp",
+        "FocusSearch",
+        "GrabAccelerator",
+        "GrabAccelerators",
+        "HideMonitorLabels",
+        "ScreenTransition",
+        "ShowApplications",
+        "ShowMonitorLabels",
+        "ShowOSD",
+        "UngrabAccelerator",
+        "UngrabAccelerators"
+       ],
+       "org.gnome.Shell.Brightness": [
+        "SetAutoBrightnessTarget",
+        "SetDimming"
+       ],
+       "org.gnome.Shell.Extensions": [
+        "CheckForUpdates",
+        "DisableExtension",
+        "EnableExtension",
+        "GetExtensionErrors",
+        "GetExtensionInfo",
+        "InstallRemoteExtension",
+        "LaunchExtensionPrefs",
+        "ListExtensions",
+        "OpenExtensionPrefs",
+        "ReloadExtension",
+        "UninstallExtension"
+       ],
+       "org.gnome.Shell.Wacom.PadOsd": [
+        "Show"
+       ],
+       "org.gnome.Sysprof3.Profiler": [
+        "Start",
+        "Stop"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel",
+       "org.gnome.Shell.Extensions"
+      ]
+     },
+     {
+      "interfaces": {
+       "org.Gtk.MountOperationHandler": [
+        "AskPassword",
+        "AskQuestion",
+        "Close",
+        "ShowProcesses"
+       ],
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.Notifications": [
+        "CloseNotification",
+        "GetCapabilities",
+        "GetServerInformation",
+        "Notify"
+       ],
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.freedesktop.a11y.PointerLocator": [
+        "QueryPointer"
+       ],
+       "org.freedesktop.impl.portal.Access": [
+        "AccessDialog"
+       ],
+       "org.gnome.Mutter.ColorManager": [
+        "CalibrateMonitor"
+       ],
+       "org.gnome.Mutter.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "SetBacklight",
+        "SetCrtcGamma",
+        "SetOutputCTM"
+       ],
+       "org.gnome.Mutter.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.gnome.Mutter.InputCapture": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.InputMapping": [
+        "GetDeviceMapping"
+       ],
+       "org.gnome.Mutter.RemoteDesktop": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ScreenCast": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ServiceChannel": [
+        "OpenWaylandConnection",
+        "OpenWaylandServiceConnection"
+       ],
+       "org.gnome.SessionManager.EndSessionDialog": [
+        "Close",
+        "Open"
+       ],
+       "org.gnome.Shell": [
+        "Eval",
+        "FocusApp",
+        "FocusSearch",
+        "GrabAccelerator",
+        "GrabAccelerators",
+        "HideMonitorLabels",
+        "ScreenTransition",
+        "ShowApplications",
+        "ShowMonitorLabels",
+        "ShowOSD",
+        "UngrabAccelerator",
+        "UngrabAccelerators"
+       ],
+       "org.gnome.Shell.AudioDeviceSelection": [
+        "Close",
+        "Open"
+       ],
+       "org.gnome.Shell.Brightness": [
+        "SetAutoBrightnessTarget",
+        "SetDimming"
+       ],
+       "org.gnome.Shell.Extensions": [
+        "CheckForUpdates",
+        "DisableExtension",
+        "EnableExtension",
+        "GetExtensionErrors",
+        "GetExtensionInfo",
+        "InstallRemoteExtension",
+        "LaunchExtensionPrefs",
+        "ListExtensions",
+        "OpenExtensionPrefs",
+        "ReloadExtension",
+        "UninstallExtension"
+       ],
+       "org.gnome.Shell.Introspect": [
+        "GetRunningApplications",
+        "GetWindows"
+       ],
+       "org.gnome.Shell.ScreenTime": [],
+       "org.gnome.Shell.Screenshot": [
+        "FlashArea",
+        "InteractiveScreenshot",
+        "PickColor",
+        "Screenshot",
+        "ScreenshotArea",
+        "ScreenshotWindow",
+        "SelectArea"
+       ],
+       "org.gnome.Shell.Wacom.PadOsd": [
+        "Show"
+       ],
+       "org.gnome.Sysprof3.Profiler": [
+        "Start",
+        "Stop"
+       ],
+       "org.gnome.keyring.internal.Prompter": [
+        "BeginPrompting",
+        "PerformPrompt",
+        "StopPrompting"
+       ],
+       "org.gtk.Notifications": [
+        "AddNotification",
+        "RemoveNotification"
+       ]
+      },
+      "names": [
+       "org.gnome.Mutter.ColorManager",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.IdleMonitor",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.InputMapping",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel",
+       "org.gnome.Shell",
+       "org.gnome.Shell.Wacom.PadOsd"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel",
+       "org.gnome.SessionManager.EndSessionDialog",
+       "org.gnome.Shell.Extensions",
+       "org.gnome.Shell.Introspect",
+       "org.gnome.Shell.Screenshot"
+      ]
+     }
+    ],
+    "names": {
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.freedesktop.a11y.Manager' is refused: it reaches org.freedesktop.a1"
+     },
+     "org.gnome.Mutter.ColorManager": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.ColorManager' is refused: it reaches org.gnome.Mutter,"
+     },
+     "org.gnome.Mutter.DisplayConfig": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.DisplayConfig' is refused: it reaches org.gnome.Mutter"
+     },
+     "org.gnome.Mutter.IdleMonitor": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.IdleMonitor' is refused: it reaches org.gnome.Mutter, "
+     },
+     "org.gnome.Mutter.InputCapture": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.InputCapture' is refused: it reaches org.gnome.Mutter,"
+     },
+     "org.gnome.Mutter.InputMapping": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.InputMapping' is refused: it reaches org.gnome.Mutter,"
+     },
+     "org.gnome.Mutter.RemoteDesktop": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.RemoteDesktop' is refused: it reaches org.gnome.Mutter"
+     },
+     "org.gnome.Mutter.ScreenCast": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.ScreenCast' is refused: it reaches org.gnome.Mutter, w"
+     },
+     "org.gnome.Mutter.ServiceChannel": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.ServiceChannel' is refused: it reaches org.gnome.Mutte"
+     },
+     "org.gnome.Shell": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell' is refused: it reaches org.gnome.Shell, which can cont"
+     },
+     "org.gnome.Shell.Wacom.PadOsd": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Shell.Wacom.PadOsd' is refused: it reaches org.gnome.Shell, w"
+     }
+    },
+    "service_channel": {
+     "0": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "1": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "2": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "3": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "4": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "5": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "6": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "7": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     }
+    }
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "gnome-shell 51.1-1.fc45",
+   "wayland": {
+    "display": "probe-shell",
+    "full": {
+     "ext_background_effect_manager_v1": 1,
+     "gtk_shell1": 7,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 10,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_color_manager_v1": 2,
+     "wp_color_representation_manager_v1": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_drm_lease_device_v1": 1,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_session_manager_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 7,
+     "xdg_wm_dialog_v1": 1,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 3,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 2,
+     "zwp_text_input_manager_v3": 2,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "hyprland": {
+   "status": "not installed",
+   "version": null
+  },
+  "kwin": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"b\",\"data\":[false]}",
+      "member": "org.kde.kwin.Scripting.isScriptLoaded",
+      "name": "org.kde.KWin",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"s\",\"data\":[\"KWin Support Information:\\nThe following information should be used when requesting support on e.g. https://discuss.kde.org.\\nIt provides information about the currently running i",
+      "member": "org.kde.KWin.supportInformation",
+      "name": "org.kde.KWin",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"ao\",\"data\":[[\"/component/systemsettings_desktop\",\"/component/org_kde_krunner_desktop\",\"/component/org_kde_plasma_emojier_desktop\",\"/component/org_kde_screenreader_desktop\",\"/component/org_kde",
+      "member": "org.kde.KGlobalAccel.allComponents",
+      "name": "org.kde.kglobalaccel",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.freedesktop.a11y.PointerLocator": [
+        "QueryPointer"
+       ],
+       "org.kde.KGlobalAccel": [
+        "action",
+        "actionList",
+        "activateGlobalShortcutContext",
+        "allActionsForComponent",
+        "allComponents",
+        "allMainComponents",
+        "blockGlobalShortcuts",
+        "defaultShortcut",
+        "defaultShortcutKeys",
+        "doRegister",
+        "getComponent",
+        "getGlobalShortcutsByKey",
+        "globalShortcutAvailable",
+        "globalShortcutsByKey",
+        "isGlobalShortcutAvailable",
+        "setForeignShortcut",
+        "setForeignShortcutKeys",
+        "setInactive",
+        "setInverseShortcutActions",
+        "setShortcut",
+        "setShortcutKeys",
+        "shortcut",
+        "shortcutKeys",
+        "unRegister",
+        "unregister"
+       ],
+       "org.kde.KWin": [
+        "activeOutputName",
+        "currentDesktop",
+        "getWindowInfo",
+        "killWindow",
+        "nextDesktop",
+        "previousDesktop",
+        "queryWindowInfo",
+        "reconfigure",
+        "replace",
+        "setCurrentDesktop",
+        "showDebugConsole",
+        "showDesktop",
+        "supportInformation"
+       ],
+       "org.kde.KWin.EIS.InputCaptureManager": [
+        "addInputCapture",
+        "removeInputCapture"
+       ],
+       "org.kde.KWin.EIS.RemoteDesktop": [
+        "connectToEIS",
+        "disconnect"
+       ],
+       "org.kde.KWin.Effect.OutputLocator1": [
+        "hide",
+        "show"
+       ],
+       "org.kde.KWin.Effect.SystemBell1": [
+        "triggerScreen",
+        "triggerWindow"
+       ],
+       "org.kde.KWin.Effect.WindowView1": [
+        "activate"
+       ],
+       "org.kde.KWin.HighlightWindow": [
+        "highlightWindows"
+       ],
+       "org.kde.KWin.NightLight": [
+        "inhibit",
+        "preview",
+        "stopPreview",
+        "uninhibit"
+       ],
+       "org.kde.KWin.Plugins": [
+        "LoadPlugin",
+        "UnloadPlugin"
+       ],
+       "org.kde.KWin.ScreenShot2": [
+        "CaptureActiveScreen",
+        "CaptureActiveWindow",
+        "CaptureArea",
+        "CaptureInteractive",
+        "CaptureScreen",
+        "CaptureWindow",
+        "CaptureWorkspace"
+       ],
+       "org.kde.KWin.Session": [
+        "aboutToSaveSession",
+        "closeWaylandWindows",
+        "finishSaveSession",
+        "loadSession",
+        "quit",
+        "setState"
+       ],
+       "org.kde.KWin.TabletModeManager": [],
+       "org.kde.KWin.VirtualDesktopManager": [
+        "createDesktop",
+        "removeDesktop",
+        "setDesktopName"
+       ],
+       "org.kde.KeyboardLayouts": [
+        "getLayout",
+        "getLayoutsList",
+        "setLayout",
+        "switchToNextLayout",
+        "switchToPreviousLayout"
+       ],
+       "org.kde.kglobalaccel.Component": [
+        "allShortcutInfos",
+        "cleanUp",
+        "getShortcutContexts",
+        "invokeShortcut",
+        "isActive",
+        "shortcutNames"
+       ],
+       "org.kde.krunner1": [
+        "Actions",
+        "Match",
+        "Run"
+       ],
+       "org.kde.kwin.ColorPicker": [
+        "pick"
+       ],
+       "org.kde.kwin.Compositing": [
+        "reinitialize"
+       ],
+       "org.kde.kwin.Effects": [
+        "areEffectsSupported",
+        "debug",
+        "isEffectLoaded",
+        "isEffectSupported",
+        "loadEffect",
+        "reconfigureEffect",
+        "supportInformation",
+        "toggleEffect",
+        "unloadEffect"
+       ],
+       "org.kde.kwin.FTrace": [
+        "setEnabled"
+       ],
+       "org.kde.kwin.Scripting": [
+        "isScriptLoaded",
+        "loadDeclarativeScript",
+        "loadScript",
+        "start",
+        "unloadScript"
+       ],
+       "org.kde.kwin.VirtualKeyboard": [
+        "forceActivate",
+        "willShowOnActive"
+       ],
+       "org.kde.touchpad": [
+        "disable",
+        "enable",
+        "toggle"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager",
+       "org.kde.KWin",
+       "org.kde.KWin.Effect.WindowView1",
+       "org.kde.KWin.HighlightWindow",
+       "org.kde.KWin.NightLight",
+       "org.kde.KWin.ScreenShot2",
+       "org.kde.keyboard",
+       "org.kde.kglobalaccel",
+       "org.kde.touchpad"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.kde.KGlobalAccel",
+       "org.kde.KWin.EIS.InputCaptureManager",
+       "org.kde.KWin.EIS.RemoteDesktop",
+       "org.kde.KWin.Plugins",
+       "org.kde.KWin.ScreenShot2",
+       "org.kde.KWin.Session",
+       "org.kde.kglobalaccel.Component",
+       "org.kde.kwin.ColorPicker",
+       "org.kde.kwin.Effects",
+       "org.kde.kwin.Scripting",
+       "org.kde.kwin.VirtualKeyboard"
+      ]
+     }
+    ],
+    "names": {
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.freedesktop.a11y.Manager' is refused: it reaches org.freedesktop.a1"
+     },
+     "org.kde.KWin": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin' is refused: it reaches org.kde.KWin, which can control th"
+     },
+     "org.kde.KWin.Effect.WindowView1": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.Effect.WindowView1' is refused: it reaches org.kde.KWin, w"
+     },
+     "org.kde.KWin.HighlightWindow": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.HighlightWindow' is refused: it reaches org.kde.KWin, whic"
+     },
+     "org.kde.KWin.NightLight": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.NightLight' is refused: it reaches org.kde.KWin, which can"
+     },
+     "org.kde.KWin.ScreenShot2": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.ScreenShot2' is refused: it reaches org.kde.KWin, which ca"
+     },
+     "org.kde.keyboard": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.keyboard' is refused: it reaches org.kde.keyboard, which can co"
+     },
+     "org.kde.kglobalaccel": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.kglobalaccel' is refused: it reaches org.kde.kglobalaccel, whic"
+     },
+     "org.kde.touchpad": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    }
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "kwin 6.8.2-3.fc45",
+   "wayland": {
+    "display": "probe-kwin",
+    "full": {
+     "ext_background_effect_manager_v1": 1,
+     "ext_data_control_manager_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "kde_external_brightness_v1": 3,
+     "kde_lockscreen_overlay_v1": 1,
+     "kde_output_device_registry_v2": 26,
+     "kde_output_management_v2": 22,
+     "kde_output_order_v1": 1,
+     "kde_screen_edge_manager_v1": 1,
+     "org_kde_kwin_appmenu_manager": 2,
+     "org_kde_kwin_dpms_manager": 1,
+     "org_kde_kwin_fake_input": 6,
+     "org_kde_kwin_idle": 1,
+     "org_kde_kwin_keystate": 5,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "org_kde_kwin_server_decoration_palette_manager": 1,
+     "org_kde_kwin_shadow_manager": 2,
+     "org_kde_plasma_activation_feedback": 1,
+     "org_kde_plasma_shell": 8,
+     "org_kde_plasma_virtual_desktop_management": 4,
+     "org_kde_plasma_window_management": 21,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 11,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 3,
+     "wp_color_representation_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_linux_drm_syncobj_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_session_manager_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zkde_screencast_unstable_v1": 6,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 6,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 2,
+     "zwp_text_input_manager_v2": 1,
+     "zwp_text_input_manager_v3": 2,
+     "zxdg_decoration_manager_v1": 2,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zkde_screencast_unstable_v1"
+     ],
+     "clipboard": [
+      "ext_data_control_manager_v1"
+     ],
+     "desktop": [
+      "kde_external_brightness_v1",
+      "kde_screen_edge_manager_v1",
+      "org_kde_kwin_dpms_manager",
+      "org_kde_kwin_keystate",
+      "org_kde_plasma_virtual_desktop_management"
+     ],
+     "input": [
+      "org_kde_kwin_fake_input",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "shell": [
+      "org_kde_plasma_activation_feedback"
+     ],
+     "windows": [
+      "kde_lockscreen_overlay_v1",
+      "kde_output_management_v2",
+      "org_kde_plasma_shell",
+      "org_kde_plasma_window_management",
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_data_control_manager_v1",
+     "kde_lockscreen_overlay_v1",
+     "org_kde_kwin_fake_input",
+     "org_kde_plasma_activation_feedback",
+     "org_kde_plasma_window_management",
+     "wp_security_context_manager_v1",
+     "zkde_screencast_unstable_v1"
+    ],
+    "restricted": {
+     "ext_background_effect_manager_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "kde_external_brightness_v1": 3,
+     "kde_output_device_registry_v2": 26,
+     "kde_output_management_v2": 22,
+     "kde_output_order_v1": 1,
+     "kde_screen_edge_manager_v1": 1,
+     "org_kde_kwin_appmenu_manager": 2,
+     "org_kde_kwin_dpms_manager": 1,
+     "org_kde_kwin_idle": 1,
+     "org_kde_kwin_keystate": 5,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "org_kde_kwin_server_decoration_palette_manager": 1,
+     "org_kde_kwin_shadow_manager": 2,
+     "org_kde_plasma_shell": 8,
+     "org_kde_plasma_virtual_desktop_management": 4,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 11,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 3,
+     "wp_color_representation_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_linux_drm_syncobj_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_session_manager_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 6,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 2,
+     "zwp_text_input_manager_v2": 1,
+     "zwp_text_input_manager_v3": 2,
+     "zxdg_decoration_manager_v1": 2,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "restricted_privileged": {
+     "desktop": [
+      "kde_external_brightness_v1",
+      "kde_screen_edge_manager_v1",
+      "org_kde_kwin_dpms_manager",
+      "org_kde_kwin_keystate",
+      "org_kde_plasma_virtual_desktop_management"
+     ],
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "windows": [
+      "kde_output_management_v2",
+      "org_kde_plasma_shell",
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "labwc": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "labwc 0.20.2-2.fc45",
+   "wayland": {
+    "display": "wayland-0",
+    "full": {
+     "ext_data_control_manager_v1": 1,
+     "ext_foreign_toplevel_image_capture_source_manager_v1": 1,
+     "ext_foreign_toplevel_list_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "ext_image_copy_capture_manager_v1": 1,
+     "ext_output_image_capture_source_manager_v1": 1,
+     "ext_session_lock_manager_v1": 1,
+     "ext_workspace_manager_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_representation_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 4,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_input_method_manager_v2": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "ext_foreign_toplevel_image_capture_source_manager_v1",
+      "ext_image_copy_capture_manager_v1",
+      "ext_output_image_capture_source_manager_v1",
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "ext_data_control_manager_v1",
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_input_method_manager_v2",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "ext_foreign_toplevel_list_v1",
+      "ext_session_lock_manager_v1",
+      "ext_workspace_manager_v1",
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Command '['wl-paste', '--no-newline']' timed out after 10 seconds",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_data_control_manager_v1",
+     "ext_foreign_toplevel_image_capture_source_manager_v1",
+     "ext_foreign_toplevel_list_v1",
+     "ext_idle_notifier_v1",
+     "ext_image_copy_capture_manager_v1",
+     "ext_output_image_capture_source_manager_v1",
+     "ext_session_lock_manager_v1",
+     "ext_workspace_manager_v1",
+     "wp_security_context_manager_v1",
+     "zwlr_data_control_manager_v1",
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1",
+     "zwlr_screencopy_manager_v1",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_input_method_manager_v2",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "restricted": {
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_representation_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "restricted_privileged": {},
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "muffin": {
+   "status": "not installed",
+   "version": "muffin 6.8.1-1.fc45"
+  },
+  "mutter": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/ScreenCast/Session/u1\"]}",
+      "member": "org.gnome.Mutter.ScreenCast.CreateSession",
+      "name": "org.gnome.Mutter.ScreenCast",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/RemoteDesktop/Session/u1\"]}",
+      "member": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+      "name": "org.gnome.Mutter.RemoteDesktop",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"o\",\"data\":[\"/org/gnome/Mutter/InputCapture/Session/u1\"]}",
+      "member": "org.gnome.Mutter.InputCapture.CreateSession",
+      "name": "org.gnome.Mutter.InputCapture",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv}\",\"data\":[2,[[[\"Meta-0\",\"MetaVendor\",\"MetaVirtualMonitor\",\"0x00\"],[[\"1024x768@60.000\",1024,768,6.000000000000000000000e+01,1.00000000000",
+      "member": "org.gnome.Mutter.DisplayConfig.GetCurrentState",
+      "name": "org.gnome.Mutter.DisplayConfig",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"h\",\"data\":[{\"fd\":5,\"path\":\"socket:[268685]\",\"stat\":{\"dev\":{\"major\":0,\"minor\":10},\"inode\":268685,\"type\":\"sock\",\"mode\":\"0777\",\"linkCount\":1,\"uid\":1000,\"gid\":1000,\"size\":0,\"blockSize\":4096,\"bloc",
+      "member": "org.gnome.Mutter.ServiceChannel.OpenWaylandServiceConnection",
+      "name": "org.gnome.Mutter.ServiceChannel",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.freedesktop.DBus.ObjectManager": [
+        "GetManagedObjects"
+       ],
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.freedesktop.a11y.PointerLocator": [
+        "QueryPointer"
+       ],
+       "org.gnome.Mutter.ColorManager": [
+        "CalibrateMonitor"
+       ],
+       "org.gnome.Mutter.DisplayConfig": [
+        "ApplyConfiguration",
+        "ApplyMonitorsConfig",
+        "ChangeBacklight",
+        "GetCrtcGamma",
+        "GetCurrentState",
+        "GetResources",
+        "SetBacklight",
+        "SetCrtcGamma",
+        "SetOutputCTM"
+       ],
+       "org.gnome.Mutter.IdleMonitor": [
+        "AddIdleWatch",
+        "AddUserActiveWatch",
+        "GetIdletime",
+        "RemoveWatch",
+        "ResetIdletime"
+       ],
+       "org.gnome.Mutter.InputCapture": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.InputMapping": [
+        "GetDeviceMapping"
+       ],
+       "org.gnome.Mutter.RemoteDesktop": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ScreenCast": [
+        "CreateSession"
+       ],
+       "org.gnome.Mutter.ServiceChannel": [
+        "OpenWaylandConnection",
+        "OpenWaylandServiceConnection"
+       ],
+       "org.gnome.Sysprof3.Profiler": [
+        "Start",
+        "Stop"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager",
+       "org.gnome.Mutter.ColorManager",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.IdleMonitor",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.InputMapping",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.gnome.Mutter.DisplayConfig",
+       "org.gnome.Mutter.InputCapture",
+       "org.gnome.Mutter.RemoteDesktop",
+       "org.gnome.Mutter.ScreenCast",
+       "org.gnome.Mutter.ServiceChannel"
+      ]
+     }
+    ],
+    "names": {
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.freedesktop.a11y.Manager' is refused: it reaches org.freedesktop.a1"
+     },
+     "org.gnome.Mutter.ColorManager": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.ColorManager' is refused: it reaches org.gnome.Mutter,"
+     },
+     "org.gnome.Mutter.DisplayConfig": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.DisplayConfig' is refused: it reaches org.gnome.Mutter"
+     },
+     "org.gnome.Mutter.IdleMonitor": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.IdleMonitor' is refused: it reaches org.gnome.Mutter, "
+     },
+     "org.gnome.Mutter.InputCapture": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.InputCapture' is refused: it reaches org.gnome.Mutter,"
+     },
+     "org.gnome.Mutter.InputMapping": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.InputMapping' is refused: it reaches org.gnome.Mutter,"
+     },
+     "org.gnome.Mutter.RemoteDesktop": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.RemoteDesktop' is refused: it reaches org.gnome.Mutter"
+     },
+     "org.gnome.Mutter.ScreenCast": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.ScreenCast' is refused: it reaches org.gnome.Mutter, w"
+     },
+     "org.gnome.Mutter.ServiceChannel": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.gnome.Mutter.ServiceChannel' is refused: it reaches org.gnome.Mutte"
+     }
+    },
+    "service_channel": {
+     "0": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "1": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "2": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "3": {
+      "extra_globals": [
+       "mutter_x11_interop"
+      ],
+      "missing_globals": [],
+      "ok": true
+     },
+     "4": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "5": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "6": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     },
+     "7": {
+      "detail": "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Invalid service client type",
+      "ok": false
+     }
+    }
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "mutter 51.1-1.fc45",
+   "wayland": {
+    "display": "probe-mutter",
+    "full": {
+     "ext_background_effect_manager_v1": 1,
+     "gtk_shell1": 7,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 10,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_color_manager_v1": 2,
+     "wp_color_representation_manager_v1": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_drm_lease_device_v1": 1,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_session_manager_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 7,
+     "xdg_wm_dialog_v1": 1,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 3,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 2,
+     "zwp_text_input_manager_v3": 2,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "plasmashell": {
+   "dbus": {
+    "calls": [
+     {
+      "answer": "{\"type\":\"b\",\"data\":[false]}",
+      "member": "org.kde.kwin.Scripting.isScriptLoaded",
+      "name": "org.kde.KWin",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"s\",\"data\":[\"KWin Support Information:\\nThe following information should be used when requesting support on e.g. https://discuss.kde.org.\\nIt provides information about the currently running i",
+      "member": "org.kde.KWin.supportInformation",
+      "name": "org.kde.KWin",
+      "ok": true
+     },
+     {
+      "answer": "Call failed: Access denied",
+      "member": "org.freedesktop.a11y.KeyboardMonitor.WatchKeyboard",
+      "name": "org.freedesktop.a11y.Manager",
+      "ok": false
+     },
+     {
+      "answer": "{\"type\":\"ao\",\"data\":[[\"/component/systemsettings_desktop\",\"/component/org_kde_krunner_desktop\",\"/component/org_kde_plasma_emojier_desktop\",\"/component/org_kde_screenreader_desktop\",\"/component/org_kde",
+      "member": "org.kde.KGlobalAccel.allComponents",
+      "name": "org.kde.kglobalaccel",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"s\",\"data\":[\"2\"]}",
+      "member": "org.kde.PlasmaShell.evaluateScript",
+      "name": "org.kde.plasmashell",
+      "ok": true
+     },
+     {
+      "answer": "{\"type\":\"s\",\"data\":[\"\"]}",
+      "member": "org.kde.klipper.klipper.getClipboardContents",
+      "name": "org.kde.klipper",
+      "ok": true
+     }
+    ],
+    "connections": [
+     {
+      "interfaces": {
+       "org.freedesktop.Application": [
+        "Activate",
+        "ActivateAction",
+        "Open"
+       ],
+       "org.freedesktop.Notifications": [
+        "CloseNotification",
+        "GetCapabilities",
+        "GetServerInformation",
+        "Inhibit",
+        "Notify",
+        "UnInhibit"
+       ],
+       "org.freedesktop.impl.portal.Notification": [
+        "AddNotification",
+        "RemoveNotification"
+       ],
+       "org.kde.JobViewServer": [
+        "requestView"
+       ],
+       "org.kde.JobViewServerV2": [
+        "requestView"
+       ],
+       "org.kde.KDBusService": [
+        "CommandLine"
+       ],
+       "org.kde.NotificationManager": [
+        "InvokeAction",
+        "RegisterWatcher",
+        "UnRegisterWatcher"
+       ],
+       "org.kde.PlasmaShell": [
+        "activateLauncherMenu",
+        "changeShell",
+        "color",
+        "dumpCurrentLayoutJS",
+        "evaluateScript",
+        "grabContainmentImage",
+        "immutable",
+        "loadLookAndFeelDefaultLayout",
+        "setDashboardShown",
+        "setWallpaper",
+        "toggleActivityManager",
+        "toggleDashboard",
+        "toggleWidgetExplorer",
+        "wallpaper"
+       ],
+       "org.kde.PlasmaShell.StrutManager": [
+        "availableScreenRect",
+        "setAvailableScreenRect",
+        "setAvailableScreenRegion"
+       ],
+       "org.kde.klipper.klipper": [
+        "clearClipboardContents",
+        "clearClipboardHistory",
+        "getClipboardContents",
+        "getClipboardHistoryItem",
+        "getClipboardHistoryMenu",
+        "reloadConfig",
+        "saveClipboardHistory",
+        "setClipboardContents",
+        "showKlipperManuallyInvokeActionMenu",
+        "showKlipperPopupMenu"
+       ],
+       "org.kde.kuiserver": [
+        "emitJobUrlsChanged",
+        "registerService",
+        "registeredJobContacts",
+        "requiresJobTracker"
+       ],
+       "org.kde.libkonq.FileUndoManager": [
+        "get"
+       ],
+       "org.kde.osdService": [
+        "bluetoothEnabledChanged",
+        "brightnessChanged",
+        "hide",
+        "kbdLayoutChanged",
+        "keyboardBrightnessChanged",
+        "mediaPlayerVolumeChanged",
+        "microphoneVolumeChanged",
+        "powerManagementInhibitedChanged",
+        "powerProfileChanged",
+        "screenBrightnessChanged",
+        "showText",
+        "touchpadEnabledChanged",
+        "virtualDesktopChanged",
+        "virtualKeyboardEnabledChanged",
+        "volumeChanged",
+        "wifiEnabledChanged",
+        "wwanEnabledChanged"
+       ],
+       "org.qtproject.Qt.QApplication": [
+        "aboutQt",
+        "closeAllWindows",
+        "setAutoSipEnabled",
+        "setStyleSheet"
+       ],
+       "org.qtproject.Qt.QCoreApplication": [
+        "exit",
+        "quit"
+       ],
+       "org.qtproject.Qt.QGuiApplication": [
+        "setBadgeNumber"
+       ]
+      },
+      "names": [
+       "com.canonical.Unity",
+       "org.freedesktop.Notifications",
+       "org.freedesktop.impl.portal.desktop.plasmanotify",
+       "org.kde.JobViewServer",
+       "org.kde.StatusNotifierHost-44568",
+       "org.kde.klipper",
+       "org.kde.kuiserver",
+       "org.kde.plasmashell"
+      ],
+      "privileged_looking": []
+     },
+     {
+      "interfaces": {
+       "org.freedesktop.a11y.KeyboardMonitor": [
+        "GrabKeyboard",
+        "SetKeyGrabs",
+        "UngrabKeyboard",
+        "UnwatchKeyboard",
+        "WatchKeyboard"
+       ],
+       "org.freedesktop.a11y.PointerLocator": [
+        "QueryPointer"
+       ],
+       "org.kde.KGlobalAccel": [
+        "action",
+        "actionList",
+        "activateGlobalShortcutContext",
+        "allActionsForComponent",
+        "allComponents",
+        "allMainComponents",
+        "blockGlobalShortcuts",
+        "defaultShortcut",
+        "defaultShortcutKeys",
+        "doRegister",
+        "getComponent",
+        "getGlobalShortcutsByKey",
+        "globalShortcutAvailable",
+        "globalShortcutsByKey",
+        "isGlobalShortcutAvailable",
+        "setForeignShortcut",
+        "setForeignShortcutKeys",
+        "setInactive",
+        "setInverseShortcutActions",
+        "setShortcut",
+        "setShortcutKeys",
+        "shortcut",
+        "shortcutKeys",
+        "unRegister",
+        "unregister"
+       ],
+       "org.kde.KWin": [
+        "activeOutputName",
+        "currentDesktop",
+        "getWindowInfo",
+        "killWindow",
+        "nextDesktop",
+        "previousDesktop",
+        "queryWindowInfo",
+        "reconfigure",
+        "replace",
+        "setCurrentDesktop",
+        "showDebugConsole",
+        "showDesktop",
+        "supportInformation"
+       ],
+       "org.kde.KWin.EIS.InputCaptureManager": [
+        "addInputCapture",
+        "removeInputCapture"
+       ],
+       "org.kde.KWin.EIS.RemoteDesktop": [
+        "connectToEIS",
+        "disconnect"
+       ],
+       "org.kde.KWin.Effect.OutputLocator1": [
+        "hide",
+        "show"
+       ],
+       "org.kde.KWin.Effect.SystemBell1": [
+        "triggerScreen",
+        "triggerWindow"
+       ],
+       "org.kde.KWin.Effect.WindowView1": [
+        "activate"
+       ],
+       "org.kde.KWin.HighlightWindow": [
+        "highlightWindows"
+       ],
+       "org.kde.KWin.NightLight": [
+        "inhibit",
+        "preview",
+        "stopPreview",
+        "uninhibit"
+       ],
+       "org.kde.KWin.Plugins": [
+        "LoadPlugin",
+        "UnloadPlugin"
+       ],
+       "org.kde.KWin.ScreenShot2": [
+        "CaptureActiveScreen",
+        "CaptureActiveWindow",
+        "CaptureArea",
+        "CaptureInteractive",
+        "CaptureScreen",
+        "CaptureWindow",
+        "CaptureWorkspace"
+       ],
+       "org.kde.KWin.Session": [
+        "aboutToSaveSession",
+        "closeWaylandWindows",
+        "finishSaveSession",
+        "loadSession",
+        "quit",
+        "setState"
+       ],
+       "org.kde.KWin.TabletModeManager": [],
+       "org.kde.KWin.VirtualDesktopManager": [
+        "createDesktop",
+        "removeDesktop",
+        "setDesktopName"
+       ],
+       "org.kde.KeyboardLayouts": [
+        "getLayout",
+        "getLayoutsList",
+        "setLayout",
+        "switchToNextLayout",
+        "switchToPreviousLayout"
+       ],
+       "org.kde.kglobalaccel.Component": [
+        "allShortcutInfos",
+        "cleanUp",
+        "getShortcutContexts",
+        "invokeShortcut",
+        "isActive",
+        "shortcutNames"
+       ],
+       "org.kde.krunner1": [
+        "Actions",
+        "Match",
+        "Run"
+       ],
+       "org.kde.kwin.ColorPicker": [
+        "pick"
+       ],
+       "org.kde.kwin.Compositing": [
+        "reinitialize"
+       ],
+       "org.kde.kwin.Effects": [
+        "areEffectsSupported",
+        "debug",
+        "isEffectLoaded",
+        "isEffectSupported",
+        "loadEffect",
+        "reconfigureEffect",
+        "supportInformation",
+        "toggleEffect",
+        "unloadEffect"
+       ],
+       "org.kde.kwin.FTrace": [
+        "setEnabled"
+       ],
+       "org.kde.kwin.Scripting": [
+        "isScriptLoaded",
+        "loadDeclarativeScript",
+        "loadScript",
+        "start",
+        "unloadScript"
+       ],
+       "org.kde.kwin.VirtualKeyboard": [
+        "forceActivate",
+        "willShowOnActive"
+       ],
+       "org.kde.touchpad": [
+        "disable",
+        "enable",
+        "toggle"
+       ]
+      },
+      "names": [
+       "org.freedesktop.a11y.Manager",
+       "org.kde.KWin",
+       "org.kde.KWin.Effect.WindowView1",
+       "org.kde.KWin.HighlightWindow",
+       "org.kde.KWin.NightLight",
+       "org.kde.KWin.ScreenShot2",
+       "org.kde.keyboard",
+       "org.kde.kglobalaccel",
+       "org.kde.touchpad"
+      ],
+      "privileged_looking": [
+       "org.freedesktop.a11y.KeyboardMonitor",
+       "org.kde.KGlobalAccel",
+       "org.kde.KWin.EIS.InputCaptureManager",
+       "org.kde.KWin.EIS.RemoteDesktop",
+       "org.kde.KWin.Plugins",
+       "org.kde.KWin.ScreenShot2",
+       "org.kde.KWin.Session",
+       "org.kde.kglobalaccel.Component",
+       "org.kde.kwin.ColorPicker",
+       "org.kde.kwin.Effects",
+       "org.kde.kwin.Scripting",
+       "org.kde.kwin.VirtualKeyboard"
+      ]
+     },
+     {
+      "interfaces": {
+       "org.kde.ActivityManager.Activities": [
+        "ActivityDescription",
+        "ActivityIcon",
+        "ActivityInformation",
+        "ActivityName",
+        "AddActivity",
+        "CurrentActivity",
+        "ListActivities",
+        "ListActivitiesWithInformation",
+        "NextActivity",
+        "PreviousActivity",
+        "RemoveActivity",
+        "SetActivityDescription",
+        "SetActivityIcon",
+        "SetActivityName",
+        "SetCurrentActivity"
+       ],
+       "org.kde.ActivityManager.Application": [
+        "loadPlugin",
+        "quit",
+        "serviceVersion"
+       ],
+       "org.kde.ActivityManager.Features": [
+        "GetValue",
+        "IsFeatureOperational",
+        "ListFeatures",
+        "SetValue"
+       ],
+       "org.kde.ActivityManager.Resources": [
+        "RegisterResourceEvent",
+        "RegisterResourceMimetype",
+        "RegisterResourceTitle"
+       ],
+       "org.kde.ActivityManager.ResourcesLinking": [
+        "IsResourceLinkedToActivity",
+        "LinkResourceToActivity",
+        "UnlinkResourceFromActivity"
+       ],
+       "org.kde.ActivityManager.ResourcesScoring": [
+        "DeleteEarlierStats",
+        "DeleteRecentStats",
+        "DeleteStatsForResource"
+       ],
+       "org.kde.ActivityManager.Templates": [
+        "createActivity"
+       ],
+       "org.kde.krunner1": [
+        "Actions",
+        "Config",
+        "Match",
+        "Run",
+        "SetActivationToken",
+        "Teardown"
+       ],
+       "org.qtproject.Qt.QCoreApplication": [
+        "exit",
+        "quit"
+       ],
+       "org.qtproject.Qt.QGuiApplication": [
+        "setBadgeNumber"
+       ]
+      },
+      "names": [
+       "org.kde.ActivityManager",
+       "org.kde.runners.activities"
+      ],
+      "privileged_looking": []
+     }
+    ],
+    "names": {
+     "com.canonical.Unity": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.freedesktop.Notifications": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.freedesktop.a11y.Manager": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.freedesktop.a11y.Manager' is refused: it reaches org.freedesktop.a1"
+     },
+     "org.freedesktop.impl.portal.desktop.plasmanotify": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.freedesktop.impl.portal.desktop.plasmanotify' is refused: it reache"
+     },
+     "org.kde.ActivityManager": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.JobViewServer": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.KWin": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin' is refused: it reaches org.kde.KWin, which can control th"
+     },
+     "org.kde.KWin.Effect.WindowView1": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.Effect.WindowView1' is refused: it reaches org.kde.KWin, w"
+     },
+     "org.kde.KWin.HighlightWindow": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.HighlightWindow' is refused: it reaches org.kde.KWin, whic"
+     },
+     "org.kde.KWin.NightLight": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.NightLight' is refused: it reaches org.kde.KWin, which can"
+     },
+     "org.kde.KWin.ScreenShot2": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.KWin.ScreenShot2' is refused: it reaches org.kde.KWin, which ca"
+     },
+     "org.kde.StatusNotifierHost-44568": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.keyboard": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.keyboard' is refused: it reaches org.kde.keyboard, which can co"
+     },
+     "org.kde.kglobalaccel": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.kglobalaccel' is refused: it reaches org.kde.kglobalaccel, whic"
+     },
+     "org.kde.klipper": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.klipper' is refused: it reaches org.kde.klipper, which can cont"
+     },
+     "org.kde.kuiserver": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.plasmashell": {
+      "appjail_policy_allows": false,
+      "appjail_policy_reason": "dbus_filter entry 'org.kde.plasmashell' is refused: it reaches org.kde.plasmashell, which "
+     },
+     "org.kde.runners.activities": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     },
+     "org.kde.touchpad": {
+      "appjail_policy_allows": true,
+      "appjail_policy_reason": ""
+     }
+    }
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "plasma-workspace 6.8.2-1.fc45",
+   "wayland": {
+    "display": "probe-kwin",
+    "full": {
+     "ext_background_effect_manager_v1": 1,
+     "ext_data_control_manager_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "kde_external_brightness_v1": 3,
+     "kde_lockscreen_overlay_v1": 1,
+     "kde_output_device_registry_v2": 26,
+     "kde_output_management_v2": 22,
+     "kde_output_order_v1": 1,
+     "kde_screen_edge_manager_v1": 1,
+     "org_kde_kwin_appmenu_manager": 2,
+     "org_kde_kwin_dpms_manager": 1,
+     "org_kde_kwin_fake_input": 6,
+     "org_kde_kwin_idle": 1,
+     "org_kde_kwin_keystate": 5,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "org_kde_kwin_server_decoration_palette_manager": 1,
+     "org_kde_kwin_shadow_manager": 2,
+     "org_kde_plasma_activation_feedback": 1,
+     "org_kde_plasma_shell": 8,
+     "org_kde_plasma_virtual_desktop_management": 4,
+     "org_kde_plasma_window_management": 21,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 11,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 3,
+     "wp_color_representation_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_linux_drm_syncobj_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_session_manager_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zkde_screencast_unstable_v1": 6,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 6,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 2,
+     "zwp_text_input_manager_v2": 1,
+     "zwp_text_input_manager_v3": 2,
+     "zxdg_decoration_manager_v1": 2,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zkde_screencast_unstable_v1"
+     ],
+     "clipboard": [
+      "ext_data_control_manager_v1"
+     ],
+     "desktop": [
+      "kde_external_brightness_v1",
+      "kde_screen_edge_manager_v1",
+      "org_kde_kwin_dpms_manager",
+      "org_kde_kwin_keystate",
+      "org_kde_plasma_virtual_desktop_management"
+     ],
+     "input": [
+      "org_kde_kwin_fake_input",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "shell": [
+      "org_kde_plasma_activation_feedback"
+     ],
+     "windows": [
+      "kde_lockscreen_overlay_v1",
+      "kde_output_management_v2",
+      "org_kde_plasma_shell",
+      "org_kde_plasma_window_management",
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_data_control_manager_v1",
+     "kde_lockscreen_overlay_v1",
+     "org_kde_kwin_fake_input",
+     "org_kde_plasma_activation_feedback",
+     "org_kde_plasma_window_management",
+     "wp_security_context_manager_v1",
+     "zkde_screencast_unstable_v1"
+    ],
+    "restricted": {
+     "ext_background_effect_manager_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "kde_external_brightness_v1": 3,
+     "kde_output_device_registry_v2": 26,
+     "kde_output_management_v2": 22,
+     "kde_output_order_v1": 1,
+     "kde_screen_edge_manager_v1": 1,
+     "org_kde_kwin_appmenu_manager": 2,
+     "org_kde_kwin_dpms_manager": 1,
+     "org_kde_kwin_idle": 1,
+     "org_kde_kwin_keystate": 5,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "org_kde_kwin_server_decoration_palette_manager": 1,
+     "org_kde_kwin_shadow_manager": 2,
+     "org_kde_plasma_shell": 8,
+     "org_kde_plasma_virtual_desktop_management": 4,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 11,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_manager_v1": 3,
+     "wp_color_representation_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fifo_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_linux_drm_syncobj_manager_v1": 1,
+     "wp_pointer_warp_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_session_manager_v1": 1,
+     "xdg_system_bell_v1": 1,
+     "xdg_toplevel_drag_manager_v1": 1,
+     "xdg_toplevel_icon_manager_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 6,
+     "xdg_wm_dialog_v1": 1,
+     "zwlr_layer_shell_v1": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_linux_dmabuf_v1": 6,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 2,
+     "zwp_text_input_manager_v2": 1,
+     "zwp_text_input_manager_v3": 2,
+     "zxdg_decoration_manager_v1": 2,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "restricted_privileged": {
+     "desktop": [
+      "kde_external_brightness_v1",
+      "kde_screen_edge_manager_v1",
+      "org_kde_kwin_dpms_manager",
+      "org_kde_kwin_keystate",
+      "org_kde_plasma_virtual_desktop_management"
+     ],
+     "input": [
+      "zwp_keyboard_shortcuts_inhibit_manager_v1"
+     ],
+     "windows": [
+      "kde_output_management_v2",
+      "org_kde_plasma_shell",
+      "zwlr_layer_shell_v1"
+     ]
+    },
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "sway": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "sway 1.12-2.fc45",
+   "wayland": {
+    "display": "wayland-1",
+    "full": {
+     "ext_data_control_manager_v1": 1,
+     "ext_foreign_toplevel_image_capture_source_manager_v1": 1,
+     "ext_foreign_toplevel_list_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "ext_image_copy_capture_manager_v1": 1,
+     "ext_output_image_capture_source_manager_v1": 1,
+     "ext_session_lock_manager_v1": 1,
+     "ext_transient_seat_manager_v1": 1,
+     "ext_workspace_manager_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_representation_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_security_context_manager_v1": 1,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 5,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 5,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_input_method_manager_v2": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "ext_foreign_toplevel_image_capture_source_manager_v1",
+      "ext_image_copy_capture_manager_v1",
+      "ext_output_image_capture_source_manager_v1",
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "ext_data_control_manager_v1",
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "ext_transient_seat_manager_v1",
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_input_method_manager_v2",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "ext_foreign_toplevel_list_v1",
+      "ext_session_lock_manager_v1",
+      "ext_workspace_manager_v1",
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "This seat has no keyboard",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      },
+      "restricted": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "hidden_by_restriction": [
+     "ext_data_control_manager_v1",
+     "ext_foreign_toplevel_list_v1",
+     "ext_image_copy_capture_manager_v1",
+     "ext_session_lock_manager_v1",
+     "ext_transient_seat_manager_v1",
+     "ext_workspace_manager_v1",
+     "wp_security_context_manager_v1",
+     "zwlr_data_control_manager_v1",
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1",
+     "zwlr_screencopy_manager_v1",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_input_method_manager_v2",
+     "zwp_keyboard_shortcuts_inhibit_manager_v1",
+     "zwp_virtual_keyboard_manager_v1",
+     "zxdg_output_manager_v1"
+    ],
+    "restricted": {
+     "ext_foreign_toplevel_image_capture_source_manager_v1": 1,
+     "ext_idle_notifier_v1": 2,
+     "ext_output_image_capture_source_manager_v1": 1,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_fixes": 1,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_alpha_modifier_v1": 1,
+     "wp_color_representation_manager_v1": 1,
+     "wp_content_type_manager_v1": 1,
+     "wp_cursor_shape_manager_v1": 2,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_activation_v1": 1,
+     "xdg_toplevel_tag_manager_v1": 1,
+     "xdg_wm_base": 5,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_text_input_manager_v3": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1
+    },
+    "restricted_privileged": {
+     "capture": [
+      "ext_foreign_toplevel_image_capture_source_manager_v1",
+      "ext_output_image_capture_source_manager_v1"
+     ]
+    },
+    "security_context": true,
+    "wayland_info_agrees": true
+   }
+  },
+  "wayfire": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "wayfire 0.10.1-2.fc45",
+   "wayland": {
+    "display": "wayland-1",
+    "full": {
+     "ext_idle_notifier_v1": 2,
+     "ext_session_lock_manager_v1": 1,
+     "gtk_shell1": 3,
+     "org_kde_kwin_server_decoration_manager": 1,
+     "wl_compositor": 6,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_seat": 9,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_cursor_shape_manager_v1": 1,
+     "wp_fractional_scale_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 6,
+     "xwayland_shell_v1": 1,
+     "zwf_shell_manager_v2": 2,
+     "zwlr_data_control_manager_v1": 2,
+     "zwlr_export_dmabuf_manager_v1": 1,
+     "zwlr_foreign_toplevel_manager_v1": 3,
+     "zwlr_gamma_control_manager_v1": 1,
+     "zwlr_layer_shell_v1": 4,
+     "zwlr_output_manager_v1": 4,
+     "zwlr_output_power_manager_v1": 1,
+     "zwlr_screencopy_manager_v1": 3,
+     "zwlr_virtual_pointer_manager_v1": 2,
+     "zwp_idle_inhibit_manager_v1": 1,
+     "zwp_keyboard_shortcuts_inhibit_manager_v1": 1,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_pointer_gestures_v1": 3,
+     "zwp_primary_selection_device_manager_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_tablet_manager_v2": 1,
+     "zwp_virtual_keyboard_manager_v1": 1,
+     "zxdg_decoration_manager_v1": 1,
+     "zxdg_exporter_v1": 1,
+     "zxdg_exporter_v2": 1,
+     "zxdg_importer_v1": 1,
+     "zxdg_importer_v2": 1,
+     "zxdg_output_manager_v1": 3
+    },
+    "full_privileged": {
+     "capture": [
+      "zwlr_export_dmabuf_manager_v1",
+      "zwlr_screencopy_manager_v1"
+     ],
+     "clipboard": [
+      "zwlr_data_control_manager_v1"
+     ],
+     "input": [
+      "zwf_shell_manager_v2",
+      "zwlr_virtual_pointer_manager_v1",
+      "zwp_keyboard_shortcuts_inhibit_manager_v1",
+      "zwp_virtual_keyboard_manager_v1"
+     ],
+     "windows": [
+      "ext_session_lock_manager_v1",
+      "zwlr_foreign_toplevel_manager_v1",
+      "zwlr_gamma_control_manager_v1",
+      "zwlr_layer_shell_v1",
+      "zwlr_output_manager_v1",
+      "zwlr_output_power_manager_v1"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "",
+       "ok": true
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  },
+  "weston": {
+   "dbus": {
+    "calls": [],
+    "connections": [],
+    "names": {}
+   },
+   "status": "ok",
+   "survived_clients": true,
+   "version": "weston 15.0.1-3.fc45",
+   "wayland": {
+    "display": "probe-wl",
+    "full": {
+     "weston_capture_v1": 2,
+     "weston_desktop_shell": 1,
+     "wl_compositor": 5,
+     "wl_data_device_manager": 3,
+     "wl_output": 4,
+     "wl_shm": 2,
+     "wl_subcompositor": 1,
+     "wp_commit_timing_manager_v1": 1,
+     "wp_fifo_manager_v1": 1,
+     "wp_presentation": 2,
+     "wp_single_pixel_buffer_manager_v1": 1,
+     "wp_tearing_control_manager_v1": 1,
+     "wp_viewporter": 1,
+     "xdg_wm_base": 5,
+     "zwp_input_panel_v1": 1,
+     "zwp_input_timestamps_manager_v1": 1,
+     "zwp_linux_explicit_synchronization_v1": 2,
+     "zwp_pointer_constraints_v1": 1,
+     "zwp_relative_pointer_manager_v1": 1,
+     "zwp_text_input_manager_v1": 1,
+     "zxdg_output_manager_v1": 2
+    },
+    "full_privileged": {
+     "capture": [
+      "weston_capture_v1"
+     ],
+     "input": [
+      "zwp_input_panel_v1"
+     ],
+     "windows": [
+      "weston_desktop_shell"
+     ]
+    },
+    "functional": {
+     "capture": {
+      "full": {
+       "detail": "compositor doesn't support the screen capture protocol",
+       "ok": false
+      }
+     },
+     "clipboard": {
+      "full": {
+       "detail": "no victim: The compositor does not seem to implement seat, which is required for wl-clipboard to work",
+       "ok": false
+      }
+     },
+     "type": {
+      "full": {
+       "detail": "Compositor does not support the virtual keyboard protocol",
+       "ok": false
+      }
+     }
+    },
+    "security_context": false,
+    "wayland_info_agrees": true
+   }
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "fedora",
+  "kernel": "7.2.11-300.fc45.x86_64",
+  "name": "Fedora Linux 45 (Cloud Edition)",
+  "version": "45"
+ }
+}

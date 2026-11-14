@@ -9,13 +9,13 @@
 
 ## Rules for every change
 
-- **Standard library only**, Python 3.12 or later, Linux on x86-64; Debian 13 and Ubuntu 26.04 are the minimum systems,
+- **Standard library only**, Python 3.12 or later, Linux on x86-64; Debian 13, Ubuntu 26.04 and Fedora 45 are the minimum systems,
   with no workarounds for older ones.
 - **Never source, execute or evaluate text from the network**, catalogs included; parse it as data and clean it before
   printing.
 - **Tests and documentation in the same commit as the code.** When behaviour changes, update the affected pages of this
   site (the concept page, the guide, the reference, a decision page if a choice was made) and the tests.
-- **Both guests pass** before a commit: `tests/vm/test.sh` and `GUEST=ubuntu tests/vm/test.sh`.
+- **Every guest passes** before a commit: `tests/vm/test.sh`, `GUEST=ubuntu tests/vm/test.sh` and `GUEST=fedora tests/vm/test.sh`.
 - **Licensing:** MPL-2.0, REUSE-compliant at every commit. Every code file starts with
   `SPDX-FileCopyrightText: 2026 Alberto P` and `SPDX-License-Identifier: MPL-2.0` (after a shebang); other files are
   covered by `REUSE.toml`. A new file type needs a header or a `REUSE.toml` entry in the same commit.

@@ -6,14 +6,15 @@ focus, controlling other windows), or interfaces it does not know. Why: [Wayland
 
 | Desktop or compositor (measured versions) | Apps run without `full_wayland` |
 |---|---|
-| GNOME 48.7, 50.1 | yes |
+| GNOME 48.7, 50.1, 51.1 | yes |
 | Cinnamon 6.4 | yes |
-| sway 1.10, 1.11 | yes |
-| labwc 0.8, 0.9 | yes |
+| Cinnamon 6.8 | no: it offers `xapp_shell_v1`, which appjail has not cleared |
+| sway 1.10, 1.11, 1.12 | yes |
+| labwc 0.8, 0.9, 0.20 | yes |
 | Hyprland 0.55 | yes |
-| KDE Plasma (KWin 6.3, 6.6) | no: its app socket still offers clipboard reading without focus |
+| KDE Plasma (KWin 6.3, 6.6, 6.8) | no: its app socket still offers clipboard reading without focus |
 | Hyprland 0.53 | no: virtual keyboard and pointer |
-| Wayfire, Cage, Weston | no: capture, input and window control |
+| Wayfire, Cage, Weston 14, 15 | no: capture, input and window control |
 
 Copy and paste with the keyboard focus works everywhere.
 

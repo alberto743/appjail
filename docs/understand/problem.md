@@ -82,7 +82,7 @@ the untrusted bytes before anything about them is known. Containment cannot make
   files, including the manifests and the pins. appjail keeps a history of its manifests and warns when one was changed
   behind its back; that is evidence, not prevention.
 - **It is not audited.** It is maintained by one person and has had no external review.
-- **It runs on x86-64 Linux only**, with Debian 13 and Ubuntu 26.04 as the minimum supported systems.
+- **It runs on x86-64 Linux only**, with Debian 13, Ubuntu 26.04 and Fedora 45 as the minimum supported systems.
 
 The design's own measured limits (which desktops it was tested on, which devices and services were checked by hand)
 are stated on the page of each mechanism.

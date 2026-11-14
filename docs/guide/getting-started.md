@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Linux on x86-64 with unprivileged user namespaces. Supported: Debian 13 and Ubuntu 26.04 or later.
+- Linux on x86-64 with unprivileged user namespaces. Supported: Debian 13, Ubuntu 26.04 and Fedora 45, or later.
 - Python 3.12 or later. appjail uses only the standard library.
 - A Wayland desktop for apps with a window. The host's X11 server is never shared; X11-only apps get a private one.
 
@@ -13,20 +13,29 @@ sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland openbox
     librsvg2-bin libgtk-3-bin desktop-file-utils dbus-bin libnotify-bin
 ```
 
+On Fedora:
+
+```sh
+sudo dnf install bubblewrap squashfs-tools passt xdg-dbus-proxy xorg-x11-server-Xwayland openbox git \
+    librsvg2-tools gtk-update-icon-cache desktop-file-utils dbus-tools libnotify
+```
+
+The table gives the Debian and Ubuntu names; where Fedora's differ they follow in parentheses.
+
 | Package | Needed for |
 |---|---|
 | `bubblewrap` (0.10 or later) | every jail |
 | `squashfs-tools` | extracting AppImages (`unsquashfs`) |
 | `passt` | the `network` permission, and a private network for the download jails; without it apps with `network` are refused and downloads use the host network with a warning |
 | `xdg-dbus-proxy` | D-Bus grants and portals |
-| `xwayland`, `openbox` | X11-only apps (`openbox` for `xwayland-rootful`) |
+| `xwayland` (`xorg-x11-server-Xwayland`), `openbox` | X11-only apps (`openbox` for `xwayland-rootful`) |
 | `git` | the manifest history |
-| `librsvg2-bin`, `libgtk-3-bin`, `desktop-file-utils` | menu icons from SVG, icon caches, file types |
-| `dbus-bin`, `libnotify-bin` | D-Bus owner checks and the document portal; error notices from the menu |
-| `pipewire`, `pipewire-bin`, `wireplumber`, `pipewire-pulse` | sound through the private audio graph (usually already installed) |
-| `python3-tk` (optional) | the window, `appjail-gui` |
+| `librsvg2-bin` (`librsvg2-tools`), `libgtk-3-bin` (`gtk-update-icon-cache`), `desktop-file-utils` | menu icons from SVG, icon caches, file types |
+| `dbus-bin` (`dbus-tools`), `libnotify-bin` (`libnotify`) | D-Bus owner checks and the document portal; error notices from the menu |
+| `pipewire`, `pipewire-bin` (`pipewire-utils`), `wireplumber`, `pipewire-pulse` (`pipewire-pulseaudio`) | sound through the private audio graph (usually already installed) |
+| `python3-tk` (`python3-tkinter`, optional) | the window, `appjail-gui` |
 
-Linux 6.12 or later with Landlock is needed for the `network_host` permission; both supported systems have it.
+Linux 6.12 or later with Landlock is needed for the `network_host` permission; every supported system has it.
 
 ## Install
 

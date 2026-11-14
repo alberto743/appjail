@@ -1,6 +1,6 @@
 # Compositor security assessment
 
-Status: measurements complete for Debian 13 and Ubuntu 26.04. Decided: option A below (the rule reads the registry of the
+Status: measurements complete for Debian 13, Ubuntu 26.04 and Fedora 45. Decided: option A below (the rule reads the registry of the
 socket the app will get), KWin is refused by default, and the D-Bus names that hand over the desktop are refused as a family.
 The implementation follows in `src/appjail/wayland.py`, `grants.py` and `dbusproxy.py`; this document keeps the evidence. A
 granted D-Bus name used to reach every interface of the connection that owns it, which defeated the refused names on GNOME
@@ -19,7 +19,7 @@ the claim with measurements and sets out what a correct rule has to rest on.
 ## Method
 
 `tests/compositors/probe.py` runs, unchanged, in a guest per distribution (`GUEST=debian-compositors`,
-`GUEST=ubuntu-compositors`, see `tests/vm/guest.sh`; the packages are in `tests/vm/packages-compositors.txt`). For every
+`GUEST=ubuntu-compositors`, `GUEST=fedora-compositors`, see `tests/vm/guest.sh`; the packages are in `tests/vm/packages-compositors.txt`). For every
 compositor it starts the compositor headless (Muffin and the Cinnamon shell, which have no headless backend, as a window of a
 private Xvfb) in a private runtime directory and on a private session bus, and records:
 
@@ -38,7 +38,7 @@ compositor that is not here yet, step by step, and what went wrong on the way: [
 
 Raw results: `results-*.json` (probe.py), `rule-a-*.json` (rule_a.py), `clipboard-*.json` (clipboard.py), `mutter-dbus-*.json`,
 `cinnamon-dbus-*.json` and `shared-connection-*.json` (shared_connection.py), one file per distribution, in this directory. Every table between `generated` markers is written by `tests/compositors/report.py --write`
-from those files and checked against them by `tests/test_assessment.py`; edit the results or the tool, not the table. Both
+from those files and checked against them by `tests/test_assessment.py`; edit the results or the tool, not the table. The
 guests ran identical code. Nothing here comes from a third party. The survey (`results-*.json`) was taken before the
 decisions: its `appjail_policy_*` fields and its privileged counts describe appjail's D-Bus name policy and rule as they
 then were, not as they are now.
@@ -51,28 +51,40 @@ Cell format is capture / clipboard / typing, `yes` meaning a client succeeded.
 | Compositor | Distribution | Version | Security context | Privileged interfaces on the full socket | Full socket: capture / clipboard / typing | Restricted socket: capture / clipboard / typing | Note |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | cage | debian 13 | 0.2.0-2 | no | 6 | yes/yes/yes | - |  |
+| cage | fedora 45 | 0.3.1-2.fc45 | no | 7 | yes/yes/yes | - |  |
 | cage | ubuntu 26.04 | 0.2.1-1 | no | 6 | yes/yes/yes | - |  |
 | cinnamon | debian 13 | 6.4.10-2+deb13u1 | no | 1 | no/no/no | - |  |
+| cinnamon | fedora 45 | 6.8.0-1.fc45 | no | 3 | no/yes/no | - |  |
 | cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | no | 1 | no/no/no | - |  |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | no | 1 | no/no/no | - |  |
+| gnome-shell | fedora 45 | 51.1-1.fc45 | no | 1 | no/no/no | - |  |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | no | 1 | no/no/no | - |  |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | yes | 20 | no/yes/yes | no/no/no |  |
+| hyprland | fedora 45 | - | - | - | - | - | not installed |
 | hyprland | ubuntu 26.04 | 0.53.3+ds-4 | yes | 17 | - | - | ConnectionRefusedError: [Errno 111] Connection refused |
 | kwin | debian 13 | 4:6.3.6-1 | yes | 5 | no/yes/no | no/yes/no |  |
+| kwin | fedora 45 | 6.8.2-3.fc45 | yes | 15 | no/yes/no | no/yes/no |  |
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | yes | 5 | no/yes/no | no/yes/no |  |
 | labwc | debian 13 | 0.8.3-1 | yes | 14 | yes/yes/yes | no/no/no |  |
+| labwc | fedora 45 | 0.20.2-2.fc45 | yes | 18 | yes/yes/yes | no/no/no |  |
 | labwc | ubuntu 26.04 | 0.9.3-1 | yes | 17 | yes/yes/yes | no/no/no |  |
 | muffin | debian 13 | 6.4.1-1 | no | 1 | no/no/no | - |  |
+| muffin | fedora 45 | 6.8.1-1.fc45 | - | - | - | - | not installed |
 | muffin | ubuntu 26.04 | 6.4.1-1build1 | no | 1 | no/no/no | - |  |
 | mutter | debian 13 | 48.7-0+deb13u1 | no | 1 | no/no/no | - |  |
+| mutter | fedora 45 | 51.1-1.fc45 | no | 1 | no/no/no | - |  |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | no | 1 | no/no/no | - |  |
 | plasmashell | debian 13 | 4:6.3.6-2 | yes | 9 | no/yes/no | no/yes/no |  |
+| plasmashell | fedora 45 | 6.8.2-1.fc45 | yes | 15 | no/yes/no | no/yes/no |  |
 | plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | yes | 10 | no/yes/no | no/yes/no |  |
 | sway | debian 13 | 1.10.1-2 | yes | 14 | yes/yes/yes | no/no/no |  |
+| sway | fedora 45 | 1.12-2.fc45 | yes | 20 | yes/yes/yes | no/no/no |  |
 | sway | ubuntu 26.04 | 1.11-3 | yes | 17 | yes/yes/yes | no/no/no |  |
 | wayfire | debian 13 | 0.9.0-5 | no | 12 | no/yes/yes | - |  |
+| wayfire | fedora 45 | 0.10.1-2.fc45 | no | 13 | yes/yes/yes | - |  |
 | wayfire | ubuntu 26.04 | 0.10.0-1 | no | 13 | yes/yes/yes | - |  |
 | weston | debian 13 | 14.0.2-1 | no | 3 | no/no/no | - |  |
+| weston | fedora 45 | 15.0.1-3.fc45 | no | 3 | no/no/no | - |  |
 | weston | ubuntu 26.04 | 14.0.2-5 | no | 3 | no/no/no | - |  |
 <!-- /generated -->
 
@@ -80,18 +92,18 @@ The Hyprland 0.53.3 row on Ubuntu comes from the first survey, whose probe conne
 
 What the table shows:
 
-1. **sway, labwc, Hyprland 0.55** (wlroots-style): the security context works. The restricted socket hides every privileged
+1. **sway, labwc, Hyprland 0.55** (wlroots-style; sway 1.12 and labwc 0.20 on Fedora): the security context works. The restricted socket hides every privileged
    interface and none of the three capabilities works on it, while all work (or clipboard and typing do) on the ordinary
    socket. This is the model appjail was written for.
-2. **KWin (6.3.6 and 6.6.6)**: the protocol is offered, but the restricted socket hides **only the protocol manager itself**.
+2. **KWin (6.3.6, 6.6.6 and 6.8.2)**: the protocol is offered, but the restricted socket hides **only the protocol manager itself**.
    A client on it sees the same privileged-looking interfaces (`zwlr_data_control_manager_v1`, `zwlr_layer_shell_v1`,
    `org_kde_plasma_shell`, `kde_output_management_v2`, keyboard-shortcuts inhibit) and **can read another client's clipboard**.
    KWin guards the rest by other means (it does not advertise screen capture or fake input to an unauthorised client).
-3. **GNOME (Mutter and GNOME Shell, 48.7 and 50.1)**: no security context, and no privileged capability on the socket: none of
+3. **GNOME (Mutter and GNOME Shell, 48.7, 50.1 and 51.1)**: no security context, and no privileged capability on the socket: none of
    the three works, and the only privileged-looking global is keyboard-shortcuts inhibit.
-4. **Wayfire, Cage**: no security context, and the full socket allows clipboard reads and typing (Cage and Wayfire 0.10 also
-   capture).
-5. **Weston 14**: no security context; none of the three works. It advertises weston-specific interfaces
+4. **Wayfire, Cage**: no security context, and the full socket allows clipboard reads and typing (Cage and Wayfire 0.10
+   and later also capture).
+5. **Weston 14 and 15**: no security context; none of the three works. It advertises weston-specific interfaces
    (`weston_capture_v1`, `weston_desktop_shell`, `zwp_input_panel_v1`) that these tools do not exercise, so this is not a
    statement that weston is safe.
 6. **Hyprland 0.53.3 (Ubuntu 26.04)**: the table above comes from the first survey, where connections to the restricted socket
@@ -120,6 +132,22 @@ What the table shows:
    `org.kde.PlasmaShell.evaluateScript` runs a desktop script (in a manual check, a script wrote a file into the user's
    configuration directory), and `org.kde.klipper.klipper.getClipboardContents` (and the history calls) returned text
    another client had copied. Both names are refused (decision D).
+10. **Fedora 45** (Mutter and GNOME Shell 51.1, KWin and Plasma 6.8.2, Cinnamon 6.8.0, sway 1.12, labwc 0.20, Wayfire 0.10.1,
+    Cage 0.3.1, Weston 15; measured 2026-11-14): the same results as the other two systems, with five differences.
+    **New globals.** Seven globals were in no list, which refuses the compositor that offers them. Allowed after reading their
+    definitions: `ext_background_effect_manager_v1` (blur behind the client's own translucent surface),
+    `xdg_session_manager_v1` (the client's own toplevels, restored through a session token the compositor makes) and
+    `kde_output_device_registry_v2` (the list of outputs, as `kde_output_device_v2`, already allowed, describes them).
+    Refused: `kde_lockscreen_overlay_v1` (a surface shown over the lock screen). Refused until they are checked:
+    `xapp_shell_v1` (Cinnamon: a window's icon may be an absolute path the shell opens outside the jail) and
+    `org_kde_plasma_activation_feedback` (its definition could not be found). The verdicts, rerun live with the new
+    lists: GNOME runs; Cinnamon, KWin and Plasma are refused.
+    **Cinnamon 6.8 renamed its screenshot service** from `org.gnome.Shell.Screenshot` to `org.cinnamon.Screenshot`, which
+    answers `Screenshot` from any client (the D-Bus section below), so that name and `org.cinnamon.ScreenSaver` are refused.
+    **Muffin and Cinnamon survived `wl-copy` and `wl-paste`**, which ended them in 6.4. **KWin 6.8 hosts `org.kde.touchpad`
+    on the connection that owns `org.kde.KWin`**, so granting it reaches KWin (the shared-connection section below).
+    **Not measured:** Hyprland (Fedora does not package it) and standalone Muffin (Fedora's `muffin` ships no executable;
+    only the shell is measured, which runs Muffin).
 
 ## Results: option A and the clipboard, tried live
 
@@ -134,34 +162,46 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | Compositor | Distribution | Version | Socket the app gets | Privileged interfaces left on it | Window client | Verdict |
 | --- | --- | --- | --- | --- | --- | --- |
 | cage | debian 13 | 0.2.0-2 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
+| cage | fedora 45 | 0.3.1-2.fc45 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cage | ubuntu 26.04 | 0.2.1-1 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cinnamon | debian 13 | 6.4.10-2+deb13u1 | full | nothing | works | run |
+| cinnamon | fedora 45 | 6.8.0-1.fc45 | full | shell: xapp_shell_v1; windows: zwlr_layer_shell_v1 | works | refuse |
 | cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | full | nothing | works | run |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | nothing | works | run |
+| gnome-shell | fedora 45 | 51.1-1.fc45 | full | nothing | works | run |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | nothing | works | run |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | nothing | works | run |
+| hyprland | fedora 45 | - | - | - | - | not installed |
 | hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | input: zwlr_virtual_pointer_manager_v1, zwp_input_method_manager_v2, zwp_virtual_keyboard_manager_v1 | works | refuse |
 | kwin | debian 13 | 4:6.3.6-1 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| kwin | fedora 45 | 6.8.2-3.fc45 | restricted | desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | labwc | debian 13 | 0.8.3-1 | restricted | nothing | works | run |
+| labwc | fedora 45 | 0.20.2-2.fc45 | restricted | nothing | works | run |
 | labwc | ubuntu 26.04 | 0.9.3-1 | restricted | nothing | works | run |
 | muffin | debian 13 | 6.4.1-1 | full | nothing | works | run |
+| muffin | fedora 45 | 6.8.1-1.fc45 | - | - | - | not installed |
 | muffin | ubuntu 26.04 | 6.4.1-1build1 | full | nothing | works | run |
 | mutter | debian 13 | 48.7-0+deb13u1 | full | nothing | works | run |
+| mutter | fedora 45 | 51.1-1.fc45 | full | nothing | works | run |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | nothing | works | run |
 | plasmashell | debian 13 | 4:6.3.6-2 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| plasmashell | fedora 45 | 6.8.2-1.fc45 | restricted | desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | sway | debian 13 | 1.10.1-2 | restricted | nothing | works | run |
+| sway | fedora 45 | 1.12-2.fc45 | restricted | nothing | works | run |
 | sway | ubuntu 26.04 | 1.11-3 | restricted | nothing | works | run |
 | wayfire | debian 13 | 0.9.0-5 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; clipboard: zwlr_data_control_manager_v1; input: zwf_shell_manager_v2, zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_layer_shell_v1, zwlr_output_manager_v1, zwlr_output_power_manager_v1 | works | refuse |
+| wayfire | fedora 45 | 0.10.1-2.fc45 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; clipboard: zwlr_data_control_manager_v1; input: zwf_shell_manager_v2, zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: ext_session_lock_manager_v1, zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_layer_shell_v1, zwlr_output_manager_v1, zwlr_output_power_manager_v1 | works | refuse |
 | wayfire | ubuntu 26.04 | 0.10.0-1 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; clipboard: zwlr_data_control_manager_v1; input: zwf_shell_manager_v2, zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: ext_session_lock_manager_v1, zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_layer_shell_v1, zwlr_output_manager_v1, zwlr_output_power_manager_v1 | works | refuse |
 | weston | debian 13 | 14.0.2-1 | full | capture: weston_capture_v1; input: zwp_input_panel_v1; windows: weston_desktop_shell | works | refuse |
+| weston | fedora 45 | 15.0.1-3.fc45 | full | capture: weston_capture_v1; input: zwp_input_panel_v1; windows: weston_desktop_shell | works | refuse |
 | weston | ubuntu 26.04 | 14.0.2-5 | full | capture: weston_capture_v1; input: zwp_input_panel_v1; windows: weston_desktop_shell | works | refuse |
 <!-- /generated -->
 
-In short: sway, labwc, Hyprland 0.55 and GNOME run (nothing left on the socket); KWin, Wayfire, Cage, Weston and Hyprland 0.53 are
-refused. Weston is refused although none of the three probes worked on it, which is conservative. A window client ran on the
-chosen socket of every compositor, on both distributions.
+In short: sway, labwc, Hyprland 0.55 and GNOME run (nothing left on the socket); KWin, Wayfire, Cage, Weston, Hyprland 0.53 and,
+on Fedora 45, Cinnamon are refused. Weston is refused although none of the three probes worked on it, which is conservative. A window client ran on the
+chosen socket of every compositor, on every distribution.
 
 `tests/compositors/clipboard.py` tests what an ordinary user does: copy in one window, paste in another, with real keyboard
 focus, in both directions between a window outside and a window on the app's socket (`clipboard-*.json`). The headless
@@ -173,26 +213,40 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 | Compositor | Distribution | Version | Socket the app gets | Outside → app | App → outside |
 | --- | --- | --- | --- | --- | --- |
 | cage | debian 13 | 0.2.0-2 | full | ok | ok |
+| cage | fedora 45 | 0.3.1-2.fc45 | full | ok | ok |
 | cage | ubuntu 26.04 | 0.2.1-1 | full | ok | ok |
 | cinnamon | debian 13 | 6.4.10-2+deb13u1 | full | ok | ok |
+| cinnamon | fedora 45 | 6.8.0-1.fc45 | full | ok | ok |
 | cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | full | ok | ok |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | ok | ok |
+| gnome-shell | fedora 45 | 51.1-1.fc45 | full | untestable (a window never got keyboard focus) | untestable (a window never got keyboard focus) |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | full | ok | ok |
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | ok | ok |
+| hyprland | fedora 45 | - | - | - | not installed |
 | hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | ok | untestable (the compositor stopped answering: it crashed) |
 | kwin | debian 13 | 4:6.3.6-1 | restricted | ok | ok |
+| kwin | fedora 45 | 6.8.2-3.fc45 | restricted | ok | ok |
 | kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | ok | ok |
 | labwc | debian 13 | 0.8.3-1 | restricted | ok | ok |
+| labwc | fedora 45 | 0.20.2-2.fc45 | restricted | ok | ok |
 | labwc | ubuntu 26.04 | 0.9.3-1 | restricted | ok | ok |
 | muffin | debian 13 | 6.4.1-1 | full | ok | ok |
+| muffin | fedora 45 | 6.8.1-1.fc45 | - | - | not installed |
 | muffin | ubuntu 26.04 | 6.4.1-1build1 | full | ok | ok |
 | mutter | debian 13 | 48.7-0+deb13u1 | full | ok | ok |
+| mutter | fedora 45 | 51.1-1.fc45 | full | ok | ok |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | ok | ok |
+| plasmashell | debian 13 | - | - | - | not run |
+| plasmashell | fedora 45 | 6.8.2-1.fc45 | restricted | ok | ok |
+| plasmashell | ubuntu 26.04 | - | - | - | not run |
 | sway | debian 13 | 1.10.1-2 | restricted | ok | ok |
+| sway | fedora 45 | 1.12-2.fc45 | restricted | ok | ok |
 | sway | ubuntu 26.04 | 1.11-3 | restricted | ok | ok |
 | wayfire | debian 13 | 0.9.0-5 | full | ok | ok |
+| wayfire | fedora 45 | 0.10.1-2.fc45 | full | ok | ok |
 | wayfire | ubuntu 26.04 | 0.10.0-1 | full | ok | ok |
 | weston-nested | debian 13 | 14.0.2-1 | full | ok | ok |
+| weston-nested | fedora 45 | 15.0.1-3.fc45 | full | ok | ok |
 | weston-nested | ubuntu 26.04 | 14.0.2-5 | full | ok | ok |
 <!-- /generated -->
 
@@ -212,39 +266,40 @@ Calls made by an ordinary client on the compositor's session bus (side-effect fr
 checked the caller):
 
 <!-- generated:dbus -->
-| Compositor | Call, as an ordinary client | debian 13 | ubuntu 26.04 |
-| --- | --- | --- | --- |
-| cinnamon | `Cinnamon.Eval` | allowed | allowed |
-| cinnamon | `Cinnamon.GetRunState` | allowed | allowed |
-| cinnamon | `DisplayConfig.GetCurrentState` | allowed | allowed |
-| cinnamon | `Magnifier.isActive` | allowed | allowed |
-| cinnamon | `Screenshot.SelectArea` | not called | not called |
-| gnome-shell | `KeyboardMonitor.WatchKeyboard` | refused | refused |
-| gnome-shell | `DisplayConfig.GetCurrentState` | allowed | allowed |
-| gnome-shell | `InputCapture.CreateSession` | allowed | allowed |
-| gnome-shell | `RemoteDesktop.CreateSession` | allowed | allowed |
-| gnome-shell | `ScreenCast.CreateSession` | allowed | allowed |
-| gnome-shell | `ServiceChannel.OpenWaylandServiceConnection` | allowed | allowed |
-| gnome-shell | `Shell.Eval` | refused | refused |
-| gnome-shell | `Introspect.GetWindows` | refused | refused |
-| gnome-shell | `Screenshot.SelectArea` | refused | refused |
-| kwin | `KeyboardMonitor.WatchKeyboard` | refused | refused |
-| kwin | `KGlobalAccel.allComponents` | allowed | allowed |
-| kwin | `KWin.supportInformation` | allowed | allowed |
-| kwin | `Scripting.isScriptLoaded` | allowed | allowed |
-| muffin | `DisplayConfig.GetCurrentState` | allowed | allowed |
-| mutter | `KeyboardMonitor.WatchKeyboard` | refused | refused |
-| mutter | `DisplayConfig.GetCurrentState` | allowed | allowed |
-| mutter | `InputCapture.CreateSession` | allowed | allowed |
-| mutter | `RemoteDesktop.CreateSession` | allowed | allowed |
-| mutter | `ScreenCast.CreateSession` | allowed | allowed |
-| mutter | `ServiceChannel.OpenWaylandServiceConnection` | allowed | allowed |
-| plasmashell | `KeyboardMonitor.WatchKeyboard` | refused | refused |
-| plasmashell | `KGlobalAccel.allComponents` | allowed | allowed |
-| plasmashell | `KWin.supportInformation` | allowed | allowed |
-| plasmashell | `PlasmaShell.evaluateScript` | allowed | allowed |
-| plasmashell | `klipper.getClipboardContents` | allowed | allowed |
-| plasmashell | `Scripting.isScriptLoaded` | allowed | allowed |
+| Compositor | Call, as an ordinary client | debian 13 | fedora 45 | ubuntu 26.04 |
+| --- | --- | --- | --- | --- |
+| cinnamon | `Cinnamon.Eval` | allowed | allowed | allowed |
+| cinnamon | `Cinnamon.GetRunState` | allowed | allowed | allowed |
+| cinnamon | `DisplayConfig.GetCurrentState` | allowed | allowed | allowed |
+| cinnamon | `ScreenSaver.GetActive` | - | allowed | - |
+| cinnamon | `Magnifier.isActive` | allowed | allowed | allowed |
+| cinnamon | `Screenshot.SelectArea` | not called | - | not called |
+| gnome-shell | `KeyboardMonitor.WatchKeyboard` | refused | refused | refused |
+| gnome-shell | `DisplayConfig.GetCurrentState` | allowed | allowed | allowed |
+| gnome-shell | `InputCapture.CreateSession` | allowed | allowed | allowed |
+| gnome-shell | `RemoteDesktop.CreateSession` | allowed | allowed | allowed |
+| gnome-shell | `ScreenCast.CreateSession` | allowed | allowed | allowed |
+| gnome-shell | `ServiceChannel.OpenWaylandServiceConnection` | allowed | allowed | allowed |
+| gnome-shell | `Shell.Eval` | refused | refused | refused |
+| gnome-shell | `Introspect.GetWindows` | refused | - | refused |
+| gnome-shell | `Screenshot.SelectArea` | refused | - | refused |
+| kwin | `KeyboardMonitor.WatchKeyboard` | refused | refused | refused |
+| kwin | `KGlobalAccel.allComponents` | allowed | allowed | allowed |
+| kwin | `KWin.supportInformation` | allowed | allowed | allowed |
+| kwin | `Scripting.isScriptLoaded` | allowed | allowed | allowed |
+| muffin | `DisplayConfig.GetCurrentState` | allowed | - | allowed |
+| mutter | `KeyboardMonitor.WatchKeyboard` | refused | refused | refused |
+| mutter | `DisplayConfig.GetCurrentState` | allowed | allowed | allowed |
+| mutter | `InputCapture.CreateSession` | allowed | allowed | allowed |
+| mutter | `RemoteDesktop.CreateSession` | allowed | allowed | allowed |
+| mutter | `ScreenCast.CreateSession` | allowed | allowed | allowed |
+| mutter | `ServiceChannel.OpenWaylandServiceConnection` | allowed | allowed | allowed |
+| plasmashell | `KeyboardMonitor.WatchKeyboard` | refused | refused | refused |
+| plasmashell | `KGlobalAccel.allComponents` | allowed | allowed | allowed |
+| plasmashell | `KWin.supportInformation` | allowed | allowed | allowed |
+| plasmashell | `PlasmaShell.evaluateScript` | allowed | allowed | allowed |
+| plasmashell | `klipper.getClipboardContents` | allowed | allowed | allowed |
+| plasmashell | `Scripting.isScriptLoaded` | allowed | allowed | allowed |
 <!-- /generated -->
 
 * **GNOME**: Mutter's own `ScreenCast`, `RemoteDesktop` and `InputCapture` accept `CreateSession` from any client, and so do
@@ -266,15 +321,17 @@ checked the caller):
 another client (a GTK 4 window that logs the keys it receives), and opens a `ScreenCast` session on the monitor, whose PipeWire
 stream it reads with GStreamer (a private PipeWire and WirePlumber in the compositor's runtime directory). The frame holds
 the other client's red window. No portal and no prompt are involved. GNOME Shell starts in its overview, which takes the
-first click and keys; the tool presses Escape first and tries the typing up to three times. Twelve runs (three on each of
-the four versions) all succeeded; one GNOME Shell 48.7 run needed a second try.
+first click and keys; the tool presses Escape first and tries the typing up to three times. Eighteen runs (three on each of
+the six versions) all succeeded; one GNOME Shell 48.7 run needed a second try.
 
 <!-- generated:mutter_dbus -->
 | Compositor | Distribution | Version | RemoteDesktop: keys typed into another client's window | ScreenCast: a whole frame of the screen |
 | --- | --- | --- | --- | --- |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | yes (`appjail`) | yes (786432 pixels, 2159 colours) |
+| gnome-shell | fedora 45 | 51.1-1.fc45 | yes (`appjail`) | yes (786432 pixels, 25621 colours) |
 | gnome-shell | ubuntu 26.04 | 50.1-0ubuntu1.5 | yes (`appjail`) | yes (786432 pixels, 499 colours) |
 | mutter | debian 13 | 48.7-0+deb13u1 | yes (`appjail`) | yes (786432 pixels, 427 colours) |
+| mutter | fedora 45 | 51.1-1.fc45 | yes (`appjail`) | yes (786432 pixels, 404 colours) |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | yes (`appjail`) | yes (786432 pixels, 411 colours) |
 <!-- /generated -->
 
@@ -286,20 +343,23 @@ As an ordinary client, the tool:
 * runs a command as the user (the script calls `GLib.spawn_command_line_async`, which creates a file);
 * types into another client's window (the script activates the window and types with a virtual keyboard of the shell's own
   input stack; nested in Xvfb this is the X11 backend's virtual device, in a real session it would be the native one);
-* takes a picture of the whole screen with `org.gnome.Shell.Screenshot.Screenshot`, which Cinnamon owns and answers for any
-  client; the picture is the size of the shell's stage and holds the other client's red window;
-* calls `org.gnome.Shell.Screenshot.SelectArea`, after which Cinnamon is gone (a GTK error: in this nested setup the shell has
+* takes a picture of the whole screen with `Screenshot` of the name Cinnamon owns for it (`org.gnome.Shell.Screenshot` in 6.4,
+  `org.cinnamon.Screenshot` in 6.8), which it answers for any client; the picture is the size of the shell's stage and holds the other client's red window;
+* calls `SelectArea` of the same name, after which Cinnamon is gone (a GTK error: in this nested setup the shell has
   no display for the selection; in a real session it may show the selection instead). probe.py skips this call on Cinnamon
   for that reason.
 
-Three runs on each distribution, all with the same result. `org.Cinnamon` also has `induceSegfault`, `RestartCinnamon` and
+Three runs on each distribution, all with the same result (on Fedora the first run, on a guest just started, typed nothing:
+the window had not taken the focus; the five after it did). `org.Cinnamon` also has `induceSegfault`, `RestartCinnamon` and
 `ShowEndSessionDialog`, which were not called. Granting `org.Cinnamon` would therefore hand over the user's account, so
-`org.Cinnamon` is refused as a family (decision D); `org.gnome.Shell.Screenshot` already was, under `org.gnome.Shell`.
+`org.Cinnamon` is refused as a family (decision D); `org.gnome.Shell.Screenshot` already was, under `org.gnome.Shell`, and
+`org.cinnamon.Screenshot` and `org.cinnamon.ScreenSaver` (`Lock`, `Quit`, `SetActive`) are refused since Fedora 45.
 
 <!-- generated:cinnamon_dbus -->
 | Distribution | Version | Eval: a command run as the user | Eval: keys typed into another client's window | Screenshot: the whole screen | SelectArea: Cinnamon still running afterwards |
 | --- | --- | --- | --- | --- | --- |
 | debian 13 | 6.4.10-2+deb13u1 | yes | yes (`appjail`) | yes (800x600, the other client's window in it) | no |
+| fedora 45 | 6.8.0-1.fc45 | yes | yes (`appjail`) | yes (800x600, the other client's window in it) | no |
 | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | yes | yes (`appjail`) | yes (800x600, the other client's window in it) | no |
 <!-- /generated -->
 
@@ -312,8 +372,9 @@ call to any name of a connection reaches every object of it. `tests/compositors/
 `shared-connection-*.json`) starts the proxy with one allowed name at a time, connects through it as an app would, and sends
 the connection's privileged call to that allowed name: `org.gnome.Mutter.RemoteDesktop.CreateSession` on GNOME Shell (the
 session that types into other windows, above), `org.Cinnamon.Eval` of `1+1` on Cinnamon (the call that runs commands, above),
-`org.kde.PlasmaShell.evaluateScript` of `print(1 + 1)` on plasmashell (point 9). Mutter, Muffin and KWin alone list no row:
-every name of their privileged connection is refused.
+`org.kde.PlasmaShell.evaluateScript` of `print(1 + 1)` on plasmashell (point 9). On Fedora 45 KWin 6.8 lists a row too: `org.kde.touchpad` lives on its connection, and the call to
+`org.kde.kwin.Scripting` reached KWin through it. Mutter and Muffin alone list no row: every name of their privileged
+connection is refused.
 
 The "reached with `--talk`" columns are the hole: every allowed name of both shells reached the privileged call. The
 "appjail" columns are what `run` does now with the same grant (decision D):
@@ -327,29 +388,32 @@ The "reached with `--talk`" columns are the hole: every allowed name of both she
   owner while the app runs, is not caught ([D-Bus and the filtering proxy](../understand/desktop/dbus.md), Limits).
 
 <!-- generated:shared_connection -->
-| Compositor | Granted name (allowed) | Call sent to it | reached with `--talk`, debian 13 | appjail, debian 13 | reached with `--talk`, ubuntu 26.04 | appjail, ubuntu 26.04 |
-| --- | --- | --- | --- | --- | --- | --- |
-| cinnamon | `org.freedesktop.Notifications` | `Cinnamon.Eval` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
-| cinnamon | `org.gnome.Caribou.Keyboard` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
-| cinnamon | `org.gnome.Magnifier` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
-| cinnamon | `org.gnome.Panel` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
-| cinnamon | `org.gnome.keyring.SystemPrompter` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
-| cinnamon | `org.x.StatusIconMonitor.cinnamon_0` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch |
-| gnome-shell | `org.gnome.keyring.SystemPrompter` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch |
-| gnome-shell | `org.gtk.MountOperationHandler` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch |
-| gnome-shell | `org.gtk.Notifications` | `RemoteDesktop.CreateSession` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
-| plasmashell | `com.canonical.Unity` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
-| plasmashell | `org.freedesktop.Notifications` | `PlasmaShell.evaluateScript` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
-| plasmashell | `org.kde.JobViewServer` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
-| plasmashell | `org.kde.StatusNotifierHost-PID` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
-| plasmashell | `org.kde.kuiserver` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch |
+| Compositor | Granted name (allowed) | Call sent to it | reached with `--talk`, debian 13 | appjail, debian 13 | reached with `--talk`, fedora 45 | appjail, fedora 45 | reached with `--talk`, ubuntu 26.04 | appjail, ubuntu 26.04 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cinnamon | `org.freedesktop.Notifications` | `Cinnamon.Eval` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
+| cinnamon | `org.gnome.Caribou.Keyboard` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gnome.Magnifier` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gnome.Panel` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gnome.keyring.SystemPrompter` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| cinnamon | `org.gtk.MountOperationHandler` | `Cinnamon.Eval` | - | - | yes | refused at launch | - | - |
+| cinnamon | `org.x.StatusIconMonitor.cinnamon_0` | `Cinnamon.Eval` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| gnome-shell | `org.gnome.keyring.SystemPrompter` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| gnome-shell | `org.gtk.MountOperationHandler` | `RemoteDesktop.CreateSession` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| gnome-shell | `org.gtk.Notifications` | `RemoteDesktop.CreateSession` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
+| kwin | `org.kde.touchpad` | `Scripting.isScriptLoaded` | - | - | yes | refused at launch | - | - |
+| plasmashell | `com.canonical.Unity` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.freedesktop.Notifications` | `PlasmaShell.evaluateScript` | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works | yes | confined: privileged call blocked, the service's own call works |
+| plasmashell | `org.kde.JobViewServer` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.kde.StatusNotifierHost-PID` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.kde.kuiserver` | `PlasmaShell.evaluateScript` | yes | refused at launch | yes | refused at launch | yes | refused at launch |
+| plasmashell | `org.kde.touchpad` | `Scripting.isScriptLoaded` | - | - | yes | refused at launch | - | - |
 <!-- /generated -->
 
 Every one reached the compositor. So on GNOME Shell, granting `org.gtk.Notifications` (where GTK applications send their
 notifications), `org.gnome.keyring.SystemPrompter` or `org.gtk.MountOperationHandler` gives an app Mutter's remote desktop;
 on Cinnamon, granting `org.freedesktop.Notifications` (the example of a `dbus_filter` entry in DESIGN.md) or any other name
-of the shell gives it `Eval`, that is, the user's account. Mutter, Muffin and KWin on their own own no allowed name on that
-connection, so nothing reached there. In a real GNOME session the shell may own `org.freedesktop.Notifications` too; the
+of the shell gives it `Eval`, that is, the user's account. Mutter and Muffin on their own own no allowed name on that
+connection, so nothing reached there; KWin 6.8's `org.kde.touchpad` was refused at launch like the others. In a real GNOME session the shell may own `org.freedesktop.Notifications` too; the
 headless shell did not, so that is not measured. This is a hole in appjail's D-Bus grants, not in the compositors; the
 possible fixes are in [One granted name reaches its whole connection](../decisions/desktop/dbus-connection.md).
 
@@ -374,7 +438,7 @@ app will get actually lets a client do**, plus, for GNOME and KDE, **which bus n
 **A. Decide from the registry of the socket the app will get.** Chosen. After choosing the socket, `run` refuses a windowed
 app when the registry lists a privileged global (capture, virtual input, input method, data-control, foreign-toplevel, layer
 shell, session lock, output management, gamma, ...) and names them; `full_wayland` overrides the refusal. It matched the
-measurements of all 18 compositor and distribution runs. Weakness: a denylist of interface names misses interfaces not on it
+measurements of all 28 compositor and distribution runs. Weakness: a denylist of interface names misses interfaces not on it
 (the inverse, allowing only known-harmless globals, would refuse compositors on their own extras).
 
 **B. Warn only without the protocol.** Rejected: Wayfire and Cage let an app capture, type and read the clipboard, and a
@@ -384,7 +448,8 @@ terminal warning is not a decision.
 the registry anyway.
 
 **D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` and, after Muffin and Cinnamon were measured,
-`org.cinnamon.Muffin` and `org.Cinnamon` (every name of each family), `org.freedesktop.a11y`, `org.gnome.ScreenSaver`,
+`org.cinnamon.Muffin` and `org.Cinnamon` (every name of each family), and after Cinnamon 6.8 `org.cinnamon.Screenshot` and
+`org.cinnamon.ScreenSaver`, `org.freedesktop.a11y`, `org.gnome.ScreenSaver`,
 `org.kde.kglobalaccel` and `org.kde.keyboard` are refused, and after plasmashell was measured `org.kde.plasmashell` and
 `org.kde.klipper`. Under A a GNOME or Cinnamon app has no privileged global on its
 socket, so these bus names are what keep it from capturing, injecting input, running commands through the shell or locking
@@ -411,11 +476,11 @@ know refuses the app (`wayland.ALLOWED`).
   paste was tested on all compositors with GTK 4 windows (see above), but with an added virtual input device, in headless
   compositors; a real session adds clipboard managers and extensions that were not tried.
 * One client per capability, on a quiet compositor. Xwayland, GPU, camera and audio were not part of this.
-* Only the versions the two distributions package (and Hyprland from Debian backports). niri, river, COSMIC and Miriway are
-  not packaged in either, so they were not measured here. Packaged but left out by decision (2026-11-13): Mir's demo shells
+* Only the versions the three distributions package (and Hyprland from Debian backports). niri, river, COSMIC and Miriway are
+  not packaged in any of them, so they were not measured here. Packaged but left out by decision (2026-11-13): Mir's demo shells
   (`mir-demos`), phoc (Phosh), gnome-kiosk, gamescope (Ubuntu only) and kylin-wayland-compositor (Ubuntu only).
 * Muffin and Cinnamon were measured nested in Xvfb, without `cinnamon-session` and the daemons a real Cinnamon session
-  starts (cinnamon-screensaver's `org.cinnamon.ScreenSaver`, the settings daemon); those names were not measured. In that
+  starts (the settings daemon); those names were not measured. In that
   setup the shell's virtual keyboard is the X11 backend's.
 * plasmashell was measured beside a virtual KWin with only the activity manager, without `plasma_session`, kded and the
   other daemons of a real Plasma session (the status-notifier watcher, KWallet, the screen locker); their names were not
@@ -424,7 +489,7 @@ know refuses the app (`wayland.ALLOWED`).
 
 ## Reproducing
 
-On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `debian` and `ubuntu`:
+On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `debian`, `ubuntu` and `fedora`:
 
     GUEST=<distro>-compositors tests/vm/create.sh      # reuses the base image; the first creation of that image downloads it
     GUEST=<distro>-compositors tests/vm/start.sh

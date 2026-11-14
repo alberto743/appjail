@@ -39,12 +39,19 @@ Why each of these, and how it works: [Understanding appjail](https://alberto743.
 
 ## Requirements
 
-Linux on x86-64 (Debian 13 or Ubuntu 26.04 or later), Python 3.12 or later, a Wayland desktop for apps with a window.
-On Debian or Ubuntu:
+Linux on x86-64 (Debian 13, Ubuntu 26.04 or Fedora 45, or later), Python 3.12 or later, a Wayland desktop for apps with a
+window. On Debian or Ubuntu:
 
 ```sh
 sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland openbox git \
     librsvg2-bin libgtk-3-bin desktop-file-utils dbus-bin libnotify-bin
+```
+
+On Fedora:
+
+```sh
+sudo dnf install bubblewrap squashfs-tools passt xdg-dbus-proxy xorg-x11-server-Xwayland openbox git \
+    librsvg2-tools gtk-update-icon-cache desktop-file-utils dbus-tools libnotify
 ```
 
 What each package is for: [Getting started](https://alberto743.github.io/appjail/guide/getting-started/).

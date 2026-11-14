@@ -32,7 +32,7 @@ offers privileged protocols to every client, an app with nothing but a window ca
 | windows | foreign toplevel management, layer shell, output management, session lock | seeing and controlling other windows, the screen layout, the lock screen |
 | desktop | KWin's screen power, brightness, virtual desktops, screen edges, lock keys | changing the desktop itself |
 
-Compositors differ widely. Measured on Debian 13 and Ubuntu 26.04 (headless, with real clients trying each capability):
+Compositors differ widely. Measured on Debian 13, Ubuntu 26.04 and Fedora 45 (headless, with real clients trying each capability):
 sway, labwc and Hyprland 0.55 hide all of these on the restricted socket; KWin's restricted socket still lists
 data-control, and a client read another client's clipboard through it; GNOME and Cinnamon have no restricted socket, but
 their own socket lists none of these, because they keep capture and remote input on D-Bus; Wayfire, Cage and Weston
@@ -57,8 +57,8 @@ offer them on the only socket they have.
 
 | Compositor (measured versions) | Without `full_wayland` |
 |---|---|
-| GNOME 48.7, 50.1 · Cinnamon 6.4 · sway 1.10, 1.11 · labwc 0.8, 0.9 · Hyprland 0.55 | runs |
-| KWin 6.3, 6.6 · Hyprland 0.53 · Wayfire · Cage · Weston | refused |
+| GNOME 48.7, 50.1, 51.1 · Cinnamon 6.4 · sway 1.10, 1.11, 1.12 · labwc 0.8, 0.9, 0.20 · Hyprland 0.55 | runs |
+| KWin 6.3, 6.6, 6.8 · Cinnamon 6.8 · Hyprland 0.53 · Wayfire · Cage · Weston | refused |
 
 Ordinary copy and paste works everywhere: it uses the core clipboard, which needs keyboard focus.
 

@@ -25,6 +25,9 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 # measured on Cinnamon 6.4: its Eval runs any JavaScript in the shell for any client (a command, typing into
                 # other windows); the shell also answers org.gnome.Shell.Screenshot, refused above
                 "org.Cinnamon",
+                # measured on Cinnamon 6.8, which renamed GNOME's screenshot name: org.cinnamon.Screenshot writes a picture of the
+                # whole screen for any client, and org.cinnamon.ScreenSaver locks, unlocks and ends the screensaver
+                "org.cinnamon.Screenshot", "org.cinnamon.ScreenSaver",
                 # measured on Plasma 6.3 and 6.6: the shell's evaluateScript runs a desktop script for any client (it writes
                 # the user's configuration files), and klipper, in the same process, hands over the clipboard and its history
                 "org.kde.plasmashell", "org.kde.klipper")

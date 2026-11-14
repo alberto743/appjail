@@ -3,7 +3,7 @@
 
 """What a client of a Wayland compositor can reach, measured: the Wayland registry and the compositor's D-Bus interfaces.
 
-Run in the *-compositors guests (tests/vm/provision.sh installs the compositors), the same way on Debian 13 and Ubuntu 26.04:
+Run in the *-compositors guests (tests/vm/provision.sh installs the compositors), the same way on every supported system:
 
     python3 tests/compositors/probe.py [--only NAME]... [--out FILE.json]
 
@@ -78,6 +78,7 @@ CALLS = (
      "org.gnome.Mutter.ServiceChannel.OpenWaylandServiceConnection", "u", ["1"]),
     ("org.gnome.Shell.Introspect", "/org/gnome/Shell/Introspect", "org.gnome.Shell.Introspect.GetWindows", "", []),
     ("org.gnome.ScreenSaver", "/org/gnome/ScreenSaver", "org.gnome.ScreenSaver.GetActive", "", []),
+    ("org.cinnamon.ScreenSaver", "/org/cinnamon/ScreenSaver", "org.cinnamon.ScreenSaver.GetActive", "", []),
     ("org.kde.kglobalaccel", "/kglobalaccel", "org.kde.KGlobalAccel.allComponents", "", []),
     ("org.kde.KWin.ScreenShot2", "/org/kde/KWin/ScreenShot2", "org.kde.KWin.ScreenShot2.CaptureActiveScreen", "a{sv}h", None),
     ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon.Eval", "s", ["1+1"]),
@@ -101,10 +102,11 @@ def run(argv, **kw):
 
 
 def package_version(*packages):
-    """The installed version of the first of these packages that is installed, as dpkg reports it."""
+    """The installed version of the first of these packages that is installed, as dpkg (Debian, Ubuntu) or rpm (Fedora) reports it."""
     for pkg in packages:
-        out = run(["dpkg-query", "-W", "-f=${Version}", pkg]).stdout.strip()
-        if out:
+        out = run(["dpkg-query", "-W", "-f=${Version}", pkg]).stdout.strip() or \
+            run(["rpm", "-q", "--qf", "%{VERSION}-%{RELEASE}", pkg]).stdout.strip()
+        if out and "not installed" not in out:
             return f"{pkg} {out}"
     return None
 
@@ -162,7 +164,7 @@ XVFB = ["xvfb-run", "-a", "-s", "-screen 0 1024x768x24"]
 PLASMA_START = ("command -v plasmashell >/dev/null || exit 1; "
                 "QT_QPA_PLATFORM=offscreen kwin_wayland --virtual --socket=probe-kwin --no-lockscreen --no-global-shortcuts & "
                 "sleep 4; export WAYLAND_DISPLAY=probe-kwin QT_QPA_PLATFORM=wayland; "
-                "$(ls /usr/lib/*/libexec/kactivitymanagerd | head -n 1) & sleep 2; "
+                "$(ls /usr/lib/*/libexec/kactivitymanagerd /usr/libexec/kactivitymanagerd /usr/lib64/libexec/kactivitymanagerd 2>/dev/null | head -n 1) & sleep 2; "
                 "QT_QUICK_BACKEND=software LIBGL_ALWAYS_SOFTWARE=1 KDE_FULL_SESSION=true XDG_CURRENT_DESKTOP=KDE "
                 "plasmashell --no-respawn & wait")
 
@@ -174,7 +176,7 @@ COMPOSITORS = {
     "wayfire": (("wayfire",), lambda s: ["wayfire"], {**WLROOTS, "WLR_RENDER_DRM_DEVICE": RENDER_NODE}),
     "cage": (("cage",), lambda s: ["cage", "--", "sleep", "3600"], WLROOTS),
     "hyprland": (("hyprland",), lambda s: ["Hyprland"], {"AQ_BACKENDS": "headless", "LIBSEAT_BACKEND": "noop", "AQ_DRM_DEVICES": "/dev/dri/card0"}),
-    "kwin": (("kwin-wayland",), lambda s: ["kwin_wayland", "--virtual", "--socket=probe-kwin", "--no-lockscreen", "--no-global-shortcuts"],
+    "kwin": (("kwin-wayland", "kwin"), lambda s: ["kwin_wayland", "--virtual", "--socket=probe-kwin", "--no-lockscreen", "--no-global-shortcuts"],
              {"QT_QPA_PLATFORM": "offscreen"}),
     "mutter": (("mutter",), lambda s: ["mutter", "--headless", "--wayland", "--no-x11", "--virtual-monitor", "1024x768",
                                        "--wayland-display=probe-mutter"], {}),

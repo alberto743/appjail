@@ -1,0 +1,56 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "capture": {
+    "answer": [
+     true,
+     "/tmp/cptr6s8ob0/shot.png"
+    ],
+    "height": 600,
+    "name": "org.cinnamon.Screenshot",
+    "ok": true,
+    "red": true,
+    "stage": "800x600",
+    "width": 800
+   },
+   "command": {
+    "answer": [
+     true,
+     "true"
+    ],
+    "ok": true
+   },
+   "select_area": {
+    "answer": "Call failed: Message recipient disconnected from message bus without replying",
+    "survived": false
+   },
+   "status": "ok",
+   "type": {
+    "answer": [
+     true,
+     "true"
+    ],
+    "ok": true,
+    "received": "appjail",
+    "victim_log": [
+     "active",
+     "key:a",
+     "key:p",
+     "key:p",
+     "key:j",
+     "key:a",
+     "key:i",
+     "key:l"
+    ]
+   },
+   "version": "cinnamon 6.8.0-1.fc45"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "fedora",
+  "kernel": "7.2.11-300.fc45.x86_64",
+  "name": "Fedora Linux 45 (Cloud Edition)",
+  "version": "45"
+ }
+}
