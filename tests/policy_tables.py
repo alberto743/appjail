@@ -36,7 +36,7 @@ def render():
             f"| credentials and secrets (`grants.SECRET_HOME_DIRS`) | {_codes(grants.SECRET_HOME_DIRS)} | |",
             f"| file names like keys and password databases (`grants.SECRET_SUFFIXES`) | {_codes(grants.SECRET_SUFFIXES, '*')} | |",
             f"| too broad (`grants.BROAD_HOME_DIRS`) | {_codes(grants.BROAD_HOME_DIRS)}, the home directory and its parents, `/` | |",
-            f"| system trees (`grants.SYSTEM_PATHS`) | {_codes(grants.SYSTEM_PATHS)} | |",
+            f"| system trees (`grants.SYSTEM_PATHS`) | {_codes(grants.SYSTEM_PATHS)}, except mount points of your own removable media, `{grants.REMOVABLE_MEDIA}`, and what is inside them | |",
             f"| shared temporary directories, as folders (`grants.SHARED_DIRS`) | {_codes(grants.SHARED_DIRS)} | |",
             f"| code that runs outside the jail later (`grants.PERSIST_HOME_DIRS`) | | {_codes(grants.PERSIST_HOME_DIRS)} |",
             f"| startup files (`grants.PERSIST_HOME_FILES`) | | {_codes(grants.PERSIST_HOME_FILES)} |",

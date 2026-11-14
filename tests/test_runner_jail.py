@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import socket
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -108,6 +109,48 @@ def test_granted_directories_modes(sandbox, runtime):
     assert proc.returncode == 0, proc.stderr
     r = json.loads(proc.stdout)
     assert (r["w_ro"], r["w_rw"]) == (False, True)
+
+
+@pytest.fixture
+def drive(tmp_path):
+    """A FAT filesystem mounted where udisks mounts a USB drive of this user, /run/media/USER/LABEL (needs passwordless
+    sudo, loop devices and mkfs.vfat, as in the guests); FAT carries the labels and ownership options of real media."""
+    user = runtimejail._user_name()
+    mkfs = shutil.which("mkfs.vfat", path=os.environ["PATH"] + ":/usr/sbin")  # Debian keeps it out of an ordinary user's PATH
+    if not (shutil.which("sudo") and mkfs) or subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode:
+        pytest.skip("needs passwordless sudo and mkfs.vfat to mount a drive under /run/media")
+    image = tmp_path / "drive.img"
+    subprocess.run(["truncate", "-s", "20M", str(image)], check=True)
+    subprocess.run([mkfs, "-n", "PHOTOS", str(image)], check=True, capture_output=True)
+    existed = Path("/run/media").exists()
+    mount = Path("/run/media") / user / "PHOTOS"
+    subprocess.run(["sudo", "install", "-d", "-o", str(os.getuid()), str(mount)], check=True)
+    mounted = subprocess.run(["sudo", "mount", "-o", f"loop,uid={os.getuid()},gid={os.getgid()}", str(image), str(mount)], capture_output=True)
+    if mounted.returncode:
+        subprocess.run(["sudo", "rm", "-rf", str(mount.parent) if existed else "/run/media"], check=False)
+        pytest.skip(f"cannot loop-mount a FAT image: {mounted.stderr.decode().strip()}")
+    (mount / "photo.txt").write_text("on the drive")
+    try:
+        yield mount
+    finally:
+        subprocess.run(["sudo", "umount", str(mount)], check=False)
+        subprocess.run(["sudo", "rm", "-rf", str(mount.parent) if existed else "/run/media"], check=False)
+
+
+@integration
+def test_a_drive_under_run_media_is_granted_to_its_own_user_and_nothing_else_of_run(sandbox, runtime, drive):
+    script = "#!/bin/sh\ncat \"$1/photo.txt\"; echo more > \"$1/new.txt\" && echo written\n"
+    proc = run_in_jail(sandbox, runtime, script=script, extra=(str(drive),), dirs=(f"{drive}:rw",))
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout == "on the drivewritten\n" and (drive / "new.txt").read_text() == "more\n"
+    refused = [d for d in (drive.parent, Path("/run/media"), Path("/run")) if _refused(sandbox, runtime, d)]
+    assert refused == [drive.parent, Path("/run/media"), Path("/run")]
+
+
+def _refused(sandbox, runtime, directory):
+    with pytest.raises(RunError, match="system tree"):
+        run_in_jail(sandbox, runtime, dirs=(str(directory),))
+    return True
 
 
 @integration
