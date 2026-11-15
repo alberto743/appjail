@@ -168,3 +168,35 @@ def permission_changes(old, new):
                         ("dbus-own", old.dbus_own, new.dbus_own), ("portals", old.portal_interfaces, new.portal_interfaces)):
         lines += [(label, f"+ {x}") for x in b if x not in a] + [(label, f"- {x}") for x in a if x not in b]
     return lines
+
+
+def env_from_args(current, set_specs, unset_names):
+    """The [env] pairs after --unset-env and --set-env (NAME=VALUE), sorted by name."""
+    env = dict(current)
+    for name in unset_names:
+        if name not in env:
+            raise Abort(f"--unset-env {name}: not set")
+        del env[name]
+    for spec in set_specs:
+        key, eq, value = spec.partition("=")
+        if not eq:
+            raise Abort(f"--set-env {spec}: expected NAME=VALUE")
+        try:
+            grants.check_env(key, value)
+        except manifest.ManifestError as e:
+            raise Abort(f"--set-env {key}: {e}") from e
+        env[key] = value
+    return tuple(sorted(env.items()))
+
+
+def env_lines(env):
+    """The (label, text) lines `perms` and `list --long` print for [env]; the values are the user's own, shown as set."""
+    return [("env", ", ".join(f"{k}={v}" for k, v in env))] if env else []
+
+
+def env_changes(old, new):
+    """(label, text) lines for what differs between two [env] tables."""
+    a, b = dict(old), dict(new)
+    return ([("env", f"+ {k}={v}") for k, v in b.items() if a.get(k) != v and k not in a]
+            + [("env", f"{k}: {a[k]} {ARROW} {v}") for k, v in b.items() if k in a and a[k] != v]
+            + [("env", f"- {k}") for k in a if k not in b])

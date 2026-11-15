@@ -19,6 +19,7 @@ from .grants import (
     check_dbus_name,
     check_dbus_own,
     check_dir,
+    check_env_table,
     check_portal_interface,
 )
 from .valid import ManifestError, boolean, display_size, match, str_list, string
@@ -43,7 +44,7 @@ DEFAULT_DISPLAY_SIZE = "1280x800"
 
 TOP_KEYS = {
     "schema", "name", "source", "asset_pattern", "version", "sha256",
-    "evidence_tier", "published_at", "owner_id", "channel", "fingerprint", "permissions",
+    "evidence_tier", "published_at", "owner_id", "channel", "fingerprint", "permissions", "env",
 }
 FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
@@ -105,6 +106,7 @@ class Manifest:
     owner_id: int = None  # GitHub account id of the owner; pins the account, not just the name
     channel: str = "stable"  # which releases `update` follows: stable, prerelease, or pinned (never)
     permissions: Permissions = field(default_factory=Permissions)
+    env: tuple = ()  # (name, value) pairs for the app's environment; no capability, see grants.check_env
 
     @property
     def kind(self):
@@ -233,6 +235,12 @@ def _fingerprint(table):
     return Fingerprint(**table)
 
 
+def _env(table):
+    if not isinstance(table, dict):
+        raise ManifestError("env must be a table")
+    return tuple(sorted(table.items()))
+
+
 def validate(m):
     """Return m after checking every field; raise ManifestError otherwise."""
     match(m.name, NAME_RE, "name")
@@ -269,6 +277,9 @@ def validate(m):
     _audio_consistency(p)
     for d in p.dirs:
         check_dir(string(d, "permissions.dirs entry"))
+    if not isinstance(m.env, tuple) or not all(isinstance(e, tuple) and len(e) == 2 for e in m.env):
+        raise ManifestError("env must be a table")
+    check_env_table(m.env)
     return m
 
 
@@ -288,7 +299,7 @@ def loads(text):
     _unknown(data, TOP_KEYS, "manifest")
     if data.get("schema") != SCHEMA_VERSION:
         raise ManifestError(f"schema must be {SCHEMA_VERSION}")
-    missing = sorted(TOP_KEYS - {"permissions", "owner_id", "channel", "schema", "asset_pattern", "fingerprint"} - set(data))
+    missing = sorted(TOP_KEYS - {"permissions", "env", "owner_id", "channel", "schema", "asset_pattern", "fingerprint"} - set(data))
     if missing:
         raise ManifestError(f"missing key(s): {', '.join(missing)}")
     if str(data["source"]).startswith("github:") and "asset_pattern" not in data:
@@ -298,7 +309,7 @@ def loads(text):
         version=data["version"], sha256=data["sha256"], evidence_tier=data["evidence_tier"],
         published_at=data["published_at"], owner_id=data.get("owner_id"), channel=data.get("channel", "stable"),
         fingerprint=_fingerprint(data["fingerprint"]) if "fingerprint" in data else None,
-        permissions=_permissions(data.get("permissions", {})),
+        permissions=_permissions(data.get("permissions", {})), env=_env(data.get("env", {})),
     ))
 
 
@@ -373,6 +384,7 @@ def dumps(m):
         *(["full_wayland = true"] if p.full_wayland else []),
         f"dirs = {_array(p.dirs)}",
         "",
+        *(["[env]", *(f"{k} = {_quote(v)}" for k, v in sorted(m.env)), ""] if m.env else []),
     ]
     return "\n".join(lines)
 

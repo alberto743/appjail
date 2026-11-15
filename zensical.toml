@@ -93,6 +93,7 @@ nav = [
       "decisions/isolation/grants-by-descriptor.md",
       "decisions/isolation/seccomp.md",
       "decisions/isolation/landlock.md",
+      "decisions/isolation/environment.md",
       "decisions/isolation/lifetime.md",
     ] },
     { "Desktop access" = [

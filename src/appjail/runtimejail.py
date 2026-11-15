@@ -347,7 +347,7 @@ def _base_filesystem_args(etc_dir, rt, perms):
 
 
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
-                 portal_docs=None, status_fd=None, block_fd=None, binds=(), audio_sockets=None, host_audio=True):
+                 portal_docs=None, status_fd=None, block_fd=None, binds=(), audio_sockets=None, host_audio=True, user_env=()):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     binds: the directory and file grants, from Grants.args.
@@ -383,6 +383,11 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
     if perms.camera:
         args += _camera_args(sysfs=not perms.gpu)
     args += binds
+    for k, v in user_env:
+        grants.check_env(k, v)
+        if k in env:
+            raise RunError(f"env {k} is set by appjail and cannot be overridden")
+        env[k] = v
     for k, v in env.items():
         args += ["--setenv", k, v]
     if status_fd is not None:

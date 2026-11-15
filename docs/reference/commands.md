@@ -85,6 +85,7 @@ after and ask before saving.
 | `--add-dbus NAME`, `--rm-dbus NAME` | a session-bus name to talk to |
 | `--add-dbus-own NAME`, `--rm-dbus-own NAME` | a session-bus name to own |
 | `--add-portal NAME`, `--rm-portal NAME` | an opt-in portal interface |
+| `--set-env NAME=VALUE`, `--unset-env NAME` | an environment variable of the app, from the manifest's `[env]` |
 | `--yes` | do not ask |
 
 ### `portals`

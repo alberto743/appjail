@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""What an app may be granted: D-Bus names, portal interfaces and directories. Pure policy, no I/O."""
+"""What an app may be granted: D-Bus names, portal interfaces, directories and environment variables. Pure policy, no I/O."""
 
 import os
 import re
@@ -83,6 +83,43 @@ def check_dbus_own(name):
         raise ManifestError(f"dbus_own entry {name!r} is refused: owning a name in a desktop service namespace "
                             "would let the app impersonate that service")
     return name
+
+
+# Environment variables of the manifest's [env] table.
+ENV_NAME_RE = re.compile(r"[A-Z_][A-Z0-9_]{0,63}")
+ENV_MAX_ENTRIES = 32
+ENV_MAX_VALUE = 1024
+# Names appjail sets itself (the display, bus, audio and portal ones depend on the permissions): only the permissions
+# change them.
+ENV_REFUSED = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "TZ", "XDG_RUNTIME_DIR", "APPDIR", "APPIMAGE_EXTRACT_AND_RUN",
+               "TMPDIR", "DISPLAY", "WAYLAND_DISPLAY", "XDG_SESSION_TYPE", "GDK_BACKEND", "QT_QPA_PLATFORM", "MOZ_ENABLE_WAYLAND",
+               "ELECTRON_OZONE_PLATFORM_HINT", "SDL_VIDEODRIVER", "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER", "GTK_USE_PORTAL")
+# Names that make the dynamic loader or an interpreter load code of the caller's choosing.
+ENV_REFUSED_HOOKS = ("BASH_ENV", "ENV", "NODE_OPTIONS")
+ENV_REFUSED_PREFIXES = ("LD_", "PYTHON", "PERL5")
+
+
+def check_env(key, value):
+    """One entry of [env]: a plain name that appjail does not set, and a short text value."""
+    match(key, ENV_NAME_RE, "env name")
+    if key in ENV_REFUSED or key in ENV_REFUSED_HOOKS or key.startswith(ENV_REFUSED_PREFIXES):
+        raise ManifestError(f"env name {key} is refused: appjail sets it from the permissions, or it makes a program "
+                            "load code of the app's choosing")
+    if not isinstance(value, str):
+        raise ManifestError(f"env {key} must be a string")
+    if value:
+        string(value, f"env {key}", ENV_MAX_VALUE)
+    return key, value
+
+
+def check_env_table(pairs):
+    """The whole [env] table, as (name, value) pairs: valid, without duplicates, at most ENV_MAX_ENTRIES."""
+    if len(pairs) > ENV_MAX_ENTRIES:
+        raise ManifestError(f"env has more than {ENV_MAX_ENTRIES} entries")
+    names = [check_env(k, v)[0] for k, v in pairs]
+    if len(set(names)) != len(names):
+        raise ManifestError("env names must be unique")
+    return pairs
 
 
 # Paths below the home directory (no leading "~/") that hold credentials or secrets: never granted.

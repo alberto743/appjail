@@ -12,4 +12,5 @@ Decisions about the jail an app runs in. How it works is explained in
 | [Grants bound by descriptor](grants-by-descriptor.md) | the race between checking a path and binding it |
 | [A seccomp deny list](seccomp.md) | which system calls are refused, and how |
 | [Landlock for abstract sockets only](landlock.md) | Landlock is used for abstract sockets only |
+| [Environment variables in the manifest](environment.md) | the `[env]` table, and the names it refuses |
 | [The jail ends with its command](lifetime.md) | when a jail ends, and the `linger` permission |

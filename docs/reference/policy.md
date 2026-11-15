@@ -43,6 +43,17 @@ Confined services (`dbusproxy.CONFINED`): only these interfaces, on this object 
 | `org.kde.StatusNotifierWatcher` | `org.kde.StatusNotifierWatcher` | `/StatusNotifierWatcher` |
 | `org.mpris.MediaPlayer2.*` | `org.mpris.MediaPlayer2`, `org.mpris.MediaPlayer2.Player`, `org.mpris.MediaPlayer2.TrackList`, `org.mpris.MediaPlayer2.Playlists` | `/org/mpris/MediaPlayer2` |
 
+## Environment variables
+
+Explained in [the manifest](../understand/acquisition/manifest.md). Names the `[env]` table refuses.
+
+| List | Names |
+|---|---|
+| set by appjail itself (`grants.ENV_REFUSED`) | `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`, `LANG`, `TZ`, `XDG_RUNTIME_DIR`, `APPDIR`, `APPIMAGE_EXTRACT_AND_RUN`, `TMPDIR`, `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE`, `GDK_BACKEND`, `QT_QPA_PLATFORM`, `MOZ_ENABLE_WAYLAND`, `ELECTRON_OZONE_PLATFORM_HINT`, `SDL_VIDEODRIVER`, `DBUS_SESSION_BUS_ADDRESS`, `PULSE_SERVER`, `GTK_USE_PORTAL` |
+| loader and interpreter hooks (`grants.ENV_REFUSED_HOOKS`) | `BASH_ENV`, `ENV`, `NODE_OPTIONS` |
+| any name starting with (`grants.ENV_REFUSED_PREFIXES`) | `LD_*`, `PYTHON*`, `PERL5*` |
+| limits | 32 entries, values up to 1024 characters |
+
 ## Portal interfaces
 
 Explained in [portals](../understand/desktop/portals.md). Names are the part after `org.freedesktop.portal.`.

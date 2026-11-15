@@ -39,6 +39,20 @@ appjail run lagrange --file ~/notes.gmi:rw      # this file only, read-write; it
 
 Nothing given to `run` is saved. Opening a file from the app's menu entry works the same way as `--file`.
 
+## Environment variables
+
+An app runs with a cleared environment, so a variable your shell sets does not reach it. Some apps need one to start
+(an Electron launcher that picks Wayland only when asked, for example). Set it in the manifest:
+
+```sh
+appjail perms NAME --set-env CLAUDE_USE_WAYLAND=1
+appjail perms NAME --unset-env CLAUDE_USE_WAYLAND
+```
+
+It is not a permission and grants nothing, and it survives `update` and `reset`. The manifest is plain text kept in
+git, so keep tokens and passwords out of it. Names appjail sets itself (`HOME`, `DISPLAY`, the toolkit hints) and
+names that load code (`LD_PRELOAD`, `PYTHONPATH`, ...) are refused: see the [policy lists](../reference/policy.md#environment-variables).
+
 ## Warnings and refusals
 
 Some grants widen what an app can reach more than others; `add` and `perms` print a warning for each when you give it

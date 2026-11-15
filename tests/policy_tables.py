@@ -58,6 +58,15 @@ def render():
         out.append(f"| `{name}` | {_codes(interfaces)} | `{path}` |")
     out.append("")
 
+    out += ["## Environment variables", "",
+            "Explained in [the manifest](../understand/acquisition/manifest.md). Names the `[env]` table refuses.", "",
+            "| List | Names |", "|---|---|",
+            f"| set by appjail itself (`grants.ENV_REFUSED`) | {_codes(grants.ENV_REFUSED)} |",
+            f"| loader and interpreter hooks (`grants.ENV_REFUSED_HOOKS`) | {_codes(grants.ENV_REFUSED_HOOKS)} |",
+            f"| any name starting with (`grants.ENV_REFUSED_PREFIXES`) | {_codes(grants.ENV_REFUSED_PREFIXES, suffix='*')} |",
+            f"| limits | {grants.ENV_MAX_ENTRIES} entries, values up to {grants.ENV_MAX_VALUE} characters |",
+            ""]
+
     out += ["## Portal interfaces", "",
             ("Explained in [portals](../understand/desktop/portals.md). Names are the part after "
              "`org.freedesktop.portal.`."), "",

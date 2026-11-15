@@ -36,6 +36,7 @@ version control.
 
 ## How appjail uses it
 
+- **Environment.** An optional `[env]` table gives the app variables it needs to start. It is data like the rest: names appjail sets itself and code-loading hooks are refused, and updates never change it ([decision](../../decisions/isolation/environment.md)).
 - **Strict schema.** An unknown key, a wrong type, a control character, a malformed hash, URL or date, or a name that
   does not match the file name makes the manifest invalid; appjail refuses to use it rather than guess. Keys that do not
   belong to the source's kind (an owner id on a URL app) are refused too.

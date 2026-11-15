@@ -49,3 +49,4 @@ No other variable of yours reaches an app: the jail's environment is cleared and
 | `APPDIR`, `APPIMAGE_EXTRACT_AND_RUN` | `/app`, `1` |
 | `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE` and toolkit hints (`GDK_BACKEND`, `QT_QPA_PLATFORM`, `MOZ_ENABLE_WAYLAND`, `ELECTRON_OZONE_PLATFORM_HINT`, `SDL_VIDEODRIVER`) | for a Wayland app; X11 values and `DISPLAY` for an Xwayland app; none with `display = none` |
 | `DBUS_SESSION_BUS_ADDRESS`, `PULSE_SERVER`, `GTK_USE_PORTAL` | only with the grants that need them |
+| the names in the manifest's `[env]` table | as set with `perms --set-env`; never one of the names above |

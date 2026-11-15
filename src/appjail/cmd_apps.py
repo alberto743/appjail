@@ -25,6 +25,9 @@ from .permargs import (
     PERMISSION_FLAGS,
     dbus_from_args,
     dirs_from_args,
+    env_changes,
+    env_from_args,
+    env_lines,
     permission_changes,
     permission_lines,
     portals_from_args,
@@ -71,7 +74,7 @@ def list_row(name, m):
 
 def list_details(m):
     """The lines `list --long` prints under an app: what it is granted."""
-    return [f"{label}: {text}" for label, text in permission_lines(m.permissions)]
+    return [f"{label}: {text}" for label, text in (*permission_lines(m.permissions), *env_lines(m.env))]
 
 
 def list_json(name, m):
@@ -84,7 +87,8 @@ def list_json(name, m):
         perms["display_size"] = p.display_size
     pending = updater.load_pending(name)
     return {"name": name, "version": m.version, "source": m.source, "tier": m.evidence_tier, "channel": m.channel,
-            "update_seen": pending["tag"] if pending else None, "permissions": perms}
+            "update_seen": pending["tag"] if pending else None, "permissions": perms,
+            "env": dict(m.env)}
 
 
 def cmd_list(console, long=False, as_json=False):
@@ -252,18 +256,21 @@ def cmd_perms(args, console):
     if dirs != p.dirs:
         changes["dirs"] = dirs
     bus_and_portal_changes(args, p, changes)
-    if not changes:
+    env = env_from_args(m.env, args.set_env, args.unset_env)
+    if not changes and env == m.env:
         console.out(f"{name} permissions")
-        for label, text in permission_lines(p):
+        for label, text in (*permission_lines(p), *env_lines(m.env)):
             console.kv("  " + label, text, width=10)
         return
-    new = replace(m, permissions=replace(p, **changes))
+    new = replace(m, permissions=replace(p, **changes), env=env)
     manifest.validate(new)
     if new.permissions.network != p.network or new.permissions.network_host != p.network_host:
         require_network_isolation(new.permissions)
     console.out(f"{name} permissions")
-    for label, text in permission_changes(p, new.permissions):
+    for label, text in (*permission_changes(p, new.permissions), *env_changes(m.env, env)):
         console.kv("  " + label, text, width=10)
+    if env != m.env:
+        console.warn("the manifest is plain text and kept in git: do not store tokens or passwords in env")
     warn_new_grants(console, p, new.permissions)
     if not args.yes and not console.confirm("Save these permissions?"):
         raise Abort("cancelled")

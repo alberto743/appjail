@@ -188,6 +188,8 @@ def build_parser():
     perms.add_argument("--rm-dbus-own", action="append", default=[], metavar="NAME")
     perms.add_argument("--add-portal", action="append", default=[], metavar="NAME", help="also allow this privileged portal interface")
     perms.add_argument("--rm-portal", action="append", default=[], metavar="NAME")
+    perms.add_argument("--set-env", action="append", default=[], metavar="NAME=VALUE", help="set an environment variable of the app (stored in the manifest in clear text)")
+    perms.add_argument("--unset-env", action="append", default=[], metavar="NAME")
     perms.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     run = sub.add_parser("run", help="run an installed app in its jail")
     run.add_argument("name")
