@@ -7,7 +7,8 @@
 
 Stdlib only; it speaks the wire protocol itself. OUTFILE gets a line per event (`mapped`, `gtk_shell1:<version>` or
 `no-gtk_shell1`, `keyboard-enter`, `keyboard-leave`). Lines on stdin are commands: `present TIME` (gtk_surface1.present),
-`notify ID` (gtk_shell1.notify_launch), `request_focus ID` (gtk_surface1.request_focus), `quit`; several, separated by `;`.
+`notify ID` (gtk_shell1.notify_launch), `request_focus ID` (gtk_surface1.request_focus), `dbus_props NAME` (gtk_surface1.set_dbus_properties
+with that unique bus name and fixed object paths), `quit`; several, separated by `;`.
 """
 
 import array
@@ -164,6 +165,9 @@ def main(out):
             c.send(gtk_surface, 3, struct.pack("I", int(word[1])))
         elif word[0] == "notify":
             c.send(gtk_shell, 3, string(word[1]))
+        elif word[0] == "dbus_props":
+            c.send(gtk_surface, 0, string("org.example.Probe") + struct.pack("II", 0, 0) + string("/org/example/window")
+                   + string("/org/example/application") + string(word[1]))
         elif word[0] == "request_focus":
             c.send(gtk_surface, 4, string(word[1]))
         c.log("sent:" + " ".join(word))
