@@ -3,7 +3,7 @@
 How appjail's compositor assessment is made, so that a compositor, a new version of one, or a whole desktop can be added
 the same way. The results and the decisions taken from them are in
 [compositor-assessment/ASSESSMENT.md](../compositor-assessment/ASSESSMENT.md); the rules they feed are `wayland.PRIVILEGED`
-and `wayland.ALLOWED` (`src/appjail/wayland.py`) and `grants.DBUS_BLOCKED` (`src/appjail/grants.py`).
+and `wayland.RATIONALE` (`src/appjail/wayland.py`) and `grants.DBUS_BLOCKED` (`src/appjail/grants.py`).
 
 ## The question
 
@@ -41,10 +41,13 @@ executable, Hyprland is not packaged), is not measured there, and the rule decid
    a headless sway. A shell that is a plugin of a compositor (GNOME Shell on Mutter, Cinnamon on Muffin) is its own entry; so is a shell that
    is a client of one (plasmashell beside KWin, with the activity manager it needs; `probe.SETTLE` gives it time to load).
 3. **Survey.** `probe.py --only NAME` on every guest. Read `full`, `restricted`, `functional` and `dbus`.
-4. **Classify every global it lists** that is in neither `wayland.PRIVILEGED` nor `wayland.ALLOWED`: read the protocol's XML
-   and decide whether it acts only on the app's own windows, on input while the app has focus, or on its own buffers
-   (allowed), or on other apps, the screen, input in general or the desktop (privileged). An unknown global refuses the app,
-   so leaving one unclassified is safe but refuses the compositor.
+4. **Classify every global it lists** that is in neither `wayland.PRIVILEGED` nor `wayland.RATIONALE`: read the protocol's XML
+   and apply the three questions of [Unknown Wayland interfaces are refused](../decisions/desktop/wayland-allowlist.md): does it
+   act on other apps, the screen, input in general or the user's activity (privileged); does it hand over a host resource a
+   permission gates (an accepted limit, written down, or privileged); or does it act only on the app's own surfaces and
+   buffers, on input while focused, behind a token, or describe the hardware (allowed, with its reason in `RATIONALE`, and
+   whether its definition could be read). An unknown global refuses the app, so leaving one unclassified is safe but refuses
+   the compositor.
 5. **Read its D-Bus.** For every name it owns: the interfaces (`busctl introspect`), and what appjail's policy does with it
    (`appjail_policy_*`). Add side-effect-free calls for privileged-looking interfaces to `probe.CALLS` (a getter, a session
    created and not started, an `Eval` of `1+1`). A refused call means the compositor checks the caller; an allowed one means
@@ -65,7 +68,7 @@ executable, Hyprland is not packaged), is not measured there, and the rule decid
    rather than rerunning everything: the survey's `appjail_policy_*` fields record the policy as it was when it ran. Copy
    the files back, run `report.py --write` in a guest, add the new `generated` blocks to ASSESSMENT.md and to
    `tests/test_assessment.py`.
-10. **Decide and document.** Change `wayland.PRIVILEGED` or `ALLOWED`, `grants.DBUS_BLOCKED` and `tests/test_dbus.py` as the
+10. **Decide and document.** Change `wayland.PRIVILEGED` or `RATIONALE`, `grants.DBUS_BLOCKED` and `tests/test_dbus.py` as the
     results require; update ASSESSMENT.md (what the table shows, decision D, the limits), the decision pages under
     `docs/decisions/desktop/` (why), `docs/understand/desktop/` (the refused names), and the compositor table in
     `docs/guide/compositors.md`; regenerate `docs/reference/policy.md`; run the full suite on every guest.
@@ -99,7 +102,7 @@ executable, Hyprland is not packaged), is not measured there, and the rule decid
   shell owns. A global the lists do not know refuses the compositor: classify it from the protocol's own XML, and say in
   ASSESSMENT.md when one could not be read.
 * **Rerun the rule after changing the lists.** `rule-a-*.json` records the verdicts of the lists as they were; after
-  `wayland.PRIVILEGED` or `ALLOWED` change, run `rule_a.py` again for every distribution, or
+  `wayland.PRIVILEGED` or `RATIONALE` change, run `rule_a.py` again for every distribution, or
   `tests/test_wayland.py` fails against the old verdict.
 
 ## What this does not cover
