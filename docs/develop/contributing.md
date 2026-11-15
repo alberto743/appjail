@@ -19,7 +19,7 @@
   tests/vm/test.sh`.
 - **Licensing:** MPL-2.0, REUSE-compliant at every commit. Contributors keep the copyright of their work and license it
   under MPL-2.0 (no CLA, no assignment). Every code file starts with at least one `SPDX-FileCopyrightText` line and
-  `SPDX-License-Identifier: MPL-2.0` (after a shebang). A new file takes its author's line
+  an `SPDX-License-Identifier` line for MPL-2.0 (after a shebang). A new file takes its author's line
   (`SPDX-FileCopyrightText: <year> <your name>`). An existing file gains the line of a contributor whose change is
   creative and non-trivial (more than a fix, a rename or formatting); when several people have contributed
   significantly, the holder may become `appjail contributors` with the individual lines kept as further entries. Other
