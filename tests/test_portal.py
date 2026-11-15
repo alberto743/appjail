@@ -171,7 +171,7 @@ def portal_stack(sandbox, runtime):
     (share / "xdg-desktop-portal" / "portals").mkdir(parents=True)
     (share / "xdg-desktop-portal" / "portals" / "fake.portal").write_text(
         "[portal]\nDBusName=org.freedesktop.impl.portal.desktop.fake\n"
-        "Interfaces=org.freedesktop.impl.portal.FileChooser\nUseIn=fake\n")
+        "Interfaces=org.freedesktop.impl.portal.FileChooser;org.freedesktop.impl.portal.Access\nUseIn=fake\n")
     cfg = sandbox / "cfg"
     (cfg / "xdg-desktop-portal").mkdir(parents=True)
     (cfg / "xdg-desktop-portal" / "portals.conf").write_text("[preferred]\ndefault=fake\n")
