@@ -209,6 +209,7 @@ class App:
                 ("History", on(lambda a: self.run(argv.history_argv(a)))),
                 ("Menu entry…", on(self._menu_entry)), ("File types", on(lambda a: self.run(argv.desktop_argv(a, show=True)))),
                 ("Remove menu entry", on(lambda a: self.run(argv.desktop_argv(a, remove=True)))),
+                ("Reset app", on(lambda a: self.run(["reset", a]))),
                 ("Remove app", on(lambda a: self.run(["remove", a]))))):
             ttk.Button(buttons, text=text, command=action).grid(row=i // 5, column=i % 5, sticky="ew", padx=2, pady=2)
         for c in range(5):

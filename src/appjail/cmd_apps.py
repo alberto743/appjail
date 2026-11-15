@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""`appjail tools`, `history`, `list`, `remove` and `perms`."""
+"""`appjail tools`, `history`, `list`, `remove`, `reset` and `perms`."""
 
 import os
 from dataclasses import replace
@@ -151,6 +151,23 @@ def cmd_remove(args, console):
     history.record(f"remove {name}")
     console.out(f"Removed {name}.")
     forget(name, console)
+
+
+def cmd_reset(args, console):
+    name = manifest.check_name(args.app)
+    mpath, home = store.manifest_path(name), store.home_path(name)
+    if not mpath.exists():
+        raise Abort(f"unknown app '{name}'")
+    if not home.exists():
+        console.out(f"{name} has no private home yet; nothing to reset.")
+        return
+    console.out(f"This deletes the app's private home (its settings and data): {home}")
+    console.out("The app, its manifest, its permissions and its menu entry are kept; the next run starts with an empty home.")
+    if not args.yes and not console.confirm(f"Reset {name}?"):
+        raise Abort("cancelled")
+    store.remove_tree(home)
+    history.record(f"reset {name}")
+    console.out(f"Reset {name}.")
 
 
 def without(names, remove, what):

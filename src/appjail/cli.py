@@ -14,7 +14,7 @@ from . import github, jail, manifest, runner, tools, updater
 from .catalog import IndexProblem
 from .cmd_add import cmd_add
 from .cmd_addimage import cmd_add_file, cmd_add_url
-from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_tools
+from .cmd_apps import cmd_history, cmd_list, cmd_perms, cmd_remove, cmd_reset, cmd_tools
 from .cmd_desktop import cmd_desktop
 from .cmd_index import (
     cmd_index_add,
@@ -165,6 +165,9 @@ def build_parser():
     rm = sub.add_parser("remove", help="delete an app, including its private home")
     rm.add_argument("app")
     rm.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    rs = sub.add_parser("reset", help="delete an app's private home (its settings and data), keeping the app")
+    rs.add_argument("app")
+    rs.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     por = sub.add_parser("portals", help="list or revoke the files an app was granted through the document portal")
     por.add_argument("app")
     por.add_argument("--revoke", action="append", default=[], metavar="DOC_ID", help="revoke one document grant (repeatable)")
@@ -242,6 +245,7 @@ COMMANDS = {
     "tools": lambda args, client, console, app_args: cmd_tools(args, console),
     "history": lambda args, client, console, app_args: cmd_history(args, console),
     "remove": lambda args, client, console, app_args: cmd_remove(args, console),
+    "reset": lambda args, client, console, app_args: cmd_reset(args, console),
     "portals": lambda args, client, console, app_args: cmd_portals(args, console),
     "perms": lambda args, client, console, app_args: cmd_perms(args, console),
     "run": _run,
