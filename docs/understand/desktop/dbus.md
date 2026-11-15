@@ -80,7 +80,7 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
 - [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) and its manual page
   [xdg-dbus-proxy(1)](https://manpages.debian.org/trixie/xdg-dbus-proxy/xdg-dbus-proxy.1.en.html) (`--talk`, `--call`,
   `--broadcast`, `--own`).
-- Specifications of the confined services: [Desktop Notifications](https://specifications.freedesktop.org/notification-spec/latest/),
-  [Secret Service](https://specifications.freedesktop.org/secret-service-spec/latest/),
-  [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/).
+- Specifications of the confined services: [Desktop Notifications](https://specifications.freedesktop.org/notification/latest/),
+  [Secret Service](https://specifications.freedesktop.org/secret-service/latest/),
+  [MPRIS](https://specifications.freedesktop.org/mpris/latest/).
 - Flatpak documentation, [Sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html) (D-Bus access).

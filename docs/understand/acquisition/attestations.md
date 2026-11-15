@@ -58,7 +58,7 @@ evidence a GitHub release can carry.
 ## References
 
 - GitHub Docs, [Artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations) and
-  [Using artifact attestations to establish provenance for builds](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds).
+  [Using artifact attestations to establish provenance for builds](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
 - GitHub CLI manual, [gh attestation verify](https://cli.github.com/manual/gh_attestation_verify).
 - Sigstore, [Overview](https://docs.sigstore.dev/about/overview/): Fulcio, Rekor and keyless signing.
 - SLSA, [Provenance](https://slsa.dev/spec/v1.0/provenance).

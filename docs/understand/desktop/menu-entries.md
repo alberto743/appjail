@@ -50,7 +50,7 @@ meant to give it.
 
 ## References
 
-- freedesktop.org, [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/),
-  [Icon Theme Specification](https://specifications.freedesktop.org/icon-theme-spec/latest/),
-  [Shared MIME-info Database](https://specifications.freedesktop.org/shared-mime-info-spec/latest/).
+- freedesktop.org, [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry/latest/),
+  [Icon Theme Specification](https://specifications.freedesktop.org/icon-theme/latest/),
+  [Shared MIME-info Database](https://specifications.freedesktop.org/shared-mime-info/latest/).
 - W3C, [Portable Network Graphics (PNG) Specification](https://www.w3.org/TR/png-3/).

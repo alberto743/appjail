@@ -100,7 +100,7 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 ## References
 
 - Wayland project, [Wayland architecture](https://wayland.freedesktop.org/architecture.html) and
-  [the Wayland protocol](https://wayland.freedesktop.org/docs/html/ch04.html).
+  [the Wayland protocol](https://wayland.freedesktop.org/docs/book/Protocol.html).
 - [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols), and the
   [Wayland Explorer](https://wayland.app/protocols/): for example
   [security-context-v1](https://wayland.app/protocols/security-context-v1),
