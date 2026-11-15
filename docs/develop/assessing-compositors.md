@@ -31,7 +31,10 @@ not measured there, and the rule decides it from its registry at run time.
 | `clipboard.py` | ordinary copy and paste with keyboard focus, both directions, between a window outside and one on the app's socket | `clipboard-*.json` |
 | `mutter_dbus.py`, `cinnamon_dbus.py` | a desktop's privileged D-Bus API used end to end as an ordinary client: keys typed into another client's window, a whole screen captured with that window in it, a command run | `mutter-dbus-*.json`, `cinnamon-dbus-*.json` |
 | `shared_connection.py` | for every name appjail allows that is owned by the connection of a refused one: whether the privileged call, sent to the allowed name through xdg-dbus-proxy with `--talk`, reaches the compositor, and what appjail does with that grant (refused at launch, or confined: the privileged call by name and by unique name, the service's own call) | `shared-connection-*.json` |
-| `focus_steal.py` (with `focus_client.py`) | for a compositor that lists `gtk_shell1`: whether a client with only a window takes the keyboard focus from another client (two bare windows, the second mapped last; `gtk_surface1.present` with 1 and 0, `notify_launch` and `request_focus`; a control that sends nothing) | `focus-*.json` |
+| `focus_steal.py` (with `focus_client.py`, a stdlib Wayland window that also sends the `gtk_shell1` requests) | for a compositor that lists `gtk_shell1`: whether a client with only a window takes the keyboard focus from another client (two bare windows, the second mapped last; `gtk_surface1.present` with 1 and 0, `notify_launch` and `request_focus`; a control that sends nothing) | `focus-*.json` |
+| `gtk_bus_name.py` | GNOME Shell: whether it calls the D-Bus name a window gives in `gtk_surface1.set_dbus_properties` (a bus monitor on a unique name; a control that sets nothing) | `gtk-bus-name-*.json` |
+| `drm_fd.py` | for every compositor that lists `wp_drm_lease_device_v1`: the DRM file descriptors a client with only a window receives on binding it | |
+| `layer_shell.py` | Cinnamon: whether `swaybg`, a plain layer-shell client, paints the screen (two captures through the shell's own screenshot service) | |
 | `report.py` | the tables of ASSESSMENT.md from the results (`--write`; `tests/test_assessment.py` checks them) | |
 
 ## Adding a compositor
