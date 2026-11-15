@@ -234,6 +234,68 @@ def test_choice_list_returns_the_selected_types_and_keeps_the_form_open_on_a_pro
     assert shown == ["select one"] and calls == [1] and got == {"mime": ("text/plain",)}
 
 
+def _walk(w):
+    yield w
+    for c in w.winfo_children():
+        yield from _walk(c)
+
+
+PERMS_STATE = {"network": True, "audio_mode": "pipewire", "display": "wayland", "display_size": "1280x800", "dirs": ("~/a",),
+               "dbus_filter": ("org.a.B",), "dbus_own": (), "portal_interfaces": (), "env": ("A=1", "B=x=y")}
+
+
+def _open_permissions(window, monkeypatch, act):
+    """Run permissions_editor with `act(top, editors, buttons)` standing in for the person at the dialog."""
+    def fake_wait(top, focus=None):
+        top.update()
+        editors = {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ListEditor)}
+        buttons = {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)}
+        act(top, editors, buttons)
+
+    monkeypatch.setattr(dialogs, "_wait", fake_wait)
+    return dialogs.permissions_editor(window.root, "app", PERMS_STATE)
+
+
+def test_permissions_editor_returns_the_state_it_was_given_when_nothing_changes(window, monkeypatch):
+    got = _open_permissions(window, monkeypatch, lambda top, ed, bt: bt["Review changes…"].invoke())
+    assert got["env"] == ("A=1", "B=x=y") and got["dirs"] == ("~/a",) and got["network"] is True
+    assert not app.argv.perms_argv("app", PERMS_STATE, got)[2:]
+
+
+def test_permissions_editor_edits_the_environment_and_the_other_lists(window, monkeypatch):
+    def act(top, ed, bt):
+        env = ed["Environment"]
+        assert env.values(flush=False) == ("A=1", "B=x=y")
+        env.box.selection_set(0)
+        env.remove()  # A=1 goes
+        env.var.set("CLAUDE_USE_WAYLAND=1")  # text left in the entry counts
+        ed["D-Bus names (talk)"].var.set("org.c.D")
+        bt["Review changes…"].invoke()
+
+    got = _open_permissions(window, monkeypatch, act)
+    assert got["env"] == ("B=x=y", "CLAUDE_USE_WAYLAND=1") and got["dbus_filter"] == ("org.a.B", "org.c.D")
+    command = app.argv.perms_argv("app", PERMS_STATE, got)
+    assert command[:2] == ["perms", "app"] and "--yes" not in command
+    assert command[command.index("--unset-env") + 1] == "A" and "CLAUDE_USE_WAYLAND=1" in command
+
+
+def test_permissions_editor_cancel_returns_none_and_every_editor_fits_the_screen(window, monkeypatch):
+    seen = {}
+
+    def act(top, ed, bt):
+        seen["titles"] = sorted(ed)
+        for widget in ed.values():
+            assert widget.winfo_ismapped()
+            assert widget.winfo_rooty() + widget.winfo_height() <= top.winfo_screenheight()
+            assert widget.winfo_rootx() + widget.winfo_width() <= top.winfo_screenwidth()
+        for name in ("Review changes…", "Cancel"):
+            assert bt[name].winfo_ismapped() and bt[name].winfo_rooty() + bt[name].winfo_height() <= top.winfo_screenheight()
+        bt["Cancel"].invoke()
+
+    assert _open_permissions(window, monkeypatch, act) is None
+    assert seen["titles"] == ["D-Bus names (own)", "D-Bus names (talk)", "Directories", "Environment", "Privileged portals"]
+
+
 def test_search_hit_goes_to_the_add_tab(window, monkeypatch):
     hits = [app.apps.index.Hit("good", "an app", "github:o/good", "", "db"),
             app.apps.index.Hit("other", "elsewhere", "gitlab:gitlab.com/g/p", "", "db")]
