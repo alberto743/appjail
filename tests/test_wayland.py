@@ -199,8 +199,9 @@ def test_the_lists_do_not_overlap_and_every_kind_says_what_it_allows():
 
 
 def test_every_allowed_global_says_why_and_the_limits_are_in_the_decision_page():
-    """RATIONALE is the table of allowed globals: a known basis, where the protocol was read, a reason; every accepted
-    limit is named on the decision page, which is where a reader looks for what the permission-less app can still do."""
+    """RATIONALE is the table of allowed globals: a known basis, where the protocol was read (a new name needs its protocol
+    read), a reason; every accepted limit is named on the decision page, which is where a reader looks for what the
+    permission-less app can still do."""
     assert wayland.ALLOWED == frozenset(wayland.RATIONALE)
     reads = {wayland.READ_WP, wayland.READ_PLASMA, wayland.READ_CORE, wayland.READ_GTK, wayland.READ_MESA, wayland.READ_HYPRLAND,
              wayland.READ_FROG}
@@ -212,11 +213,6 @@ def test_every_allowed_global_says_why_and_the_limits_are_in_the_decision_page()
     for name, (basis, _read, _note) in wayland.RATIONALE.items():
         if basis == wayland.LIMIT:
             assert name in page, f"{name} is an accepted limit and must be explained in wayland-allowlist.md"
-
-
-def test_every_allowed_global_has_been_read():
-    """A new allowed name needs its protocol read (or a decision to allow an unread one, which changes this test)."""
-    assert [n for n, (_b, read, _t) in wayland.RATIONALE.items() if read == wayland.UNREAD] == []
 
 
 def test_what_acts_on_the_shell_or_the_desktop_is_not_allowed():

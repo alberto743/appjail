@@ -117,8 +117,8 @@ reused by another file.
   [removable media](../../guide/files.md#removable-media-usb-drives-sd-cards).
 - A secret is recognised by where it is, not by what it is: a key file kept in an ordinary folder you grant is visible
   to the app.
-- The private home is persistent and is deleted only by `appjail remove`; an app can keep state there between runs, as
-  any app does.
+- The private home is persistent and is deleted only by `appjail remove`, or by `appjail reset`, which keeps the app;
+  an app can keep state there between runs, as any app does.
 
 ## References
 

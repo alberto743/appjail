@@ -52,7 +52,8 @@ So a separate microphone permission could not be a real promise on the host's so
 - The tunnels connect to the devices that are your defaults when the app starts. Making another device the default later
   adds links instead of moving them (sound on both, the microphone mixed from both; newer PipeWire moves the microphone
   link); unplugging a device the app used stops its sound until the app restarts (newer PipeWire removes the app's audio
-  devices, [measured](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)); the tunnels do not reconnect if your audio server restarts.
+  devices, [measured](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)); the tunnels do not
+  reconnect if your audio server restarts.
 - About 36 MiB of memory and under a second of start-up per app.
 - Apps that speak only native PipeWire need `pipewire` mode.
 - Tested with virtual devices and PipeWire 1.4, 1.6.2 and 1.6.11; not yet with a real headset.

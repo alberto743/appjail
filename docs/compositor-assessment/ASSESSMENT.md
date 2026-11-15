@@ -138,16 +138,17 @@ What the table shows:
    another client had copied. Both names are refused (decision D).
 10. **Fedora 45** (Mutter and GNOME Shell 51.1, KWin and Plasma 6.8.2, Cinnamon 6.8.0, sway 1.12, labwc 0.20, Wayfire 0.10.1,
     Cage 0.3.1, Weston 15; measured 2026-11-14): the same results as the other two systems, with five differences.
-    **New globals.** Seven globals were in no list, which refuses the compositor that offers them. Allowed after reading their
+    **New globals.** Six globals were in no list, which refuses the compositor that offers them. Allowed after reading their
     definitions: `ext_background_effect_manager_v1` (blur behind the client's own translucent surface),
     `xdg_session_manager_v1` (the client's own toplevels, restored through a session token the compositor makes) and
     `kde_output_device_registry_v2` (the list of outputs, as `kde_output_device_v2`, already allowed, describes them).
-    `xapp_shell_v1` (Cinnamon: hints for the client's own window, an icon name or path and a progress value; Muffin stores the
-    string without opening anything or answering the client, no consumer of it was found in Cinnamon 6.8's scripts and
-    libraries, and an X11 client can set the same hint through `_NET_WM_XAPP_ICON_NAME`). Privileged, under "windows":
+    `xapp_shell_v1` was first allowed too (Cinnamon: hints for the client's own window, an icon name or path and a
+    progress value; Muffin stores the string without opening anything or answering the client, no consumer of it was
+    found in Cinnamon 6.8's scripts and libraries, and an X11 client can set the same hint through
+    `_NET_WM_XAPP_ICON_NAME`); its definition made it privileged (item 12). Privileged, under "windows":
     `kde_lockscreen_overlay_v1` (a surface shown over the lock screen) and `org_kde_plasma_activation_feedback` (read-only
     events naming every app that is being started, defined in `plasma-window-management.xml`). The verdicts, rerun live
-    with the new lists: GNOME runs; Cinnamon, KWin and Plasma are refused, and none of these seven globals decides that.
+    with the new lists: GNOME runs; Cinnamon, KWin and Plasma are refused, and none of these six globals decides that.
     **Cinnamon 6.8 offers `zwlr_layer_shell_v1`** (6.4 did not): a client of the same socket drew a solid surface on the
     desktop with `swaybg`, and a whole-screen capture held it (checked by hand, with a control run without the client).
     That is what keeps Cinnamon 6.8 refused.

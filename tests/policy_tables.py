@@ -84,8 +84,7 @@ def render():
     for kind, names in wayland.PRIVILEGED.items():
         out.append(f"| {kind} | {wayland.CAPABILITY[kind]} | {_codes(names)} |")
     out += ["", "Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: " +
-            "; ".join(f"**{b}**: {text}" for b, text in wayland.BASIS.items()) + ". *Read* says where the protocol was read; "
-            "`unread` names are known only from the compositors that list them.", "",
+            "; ".join(f"**{b}**: {text}" for b, text in wayland.BASIS.items()) + ". *Read* says where the protocol was read.", "",
             "| Interface | Basis | Read | Why |", "|---|---|---|---|"]
     for name, (basis, read, note) in sorted(wayland.RATIONALE.items()):
         out.append(f"| `{name}` | {basis} | {read} | {note} |")

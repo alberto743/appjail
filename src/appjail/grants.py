@@ -26,7 +26,7 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 # other windows); the shell also answers org.gnome.Shell.Screenshot, refused above
                 "org.Cinnamon",
                 # measured on Cinnamon 6.8, which renamed GNOME's screenshot name: org.cinnamon.Screenshot writes a picture of the
-                # whole screen for any client, and org.cinnamon.ScreenSaver locks, unlocks and ends the screensaver
+                # whole screen for any client, and org.cinnamon.ScreenSaver locks the screen and ends the screensaver
                 "org.cinnamon.Screenshot", "org.cinnamon.ScreenSaver",
                 # measured on Plasma 6.3 and 6.6: the shell's evaluateScript runs a desktop script for any client (it writes
                 # the user's configuration files), and klipper, in the same process, hands over the clipboard and its history
@@ -102,9 +102,10 @@ ENV_REFUSED_PREFIXES = ("LD_", "PYTHON", "PERL5")
 def check_env(key, value):
     """One entry of [env]: a plain name that appjail does not set, and a short text value."""
     match(key, ENV_NAME_RE, "env name")
-    if key in ENV_REFUSED or key in ENV_REFUSED_HOOKS or key.startswith(ENV_REFUSED_PREFIXES):
-        raise ManifestError(f"env name {key} is refused: appjail sets it from the permissions, or it makes a program "
-                            "load code of the app's choosing")
+    if key in ENV_REFUSED:
+        raise ManifestError(f"env name {key} is refused: appjail sets it from the permissions")
+    if key in ENV_REFUSED_HOOKS or key.startswith(ENV_REFUSED_PREFIXES):
+        raise ManifestError(f"env name {key} is refused: it makes a program load code of the caller's choosing")
     if not isinstance(value, str):
         raise ManifestError(f"env {key} must be a string")
     if value:

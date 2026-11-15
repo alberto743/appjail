@@ -3,22 +3,20 @@
 
 """The manifest's [env] table: schema, policy, the jail's environment and `perms --set-env`."""
 
-from dataclasses import replace
-
 import pytest
 
 from appjail import cli, grants, manifest, runtimejail, store
 from appjail.errors import RunError
 from appjail.manifest import Manifest, ManifestError
 
-from .helpers import Script, build
+from .helpers import FakeClient, Script, build, release2, update
 
 
 def sample(**kw):
     return Manifest("app", "github:o/a", "v1", "a" * 64, 3, "2026-01-01T00:00:00Z", asset_pattern="*.AppImage", **kw)
 
 
-def perms(h, *argv, answers=("y",)):
+def perms(*argv, answers=("y",)):
     c = Script(answers)
     cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", *argv]), c)
     return c
@@ -100,25 +98,26 @@ def saved():
 
 def test_perms_set_and_unset_env(h):
     h.add()
-    c = perms(h, "--set-env", "CLAUDE_USE_WAYLAND=1", "--set-env", "B=2")
+    c = perms("--set-env", "CLAUDE_USE_WAYLAND=1", "--set-env", "B=2")
     assert saved().env == (("B", "2"), ("CLAUDE_USE_WAYLAND", "1"))
     assert "plain text" in c.text and "+ B=2" in c.text
-    c = perms(h, "--unset-env", "B")
+    c = perms("--unset-env", "B")
     assert saved().env == (("CLAUDE_USE_WAYLAND", "1"),)
-    assert "CLAUDE_USE_WAYLAND=1" in perms(h).text
+    assert "CLAUDE_USE_WAYLAND=1" in perms().text
 
 
 def test_perms_refuses_bad_env(h):
     h.add()
     for argv in (["--set-env", "NOVALUE"], ["--set-env", "PATH=/x"], ["--unset-env", "NOPE"]):
         with pytest.raises(cli.Abort):
-            perms(h, *argv)
+            perms(*argv)
     assert saved().env == ()
 
 
-def test_env_survives_a_permission_change_and_an_update_record(h):
+def test_env_survives_a_permission_change_and_an_update(h):
     h.add()
-    perms(h, "--set-env", "A=1")
-    perms(h, "--allow", "network", answers=("y", "y"))
+    perms("--set-env", "A=1")
+    perms("--allow", "network", answers=("y", "y"))
     assert saved().env == (("A", "1"),)
-    assert replace(saved(), version="v2").env == (("A", "1"),)
+    update(h, FakeClient(release_=release2()), days=0)
+    assert saved().version == "v2.0" and saved().env == (("A", "1"),)

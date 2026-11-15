@@ -1,8 +1,8 @@
 # Permissions
 
 A new app gets a private home, a read-only view of the system and a window, nothing else
-([why](../understand/principles.md#6-nothing-is-granted-by-default)). Everything beyond that is a permission recorded
-in the app's manifest. This page shows how to read and change them; the [permission reference](../reference/permissions.md)
+([why](../understand/principles.md#6-nothing-is-granted-by-default)). Everything beyond that is a permission recorded in
+the app's manifest. This page shows how to read and change them; the [permission reference](../reference/permissions.md)
 lists every one.
 
 ## See what an app may do
@@ -49,9 +49,10 @@ appjail perms NAME --set-env CLAUDE_USE_WAYLAND=1
 appjail perms NAME --unset-env CLAUDE_USE_WAYLAND
 ```
 
-It is not a permission and grants nothing, and it survives `update` and `reset`. The manifest is plain text kept in
-git, so keep tokens and passwords out of it. Names appjail sets itself (`HOME`, `DISPLAY`, the toolkit hints) and
-names that load code (`LD_PRELOAD`, `PYTHONPATH`, ...) are refused: see the [policy lists](../reference/policy.md#environment-variables).
+It is not a permission and grants nothing, and it survives `update` and `reset`. The manifest is plain text kept in git,
+so keep tokens and passwords out of it. Names appjail sets itself (`HOME`, `DISPLAY`, the toolkit hints) and names that
+load code (`LD_PRELOAD`, `PYTHONPATH`, ...) are refused: see the [policy
+lists](../reference/policy.md#environment-variables).
 
 ## Warnings and refusals
 

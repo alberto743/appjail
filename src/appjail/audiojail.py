@@ -60,7 +60,7 @@ def _in_jail_system(path):
 MODULE_DIRS = ("lib/*/pipewire-0.3", "lib/pipewire-0.3", "lib64/pipewire-0.3")
 
 
-def module_dirs(root="/usr"):
+def find_module_dirs(root="/usr"):
     return [d for pattern in MODULE_DIRS for d in Path(root).glob(pattern)]
 
 
@@ -73,7 +73,7 @@ def availability(host_pulse_socket, which=shutil.which, module_dirs=None):
         if not _in_jail_system(path):
             return False, f"{tool} is not under /usr, where the audio jail can see it"
     if module_dirs is None:
-        module_dirs = globals()["module_dirs"]()
+        module_dirs = find_module_dirs()
     if not any((Path(d) / "libpipewire-module-pulse-tunnel.so").exists() for d in module_dirs):
         return False, "PipeWire's pulse-tunnel module is missing"
     if not (host_pulse_socket and Path(host_pulse_socket).is_socket()):

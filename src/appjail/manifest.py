@@ -106,7 +106,7 @@ class Manifest:
     owner_id: int = None  # GitHub account id of the owner; pins the account, not just the name
     channel: str = "stable"  # which releases `update` follows: stable, prerelease, or pinned (never)
     permissions: Permissions = field(default_factory=Permissions)
-    env: tuple = ()  # (name, value) pairs for the app's environment; no capability, see grants.check_env
+    env: tuple = ()  # (name, value) pairs of [env], the app's own variables; checked by grants.check_env_table
 
     @property
     def kind(self):

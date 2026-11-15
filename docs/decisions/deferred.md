@@ -38,7 +38,9 @@ machine.
 - Compositors: a full desktop session (GNOME, Plasma, Cinnamon) with its daemons, the bus names they add and the Wayland
   globals they list; only headless or nested compositors were measured
   ([what the assessment does not cover](../develop/assessing-compositors.md#what-this-does-not-cover)).
-- Camera: whether Webcamoid fixes its device listing (its V4L2 plugin lists `/dev` by file type, see [GPU and camera](../understand/desktop/devices.md#limits)); a real V4L2 webcam, unplugging while the app runs, and a real camera through the Camera portal.
+- Camera: whether Webcamoid fixes its device listing (its V4L2 plugin lists `/dev` by file type, see [GPU and
+  camera](../understand/desktop/devices.md#limits)); a real V4L2 webcam, unplugging while the app runs, and a real
+  camera through the Camera portal.
 - Xwayland: GPU acceleration; clipboard and drag and drop through the `xwayland-rootful` window (briefly tested on
   GNOME).
 - D-Bus: real MPRIS players and tray icons with process-id names.

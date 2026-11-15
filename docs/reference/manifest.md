@@ -41,8 +41,9 @@ Consistency rules: `network_host` needs `network`, `mic` needs `audio`, `portal_
 
 Optional table of environment variables for the app, name to string value; omitted when empty, written sorted. Names
 match `[A-Z_][A-Z0-9_]{0,63}`, values have at most 1024 characters and no control characters, at most 32 entries. Names
-appjail sets itself and loader or interpreter hooks are refused (the lists are in [policy lists](policy.md#environment-variables)).
-Updates never change it. The file is plain text under git: keep tokens and passwords out of it.
+appjail sets itself and loader or interpreter hooks are refused (the lists are in [policy
+lists](policy.md#environment-variables)). Updates never change it. The file is plain text under git: keep tokens and
+passwords out of it.
 
 ```toml
 [env]
