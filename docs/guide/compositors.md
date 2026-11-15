@@ -12,7 +12,7 @@ focus, controlling other windows), or interfaces it does not know. Why: [Wayland
 | sway 1.10, 1.11, 1.12 | yes |
 | labwc 0.8, 0.9, 0.20 | yes |
 | Hyprland 0.55 | yes |
-| KDE Plasma (KWin 6.3, 6.6, 6.8) | no: its app socket still offers clipboard reading without focus |
+| KDE Plasma (KWin 6.3, 6.6, 6.8) | no: its app socket still offers the layer shell and shell control (6.3 and 6.6 also clipboard reading without focus) |
 | Hyprland 0.53 | no: virtual keyboard and pointer |
 | Wayfire, Cage, Weston 14, 15 | no: capture, input and window control |
 
@@ -27,7 +27,7 @@ appjail perms NAME --allow full_wayland
 ```
 
 The app then runs, with a warning at each start. On KDE Plasma this is needed for every app until KWin hides
-data-control on restricted sockets.
+the layer shell, the Plasma shell and output management on restricted sockets.
 
 If the message says an interface is **not known to appjail**, your compositor offers something that has not been
 classified yet (a compositor that was not measured, or a new version). `full_wayland` lets the app run meanwhile; please

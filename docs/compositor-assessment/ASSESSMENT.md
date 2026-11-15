@@ -95,10 +95,14 @@ What the table shows:
 1. **sway, labwc, Hyprland 0.55** (wlroots-style; sway 1.12 and labwc 0.20 on Fedora): the security context works. The restricted socket hides every privileged
    interface and none of the three capabilities works on it, while all work (or clipboard and typing do) on the ordinary
    socket. This is the model appjail was written for.
-2. **KWin (6.3.6, 6.6.6 and 6.8.2)**: the protocol is offered, but the restricted socket hides **only the protocol manager itself**.
-   A client on it sees the same privileged-looking interfaces (`zwlr_data_control_manager_v1`, `zwlr_layer_shell_v1`,
-   `org_kde_plasma_shell`, `kde_output_management_v2`, keyboard-shortcuts inhibit) and **can read another client's clipboard**.
-   KWin guards the rest by other means (it does not advertise screen capture or fake input to an unauthorised client).
+2. **KWin (6.3.6, 6.6.6 and 6.8.2)**: the protocol is offered. On 6.3.6 and 6.6.6 the restricted socket hides **only the protocol
+   manager itself**: a client on it sees the same privileged-looking interfaces (`zwlr_data_control_manager_v1` or
+   `ext_data_control_manager_v1`, `zwlr_layer_shell_v1`, `org_kde_plasma_shell`, `kde_output_management_v2`, keyboard-shortcuts
+   inhibit) and **can read another client's clipboard**. On 6.8.2 (Fedora 45) it also hides data-control, fake input, the lock
+   screen overlay, activation feedback, Plasma window management and screencast, but still lists the layer shell, the Plasma
+   shell, output management, screen power, brightness, screen edges, virtual desktops and the lock keys; the clipboard read
+   that still worked there used `wl-paste`'s fallback, a window with the keyboard focus, which is the ordinary path. KWin guards
+   the rest by other means (it does not advertise screen capture or fake input to an unauthorised client).
 3. **GNOME (Mutter and GNOME Shell, 48.7, 50.1 and 51.1)**: no security context, and no privileged capability on the socket: none of
    the three works, and the only privileged-looking global is keyboard-shortcuts inhibit.
 4. **Wayfire, Cage**: no security context, and the full socket allows clipboard reads and typing (Cage and Wayfire 0.10
@@ -507,8 +511,8 @@ the screen. Refusing names is not enough where an allowed name shares the connec
 Cinnamon; found 2026-11-13, see "One granted name reaches its whole connection"), so the proxy confines the grants of known
 services to their own objects, and `run` refuses any other grant whose owner also owns a refused name.
 
-**KWin.** Its restricted socket hides only the protocol manager, so data-control stays visible and a client reads another
-client's clipboard. Accepting that for KWin alone would give the same capability as `full_wayland` without asking, so KWin is
+**KWin.** Its restricted socket (6.3 and 6.6) hides only the protocol manager, so data-control stays visible and a client reads another
+client's clipboard; 6.8 hides data-control but keeps the layer shell and shell control. Accepting that for KWin alone would give the same capability as `full_wayland` without asking, so KWin is
 refused like any other compositor with a privileged global, and the message says what is exposed.
 
 **Hyprland 0.53.** Refused by A without a special case (see above).

@@ -33,8 +33,9 @@ offers privileged protocols to every client, an app with nothing but a window ca
 | desktop | KWin's screen power, brightness, virtual desktops, screen edges, lock keys | changing the desktop itself |
 
 Compositors differ widely. Measured on Debian 13, Ubuntu 26.04 and Fedora 45 (headless, with real clients trying each capability):
-sway, labwc and Hyprland 0.55 hide all of these on the restricted socket; KWin's restricted socket still lists
-data-control, and a client read another client's clipboard through it; GNOME and Cinnamon have no restricted socket, but
+sway, labwc and Hyprland 0.55 hide all of these on the restricted socket; KWin 6.3 and 6.6 hide only the manager of the
+protocol, so data-control stays listed and a client read another client's clipboard through it (KWin 6.8 hides data-control,
+fake input and a few more, but still lists the layer shell, the Plasma shell and output management); GNOME and Cinnamon have no restricted socket, but
 their own socket lists none of these, because they keep capture and remote input on D-Bus; Wayfire, Cage and Weston
 offer them on the only socket they have.
 
@@ -76,7 +77,8 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 
 ## Limits
 
-- KWin is refused until it hides data-control on restricted sockets; Plasma users need `full_wayland` per app.
+- KWin is refused until it hides the layer shell, the Plasma shell and output management (and, before 6.8, data-control) on
+  restricted sockets; Plasma users need `full_wayland` per app.
 - The classification is by interface name, not version.
 - An app can learn when you are idle where the compositor offers idle notification, and keep the screen from blanking or
   locking while its window is visible.

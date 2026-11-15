@@ -10,8 +10,9 @@ it. Measurements of twelve compositors (Mutter, GNOME Shell, Muffin, Cinnamon, K
 
 - GNOME (Mutter, GNOME Shell) and Cinnamon (Muffin) have no such protocol, and their own socket lists nothing
   privileged: they keep capture and remote input on D-Bus;
-- the protocol is not sufficient: KWin's restricted socket still lists data-control, and a client read another
-  client's clipboard through it; Hyprland 0.53's lists virtual input, and a client typed through it;
+- the protocol is not sufficient: KWin 6.3 and 6.6 hide only its manager on the restricted socket, so data-control stays listed and a
+  client read another client's clipboard through it (6.8 hides data-control, but still lists the layer shell and more);
+  Hyprland 0.53's lists virtual input, and a client typed through it;
 - sway, labwc and Hyprland 0.55 hide every privileged interface on the restricted socket.
 
 **Options.** Decide by compositor name; decide by the presence of the protocol; decide by what the app's socket
@@ -24,10 +25,10 @@ with a warning. It is a permission, not a run option, so menu entries and file o
 about, and so a warning that scrolls past is never taken for consent.
 
 **Consequences.** Apps run on GNOME, sway, labwc and Hyprland 0.55 (and on Cinnamon 6.4; Cinnamon 6.8 offers the layer shell and is refused) without the permission. **KWin is
-refused**, like any compositor whose app socket lists a privileged interface: accepting data-control there would grant
+refused**, like any compositor whose app socket lists a privileged interface: accepting what it lists there would grant
 what `full_wayland` grants without asking, and would go stale with KWin. Plasma users need `full_wayland` per app until
-KWin hides data-control. Ordinary copy and paste is not affected anywhere: it uses the core clipboard, which needs
+KWin hides the layer shell, the Plasma shell and output management. Ordinary copy and paste is not affected anywhere: it uses the core clipboard, which needs
 keyboard focus (measured on every compositor, in both directions). The measurements are of headless compositors, not
 of full desktop sessions.
 
-**Revisit when** KWin hides data-control on restricted sockets, or a narrower grant for the clipboard alone is wanted.
+**Revisit when** KWin hides its privileged globals on restricted sockets, or a narrower grant for the clipboard alone is wanted.
