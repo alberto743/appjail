@@ -64,7 +64,7 @@ in neither table, refuses a windowed app without `full_wayland`.
 | capture | capture the screen | `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_manager_v1`, `zwlr_export_dmabuf_manager_v1`, `hyprland_toplevel_export_manager_v1`, `zkde_screencast_unstable_v1`, `weston_capture_v1` |
 | input | type or click for other apps, or take over the keyboard | `zwlr_virtual_pointer_manager_v1`, `zwp_virtual_keyboard_manager_v1`, `zwp_input_method_manager_v2`, `zwp_input_method_v1`, `zwp_input_panel_v1`, `org_kde_kwin_fake_input`, `zwlr_input_inhibit_manager_v1`, `hyprland_global_shortcuts_manager_v1`, `zwf_shell_manager_v2`, `ext_transient_seat_manager_v1`, `hyprland_focus_grab_manager_v1` |
 | clipboard | read and replace the clipboard without having the focus | `zwlr_data_control_manager_v1`, `ext_data_control_manager_v1` |
-| windows | see or control other apps' windows, see which apps start, change the screen layout or the lock screen, or make the shell call a D-Bus service of the app's choosing | `zwlr_foreign_toplevel_manager_v1`, `ext_foreign_toplevel_list_v1`, `org_kde_plasma_window_management`, `zwlr_layer_shell_v1`, `org_kde_plasma_shell`, `weston_desktop_shell`, `zwlr_output_manager_v1`, `zwlr_output_power_manager_v1`, `zwlr_gamma_control_manager_v1`, `kde_output_management_v2`, `kde_output_management_v1`, `ext_session_lock_manager_v1`, `ext_workspace_manager_v1`, `zcosmic_workspace_manager_v1`, `hyprland_toplevel_mapping_manager_v1`, `hyprland_ctm_control_manager_v1`, `hyprland_lock_notifier_v1`, `kde_lockscreen_overlay_v1`, `org_kde_plasma_activation_feedback`, `org_kde_kwin_appmenu_manager` |
+| windows | see or control other apps' windows, see which apps start, change the screen layout or the lock screen, or make the shell call a D-Bus service or open an icon file of the app's choosing | `zwlr_foreign_toplevel_manager_v1`, `ext_foreign_toplevel_list_v1`, `org_kde_plasma_window_management`, `zwlr_layer_shell_v1`, `org_kde_plasma_shell`, `weston_desktop_shell`, `zwlr_output_manager_v1`, `zwlr_output_power_manager_v1`, `zwlr_gamma_control_manager_v1`, `kde_output_management_v2`, `kde_output_management_v1`, `ext_session_lock_manager_v1`, `ext_workspace_manager_v1`, `zcosmic_workspace_manager_v1`, `hyprland_toplevel_mapping_manager_v1`, `hyprland_ctm_control_manager_v1`, `hyprland_lock_notifier_v1`, `kde_lockscreen_overlay_v1`, `org_kde_plasma_activation_feedback`, `org_kde_kwin_appmenu_manager`, `xapp_shell_v1` |
 | desktop | switch the screens off, change their brightness, the virtual desktops or the screen edges, or read the lock keys | `org_kde_kwin_dpms_manager`, `kde_external_brightness_v1`, `org_kde_plasma_virtual_desktop_management`, `kde_screen_edge_manager_v1`, `org_kde_kwin_keystate` |
 
 Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: **own**: acts only on the client's own surfaces, buffers or settings; **focus**: acts only while the client has the focus, or on an input serial it was given; **token**: needs a token or handle that another client or the compositor handed over; **facts**: describes the hardware, the outputs or the settings; changes nothing; **limit**: accepted limit, decided (docs/decisions/desktop/wayland-allowlist.md). *Read* says where the protocol was read; `unread` names are known only from the compositors that list them.
@@ -75,11 +75,11 @@ Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: **own**: 
 | `ext_foreign_toplevel_image_capture_source_manager_v1` | own | wayland-protocols | names a window as a capture source; capturing needs the copy manager, which is privileged |
 | `ext_idle_notifier_v1` | limit | wayland-protocols | tells whether the user is idle: a privacy signal, no request acts on anything |
 | `ext_output_image_capture_source_manager_v1` | own | wayland-protocols | names an output as a capture source; capturing needs the copy manager, which is privileged |
-| `frog_color_management_factory_v1` | own | unread | colour management of the client's own surface |
-| `gtk_primary_selection_device_manager` | focus | unread | GTK's own version of the primary selection |
-| `gtk_shell1` | own | unread | GTK's hints for the client's own windows (startup notification, application id) |
-| `gtk_text_input_manager` | focus | unread | GTK's own version of text input |
-| `hyprland_surface_manager_v1` | own | unread | Hyprland's per-surface hints; only what a client sets on its own surface |
+| `frog_color_management_factory_v1` | own | frog-color-management-v1.xml (KWin 6.3.6) | colour management of the client's own surface; the preferred metadata is a fact about its output |
+| `gtk_primary_selection_device_manager` | focus | gtk-shell.xml, gtk-primary-selection.xml, gtk-text-input.xml (Mutter 48.7, Muffin 6.4.1 sources) | GTK's own version of the primary selection: only the client with the keyboard focus receives the offer |
+| `gtk_shell1` | limit | gtk-shell.xml, gtk-primary-selection.xml, gtk-text-input.xml (Mutter 48.7, Muffin 6.4.1 sources) | own windows, but any client can take the keyboard focus (present, or notify_launch and request_focus, with no token) and GNOME Shell calls a D-Bus name the client picks |
+| `gtk_text_input_manager` | focus | gtk-shell.xml, gtk-primary-selection.xml, gtk-text-input.xml (Mutter 48.7, Muffin 6.4.1 sources) | GTK's own version of text input: enable, disable and surrounding text of the focused client |
+| `hyprland_surface_manager_v1` | own | hyprland-surface-v1.xml (hyprland-protocols 0.7.1) and Hyprland 0.55.2 source | opacity and visible region of the client's own surface (set_opacity, set_visible_region) |
 | `kde_output_device_registry_v2` | limit | plasma-wayland-protocols | the list of outputs, as kde_output_device_v2 describes them |
 | `kde_output_device_v2` | limit | plasma-wayland-protocols | describes the outputs, with their EDID and serial numbers: a hardware fingerprint |
 | `kde_output_order_v1` | facts | plasma-wayland-protocols | the order of the outputs; events only |
@@ -89,7 +89,7 @@ Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: **own**: 
 | `org_kde_kwin_shadow_manager` | own | plasma-wayland-protocols | the shadow of the client's own surface |
 | `wl_compositor` | own | core | creates the client's surfaces |
 | `wl_data_device_manager` | focus | core | selection and drag-and-drop reach the focused client; reading the clipboard needs a paste |
-| `wl_drm` | own | unread | Mesa's legacy buffer sharing: buffers of the client; not in wayland-protocols |
+| `wl_drm` | own | wayland-drm.xml (Mesa 26.1.6, KWin 6.3.6) and live on KWin and Hyprland | Mesa's buffer sharing: the device name, and buffers the client makes from its own dmabuf; a buffer by flink name is refused (KWin, Hyprland, tried) |
 | `wl_fixes` | own | core | destroys the client's own registry |
 | `wl_output` | facts | core | geometry, make, model and scale of the outputs |
 | `wl_seat` | focus | core | input goes to the focused client only |
@@ -112,7 +112,6 @@ Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: **own**: 
 | `wp_single_pixel_buffer_manager_v1` | own | wayland-protocols | a buffer of the client |
 | `wp_tearing_control_manager_v1` | own | wayland-protocols | a hint about the client's own surface |
 | `wp_viewporter` | own | wayland-protocols | crops and scales the client's own surface |
-| `xapp_shell_v1` | own | unread | XApp's hints for the client's own windows (icon, progress); Muffin stores them without opening anything |
 | `xdg_activation_v1` | token | wayland-protocols | needs a serial of the client or a token it was handed; the compositor may ignore it |
 | `xdg_session_manager_v1` | token | wayland-protocols | the client's own toplevels, restored through a session token the compositor makes |
 | `xdg_system_bell_v1` | own | wayland-protocols | rings the system bell |

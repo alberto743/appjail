@@ -59,7 +59,7 @@ PRIVILEGED = {
                 "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1",
                 "zcosmic_workspace_manager_v1", "hyprland_toplevel_mapping_manager_v1", "hyprland_ctm_control_manager_v1",
                 "hyprland_lock_notifier_v1", "kde_lockscreen_overlay_v1", "org_kde_plasma_activation_feedback",
-                "org_kde_kwin_appmenu_manager"),
+                "org_kde_kwin_appmenu_manager", "xapp_shell_v1"),
     "desktop": ("org_kde_kwin_dpms_manager", "kde_external_brightness_v1", "org_kde_plasma_virtual_desktop_management",
                 "kde_screen_edge_manager_v1", "org_kde_kwin_keystate"),
 }
@@ -71,9 +71,15 @@ BASIS = {
     FACTS: "describes the hardware, the outputs or the settings; changes nothing",
     LIMIT: "accepted limit, decided (docs/decisions/desktop/wayland-allowlist.md)",
 }
-# Where the protocol was read: "wayland-protocols" and "plasma-wayland-protocols" are the XML shipped by the distributions
-# (read in the Fedora 45 guest); "core" is wayland.xml; UNREAD is a name appjail only knows from the compositors that list it.
+# Where the protocol was read. The first two are the XML shipped by the distributions (read in the Fedora 45 guest); "core" is
+# wayland.xml; the others are the definition and the compositor's own code in the source package of the version measured
+# (the Debian and Ubuntu source packages, Fedora's source RPM), and for wl_drm and gtk_shell1 the live behaviour too.
+# UNREAD is a name appjail only knows from the compositors that list it; tests/test_wayland.py allows none.
 READ_WP, READ_PLASMA, READ_CORE, UNREAD = "wayland-protocols", "plasma-wayland-protocols", "core", "unread"
+READ_GTK = "gtk-shell.xml, gtk-primary-selection.xml, gtk-text-input.xml (Mutter 48.7, Muffin 6.4.1 sources)"
+READ_MESA = "wayland-drm.xml (Mesa 26.1.6, KWin 6.3.6) and live on KWin and Hyprland"
+READ_HYPRLAND = "hyprland-surface-v1.xml (hyprland-protocols 0.7.1) and Hyprland 0.55.2 source"
+READ_FROG = "frog-color-management-v1.xml (KWin 6.3.6)"
 
 # Every global an app's socket may list without full_wayland, with why: (basis, where its protocol was read, note).
 # The basis answers the rule in docs/decisions/desktop/wayland-allowlist.md; tests/test_wayland.py checks the table is complete.
@@ -85,7 +91,7 @@ RATIONALE = {
     "wl_seat": (FOCUS, READ_CORE, "input goes to the focused client only"),
     "wl_output": (FACTS, READ_CORE, "geometry, make, model and scale of the outputs"),
     "wl_data_device_manager": (FOCUS, READ_CORE, "selection and drag-and-drop reach the focused client; reading the clipboard needs a paste"),
-    "wl_drm": (OWN, UNREAD, "Mesa's legacy buffer sharing: buffers of the client; not in wayland-protocols"),
+    "wl_drm": (OWN, READ_MESA, "Mesa's buffer sharing: the device name, and buffers the client makes from its own dmabuf; a buffer by flink name is refused (KWin, Hyprland, tried)"),
     "wl_fixes": (OWN, READ_CORE, "destroys the client's own registry"),
     "xdg_wm_base": (OWN, READ_WP, "makes the client's surfaces windows"),
     "xdg_wm_dialog_v1": (OWN, READ_WP, "marks the client's own dialog modal"),
@@ -138,12 +144,12 @@ RATIONALE = {
     # and GTK's own primary selection and text input (the focused client's selection and input method, as the zwp_ ones)
     "wl_shell": (OWN, READ_CORE, "the deprecated shell: the client's own windows"),
     "zxdg_shell_v6": (OWN, READ_WP, "the unstable xdg shell: the client's own windows"),
-    "gtk_primary_selection_device_manager": (FOCUS, UNREAD, "GTK's own version of the primary selection"),
-    "gtk_text_input_manager": (FOCUS, UNREAD, "GTK's own version of text input"),
+    "gtk_primary_selection_device_manager": (FOCUS, READ_GTK, "GTK's own version of the primary selection: only the client with the keyboard focus receives the offer"),
+    "gtk_text_input_manager": (FOCUS, READ_GTK, "GTK's own version of text input: enable, disable and surrounding text of the focused client"),
     # compositor extras
-    "gtk_shell1": (OWN, UNREAD, "GTK's hints for the client's own windows (startup notification, application id)"),
-    "hyprland_surface_manager_v1": (OWN, UNREAD, "Hyprland's per-surface hints; only what a client sets on its own surface"),
-    "frog_color_management_factory_v1": (OWN, UNREAD, "colour management of the client's own surface"),
+    "gtk_shell1": (LIMIT, READ_GTK, "own windows, but any client can take the keyboard focus (present, or notify_launch and request_focus, with no token) and GNOME Shell calls a D-Bus name the client picks"),
+    "hyprland_surface_manager_v1": (OWN, READ_HYPRLAND, "opacity and visible region of the client's own surface (set_opacity, set_visible_region)"),
+    "frog_color_management_factory_v1": (OWN, READ_FROG, "colour management of the client's own surface; the preferred metadata is a fact about its output"),
     "org_kde_kwin_idle": (LIMIT, READ_PLASMA, "idle notification; simulate_user_activity resets the idle timer, as an idle inhibitor already can"),
     "org_kde_kwin_server_decoration_manager": (OWN, READ_PLASMA, "the decoration mode of the client's own window"),
     "org_kde_kwin_server_decoration_palette_manager": (OWN, READ_PLASMA, "the title-bar colours of the client's own window"),
@@ -154,7 +160,6 @@ RATIONALE = {
     "ext_background_effect_manager_v1": (OWN, READ_WP, "blur behind the client's own translucent surface"),
     "xdg_session_manager_v1": (TOKEN, READ_WP, "the client's own toplevels, restored through a session token the compositor makes"),
     "kde_output_device_registry_v2": (LIMIT, READ_PLASMA, "the list of outputs, as kde_output_device_v2 describes them"),
-    "xapp_shell_v1": (OWN, UNREAD, "XApp's hints for the client's own windows (icon, progress); Muffin stores them without opening anything"),
 }
 ALLOWED = frozenset(RATIONALE)
 UNKNOWN = "unknown"
@@ -163,7 +168,7 @@ CAPABILITY = {
     "input": "type or click for other apps, or take over the keyboard",
     "clipboard": "read and replace the clipboard without having the focus",
     "windows": "see or control other apps' windows, see which apps start, change the screen layout or the lock screen, or make the "
-               "shell call a D-Bus service of the app's choosing",
+               "shell call a D-Bus service or open an icon file of the app's choosing",
     "desktop": "switch the screens off, change their brightness, the virtual desktops or the screen edges, or read the "
                "lock keys",
     UNKNOWN: "do something appjail has not checked: these interfaces are not known to it",

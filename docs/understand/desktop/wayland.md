@@ -83,6 +83,9 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 - An app can read the hardware description of the outputs (make, model, EDID, serial numbers, colour profile), a
   fingerprint. On GNOME it also receives an unprivileged GPU render-node descriptor without the `gpu` permission: the
   driver's attack surface, not control of anything. A filtering proxy would remove it ([deferred](../../decisions/deferred.md)).
+- On GNOME and Cinnamon 6.4 any app with a window can take the keyboard focus from another app through `gtk_shell1`, with no
+  token, and then receives the keys typed there. The window changes visibly, but it is a real exposure of what you type
+  while the app runs ([measured](../../compositor-assessment/ASSESSMENT.md), [accepted limit](../../decisions/desktop/wayland-allowlist.md)).
 - The registry is read once, when the app starts. A global the compositor adds later (a plugin, a restart of the shell) is
   not seen.
 - The measurements are of headless compositors, not of complete desktop sessions. A compositor update that adds an

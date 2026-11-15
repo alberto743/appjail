@@ -202,7 +202,8 @@ def test_every_allowed_global_says_why_and_the_limits_are_in_the_decision_page()
     """RATIONALE is the table of allowed globals: a known basis, where the protocol was read, a reason; every accepted
     limit is named on the decision page, which is where a reader looks for what the permission-less app can still do."""
     assert wayland.ALLOWED == frozenset(wayland.RATIONALE)
-    reads = {wayland.READ_WP, wayland.READ_PLASMA, wayland.READ_CORE, wayland.UNREAD}
+    reads = {wayland.READ_WP, wayland.READ_PLASMA, wayland.READ_CORE, wayland.READ_GTK, wayland.READ_MESA, wayland.READ_HYPRLAND,
+             wayland.READ_FROG}
     for name, (basis, read, note) in wayland.RATIONALE.items():
         assert basis in wayland.BASIS, name
         assert read in reads, name
@@ -213,10 +214,17 @@ def test_every_allowed_global_says_why_and_the_limits_are_in_the_decision_page()
             assert name in page, f"{name} is an accepted limit and must be explained in wayland-allowlist.md"
 
 
+def test_every_allowed_global_has_been_read():
+    """A new allowed name needs its protocol read (or a decision to allow an unread one, which changes this test)."""
+    assert [n for n, (_b, read, _t) in wayland.RATIONALE.items() if read == wayland.UNREAD] == []
+
+
 def test_what_acts_on_the_shell_or_the_desktop_is_not_allowed():
-    """The appmenu address makes the shell call a service the app names; it is privileged though only KDE lists it."""
-    assert "org_kde_kwin_appmenu_manager" not in wayland.ALLOWED
-    assert wayland.privileged({"org_kde_kwin_appmenu_manager"}) == {"windows": ["org_kde_kwin_appmenu_manager"]}
+    """The appmenu address makes the shell call a service the app names, the XApp icon path a file it names: privileged though
+    only KDE and Cinnamon 6.8 list them."""
+    for name in ("org_kde_kwin_appmenu_manager", "xapp_shell_v1"):
+        assert name not in wayland.ALLOWED
+        assert wayland.privileged({name}) == {"windows": [name]}
 
 
 @pytest.mark.parametrize("name", ["ext_idle_notifier_v1", "wp_drm_lease_device_v1", "zwp_pointer_constraints_v1",
