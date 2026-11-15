@@ -30,6 +30,7 @@
   "cinnamon": {
    "left": {
     "windows": [
+     "xapp_shell_v1",
      "zwlr_layer_shell_v1"
     ]
    },

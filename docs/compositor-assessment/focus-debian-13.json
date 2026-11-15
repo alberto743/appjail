@@ -1,0 +1,182 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "cinnamon 6.4.10-2+deb13u1"
+  },
+  "gnome-shell": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": false
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0"
+     ],
+     "thief_focused": false,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "gnome-shell 48.7-0+deb13u2"
+  },
+  "muffin": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "muffin 6.4.1-1"
+  },
+  "mutter": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "mutter 48.7-0+deb13u1"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "debian",
+  "kernel": "6.12.116+deb13-amd64",
+  "name": "Debian GNU/Linux 13 (trixie)",
+  "version": "13"
+ }
+}

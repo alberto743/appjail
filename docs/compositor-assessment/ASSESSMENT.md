@@ -171,9 +171,33 @@ What the table shows:
     - **`kde_output_device_v2`, its registry and `wp_color_manager_v1`** give EDID, serial numbers and the colour profile of
       the outputs, a hardware fingerprint without control: accepted limits.
     - The other allowed globals act on the client's own surfaces, behind a focus, a serial or a token, or describe outputs.
-      `RATIONALE` in `wayland.py` records this for every one of them and where the protocol was read; `gtk_shell1`, `hyprland_surface_manager_v1`,
-      `frog_color_management_factory_v1`, `xapp_shell_v1`, `wl_drm` and GTK's two private protocols are `unread`: no
-      definition of them is installed in the guests.
+      `RATIONALE` in `wayland.py` records this for every one of them and where the protocol was read.
+12. **The seven globals first marked unread** (2026-11-15, same day). Their definitions came from the source packages of the versions
+    measured (Debian's and Ubuntu's source packages through `apt-get source`, Fedora's source RPM; text only, read, not
+    built): Mutter 48.7, Muffin 6.4.1 and 6.8.1, KWin 6.3.6, Mesa 26.1.6, Hyprland 0.55.2, hyprland-protocols 0.7.1, and GNOME
+    Shell 48.7 for who uses what. Results:
+    - **`gtk_shell1`: any client can take the keyboard focus.** `gtk_surface1.present(timestamp)` calls
+      `meta_window_activate_full`, whose focus-stealing check (`timestamp` before `last_user_time`) is skipped for the timestamp
+      0; and `gtk_shell1.notify_launch(id)` makes a startup sequence that `gtk_surface1.request_focus(id)` then redeems, with the
+      current time. `tests/compositors/focus_steal.py` tried it with two bare windows (`focus_client.py`, a stdlib client), one
+      focused last: **on Mutter, Muffin and Cinnamon on Debian 13, Ubuntu 26.04 and Fedora 45 the other window took the
+      focus** (`present 0` on every one of them, the notify route on every one; GNOME Shell on Debian lost both windows to its
+      overview on `present 0` and took the focus through the notify route; GNOME Shell on Fedora never gave the first window
+      the focus: untestable). The control (nothing sent) and `present 1` did not take it. `set_dbus_properties` is stored on the
+      window and GNOME Shell builds `org.gtk.Actions` and `org.gtk.Application` proxies to the bus name and paths the app
+      gave (`shell-app.c`). Both are accepted limits: refusing `gtk_shell1` refuses all of GNOME and Cinnamon 6.4. Raw results:
+      `focus-*.json`.
+    - **`wl_drm`** (KWin, Plasma's shell, Hyprland): the device name (`/dev/dri/renderD128`), no descriptor. `authenticate` is
+      answered and does nothing (Hyprland's code says so); `create_buffer` by flink name is refused by KWin ("not implemented")
+      and Hyprland ("use prime instead"): tried live. Own buffers only.
+    - **`hyprland_surface_manager_v1`**: opacity and visible region of the client's own surface (the XML and Hyprland's code).
+    - **`frog_color_management_factory_v1`** (KWin): colour management of the client's own surface, and an event with the
+      preferred metadata of its output.
+    - **`gtk_primary_selection_device_manager`, `gtk_text_input_manager`** (Muffin): the selection is offered only to the client
+      with the keyboard focus, text input follows the focus, as the `zwp_` versions.
+    - **`xapp_shell_v1`** (Muffin 6.8.1): its icon can be "an absolute path to an icon file" that the shell uses, so the shell
+      opens a file the app names: privileged ("windows"), not allowed as first decided. Only Cinnamon 6.8 lists it, and that is
+      refused for the layer shell.
 
 ## Results: option A and the clipboard, tried live
 
@@ -191,7 +215,7 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | cage | fedora 45 | 0.3.1-2.fc45 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cage | ubuntu 26.04 | 0.2.1-1 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cinnamon | debian 13 | 6.4.10-2+deb13u1 | full | nothing | works | run |
-| cinnamon | fedora 45 | 6.8.0-1.fc45 | full | windows: zwlr_layer_shell_v1 | works | refuse |
+| cinnamon | fedora 45 | 6.8.0-1.fc45 | full | windows: xapp_shell_v1, zwlr_layer_shell_v1 | works | refuse |
 | cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | full | nothing | works | run |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | nothing | works | run |
 | gnome-shell | fedora 45 | 51.1-1.fc45 | full | nothing | works | run |

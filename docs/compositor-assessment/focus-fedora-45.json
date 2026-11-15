@@ -1,0 +1,105 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "cinnamon 6.8.0-1.fc45"
+  },
+  "gnome-shell": {
+   "status": "untestable: the first window never got the keyboard focus",
+   "version": "gnome-shell 51.1-1.fc45"
+  },
+  "muffin": {
+   "status": "not installed",
+   "version": "muffin 6.8.1-1.fc45"
+  },
+  "mutter": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "mutter 51.1-1.fc45"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "fedora",
+  "kernel": "7.3.3-300.fc45.x86_64",
+  "name": "Fedora Linux 45 (Cloud Edition)",
+  "version": "45"
+ }
+}

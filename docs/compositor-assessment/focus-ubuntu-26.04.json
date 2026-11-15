@@ -1,0 +1,183 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "cinnamon 6.4.13-2ubuntu0.2"
+  },
+  "gnome-shell": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "gnome-shell 50.1-0ubuntu1.5"
+  },
+  "muffin": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "muffin 6.4.1-1build1"
+  },
+  "mutter": {
+   "gtk_shell1": [
+    "gtk_shell1:3"
+   ],
+   "status": "ok",
+   "steals_focus": true,
+   "steps": [
+    {
+     "command": "nothing",
+     "thief_events": [],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 1",
+     "thief_events": [
+      "sent:present 1"
+     ],
+     "thief_focused": false,
+     "victim_focused": true
+    },
+    {
+     "command": "present 0",
+     "thief_events": [
+      "sent:present 0",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    },
+    {
+     "command": "notify appjail-test;request_focus appjail-test",
+     "thief_events": [
+      "sent:notify appjail-test",
+      "sent:request_focus appjail-test",
+      "keyboard-enter"
+     ],
+     "thief_focused": true,
+     "victim_focused": false
+    }
+   ],
+   "version": "mutter 50.1-0ubuntu2.5"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "ubuntu",
+  "kernel": "7.0.0-43-generic",
+  "name": "Ubuntu 26.04.1 LTS",
+  "version": "26.04"
+ }
+}
