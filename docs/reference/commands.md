@@ -46,7 +46,8 @@ An option that does not apply to the chosen source is refused, never ignored.
 
 ### `reset`
 
-`appjail reset APP [--yes]`: delete the app's private home (its settings and data), keeping the app, its manifest, its permissions and its menu entry. The next run starts with an empty home.
+`appjail reset APP [--yes]`: delete the app's private home (its settings and data), keeping the app, its manifest, its
+permissions and its menu entry. The next run starts with an empty home.
 
 ## Running
 

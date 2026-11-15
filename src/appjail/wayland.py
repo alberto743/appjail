@@ -73,9 +73,9 @@ BASIS = {
 }
 # Where the protocol was read. The first two are the XML shipped by the distributions (read in the Fedora 45 guest); "core" is
 # wayland.xml; the others are the definition and the compositor's own code in the source package of the version measured
-# (the Debian and Ubuntu source packages, Fedora's source RPM), and for wl_drm and gtk_shell1 the live behaviour too.
-# UNREAD is a name appjail only knows from the compositors that list it; tests/test_wayland.py allows none.
-READ_WP, READ_PLASMA, READ_CORE, UNREAD = "wayland-protocols", "plasma-wayland-protocols", "core", "unread"
+# (the Debian and Ubuntu source packages, Fedora's source RPM), and for wl_drm and gtk_shell1 the live behaviour too. A name
+# is allowed only once its protocol has been read (tests/test_wayland.py).
+READ_WP, READ_PLASMA, READ_CORE = "wayland-protocols", "plasma-wayland-protocols", "core"
 READ_GTK = "gtk-shell.xml, gtk-primary-selection.xml, gtk-text-input.xml (Mutter 48.7, Muffin 6.4.1 sources)"
 READ_MESA = "wayland-drm.xml (Mesa 26.1.6, KWin 6.3.6) and live on KWin and Hyprland"
 READ_HYPRLAND = "hyprland-surface-v1.xml (hyprland-protocols 0.7.1) and Hyprland 0.55.2 source"

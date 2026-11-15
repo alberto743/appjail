@@ -20,7 +20,8 @@ again when the jail is built:
 - every name appjail sets itself (`PATH`, `HOME`, the display, bus, audio and portal variables, the toolkit hints), so
   `display` and the permissions stay the only way to change them;
 - names that make a program load code of the caller's choosing: `LD_*`, `PYTHON*`, `PERL5*`, `BASH_ENV`, `ENV`,
-  `NODE_OPTIONS`.
+  `NODE_OPTIONS`. They would run code in the jail that is not the verified AppImage (a library preloaded from a granted
+  folder, say), so the pinned hash would no longer describe what runs.
 
 `update` never changes `[env]`, as it never changes the permissions: a release cannot change how the app is started.
 

@@ -44,6 +44,6 @@ updates held in quarantine. Other tools cover other parts of this; if one fits y
 
 Written from each project's GitHub page and website, read in November 2026; commit dates are not shown on those pages,
 so activity claims are limited to what a release page or search listing showed. Re-checked for the 0.4 release through
-the GitHub API (language, licence, last push, archived, moved), and again for the 0.5 release (2026-11-13) for all 21
-GitHub projects listed: no language, licence or activity claim changed, none is archived or moved. The feature claims
-were not re-read. Re-check this page, and its date, at each minor release.
+the GitHub API (language, licence, last push, archived, moved), and again for the 0.5 release (2026-11-13) and the 0.6
+release (2026-11-15) for all 23 GitHub projects listed: no language, licence or activity claim changed, none is archived
+or moved. The feature claims were not re-read. Re-check this page, and its date, at each minor release.

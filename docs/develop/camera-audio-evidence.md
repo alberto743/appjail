@@ -24,7 +24,8 @@ Versions in the environment table are those of the time of writing.
 
 Test devices: the `vivid` kernel module (`video0` capture, `video1` output, `video2`/`video3` metadata), PipeWire's
 `videotestsrc` and `audiotestsrc` (Fedora does not package them: a null node that claims to be a `Video/Source`, and a
-pipe-tunnel source fed with a 440 Hz tone, stand in; `tests/pwsources.py`), a null sink as the speaker. There is no real camera, microphone or headset.
+pipe-tunnel source fed with a 440 Hz tone, stand in; `tests/pwsources.py`), a null sink as the speaker. There is no real
+camera, microphone or headset.
 
 ## How frames reach an app
 
@@ -86,8 +87,8 @@ All in the guest with `vivid`.
 Reading: the node reaches the registry and other clients but not the main WirePlumber process's object managers, which
 both its linking policy and its portal script use.
 
-**Explained on 2026-11-13** (`debian-compositors`: PipeWire 1.4.2, WirePlumber 0.5.8; `ubuntu-compositors`: PipeWire 1.6.2,
-WirePlumber 0.5.13, same result; `vivid` with `n_devs=1 node_types=0x1`):
+**Explained on 2026-11-13** (`debian-compositors`: PipeWire 1.4.2, WirePlumber 0.5.8; `ubuntu-compositors`: PipeWire
+1.6.2, WirePlumber 0.5.13, same result; `vivid` with `n_devs=1 node_types=0x1`):
 
 | Step | Observation |
 |---|---|
@@ -105,11 +106,12 @@ still a manual check. `vimc`, another virtual camera without such controls, is n
 
 ## Fedora 45 (measured 2026-11-14)
 
-The camera, portal, audio and private-graph tests pass on Fedora with SELinux enforcing and no denial recorded. What differed:
+The camera, portal, audio and private-graph tests pass on Fedora with SELinux enforcing and no denial recorded. What
+differed:
 
 | Observation | Result |
 |---|---|
-| Where PipeWire keeps its modules | `/usr/lib64/pipewire-0.3`; the graph's check looked only under `/usr/lib` and fell back to the host's Pulse socket (fixed, `audiojail.module_dirs`) |
+| Where PipeWire keeps its modules | `/usr/lib64/pipewire-0.3`; the graph's check looked only under `/usr/lib` and fell back to the host's Pulse socket (fixed, `audiojail.find_module_dirs`) |
 | The test sources | `videotestsrc` and `audiotestsrc` are not packaged; the substitutes above give the same results in the tests that use them |
 | The host default changes to a new device (a null sink as headset) | PipeWire 1.4.2 and 1.6.2: the tunnel gains links to the new sink and source and keeps the old. PipeWire 1.6.11 with WirePlumber 0.5.19: the playback links are added, the microphone link moves to the new source |
 | The device is unplugged | PipeWire 1.4.2 and 1.6.2: the tunnel stays, linked to nothing, and the app is not told. PipeWire 1.6.11: the tunnel nodes disappear from the app's graph (`pw-dump` in the jail lists only `auto_null`), so the app has no audio device; nothing re-attaches |
@@ -147,8 +149,8 @@ Both audio differences keep the property the graph is for: nothing of the host's
 
 ## Device changes in `pipewire` mode
 
-Measured on the real graph with `pw-link` (`pactl` shows only one source per stream and hides the second link), with a null
-sink standing in for a headset. Naming the devices in the tunnel's configuration gave identical results: the host's
+Measured on the real graph with `pw-link` (`pactl` shows only one source per stream and hides the second link), with a
+null sink standing in for a headset. Naming the devices in the tunnel's configuration gave identical results: the host's
 WirePlumber policy acts on the tunnel's streams.
 
 | Step | Where the tunnel is linked |
@@ -164,12 +166,14 @@ WirePlumber policy acts on the tunnel's streams.
 
 ## Checks that need a real machine
 
-1. GNOME and KDE: the Camera and ScreenCast portal dialogs for a jailed app, and that revoking in the desktop's privacy settings takes effect.
+1. GNOME and KDE: the Camera and ScreenCast portal dialogs for a jailed app, and that revoking in the desktop's privacy
+   settings takes effect.
 2. A real USB webcam with `camera`: which nodes appear, `v4l2-ctl --all`, a capture, a browser or video-call app.
-3. A real microphone and headset with the private graph: the app records the default input; the desktop's microphone indicator; changing the default input; restarting the audio server.
+3. A real microphone and headset with the private graph: the app records the default input; the desktop's microphone
+   indicator; changing the default input; restarting the audio server.
 4. The Camera portal with a real webcam: does the portal list it and does automatic linking work?
-5. PipeWire and WirePlumber versions on Ubuntu 26.04 against the findings above (the tables were measured on PipeWire 1.4.2
-   and WirePlumber 0.5.8; the private-graph tests also pass on the Ubuntu guest, PipeWire 1.6).
+5. PipeWire and WirePlumber versions on Ubuntu 26.04 against the findings above (the tables were measured on PipeWire
+   1.4.2 and WirePlumber 0.5.8; the private-graph tests also pass on the Ubuntu guest, PipeWire 1.6).
 
 ## Experiment branches (deleted)
 
@@ -188,5 +192,5 @@ Built from `main` at `4eb5134`; each held the code and tests of one experiment. 
 | `exp/audio-pulse-proxy` | `fcd4573` | the Pulse protocol proxy prototype (rejected) |
 
 To rerun an experiment: check out the branch, start the guest (`tests/vm/start.sh`), `tests/vm/provision.sh`, then for
-example `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/appjail && APPJAIL_INTEGRATION=1 python3 -m pytest tests/test_camera_portal.py -q'`.
-The camera tests load `vivid` with `sudo modprobe` inside the guest.
+example `tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/appjail && APPJAIL_INTEGRATION=1 python3 -m pytest
+tests/test_camera_portal.py -q'`. The camera tests load `vivid` with `sudo modprobe` inside the guest.

@@ -11,8 +11,9 @@ between an app and the screen and keyboard. Measured on headless desktops (Debia
   typing into another client's window were shown as an ordinary client, with no prompt (Mutter and GNOME Shell 48.7,
   50.1, 51.1);
 - Cinnamon's `org.Cinnamon.Eval` runs any JavaScript in the shell for any client: it ran a command as the user and typed
-  into another window; the shell also answers screenshot calls, under `org.gnome.Shell.Screenshot` in 6.4 and `org.cinnamon.Screenshot` in 6.8,
-  and `org.cinnamon.ScreenSaver` locks and ends the screensaver (Cinnamon 6.4.10, 6.4.13, 6.8.0);
+  into another window; the shell also answers screenshot calls, under `org.gnome.Shell.Screenshot` in 6.4 and
+  `org.cinnamon.Screenshot` in 6.8, and `org.cinnamon.ScreenSaver` locks and ends the screensaver (Cinnamon 6.4.10,
+  6.4.13, 6.8.0);
 - Muffin's display configuration changes monitors, backlight and gamma for any client (Muffin 6.4.1);
 - Plasma's `evaluateScript` runs a desktop script for any client, and klipper returns the clipboard and its history
   (plasmashell 6.3.6, 6.6.6);

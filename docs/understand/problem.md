@@ -95,4 +95,4 @@ are stated on the page of each mechanism.
   attacked between its source and its users.
 - MITRE, [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html).
 - MITRE ATT&CK, [Supply Chain Compromise (T1195)](https://attack.mitre.org/techniques/T1195/).
-- X.Org Foundation, [Access control and authentication in X](https://www.x.org/wiki/Development/Documentation/Security/): ordinary ("trusted") clients can read other clients' windows and input.
+- X.Org Foundation, [Access control and authentication in X](https://www.x.org/Development/Documentation/Security/): ordinary ("trusted") clients can read other clients' windows and input.

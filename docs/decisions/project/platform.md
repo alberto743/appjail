@@ -7,8 +7,8 @@ the seccomp filter's system-call numbers, Landlock's abstract-socket scope (Linu
 Supporting older systems would mean workarounds in exactly the code that must be simplest to review.
 
 **Decision.** Linux on x86-64 only, with Debian 13, Ubuntu 26.04 (the CI runner's system) and Fedora 45 as the minimum
-supported systems, and Python 3.12 or later. No workarounds for older systems. On another architecture `run` refuses rather
-than run without its seccomp filter.
+supported systems, and Python 3.12 or later. No workarounds for older systems. On another architecture `run` refuses
+rather than run without its seccomp filter.
 
 **Why three.** They differ where the code is exposed to the difference: Debian is the reference, Ubuntu restricts user
 namespaces through AppArmor, and Fedora lays the system out differently (`/usr/lib64`, the trust store in `/etc/pki`,

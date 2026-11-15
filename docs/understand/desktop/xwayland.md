@@ -51,5 +51,5 @@ Giving a jailed app that server would give it every other X11 app.
 
 - Debian manual page [Xwayland(1)](https://manpages.debian.org/trixie/xwayland/Xwayland.1.en.html) (`-rootless`,
   `-geometry`, `-displayfd`) and [openbox(1)](https://manpages.debian.org/trixie/openbox/openbox.1.en.html).
-- X.Org Foundation, [Access control and authentication in X](https://www.x.org/wiki/Development/Documentation/Security/):
+- X.Org Foundation, [Access control and authentication in X](https://www.x.org/Development/Documentation/Security/):
   ordinary clients can read other clients' windows and input.

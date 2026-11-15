@@ -71,8 +71,8 @@ def test_the_tunnel_module_and_the_host_pulse_socket_are_needed(tmp_path, pulse_
 @pytest.mark.parametrize("layout", ["lib/x86_64-linux-gnu/pipewire-0.3", "lib/pipewire-0.3", "lib64/pipewire-0.3"])
 def test_the_modules_are_found_where_each_distribution_puts_them(tmp_path, layout):
     (tmp_path / layout).mkdir(parents=True)
-    assert audiojail.module_dirs(tmp_path) == [tmp_path / layout]
-    assert audiojail.module_dirs(tmp_path / "elsewhere") == []
+    assert audiojail.find_module_dirs(tmp_path) == [tmp_path / layout]
+    assert audiojail.find_module_dirs(tmp_path / "elsewhere") == []
 
 
 def test_the_graph_has_a_sink_and_a_source_only_with_mic():

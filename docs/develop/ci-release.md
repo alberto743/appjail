@@ -1,8 +1,8 @@
 # CI and releases
 
 All workflows are in `.github/workflows/`, run on GitHub's `ubuntu-26.04` runners, pin every action to a full commit
-hash with the version as a comment, and keep `permissions: contents: read` unless a job needs more. CI runs on Ubuntu only; Debian and Fedora are verified in
-their guests before a push ([testing](testing.md)).
+hash with the version as a comment, and keep `permissions: contents: read` unless a job needs more. CI runs on Ubuntu
+only; Debian and Fedora are verified in their guests before a push ([testing](testing.md)).
 
 | Workflow | When | What |
 |---|---|---|

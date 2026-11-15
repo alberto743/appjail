@@ -32,8 +32,8 @@ most command-line tools, converters and editors render fine without a GPU.
   the V4L2 requests through.
 - **A limit.** GNOME's Wayland socket lists `wp_drm_lease_device_v1`, which sends every client with a window an
   unprivileged render-node descriptor, with or without `gpu`: the driver's attack surface, not control of the display
-  ([why it is allowed](../../decisions/desktop/wayland-allowlist.md)). Not granting `gpu` keeps the device nodes and `/sys`
-  out of the jail, not that descriptor.
+  ([why it is allowed](../../decisions/desktop/wayland-allowlist.md)). Not granting `gpu` keeps the device nodes and
+  `/sys` out of the jail, not that descriptor.
 - **The Camera portal** is the route for apps that reach the camera through PipeWire (browsers): `--allow portals
   --portal Camera`. No device is bound into the jail then; the portal asks you.
 

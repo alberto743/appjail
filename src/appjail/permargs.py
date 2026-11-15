@@ -197,6 +197,6 @@ def env_lines(env):
 def env_changes(old, new):
     """(label, text) lines for what differs between two [env] tables."""
     a, b = dict(old), dict(new)
-    return ([("env", f"+ {k}={v}") for k, v in b.items() if a.get(k) != v and k not in a]
+    return ([("env", f"+ {k}={v}") for k, v in b.items() if k not in a]
             + [("env", f"{k}: {a[k]} {ARROW} {v}") for k, v in b.items() if k in a and a[k] != v]
             + [("env", f"- {k}") for k in a if k not in b])

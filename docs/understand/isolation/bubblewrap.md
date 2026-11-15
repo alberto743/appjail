@@ -13,8 +13,8 @@ told to bind (each read-only or writable), mounts `/proc` and a minimal `/dev` i
 seccomp filter if given one, and finally runs the program. As its first process in the new PID namespace it stays
 behind as a small init that reaps orphaned processes.
 
-On systems that allow unprivileged user namespaces (Debian and Fedora do; Ubuntu does where its AppArmor restriction is not applied to bubblewrap), bubblewrap runs as an ordinary
-program, without the set-uid bit it once needed.
+On systems that allow unprivileged user namespaces, bubblewrap runs as an ordinary program, without the set-uid bit it
+once needed. Debian and Fedora allow them; Ubuntu restricts them through AppArmor ([namespaces](namespaces.md)).
 
 ## Why it matters
 

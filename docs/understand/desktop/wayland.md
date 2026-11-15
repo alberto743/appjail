@@ -32,12 +32,12 @@ offers privileged protocols to every client, an app with nothing but a window ca
 | windows | foreign toplevel management, activation feedback, layer shell, output management, session lock | seeing and controlling other windows, seeing which apps start, the screen layout, the lock screen |
 | desktop | KWin's screen power, brightness, virtual desktops, screen edges, lock keys | changing the desktop itself |
 
-Compositors differ widely. Measured on Debian 13, Ubuntu 26.04 and Fedora 45 (headless, with real clients trying each capability):
-sway, labwc and Hyprland 0.55 hide all of these on the restricted socket; KWin 6.3 and 6.6 hide only the manager of the
-protocol, so data-control stays listed and a client read another client's clipboard through it (KWin 6.8 hides data-control,
-fake input and a few more, but still lists the layer shell, the Plasma shell and output management); GNOME and Cinnamon have no restricted socket, but
-their own socket lists none of these, because they keep capture and remote input on D-Bus; Wayfire, Cage and Weston
-offer them on the only socket they have.
+Compositors differ widely. Measured on Debian 13, Ubuntu 26.04 and Fedora 45 (headless, with real clients trying each
+capability): sway, labwc and Hyprland 0.55 hide all of these on the restricted socket; KWin 6.3 and 6.6 hide only the
+manager of the protocol, so data-control stays listed and a client read another client's clipboard through it (KWin 6.8
+hides data-control, fake input and a few more, but still lists the layer shell, the Plasma shell and output management);
+GNOME and Cinnamon have no restricted socket, but their own socket lists none of these, because they keep capture and
+remote input on D-Bus; Wayfire, Cage and Weston offer them on the only socket they have.
 
 ## How appjail uses it
 
@@ -77,17 +77,19 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 
 ## Limits
 
-- KWin is refused until it hides the layer shell, the Plasma shell and output management (and, before 6.8, data-control) on
-  restricted sockets; Plasma users need `full_wayland` per app.
+- KWin is refused until it hides the layer shell, the Plasma shell and output management (and, before 6.8, data-control)
+  on restricted sockets; Plasma users need `full_wayland` per app.
 - The classification is by interface name, not version.
 - An app can learn when you are idle where the compositor offers idle notification, and keep the screen from blanking or
   locking while its window is visible.
 - An app can read the hardware description of the outputs (make, model, EDID, serial numbers, colour profile), a
   fingerprint. On GNOME it also receives an unprivileged GPU render-node descriptor without the `gpu` permission: the
-  driver's attack surface, not control of anything. A filtering proxy would remove it ([deferred](../../decisions/deferred.md)).
-- On GNOME and Cinnamon 6.4 any app with a window can take the keyboard focus from another app through `gtk_shell1`, with no
-  token, and then receives the keys typed there. The window changes visibly, but it is a real exposure of what you type
-  while the app runs ([measured](../../compositor-assessment/ASSESSMENT.md), [accepted limit](../../decisions/desktop/wayland-allowlist.md)).
+  driver's attack surface, not control of anything. A filtering proxy would remove it
+  ([deferred](../../decisions/deferred.md)).
+- On GNOME and Cinnamon 6.4 any app with a window can take the keyboard focus from another app through `gtk_shell1`,
+  with no token, and then receives the keys typed there. The window changes visibly, but it is a real exposure of what
+  you type while the app runs ([measured](../../compositor-assessment/ASSESSMENT.md), [accepted
+  limit](../../decisions/desktop/wayland-allowlist.md)).
 - The registry is read once, when the app starts. A global the compositor adds later (a plugin, a restart of the shell) is
   not seen.
 - The measurements are of headless compositors, not of complete desktop sessions. A compositor update that adds an
@@ -98,7 +100,7 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 ## References
 
 - Wayland project, [Wayland architecture](https://wayland.freedesktop.org/architecture.html) and
-  [the Wayland protocol](https://wayland.freedesktop.org/docs/html/ch04.html).
+  [the Wayland protocol](https://wayland.freedesktop.org/docs/book/Protocol.html).
 - [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols), and the
   [Wayland Explorer](https://wayland.app/protocols/): for example
   [security-context-v1](https://wayland.app/protocols/security-context-v1),
@@ -107,4 +109,5 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
   [virtual-keyboard](https://wayland.app/protocols/virtual-keyboard-unstable-v1),
   [foreign-toplevel management](https://wayland.app/protocols/wlr-foreign-toplevel-management-unstable-v1),
   [layer-shell](https://wayland.app/protocols/wlr-layer-shell-unstable-v1).
-- appjail's own measurements: [compositor assessment](https://github.com/alberto743/appjail/blob/main/docs/compositor-assessment/ASSESSMENT.md).
+- appjail's own measurements: [compositor
+  assessment](https://github.com/alberto743/appjail/blob/main/docs/compositor-assessment/ASSESSMENT.md).
