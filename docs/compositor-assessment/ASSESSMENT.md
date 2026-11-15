@@ -138,10 +138,15 @@ What the table shows:
     definitions: `ext_background_effect_manager_v1` (blur behind the client's own translucent surface),
     `xdg_session_manager_v1` (the client's own toplevels, restored through a session token the compositor makes) and
     `kde_output_device_registry_v2` (the list of outputs, as `kde_output_device_v2`, already allowed, describes them).
-    Refused: `kde_lockscreen_overlay_v1` (a surface shown over the lock screen). Refused until they are checked:
-    `xapp_shell_v1` (Cinnamon: a window's icon may be an absolute path the shell opens outside the jail) and
-    `org_kde_plasma_activation_feedback` (its definition could not be found). The verdicts, rerun live with the new
-    lists: GNOME runs; Cinnamon, KWin and Plasma are refused.
+    `xapp_shell_v1` (Cinnamon: hints for the client's own window, an icon name or path and a progress value; Muffin stores the
+    string without opening anything or answering the client, no consumer of it was found in Cinnamon 6.8's scripts and
+    libraries, and an X11 client can set the same hint through `_NET_WM_XAPP_ICON_NAME`). Privileged, under "windows":
+    `kde_lockscreen_overlay_v1` (a surface shown over the lock screen) and `org_kde_plasma_activation_feedback` (read-only
+    events naming every app that is being started, defined in `plasma-window-management.xml`). The verdicts, rerun live
+    with the new lists: GNOME runs; Cinnamon, KWin and Plasma are refused, and none of these seven globals decides that.
+    **Cinnamon 6.8 offers `zwlr_layer_shell_v1`** (6.4 did not): a client of the same socket drew a solid surface on the
+    desktop with `swaybg`, and a whole-screen capture held it (checked by hand, with a control run without the client).
+    That is what keeps Cinnamon 6.8 refused.
     **Cinnamon 6.8 renamed its screenshot service** from `org.gnome.Shell.Screenshot` to `org.cinnamon.Screenshot`, which
     answers `Screenshot` from any client (the D-Bus section below), so that name and `org.cinnamon.ScreenSaver` are refused.
     **Muffin and Cinnamon survived `wl-copy` and `wl-paste`**, which ended them in 6.4. **KWin 6.8 hosts `org.kde.touchpad`
@@ -165,7 +170,7 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | cage | fedora 45 | 0.3.1-2.fc45 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_foreign_toplevel_manager_v1, zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cage | ubuntu 26.04 | 0.2.1-1 | full | capture: zwlr_export_dmabuf_manager_v1, zwlr_screencopy_manager_v1; input: zwlr_virtual_pointer_manager_v1, zwp_virtual_keyboard_manager_v1; windows: zwlr_gamma_control_manager_v1, zwlr_output_manager_v1 | works | refuse |
 | cinnamon | debian 13 | 6.4.10-2+deb13u1 | full | nothing | works | run |
-| cinnamon | fedora 45 | 6.8.0-1.fc45 | full | shell: xapp_shell_v1; windows: zwlr_layer_shell_v1 | works | refuse |
+| cinnamon | fedora 45 | 6.8.0-1.fc45 | full | windows: zwlr_layer_shell_v1 | works | refuse |
 | cinnamon | ubuntu 26.04 | 6.4.13-2ubuntu0.2 | full | nothing | works | run |
 | gnome-shell | debian 13 | 48.7-0+deb13u2 | full | nothing | works | run |
 | gnome-shell | fedora 45 | 51.1-1.fc45 | full | nothing | works | run |
@@ -482,6 +487,7 @@ know refuses the app (`wayland.ALLOWED`).
 * Muffin and Cinnamon were measured nested in Xvfb, without `cinnamon-session` and the daemons a real Cinnamon session
   starts (the settings daemon); those names were not measured. In that
   setup the shell's virtual keyboard is the X11 backend's.
+* The layer-shell check on Cinnamon 6.8 (a `swaybg` surface in a screenshot) was done by hand, not by a saved tool.
 * plasmashell was measured beside a virtual KWin with only the activity manager, without `plasma_session`, kded and the
   other daemons of a real Plasma session (the status-notifier watcher, KWallet, the screen locker); their names were not
   measured, and the end-to-end use of `evaluateScript` was checked by hand, not by a saved tool.

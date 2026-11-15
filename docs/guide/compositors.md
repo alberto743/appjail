@@ -8,7 +8,7 @@ focus, controlling other windows), or interfaces it does not know. Why: [Wayland
 |---|---|
 | GNOME 48.7, 50.1, 51.1 | yes |
 | Cinnamon 6.4 | yes |
-| Cinnamon 6.8 | no: it offers `xapp_shell_v1`, which appjail has not cleared |
+| Cinnamon 6.8 | no: it offers layer shell, which lets an app draw over the desktop |
 | sway 1.10, 1.11, 1.12 | yes |
 | labwc 0.8, 0.9, 0.20 | yes |
 | Hyprland 0.55 | yes |
