@@ -56,6 +56,13 @@
    "status": "ok",
    "version": "mutter 48.7-0+deb13u1"
   },
+  "plasmashell": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "plasma-workspace 4:6.3.6-2"
+  },
   "sway": {
    "app_socket": "restricted",
    "inbound": "ok",

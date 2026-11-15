@@ -126,7 +126,7 @@ What the table shows:
    What that gives is in the D-Bus section below.
 9. **Plasma's shell, plasmashell 6.3.6 and 6.6.6** (`plasma-workspace`, measured 2026-11-13): a Wayland client of a virtual
    KWin, started with the activity manager it needs, so the Wayland socket is KWin's (point 6 and the rule's verdict for
-   KWin apply: `rule_a.py` refuses it like KWin; the clipboard was not rerun for it). On the bus, one plasmashell connection owns
+   KWin apply: `rule_a.py` refuses it like KWin; the clipboard works on its restricted socket, rerun 2026-11-15). On the bus, one plasmashell connection owns
    `org.kde.plasmashell`, `org.kde.klipper`, `org.freedesktop.Notifications`, `org.kde.JobViewServer`, `org.kde.kuiserver`,
    `com.canonical.Unity` and a `org.kde.StatusNotifierHost-PID` name. Two of its calls answer any client: the shell's
    `org.kde.PlasmaShell.evaluateScript` runs a desktop script (in a manual check, a script wrote a file into the user's
@@ -153,6 +153,27 @@ What the table shows:
     on the connection that owns `org.kde.KWin`**, so granting it reaches KWin (the shared-connection section below).
     **Not measured:** Hyprland (Fedora does not package it) and standalone Muffin (Fedora's `muffin` ships no executable;
     only the shell is measured, which runs Muffin).
+11. **Reassessment from scratch** (2026-11-15, all three distributions; Cinnamon, Muffin and Plasma's shell reinstalled in the Debian and
+    Ubuntu guests, where the packages had gone). Every compositor was surveyed again with fresh processes (`probe.py`,
+    `rule_a.py`, `clipboard.py`) and compared with the saved results: **no registry, verdict or clipboard result differed**, and
+    the clipboard of Plasma's shell, which had not been run on Debian and Ubuntu, works in both directions on the restricted
+    socket. The protocol XML shipped by Fedora 45 (`wayland-protocols`, `plasma-wayland-protocols`) was then read for every
+    allowed global, and one was tried live. Findings:
+    - **`wp_drm_lease_device_v1` sends an unprivileged DRM descriptor on bind.** On Mutter and GNOME Shell (Debian 13, Ubuntu
+      26.04, Fedora 45) a client with nothing but a window received an open `/dev/dri/renderD128`, the node the `gpu`
+      permission binds; Hyprland 0.55 does the same on its own socket (`card0`, non-master) and hides the global on the
+      restricted one. Refusing it would put every GNOME user on `full_wayland`, so it stays allowed as an **accepted limit** and
+      is written down (decision page, `devices.md`, `SECURITY.md`); a filtering proxy would remove it (deferred).
+    - **`org_kde_kwin_appmenu_manager`** lets the app name a D-Bus service that the shell then calls as a menu: privileged
+      ("windows"). Only KDE lists it, and KWin is refused anyway.
+    - **`org_kde_kwin_idle`** has `simulate_user_activity`, which resets the idle timer, as `zwp_idle_inhibit_manager_v1`
+      (allowed) already does while a window is visible: kept, as an accepted limit with idle notification.
+    - **`kde_output_device_v2`, its registry and `wp_color_manager_v1`** give EDID, serial numbers and the colour profile of
+      the outputs, a hardware fingerprint without control: accepted limits.
+    - The other allowed globals act on the client's own surfaces, behind a focus, a serial or a token, or describe outputs.
+      `RATIONALE` in `wayland.py` records this for every one of them and where the protocol was read; `gtk_shell1`, `hyprland_surface_manager_v1`,
+      `frog_color_management_factory_v1`, `xapp_shell_v1`, `wl_drm` and GTK's two private protocols are `unread`: no
+      definition of them is installed in the guests.
 
 ## Results: option A and the clipboard, tried live
 
@@ -178,9 +199,9 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | hyprland | debian 13 | 0.55.2+ds-1~bpo13+1 | restricted | nothing | works | run |
 | hyprland | fedora 45 | - | - | - | - | not installed |
 | hyprland | ubuntu 26.04 | 0.53.3+ds-4 | restricted | input: zwlr_virtual_pointer_manager_v1, zwp_input_method_manager_v2, zwp_virtual_keyboard_manager_v1 | works | refuse |
-| kwin | debian 13 | 4:6.3.6-1 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
-| kwin | fedora 45 | 6.8.2-3.fc45 | restricted | desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
-| kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| kwin | debian 13 | 4:6.3.6-1 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_kwin_appmenu_manager, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| kwin | fedora 45 | 6.8.2-3.fc45 | restricted | desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_kwin_appmenu_manager, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| kwin | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_kwin_appmenu_manager, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | labwc | debian 13 | 0.8.3-1 | restricted | nothing | works | run |
 | labwc | fedora 45 | 0.20.2-2.fc45 | restricted | nothing | works | run |
 | labwc | ubuntu 26.04 | 0.9.3-1 | restricted | nothing | works | run |
@@ -190,9 +211,9 @@ manager is what captures). Raw data: `rule-a-*.json`.
 | mutter | debian 13 | 48.7-0+deb13u1 | full | nothing | works | run |
 | mutter | fedora 45 | 51.1-1.fc45 | full | nothing | works | run |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | nothing | works | run |
-| plasmashell | debian 13 | 4:6.3.6-2 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
-| plasmashell | fedora 45 | 6.8.2-1.fc45 | restricted | desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
-| plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| plasmashell | debian 13 | 4:6.3.6-2 | restricted | clipboard: zwlr_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_kwin_appmenu_manager, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| plasmashell | fedora 45 | 6.8.2-1.fc45 | restricted | desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_kwin_appmenu_manager, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
+| plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | clipboard: ext_data_control_manager_v1; desktop: kde_external_brightness_v1, kde_screen_edge_manager_v1, org_kde_kwin_dpms_manager, org_kde_kwin_keystate, org_kde_plasma_virtual_desktop_management; windows: kde_output_management_v2, org_kde_kwin_appmenu_manager, org_kde_plasma_shell, zwlr_layer_shell_v1 | works | refuse |
 | sway | debian 13 | 1.10.1-2 | restricted | nothing | works | run |
 | sway | fedora 45 | 1.12-2.fc45 | restricted | nothing | works | run |
 | sway | ubuntu 26.04 | 1.11-3 | restricted | nothing | works | run |
@@ -241,9 +262,9 @@ and, for Weston, which has no input of its own, a nested run as a window of a he
 | mutter | debian 13 | 48.7-0+deb13u1 | full | ok | ok |
 | mutter | fedora 45 | 51.1-1.fc45 | full | ok | ok |
 | mutter | ubuntu 26.04 | 50.1-0ubuntu2.5 | full | ok | ok |
-| plasmashell | debian 13 | - | - | - | not run |
+| plasmashell | debian 13 | 4:6.3.6-2 | restricted | ok | ok |
 | plasmashell | fedora 45 | 6.8.2-1.fc45 | restricted | ok | ok |
-| plasmashell | ubuntu 26.04 | - | - | - | not run |
+| plasmashell | ubuntu 26.04 | 4:6.6.6-0ubuntu0.1 | restricted | ok | ok |
 | sway | debian 13 | 1.10.1-2 | restricted | ok | ok |
 | sway | fedora 45 | 1.12-2.fc45 | restricted | ok | ok |
 | sway | ubuntu 26.04 | 1.11-3 | restricted | ok | ok |
@@ -469,7 +490,7 @@ refused like any other compositor with a privileged global, and the message says
 **Hyprland 0.53.** Refused by A without a special case (see above).
 
 **Unmeasured compositors** (niri, river, COSMIC) are decided by their registry at run time, and a global appjail does not
-know refuses the app (`wayland.ALLOWED`).
+know refuses the app (`wayland.RATIONALE`, `wayland.PRIVILEGED`).
 
 ## Limits of this measurement
 
