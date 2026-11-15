@@ -1,4 +1,4 @@
-# x86-64, Debian 13 and Ubuntu 26.04
+# x86-64, Debian 13, Ubuntu 26.04 and Fedora 45
 
 *Decision on [the project](index.md).*
 
@@ -6,9 +6,15 @@
 the seccomp filter's system-call numbers, Landlock's abstract-socket scope (Linux 6.12), `--bind-fd` (bubblewrap 0.10).
 Supporting older systems would mean workarounds in exactly the code that must be simplest to review.
 
-**Decision.** Linux on x86-64 only, with Debian 13 and Ubuntu 26.04 (the CI runner's system) as the minimum supported
-systems, and Python 3.12 or later. No workarounds for older systems. On another architecture `run` refuses rather
+**Decision.** Linux on x86-64 only, with Debian 13, Ubuntu 26.04 (the CI runner's system) and Fedora 45 as the minimum
+supported systems, and Python 3.12 or later. No workarounds for older systems. On another architecture `run` refuses rather
 than run without its seccomp filter.
+
+**Why three.** They differ where the code is exposed to the difference: Debian is the reference, Ubuntu restricts user
+namespaces through AppArmor, and Fedora lays the system out differently (`/usr/lib64`, the trust store in `/etc/pki`,
+removable media in `/run/media/USER`), enforces SELinux and ships newer PipeWire. Each runs the whole test suite and the
+compositor assessment in its own guest. Fedora has no AppArmor restriction to relax; the suite runs with SELinux
+enforcing and no denial was found.
 
 **Older systems.** On Ubuntu 24.04 the real-portal tests fail (xdg-desktop-portal 1.18 does not export `FileChooser`
 with the tests' fake backend; the cause was not investigated) and its `reuse` cannot read `REUSE.toml`.

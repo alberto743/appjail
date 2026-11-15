@@ -13,10 +13,12 @@ from appjail import jail, runtimejail, seccomp
 
 from .helpers import build, integration, run_in_jail
 
-HEADER = Path("/usr/include/x86_64-linux-gnu/asm/unistd_64.h")
+# Debian and Ubuntu (linux-libc-dev) use a multiarch directory, Fedora (kernel-headers) the plain one.
+HEADER = next((p for p in map(Path, ("/usr/include/x86_64-linux-gnu/asm/unistd_64.h", "/usr/include/asm/unistd_64.h")) if p.is_file()),
+              Path("/usr/include/x86_64-linux-gnu/asm/unistd_64.h"))
 
 
-@pytest.mark.skipif(not HEADER.is_file(), reason="needs linux-libc-dev (kernel headers) in the guest")
+@pytest.mark.skipif(not HEADER.is_file(), reason="needs the kernel headers (linux-libc-dev, kernel-headers) in the guest")
 def test_syscall_table_matches_the_kernel_headers():
     numbers = dict(re.findall(r"#define __NR_(\w+)\s+(\d+)", HEADER.read_text()))
     wrong = {n: (v, numbers[n]) for n, v in seccomp.SYSCALLS.items() if n in numbers and str(v) != numbers[n]}

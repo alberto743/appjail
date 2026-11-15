@@ -7,7 +7,7 @@ It is maintained by one person, unaudited, and handled on a best-effort basis (s
 ## Supported versions
 
 Only the latest release (PyPI and GitHub) receives security fixes, published as a new patch release. There are no
-backports. Supported systems are Debian 13 and Ubuntu 26.04, with Python 3.12 or later.
+backports. Supported systems are Debian 13, Ubuntu 26.04 and Fedora 45, with Python 3.12 or later.
 
 ## Reporting a vulnerability
 

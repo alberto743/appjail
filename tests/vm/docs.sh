@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Build the documentation site in the guest (GUEST=debian|ubuntu) with the pinned tooling of
+# Build the documentation site in the guest (GUEST=debian|ubuntu|fedora) with the pinned tooling of
 # .github/requirements-docs.txt, in strict mode, and copy the result to vm/<guest>/site for viewing on the host
 # (open vm/<guest>/site/index.html). The venv lives in the guest's ~/docs-venv, outside the synced tree, and is
 # rebuilt when the requirements change.

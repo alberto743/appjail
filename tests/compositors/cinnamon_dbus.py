@@ -9,11 +9,11 @@ running nested in a private Xvfb (it has no headless backend). *-compositors gue
 * command: `org.Cinnamon.Eval` runs JavaScript in the shell; the script starts a command that creates a file.
 * keystroke: `Eval` again, with a virtual keyboard of the shell's own input stack, types into the window of another client
   (the GTK 4 window of mutter_dbus.py, which logs the keys it receives).
-* capture: `org.gnome.Shell.Screenshot.Screenshot`, which Cinnamon owns, writes a picture of the screen; its size and whether
-  the other client's red window is in it are recorded.
-* crash: `org.gnome.Shell.Screenshot.SelectArea`, and whether Cinnamon is still running afterwards (last, since it may not be).
+* capture: `Screenshot` of the name Cinnamon owns for it (`org.gnome.Shell.Screenshot` in 6.4, `org.cinnamon.Screenshot` in 6.8)
+  writes a picture of the screen; its size and whether the other client's red window is in it are recorded.
+* crash: `SelectArea` of the same name, and whether Cinnamon is still running afterwards (last, since it may not be).
 
-These are names `grants.DBUS_BLOCKED` refuses (`org.Cinnamon`, `org.gnome.Shell`); this shows what granting them would give.
+These are names `grants.DBUS_BLOCKED` refuses (`org.Cinnamon`, `org.gnome.Shell`, `org.cinnamon`); this shows what granting them would give.
 """
 
 import argparse
@@ -31,8 +31,10 @@ import probe
 HERE = Path(__file__).resolve()
 WINDOW = HERE.parent / "mutter_dbus.py"
 KEYS = "appjail"
-CINNAMON, SHOT = ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon"), ("org.gnome.Shell.Screenshot", "/org/gnome/Shell/Screenshot",
-                                                                     "org.gnome.Shell.Screenshot")
+CINNAMON = ("org.Cinnamon", "/org/Cinnamon", "org.Cinnamon")
+# The screenshot service: Cinnamon 6.4 answers GNOME's name, 6.8 its own (org.cinnamon.Screenshot, Screenshot(cursor, file, flash)).
+SHOTS = (("org.gnome.Shell.Screenshot", "/org/gnome/Shell/Screenshot", "org.gnome.Shell.Screenshot", "bbs", ("false", "false")),
+         ("org.cinnamon.Screenshot", "/org/cinnamon/Screenshot", "org.cinnamon.Screenshot", "bsb", ("false", None, "false")))
 # Run in the shell: activate the window titled "victim", then type KEYS with a virtual keyboard of the shell's seat.
 TYPE_JS = """
 const Clutter = imports.gi.Clutter, GLib = imports.gi.GLib;
@@ -106,8 +108,11 @@ def evaluate():
             # the nested output is not the Xvfb screen's size: the shell's stage says how large the whole screen is
             _ok, stage = call(CINNAMON, "Eval", "s", "global.stage.width + 'x' + global.stage.height")
             shot = session.rt / "shot.png"
-            ok, answer = call(SHOT, "Screenshot", "bbs", "false", "false", str(shot))
-            capture = {"answer": answer, "stage": stage[1].strip('"') if isinstance(stage, list) else stage, "ok": False}
+            owned = probe.busctl(session, "list", "--json=short", timeout=15).stdout
+            name, path, interface, signature, args = next((e for e in SHOTS if f'"{e[0]}"' in owned), SHOTS[0])
+            SHOT = (name, path, interface)
+            ok, answer = call(SHOT, "Screenshot", signature, *[str(shot) if a is None else a for a in args])
+            capture = {"name": name, "answer": answer, "stage": stage[1].strip('"') if isinstance(stage, list) else stage, "ok": False}
             if ok and shot.exists():
                 width, height, red = png_facts(shot)
                 capture.update(width=width, height=height, red=red, ok=f"{width}x{height}" == capture["stage"] and red)

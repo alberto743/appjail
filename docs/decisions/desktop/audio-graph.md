@@ -35,7 +35,8 @@ mute the microphone, and a safe one needs an allow list of the whole protocol, p
 when devices change: `pw-cli` crashed unloading it, and restarting the daemons drops the app's connection.
 
 **Consequences.** About 36 MiB and under a second per app. The tunnel connects to the devices that are the defaults when
-the app starts: a later change of default adds a link instead of moving it, an unplugged device's sound stops until
-the app restarts, and the tunnel does not reconnect after the host's audio server restarts.
+the app starts: a later change of default adds a link instead of moving it (newer PipeWire moves the microphone's), an
+unplugged device's sound stops until the app restarts (newer PipeWire also removes the app's audio devices), and the
+tunnel does not reconnect after the host's audio server restarts ([measurements](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)).
 
 **Revisit when** those limits hurt (a supervisor that rebuilds the tunnel), or the portals gain an audio interface.

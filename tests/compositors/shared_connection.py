@@ -38,6 +38,7 @@ from appjail.valid import ManifestError
 PRIVILEGED_CALL = {
     "org.gnome.Mutter.RemoteDesktop": ("/org/gnome/Mutter/RemoteDesktop", "org.gnome.Mutter.RemoteDesktop", "CreateSession", "()"),
     "org.Cinnamon": ("/org/Cinnamon", "org.Cinnamon", "Eval", "('1+1',)"),
+    "org.kde.KWin": ("/Scripting", "org.kde.kwin.Scripting", "isScriptLoaded", "('appjail-probe',)"),
     "org.kde.plasmashell": ("/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "('print(1 + 1)',)"),
 }
 # The service's own side-effect-free call, which a confined grant must still reach (removing a notification that does not

@@ -60,7 +60,10 @@ PRIVILEGED = {
                 "zwlr_output_power_manager_v1", "zwlr_gamma_control_manager_v1", "kde_output_management_v2",
                 "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1",
                 "zcosmic_workspace_manager_v1", "hyprland_toplevel_mapping_manager_v1", "hyprland_ctm_control_manager_v1",
-                "hyprland_lock_notifier_v1"),
+                "hyprland_lock_notifier_v1", "kde_lockscreen_overlay_v1"),
+    # XApp's lets a window name an icon by absolute path, which the shell opens outside the jail; the definition of KDE's
+    # activation feedback could not be read. Both are refused until they are checked (Fedora 45: Cinnamon 6.8, Plasma 6.8).
+    "shell": ("xapp_shell_v1", "org_kde_plasma_activation_feedback"),
     "desktop": ("org_kde_kwin_dpms_manager", "kde_external_brightness_v1", "org_kde_plasma_virtual_desktop_management",
                 "kde_screen_edge_manager_v1", "org_kde_kwin_keystate"),
 }
@@ -87,6 +90,9 @@ ALLOWED = frozenset({
     "gtk_shell1", "hyprland_surface_manager_v1", "frog_color_management_factory_v1", "org_kde_kwin_idle",
     "org_kde_kwin_server_decoration_manager", "org_kde_kwin_server_decoration_palette_manager",
     "org_kde_kwin_shadow_manager", "org_kde_kwin_appmenu_manager", "kde_output_device_v2", "kde_output_order_v1",
+    # new in Fedora 45: blur behind the client's own translucent surface; the client's own toplevels, restored through a
+    # session token the compositor makes; the list of outputs, as kde_output_device_v2 describes them
+    "ext_background_effect_manager_v1", "xdg_session_manager_v1", "kde_output_device_registry_v2",
 })
 UNKNOWN = "unknown"
 CAPABILITY = {
@@ -96,6 +102,7 @@ CAPABILITY = {
     "windows": "see or control other apps' windows, the screen layout or the lock screen",
     "desktop": "switch the screens off, change their brightness, the virtual desktops or the screen edges, or read the "
                "lock keys",
+    "shell": "make the desktop shell open files outside the jail, or tell it things it has not checked",
     UNKNOWN: "do something appjail has not checked: these interfaces are not known to it",
 }
 PRIVILEGED_BY_NAME = {name: kind for kind, names in PRIVILEGED.items() for name in names}

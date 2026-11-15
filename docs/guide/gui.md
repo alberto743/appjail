@@ -1,7 +1,7 @@
 # The window
 
 ```sh
-sudo apt install python3-tk     # once
+sudo apt install python3-tk          # once (Fedora: sudo dnf install python3-tkinter)
 appjail-gui
 appjail-gui --desktop           # add appjail to your application menu (--remove-desktop takes it out)
 ```

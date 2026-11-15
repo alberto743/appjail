@@ -49,7 +49,8 @@ Flatpak work without root or a set-uid helper.
 
 The same feature exposes code paths of the kernel that were once reachable only by root, and several privilege
 escalations have gone through them. Some distributions therefore restrict it: Ubuntu, since 23.10, lets only programs
-with an AppArmor profile that allows it create user namespaces (`kernel.apparmor_restrict_unprivileged_userns`).
+with an AppArmor profile that allows it create user namespaces (`kernel.apparmor_restrict_unprivileged_userns`); Debian
+and Fedora do not.
 appjail needs unprivileged user namespaces; where they are restricted, bubblewrap fails with `Operation not permitted`
 or `setting up uid map: Permission denied`. Relaxing the restriction, or giving bubblewrap its own AppArmor profile,
 changes a protection of the whole system, and is your decision.

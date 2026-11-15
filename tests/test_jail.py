@@ -137,6 +137,15 @@ def test_download_jail_properties(stage):
 
 # -- private network namespace via pasta -----------------------------------------------------
 
+def test_the_trust_store_of_every_supported_system_is_bound_when_present(monkeypatch):
+    present = {"/etc/ssl", "/etc/pki"}  # Fedora: /etc/ssl/certs is a link into /etc/pki
+    monkeypatch.setattr(jail.os.path, "isdir", lambda d: d in present)
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    args = jail.etc_args()
+    assert ["--ro-bind", "/etc/pki", "/etc/pki"] == args[args.index("/etc/pki") - 1:args.index("/etc/pki") + 2]
+    assert "/etc/ca-certificates" not in args
+
+
 def test_net_wrap_prefixes_pasta_without_forwarding(monkeypatch):
     monkeypatch.setattr(jail, "find_pasta", lambda: "/usr/bin/pasta")
     argv = ["/usr/bin/bwrap", "--share-net", "--", "true"]

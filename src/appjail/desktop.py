@@ -257,7 +257,7 @@ def svg_to_png(svg, convert=None):
     """PNG bytes for an SVG, rendered by rsvg-convert inside a jail with no network; the host never decodes the SVG."""
     convert = convert or RSVG
     if not os.access(convert, os.X_OK):
-        raise DesktopError("rsvg-convert is not installed (apt install librsvg2-bin): no icon")
+        raise DesktopError("rsvg-convert is not installed (package librsvg2-bin, or librsvg2-tools on Fedora): no icon")
     with tempfile.TemporaryDirectory(prefix="appjail-icon-") as work:
         src, out = Path(work, "in.svg"), Path(work, "out")
         out.mkdir()
@@ -296,7 +296,7 @@ def icon_status(name, root):
         return f"{files[-1].parent.parent.name} PNG"
     data = find_icon(root, read_app_desktop(root))
     if data and data[:8] != PNG_MAGIC and _is_svg(data) and not os.access(RSVG, os.X_OK):
-        return "none (SVG icon, rsvg-convert missing: apt install librsvg2-bin, then `appjail desktop` again)"
+        return "none (SVG icon, rsvg-convert missing: package librsvg2-bin, or librsvg2-tools on Fedora; then `appjail desktop` again)"
     return "none"
 
 

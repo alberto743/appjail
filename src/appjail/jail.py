@@ -27,7 +27,8 @@ from .textsafe import clean
 FETCHER = Path(__file__).with_name("fetcher.py")
 SYSTEM_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64")
 ETC_FILES = ("/etc/hosts", "/etc/nsswitch.conf", "/etc/host.conf", "/etc/gai.conf", "/etc/localtime")
-ETC_DIRS = ("/etc/ssl", "/etc/ca-certificates")
+# The trust store: Debian and Ubuntu keep it in /etc/ssl, Fedora in /etc/pki (and /etc/ssl/certs is a link into it).
+ETC_DIRS = ("/etc/ssl", "/etc/ca-certificates", "/etc/pki")
 SAFE_ENV = {"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"}
 
 

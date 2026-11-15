@@ -1,0 +1,247 @@
+{
+ "compositors": {
+  "cage": {
+   "left": {
+    "capture": [
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_screencopy_manager_v1"
+    ],
+    "input": [
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "windows": [
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_output_manager_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "cage 0.3.1-2.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "cinnamon": {
+   "left": {
+    "shell": [
+     "xapp_shell_v1"
+    ],
+    "windows": [
+     "zwlr_layer_shell_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "cinnamon 6.8.0-1.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "gnome-shell": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "gnome-shell 51.1-1.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "hyprland": {
+   "status": "not installed",
+   "version": null
+  },
+  "kwin": {
+   "functional": {
+    "capture": false,
+    "clipboard": true,
+    "type": false
+   },
+   "left": {
+    "desktop": [
+     "kde_external_brightness_v1",
+     "kde_screen_edge_manager_v1",
+     "org_kde_kwin_dpms_manager",
+     "org_kde_kwin_keystate",
+     "org_kde_plasma_virtual_desktop_management"
+    ],
+    "windows": [
+     "kde_output_management_v2",
+     "org_kde_plasma_shell",
+     "zwlr_layer_shell_v1"
+    ]
+   },
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "kwin 6.8.2-3.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "labwc": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "labwc 0.20.2-2.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "muffin": {
+   "status": "not installed",
+   "version": "muffin 6.8.1-1.fc45"
+  },
+  "mutter": {
+   "left": {},
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "run",
+   "version": "mutter 51.1-1.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "plasmashell": {
+   "functional": {
+    "capture": false,
+    "clipboard": true,
+    "type": false
+   },
+   "left": {
+    "desktop": [
+     "kde_external_brightness_v1",
+     "kde_screen_edge_manager_v1",
+     "org_kde_kwin_dpms_manager",
+     "org_kde_kwin_keystate",
+     "org_kde_plasma_virtual_desktop_management"
+    ],
+    "windows": [
+     "kde_output_management_v2",
+     "org_kde_plasma_shell",
+     "zwlr_layer_shell_v1"
+    ]
+   },
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "plasma-workspace 6.8.2-1.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "sway": {
+   "functional": {
+    "capture": false,
+    "clipboard": false,
+    "type": false
+   },
+   "left": {},
+   "security_context": true,
+   "socket": "restricted",
+   "status": "ok",
+   "verdict": "run",
+   "version": "sway 1.12-2.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "wayfire": {
+   "left": {
+    "capture": [
+     "zwlr_export_dmabuf_manager_v1",
+     "zwlr_screencopy_manager_v1"
+    ],
+    "clipboard": [
+     "zwlr_data_control_manager_v1"
+    ],
+    "input": [
+     "zwf_shell_manager_v2",
+     "zwlr_virtual_pointer_manager_v1",
+     "zwp_virtual_keyboard_manager_v1"
+    ],
+    "windows": [
+     "ext_session_lock_manager_v1",
+     "zwlr_foreign_toplevel_manager_v1",
+     "zwlr_gamma_control_manager_v1",
+     "zwlr_layer_shell_v1",
+     "zwlr_output_manager_v1",
+     "zwlr_output_power_manager_v1"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "wayfire 0.10.1-2.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  },
+  "weston": {
+   "left": {
+    "capture": [
+     "weston_capture_v1"
+    ],
+    "input": [
+     "zwp_input_panel_v1"
+    ],
+    "windows": [
+     "weston_desktop_shell"
+    ]
+   },
+   "security_context": false,
+   "socket": "full",
+   "status": "ok",
+   "verdict": "refuse",
+   "version": "weston 15.0.1-3.fc45",
+   "window": {
+    "client": "weston-simple-shm",
+    "detail": "",
+    "ok": true
+   }
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "fedora",
+  "kernel": "7.2.11-300.fc45.x86_64",
+  "name": "Fedora Linux 45 (Cloud Edition)",
+  "version": "45"
+ }
+}

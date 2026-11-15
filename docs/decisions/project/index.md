@@ -4,7 +4,7 @@ Decisions about the platform appjail supports, its interface, and how it is buil
 
 | Decision | Covers |
 |---|---|
-| [x86-64, Debian 13 and Ubuntu 26.04](platform.md) | supported systems, and the paused arm64 work |
+| [x86-64, Debian 13, Ubuntu 26.04 and Fedora 45](platform.md) | supported systems, and the paused arm64 work |
 | [A window over the command line](gui.md) | the tkinter front end |
 | [One output vocabulary, errors on stderr](output.md) | how commands print |
 | [Vulnerability reports through GitHub](security-reports.md) | the reporting channel and supported versions |

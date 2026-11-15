@@ -5,6 +5,7 @@
 
 import fcntl
 import os
+import pwd
 import stat
 import struct
 from pathlib import Path
@@ -20,6 +21,14 @@ RUNTIME_ETC = ("/etc/fonts", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.
                "/etc/alternatives")
 GPU_RO = ("/sys/dev/char", "/sys/devices", "/usr/share/glvnd", "/usr/share/vulkan", "/etc/vulkan", "/etc/glvnd")
 FIRST_PASTA_FD = 10  # above the single digits jail.net_wrap and the portal pipes use
+
+
+def _user_name():
+    """The name udisks uses for this user's directory under /run/media, or None when the account has no name."""
+    try:
+        return pwd.getpwuid(os.getuid()).pw_name
+    except KeyError:
+        return None
 
 
 def _guard_dirs():
@@ -117,7 +126,7 @@ class Grants:
             rel = real.relative_to(home_real)
         except ValueError:
             rel = None
-        why = grants.directory_reason(f"~/{rel}" if rel else str(real), mode)
+        why = grants.directory_reason(f"~/{rel}" if rel else str(real), mode, _user_name())
         if why:
             raise RunError(f"granted directory {host} is refused: {why}")
         self.items.append(Grant(fd, str(real), dest, mode == "rw", st.st_dev, st.st_ino))
@@ -140,7 +149,7 @@ class Grants:
             rel = real.relative_to(home_real)
         except ValueError:
             rel = None
-        why = grants.sensitive_reason(f"~/{rel}" if rel else str(real), mode)
+        why = grants.sensitive_reason(f"~/{rel}" if rel else str(real), mode, _user_name())
         if why:
             raise RunError(f"granted file {path} is refused: {why}")
         dest = f"{APP_HOME}/{rel}" if rel else str(real)

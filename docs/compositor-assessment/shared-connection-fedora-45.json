@@ -1,0 +1,315 @@
+{
+ "compositors": {
+  "cinnamon": {
+   "names": [
+    "org.Cinnamon",
+    "org.Cinnamon.LookingGlass",
+    "org.cinnamon.Muffin.Debug",
+    "org.cinnamon.Muffin.DisplayConfig",
+    "org.cinnamon.Muffin.IdleMonitor",
+    "org.cinnamon.Muffin.RemoteDesktop",
+    "org.cinnamon.Muffin.ScreenCast",
+    "org.cinnamon.ScreenSaver",
+    "org.cinnamon.Screenshot",
+    "org.freedesktop.IBus",
+    "org.freedesktop.IBus.Panel.Extension.Gtk3",
+    "org.freedesktop.Notifications",
+    "org.gnome.Caribou.Keyboard",
+    "org.gnome.Magnifier",
+    "org.gnome.Panel",
+    "org.gnome.keyring.SystemPrompter",
+    "org.gtk.MountOperationHandler",
+    "org.x.StatusIconMonitor.cinnamon_0"
+   ],
+   "status": "ok",
+   "tries": {
+    "org.freedesktop.Notifications": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "by_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "by_unique_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "outcome": "confined",
+      "service_call": {
+       "answer": "('cinnamon', 'GNOME', '6.8.0', '1.2')",
+       "reached": true
+      }
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    },
+    "org.gnome.Caribou.Keyboard": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    },
+    "org.gnome.Magnifier": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    },
+    "org.gnome.Panel": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    },
+    "org.gnome.keyring.SystemPrompter": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    },
+    "org.gtk.MountOperationHandler": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    },
+    "org.x.StatusIconMonitor.cinnamon_0": {
+     "answer": "(True, '2')",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.Cinnamon"
+     },
+     "call": "org.Cinnamon.Eval",
+     "reached": true
+    }
+   },
+   "version": "cinnamon 6.8.0-1.fc45"
+  },
+  "gnome-shell": {
+   "names": [
+    "org.freedesktop.IBus",
+    "org.freedesktop.IBus.Panel.Extension.Gtk3",
+    "org.freedesktop.a11y.Manager",
+    "org.gnome.Mutter.ColorManager",
+    "org.gnome.Mutter.DisplayConfig",
+    "org.gnome.Mutter.IdleMonitor",
+    "org.gnome.Mutter.InputCapture",
+    "org.gnome.Mutter.InputMapping",
+    "org.gnome.Mutter.RemoteDesktop",
+    "org.gnome.Mutter.ScreenCast",
+    "org.gnome.Mutter.ServiceChannel",
+    "org.gnome.Shell",
+    "org.gnome.Shell.AudioDeviceSelection",
+    "org.gnome.Shell.Brightness",
+    "org.gnome.Shell.Introspect",
+    "org.gnome.Shell.Screenshot",
+    "org.gnome.Shell.Wacom.PadOsd",
+    "org.gnome.keyring.SystemPrompter",
+    "org.gtk.MountOperationHandler",
+    "org.gtk.Notifications"
+   ],
+   "status": "ok",
+   "tries": {
+    "org.gnome.keyring.SystemPrompter": {
+     "answer": "('/org/gnome/Mutter/RemoteDesktop/Session/u1',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.a11y.Manager"
+     },
+     "call": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+     "reached": true
+    },
+    "org.gtk.MountOperationHandler": {
+     "answer": "('/org/gnome/Mutter/RemoteDesktop/Session/u2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.a11y.Manager"
+     },
+     "call": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+     "reached": true
+    },
+    "org.gtk.Notifications": {
+     "answer": "('/org/gnome/Mutter/RemoteDesktop/Session/u3',)",
+     "appjail": {
+      "by_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "by_unique_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "outcome": "confined",
+      "service_call": {
+       "answer": "()",
+       "reached": true
+      }
+     },
+     "call": "org.gnome.Mutter.RemoteDesktop.CreateSession",
+     "reached": true
+    }
+   },
+   "version": "gnome-shell 51.1-1.fc45"
+  },
+  "kwin": {
+   "names": [
+    "org.freedesktop.a11y.Manager",
+    "org.kde.KWin",
+    "org.kde.KWin.Effect.WindowView1",
+    "org.kde.KWin.HighlightWindow",
+    "org.kde.KWin.NightLight",
+    "org.kde.KWin.ScreenShot2",
+    "org.kde.keyboard",
+    "org.kde.kglobalaccel",
+    "org.kde.touchpad"
+   ],
+   "status": "ok",
+   "tries": {
+    "org.kde.touchpad": {
+     "answer": "(False,)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.a11y.Manager"
+     },
+     "call": "org.kde.kwin.Scripting.isScriptLoaded",
+     "reached": true
+    }
+   },
+   "version": "kwin 6.8.2-3.fc45"
+  },
+  "muffin": {
+   "status": "not installed",
+   "version": "muffin 6.8.1-1.fc45"
+  },
+  "mutter": {
+   "names": [
+    "org.freedesktop.a11y.Manager",
+    "org.gnome.Mutter.ColorManager",
+    "org.gnome.Mutter.DisplayConfig",
+    "org.gnome.Mutter.IdleMonitor",
+    "org.gnome.Mutter.InputCapture",
+    "org.gnome.Mutter.InputMapping",
+    "org.gnome.Mutter.RemoteDesktop",
+    "org.gnome.Mutter.ScreenCast",
+    "org.gnome.Mutter.ServiceChannel"
+   ],
+   "status": "ok",
+   "tries": {},
+   "version": "mutter 51.1-1.fc45"
+  },
+  "plasmashell": {
+   "names": [
+    "com.canonical.Unity",
+    "org.freedesktop.Notifications",
+    "org.freedesktop.a11y.Manager",
+    "org.freedesktop.impl.portal.desktop.plasmanotify",
+    "org.kde.ActivityManager",
+    "org.kde.JobViewServer",
+    "org.kde.KWin",
+    "org.kde.KWin.Effect.WindowView1",
+    "org.kde.KWin.HighlightWindow",
+    "org.kde.KWin.NightLight",
+    "org.kde.KWin.ScreenShot2",
+    "org.kde.StatusNotifierHost-41484",
+    "org.kde.keyboard",
+    "org.kde.kglobalaccel",
+    "org.kde.klipper",
+    "org.kde.kuiserver",
+    "org.kde.plasmashell",
+    "org.kde.runners.activities",
+    "org.kde.touchpad"
+   ],
+   "status": "ok",
+   "tries": {
+    "com.canonical.Unity": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.impl.portal.desktop.plasmanotify"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.freedesktop.Notifications": {
+     "answer": "('2',)",
+     "appjail": {
+      "by_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "by_unique_name": {
+       "answer": "GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: org.freedesktop.DBus.Error.AccessDenied",
+       "reached": false
+      },
+      "outcome": "confined",
+      "service_call": {
+       "answer": "('Plasma', 'KDE', '6.8.2', '1.2')",
+       "reached": true
+      }
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.JobViewServer": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.impl.portal.desktop.plasmanotify"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.StatusNotifierHost-41484": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.impl.portal.desktop.plasmanotify"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.kuiserver": {
+     "answer": "('2',)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.impl.portal.desktop.plasmanotify"
+     },
+     "call": "org.kde.PlasmaShell.evaluateScript",
+     "reached": true
+    },
+    "org.kde.touchpad": {
+     "answer": "(False,)",
+     "appjail": {
+      "outcome": "refused at launch",
+      "shares_owner_with": "org.freedesktop.a11y.Manager"
+     },
+     "call": "org.kde.kwin.Scripting.isScriptLoaded",
+     "reached": true
+    }
+   },
+   "version": "plasma-workspace 6.8.2-1.fc45"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "fedora",
+  "kernel": "7.2.11-300.fc45.x86_64",
+  "name": "Fedora Linux 45 (Cloud Edition)",
+  "version": "45"
+ }
+}

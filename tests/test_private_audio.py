@@ -25,13 +25,10 @@ import pytest
 from appjail import audiojail, jail, runner, runtimejail, seccomp
 from appjail.manifest import Manifest, Permissions
 
+from . import pwsources
 from .helpers import COMPOSITOR, build, integration, wait_for
 
-HOST_CONF = """context.spa-libs = { videotestsrc = videotestsrc/libspa-videotestsrc, audiotestsrc = audiotestsrc/libspa-audiotestsrc }
-context.objects = [
-  { factory = adapter args = { factory.name = videotestsrc node.name = host-camera media.class = Video/Source media.type = Video media.role = Camera } }
-  { factory = adapter args = { factory.name = audiotestsrc node.name = host-mic media.class = Audio/Source } }
-  { factory = adapter args = { factory.name = audiotestsrc node.name = host-mic2 media.class = Audio/Source } }
+SPEAKER_CONF = """context.objects = [
   { factory = adapter args = { factory.name = support.null-audio-sink node.name = host-speaker media.class = Audio/Sink object.linked = true } }
 ]
 """
@@ -48,7 +45,16 @@ class Host:
         self.rt.mkdir(mode=0o700)
         cfg = base / "hostcfg" / "pipewire" / "pipewire.conf.d"
         cfg.mkdir(parents=True)
-        (cfg / "x.conf").write_text(HOST_CONF)
+        self.feeders = []
+        sources = [("camera.conf", pwsources.camera("host-camera", "media.type = Video media.role = Camera")),
+                   ("speaker.conf", (SPEAKER_CONF, None))]
+        for mic in ("host-mic", "host-mic2"):
+            sources.append((f"{mic}.conf", pwsources.microphone(mic, base)))
+        for name, conf in sources:
+            text, feeder = conf if isinstance(conf, tuple) else (conf, None)
+            (cfg / name).write_text(text)
+            if feeder:
+                self.feeders.append(feeder)
         self.env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(self.rt), "XDG_CONFIG_HOME": str(base / "hostcfg"), "HOME": str(base)}
         self.procs = []
 
@@ -125,6 +131,8 @@ def host():
     base = Path(tempfile.mkdtemp(prefix="pa"))
     h = Host(base)
     try:
+        for feeder in h.feeders:  # blocks in open() until the pipe tunnel reads: a process of its own
+            h.procs.append(subprocess.Popen(feeder, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
         h.start("pipewire")
         assert wait_for(lambda: (h.rt / "pipewire-0").is_socket(), 10)
         h.start("wireplumber")
@@ -264,8 +272,7 @@ def test_no_camera_is_ever_in_the_graph_even_with_one_on_the_host(sandbox, host)
 
 @integration
 def test_a_stray_node_makes_the_graph_unusable(host, monkeypatch):
-    stray = ('context.spa-libs = { videotestsrc = videotestsrc/libspa-videotestsrc }\ncontext.objects = [ { factory = adapter args = '
-             '{ factory.name = videotestsrc node.name = stray-camera media.class = Video/Source media.type = Video } } ]\n')
+    stray = pwsources.camera("stray-camera", "media.type = Video")
     real = audiojail.pipewire_conf
     monkeypatch.setattr(audiojail, "pipewire_conf", lambda mic: real(mic) + stray)
     with pytest.raises(audiojail.AudioUnavailable, match="stray-camera"), private(host):
@@ -344,9 +351,10 @@ def test_the_tunnel_uses_the_default_source_at_connection_time(host):
 def test_a_default_change_adds_links_and_unplug_removes_only_the_unplugged_ones(host):
     """Measured on the real graph (pactl shows only one source per stream and hides this). A headset that becomes the default
     is ADDED to the tunnel's links (playback on both, the microphone mixed from both) instead of replacing them; unplugging
-    removes only its own links; nothing re-attaches by itself."""
-    def stable(expected):
-        return wait_for(lambda: host.links() == expected, 6)
+    removes only its own links; nothing re-attaches by itself. WirePlumber 0.5.19 with PipeWire 1.6.11 (Fedora 45) moves the
+    microphone link instead of adding to it: the tunnel then follows the new default only (see camera-audio-evidence.md)."""
+    def stable(*expected):
+        return wait_for(lambda: host.links() in expected, 6)
 
     with private(host):
         assert wait_for(lambda: all(host.links()), 8)
@@ -356,13 +364,13 @@ def test_a_default_change_adds_links_and_unplug_removes_only_the_unplugged_ones(
         assert host.links() == (["host-mic"], ["host-speaker"])  # plugged, not the default: nothing happens
         host.set_default("sink", "headset")
         host.set_default("source", "headset.monitor")
-        assert stable((["headset", "host-mic"], ["headset", "host-speaker"]))  # added, not moved
+        assert stable((["headset", "host-mic"], ["headset", "host-speaker"]), (["headset"], ["headset", "host-speaker"]))  # added, or moved
         index = next(line.split("\t")[0] for line in host.pactl("list", "short", "modules").splitlines() if "sink_name=headset" in line)
         host.pactl("unload-module", index)
-        assert stable((["host-mic"], ["host-speaker"]))  # the unplugged device's links are gone
+        assert stable((["host-mic"], ["host-speaker"]), ([], []))  # the unplugged device's links are gone (PipeWire 1.6.11: the tunnel too)
         host.pactl("load-module", "module-null-sink", "sink_name=headset")
         time.sleep(3)
-        assert host.links() == (["host-mic"], ["host-speaker"])  # and nothing re-attaches by itself
+        assert host.links() in ((["host-mic"], ["host-speaker"]), ([], []))  # and nothing re-attaches by itself
 
 
 @integration
@@ -375,8 +383,12 @@ def test_a_tunnel_on_a_headset_that_is_unplugged_goes_silent_for_good(sandbox, h
         index = next(line.split("\t")[0] for line in host.pactl("list", "short", "modules").splitlines() if "sink_name=headset" in line)
         host.pactl("unload-module", index)
         time.sleep(3)
-        assert host.links() == ([], [])  # attached to nothing, and the app is not told: its graph is unchanged
-        assert {"app-speaker", "app-mic"} <= set(node_names(in_jail(sandbox, audio, ["/usr/bin/pw-dump"])))
+        assert host.links() == ([], [])  # attached to nothing
+        # PipeWire up to 1.6.2: the app is not told, its graph is unchanged. PipeWire 1.6.11: the tunnel nodes go away and the
+        # app has no audio device at all. Either way nothing of the host is reachable.
+        seen = set(node_names(in_jail(sandbox, audio, ["/usr/bin/pw-dump"])))
+        assert {"app-speaker", "app-mic"} <= seen or not seen & {"app-speaker", "app-mic"}
+        assert not [n for n in seen if n.startswith(("host-", "headset"))]
         host.pactl("load-module", "module-null-sink", "sink_name=headset")
         time.sleep(3)
         assert host.links() == ([], [])

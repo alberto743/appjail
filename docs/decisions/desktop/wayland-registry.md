@@ -6,7 +6,7 @@
 Some are privileged: screen capture, virtual keyboards and pointers, reading the clipboard without focus, controlling
 other windows or the desktop. The `wp_security_context_v1` protocol lets a sandbox ask the compositor for a restricted
 socket. A first rule refused apps wherever that protocol was missing; it rested on a wrong claim that GNOME implements
-it. Measurements of nine compositors on Debian 13 and Ubuntu 26.04 showed instead:
+it. Measurements of nine compositors on Debian 13, Ubuntu 26.04 and Fedora 45 showed instead:
 
 - GNOME (Mutter, GNOME Shell) and Cinnamon (Muffin) have no such protocol, and their own socket lists nothing
   privileged: they keep capture and remote input on D-Bus;
@@ -23,7 +23,7 @@ interface, naming it and what it allows. The manifest permission `full_wayland` 
 with a warning. It is a permission, not a run option, so menu entries and file opening work for an app you decided
 about, and so a warning that scrolls past is never taken for consent.
 
-**Consequences.** Apps run on GNOME, Cinnamon, sway, labwc and Hyprland 0.55 without the permission. **KWin is
+**Consequences.** Apps run on GNOME, sway, labwc and Hyprland 0.55 (and on Cinnamon 6.4) without the permission. **KWin is
 refused**, like any compositor whose app socket lists a privileged interface: accepting data-control there would grant
 what `full_wayland` grants without asking, and would go stale with KWin. Plasma users need `full_wayland` per app until
 KWin hides data-control. Ordinary copy and paste is not affected anywhere: it uses the core clipboard, which needs

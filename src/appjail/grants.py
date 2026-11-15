@@ -25,6 +25,9 @@ DBUS_BLOCKED = ("org.freedesktop.DBus", "org.freedesktop.systemd1", "org.freedes
                 # measured on Cinnamon 6.4: its Eval runs any JavaScript in the shell for any client (a command, typing into
                 # other windows); the shell also answers org.gnome.Shell.Screenshot, refused above
                 "org.Cinnamon",
+                # measured on Cinnamon 6.8, which renamed GNOME's screenshot name: org.cinnamon.Screenshot writes a picture of the
+                # whole screen for any client, and org.cinnamon.ScreenSaver locks, unlocks and ends the screensaver
+                "org.cinnamon.Screenshot", "org.cinnamon.ScreenSaver",
                 # measured on Plasma 6.3 and 6.6: the shell's evaluateScript runs a desktop script for any client (it writes
                 # the user's configuration files), and klipper, in the same process, hands over the clipboard and its history
                 "org.kde.plasmashell", "org.kde.klipper")
@@ -129,12 +132,27 @@ SYSTEM_PATHS = ("/etc", "/dev", "/proc", "/sys", "/run", "/boot", "/root", "/usr
 SHARED_DIRS = ("/tmp", "/var/tmp")
 
 
+# udisks mounts removable media of a user at /run/media/USER/LABEL (Fedora, Arch; Debian and Ubuntu use /media/USER/LABEL).
+# Those mount points are the one exception to refusing /run. Entries are checked where the user is not known (a manifest,
+# a typed path) with ANY_USER, and at launch with the name of the user running the app.
+ANY_USER = "*"
+REMOVABLE_MEDIA = "/run/media/USER/LABEL"  # the exception, as the reference prints it
+
+
+def _removable_media(path, media_user):
+    """True for a mount point of removable media, or a path below one, in the directory udisks keeps for ``media_user``."""
+    parts = path.split("/")
+    return bool(media_user and len(parts) >= 5 and parts[:3] == ["", "run", "media"] and parts[3] and parts[4]
+                and media_user in (ANY_USER, parts[3]))
+
+
 def _within(path, base):
     return path == base or path.startswith(base + "/")
 
 
-def sensitive_reason(path, mode):
+def sensitive_reason(path, mode, media_user=None):
     """Why a normalized dirs path (``~/x`` or absolute) must not be granted in this mode, else None.
+    ``media_user`` is the user whose removable media under /run/media may be granted (ANY_USER: whoever's); None: nobody's.
 
     Home-relative rules apply to ``~/x`` paths; callers that resolved symlinks pass the real path
     relative to the real home as ``~/x`` so a link cannot dodge them.
@@ -164,18 +182,20 @@ def sensitive_reason(path, mode):
         return None
     for d in SYSTEM_PATHS:
         if _within(path, d):
+            if d == "/run" and _removable_media(path, media_user):
+                continue
             return f"{d} is a system tree and is not available to jailed apps"
     return None
 
 
-def directory_reason(path, mode):
+def directory_reason(path, mode, media_user=None):
     """Why a directory grant (normalized like sensitive_reason's path) must be refused, else None: the sensitive-path
     policy plus the shared directories, which only matter for a directory."""
     for d in SHARED_DIRS:
         if _within(path, d):
             return (f"{d} is shared by every program and holds their sockets (X11, tmux, ...), which the app could "
                     "reach even read-only; use a directory elsewhere")
-    return sensitive_reason(path, mode)
+    return sensitive_reason(path, mode, media_user)
 
 
 def check_dir(entry):
@@ -188,7 +208,7 @@ def check_dir(entry):
         raise ManifestError(f"dirs entry {entry!r}: path is too broad or contains '..'")
     if os.path.normpath(path) != path.rstrip("/"):
         raise ManifestError(f"dirs entry {entry!r}: path is not normalised (no '.', empty or repeated components)")
-    reason = directory_reason(path.rstrip("/") or path, mode)
+    reason = directory_reason(path.rstrip("/") or path, mode, ANY_USER)
     if reason:
         raise ManifestError(f"dirs entry {entry!r} is refused: {reason}")
     return entry

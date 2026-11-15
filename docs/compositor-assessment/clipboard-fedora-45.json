@@ -1,0 +1,89 @@
+{
+ "compositors": {
+  "cage": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "cage 0.3.1-2.fc45"
+  },
+  "cinnamon": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "cinnamon 6.8.0-1.fc45"
+  },
+  "gnome-shell": {
+   "app_socket": "full",
+   "inbound": "untestable (a window never got keyboard focus)",
+   "outbound": "untestable (a window never got keyboard focus)",
+   "status": "ok",
+   "version": "gnome-shell 51.1-1.fc45"
+  },
+  "hyprland": {
+   "status": "not installed",
+   "version": null
+  },
+  "kwin": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "kwin 6.8.2-3.fc45"
+  },
+  "labwc": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "labwc 0.20.2-2.fc45"
+  },
+  "muffin": {
+   "status": "not installed",
+   "version": "muffin 6.8.1-1.fc45"
+  },
+  "mutter": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "mutter 51.1-1.fc45"
+  },
+  "plasmashell": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "plasma-workspace 6.8.2-1.fc45"
+  },
+  "sway": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "sway 1.12-2.fc45"
+  },
+  "wayfire": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "wayfire 0.10.1-2.fc45"
+  },
+  "weston-nested": {
+   "app_socket": "full",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "weston 15.0.1-3.fc45"
+  }
+ },
+ "distro": {
+  "arch": "x86_64",
+  "id": "fedora",
+  "kernel": "7.2.11-300.fc45.x86_64",
+  "name": "Fedora Linux 45 (Cloud Edition)",
+  "version": "45"
+ }
+}

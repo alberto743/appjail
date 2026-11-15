@@ -2,7 +2,7 @@
 
 *Decision on [isolation](index.md).*
 
-**Context.** appjail needs to start programs in new namespaces, without root, on Debian 13 and Ubuntu 26.04. The
+**Context.** appjail needs to start programs in new namespaces, without root, on Debian 13, Ubuntu 26.04 and Fedora 45. The
 policy (what each jail contains) must be readable, testable and owned by appjail.
 
 **Options.**

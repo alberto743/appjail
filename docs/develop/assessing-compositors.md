@@ -14,10 +14,11 @@ every capability is tried with a real client, and every claim in ASSESSMENT.md p
 
 ## Where
 
-Only in the `*-compositors` guests (`GUEST=debian-compositors`, `GUEST=ubuntu-compositors`; packages in
-`tests/vm/packages-compositors.txt`), never on the host. Both distributions, identical code, each compositor in a private
-runtime directory and on a private session bus (`probe.Session`). A compositor is measured in the version its distribution
-packages; one that neither packages is not measured, and the rule decides it from its registry at run time.
+Only in the `*-compositors` guests (`GUEST=debian-compositors`, `GUEST=ubuntu-compositors`, `GUEST=fedora-compositors`;
+packages in `tests/vm/packages-compositors.txt`, with the Fedora names in `tests/vm/packages-fedora.map`), never on the
+host. Every distribution, identical code, each compositor in a private runtime directory and on a private session bus (`probe.Session`). A compositor is measured in the version its distribution
+packages; one that a distribution does not package, or packages without what the tools start (Fedora's `muffin` has no
+executable, Hyprland is not packaged), is not measured there, and the rule decides it from its registry at run time.
 
 ## The tools (`tests/compositors/`)
 
@@ -33,13 +34,13 @@ packages; one that neither packages is not measured, and the rule decides it fro
 ## Adding a compositor
 
 1. **Package.** Add it to `tests/vm/packages-compositors.txt` with a comment (what it is, how it starts), plus whatever it
-   needs to start (Muffin needs `cinnamon-settings-daemon` for its GSettings schemas). Provision both guests.
+   needs to start (Muffin needs `cinnamon-settings-daemon` for its GSettings schemas). Provision every guest.
 2. **Start it headless.** Add an entry to `probe.COMPOSITORS`: packages, command line, environment. Use its headless
    backend if it has one (`--headless`, `--virtual`, `WLR_BACKENDS=headless`, `AQ_BACKENDS=headless`). If it has none, run
    it nested as a window of a private Xvfb (`probe.XVFB`, as Muffin and Cinnamon do); weston is also measured as a window of
    a headless sway. A shell that is a plugin of a compositor (GNOME Shell on Mutter, Cinnamon on Muffin) is its own entry; so is a shell that
    is a client of one (plasmashell beside KWin, with the activity manager it needs; `probe.SETTLE` gives it time to load).
-3. **Survey.** `probe.py --only NAME` on both guests. Read `full`, `restricted`, `functional` and `dbus`.
+3. **Survey.** `probe.py --only NAME` on every guest. Read `full`, `restricted`, `functional` and `dbus`.
 4. **Classify every global it lists** that is in neither `wayland.PRIVILEGED` nor `wayland.ALLOWED`: read the protocol's XML
    and decide whether it acts only on the app's own windows, on input while the app has focus, or on its own buffers
    (allowed), or on other apps, the screen, input in general or the desktop (privileged). An unknown global refuses the app,
@@ -67,7 +68,7 @@ packages; one that neither packages is not measured, and the rule decides it fro
 10. **Decide and document.** Change `wayland.PRIVILEGED` or `ALLOWED`, `grants.DBUS_BLOCKED` and `tests/test_dbus.py` as the
     results require; update ASSESSMENT.md (what the table shows, decision D, the limits), the decision pages under
     `docs/decisions/desktop/` (why), `docs/understand/desktop/` (the refused names), and the compositor table in
-    `docs/guide/compositors.md`; regenerate `docs/reference/policy.md`; run the full suite on both guests.
+    `docs/guide/compositors.md`; regenerate `docs/reference/policy.md`; run the full suite on every guest.
 
 ## Lessons from the measurements
 
@@ -93,6 +94,13 @@ packages; one that neither packages is not measured, and the rule decides it fro
   families; a blocklist entry covers only its own spelling.
 * **The bus filter works on names; the risk is per connection.** One process owns many names on one connection, and a call
   to any of them reaches all of its objects (`shared_connection.py`).
+* **A new version can rename a name or add a global.** Cinnamon 6.8 answers screenshots as `org.cinnamon.Screenshot`, not
+  `org.gnome.Shell.Screenshot`, so a tool that calls the old name measures nothing; `cinnamon_dbus.py` takes the name the
+  shell owns. A global the lists do not know refuses the compositor: classify it from the protocol's own XML, and say in
+  ASSESSMENT.md when one could not be read.
+* **Rerun the rule after changing the lists.** `rule-a-*.json` records the verdicts of the lists as they were; after
+  `wayland.PRIVILEGED` or `ALLOWED` change, run `rule_a.py` again for every distribution, or
+  `tests/test_wayland.py` fails against the old verdict.
 
 ## What this does not cover
 

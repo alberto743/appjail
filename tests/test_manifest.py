@@ -4,7 +4,7 @@
 
 import pytest
 
-from appjail import grants, manifest
+from appjail import grants, manifest, runtimejail
 from appjail.manifest import Manifest, ManifestError, Permissions
 
 SHA = "a" * 64
@@ -350,6 +350,47 @@ def test_sensitive_reason(path, mode, refused):
 def test_directory_reason_refuses_the_shared_temp_dirs(path, refused):
     assert bool(grants.directory_reason(path, "")) is refused
     assert grants.sensitive_reason(path, "") is None  # single files there are fine
+
+
+@pytest.mark.parametrize("path, user, refused", [
+    ("/run/media/alice/PHOTOS", "alice", False),  # udisks' mount point of the user's own drive (Fedora, Arch)
+    ("/run/media/alice/PHOTOS/2026/trip", "alice", False),
+    ("/run/media/alice/PHOTOS", grants.ANY_USER, False),  # where the user is not known: a manifest, a typed path
+    ("/run/media/bob/PHOTOS", "alice", True),  # another user's drive
+    ("/run/media/bob/PHOTOS", grants.ANY_USER, False),
+    ("/run/media/alice/PHOTOS", None, True),  # no exception unless a user is named
+    ("/run/media/alice", "alice", True),  # the directory of mount points is not a mount point
+    ("/run/media", "alice", True),
+    ("/run/media", grants.ANY_USER, True),
+    ("/run/media/alice", grants.ANY_USER, True),
+    ("/run/media/alice2/PHOTOS", "alice", True),  # a prefix of the name is not the name
+    ("/run/mediaX/alice/PHOTOS", "alice", True),
+    ("/run/user/1000", "alice", True),
+    ("/run/user/1000/bus", grants.ANY_USER, True),
+    ("/run/media/alice/PHOTOS", "", True),
+    ("/media/alice/PHOTOS", None, False),  # Debian and Ubuntu: never needed an exception
+])
+def test_removable_media_is_the_only_part_of_run_that_can_be_granted(path, user, refused):
+    assert bool(grants.sensitive_reason(path, "rw", user)) is refused
+    assert bool(grants.directory_reason(path, "ro", user)) is refused
+
+
+def test_a_manifest_and_a_typed_path_accept_a_mount_point_but_not_the_run_tree():
+    assert grants.check_dir("/run/media/alice/PHOTOS:rw") == "/run/media/alice/PHOTOS:rw"
+    assert grants.normalize_dir("/run/media/alice/PHOTOS", "/home/alice", "/home/alice") == "/run/media/alice/PHOTOS"
+    for spec in ("/run/media", "/run/media/alice", "/run", "/run/user/1000", "/run/media/alice/../../user/1000"):
+        with pytest.raises(manifest.ManifestError):
+            grants.check_dir(spec)
+
+
+def test_the_launch_names_the_user_whose_drives_may_be_granted(monkeypatch):
+    monkeypatch.setattr(runtimejail.pwd, "getpwuid", lambda uid: type("P", (), {"pw_name": "alice"})())
+    assert runtimejail._user_name() == "alice"
+
+    def unknown(uid):
+        raise KeyError(uid)
+    monkeypatch.setattr(runtimejail.pwd, "getpwuid", unknown)
+    assert runtimejail._user_name() is None
 
 
 @pytest.mark.parametrize("spec", ["~/.ssh", "~/.config", "~/.local/bin:rw", "/etc/ssl", "/proc", "/tmp", "/var/tmp/x"])

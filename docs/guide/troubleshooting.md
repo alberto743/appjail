@@ -13,7 +13,7 @@
 | No sound | `perms APP --allow audio`. If a warning says the private audio graph is unavailable, install the PipeWire packages listed in [Getting started](getting-started.md). |
 | `no asset in TAG matches 'PATTERN'` | The publisher renamed the release's files. Pick the right one from the list shown and run `update APP --pattern 'NEW-*-PATTERN.AppImage'` ([Updates](updates.md#when-the-release-file-was-renamed)). |
 | `redirect to a private network address refused` | The server of a URL app or catalog redirected the download to a machine of your local network. If you expect that (an intranet mirror), add `--allow-private-redirects` to that command ([why](../decisions/acquisition/private-redirects.md)). |
-| A file or folder on a USB drive cannot be granted or opened | Your system mounts drives under `/run/media`, which is refused. See [removable media](files.md#removable-media-usb-drives-sd-cards). |
+| A file or folder on a USB drive cannot be granted or opened | Grant the drive's own mount point (`/media/USER/LABEL`, or `/run/media/USER/LABEL` with your own user name), not the directory above it, and not another user's drive. See [removable media](files.md#removable-media-usb-drives-sd-cards). |
 | `GitHub API rate limit reached` | 60 requests an hour without a token. Set `GITHUB_TOKEN`. |
 | `unsquashfs is not installed` | Install `squashfs-tools`. |
 | A DwarFS-based AppImage | `appjail tools install dwarfs`. |
