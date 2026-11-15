@@ -32,7 +32,7 @@ they prefer not to be.
 
 - What the documentation states as limits (the Limits section of each page, and
   [the problem](https://alberto743.github.io/appjail/understand/problem/#what-appjail-does-not-do)): for example an app granted `full_wayland` running although its Wayland socket
-  lists privileged or unknown interfaces, the Wayland interfaces allowed after a decision (such as idle notification, or the unprivileged GPU file descriptor GNOME sends to every window; see
+  lists privileged or unknown interfaces, the Wayland interfaces allowed after a decision (such as idle notification, the unprivileged GPU file descriptor GNOME sends to every window, or the keyboard focus any window can take on GNOME and Cinnamon; see
   [Unknown Wayland interfaces are refused](https://alberto743.github.io/appjail/decisions/desktop/wayland-allowlist/)), or reaching the LAN with `network`. An interface in appjail's allowed list that lets an app act on other
   apps is in scope. A granted D-Bus name outside appjail's confined services reaching the other objects of a process
   that took it over after the app started is a documented limit; reaching another process's objects, a confined service's
