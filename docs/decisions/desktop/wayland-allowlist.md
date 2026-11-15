@@ -23,10 +23,11 @@ other apps, and refusing them would refuse compositors that are otherwise fine:
 | `xdg_session_manager_v1` | the app's own toplevels, saved and restored through a token the compositor makes | acts on the app's own windows; the session replaced by a second client needs its unguessable token |
 | `kde_output_device_registry_v2` | the list of outputs | describes outputs, as `kde_output_device_v2`, already allowed, does; it has no request that changes anything |
 
-Two interfaces seen on Fedora 45 stay refused until they are checked: `xapp_shell_v1` (Cinnamon 6.8; a window's icon may be
-an absolute path, which the shell opens outside the jail, the kind of host-side decoding that makes appearance folders
-read-only) and `org_kde_plasma_activation_feedback` (Plasma 6.8; its definition was not found). `kde_lockscreen_overlay_v1`
-(a surface shown over the lock screen) is privileged, with the other window and lock-screen interfaces.
+`xapp_shell_v1` (Cinnamon 6.8) is allowed too: it sets an icon name or path and a progress value on the client's own window,
+Muffin stores the string without opening it or answering, and an X11 client can set the same hint already. Its consumers are
+not known; if one that opens the path turns up, the entry goes back. Two interfaces seen on Fedora 45 are privileged, under
+"windows": `kde_lockscreen_overlay_v1` (a surface shown over the lock screen) and `org_kde_plasma_activation_feedback` (it
+tells any client which app is being started, which is what refusing the toplevel lists keeps from an app).
 
 **Options rejected.** A separate, weaker permission for unknown interfaces (`full_wayland` already means "more than
 appjail vouches for"); measuring every compositor first (some are not packaged for the supported systems, and the allow

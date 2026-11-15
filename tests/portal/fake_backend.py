@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Fake xdg-desktop-portal FileChooser backend for tests (guest only: needs python3-dbus and python3-gi).
+"""Fake xdg-desktop-portal FileChooser and Access backend for tests (guest only: needs python3-dbus and python3-gi).
 
 Usage: fake_backend.py LOGFILE CHOSEN_FILE
 Owns org.freedesktop.impl.portal.desktop.fake, appends the app_id of every OpenFile call to LOGFILE
-and answers with CHOSEN_FILE as the user's choice.
+and answers with CHOSEN_FILE as the user's choice. It also answers every access dialog (the Camera portal asks one when
+the permission store holds no decision) with "allowed", and appends "access" and the app_id to LOGFILE.
 """
 
 import sys
@@ -29,6 +30,12 @@ class FileChooser(dbus.service.Object):
         with open(self.log, "a") as f:
             f.write(f"{app_id}\n")
         return dbus.UInt32(0), {"uris": dbus.Array([f"file://{self.chosen}"], signature="s")}
+
+    @dbus.service.method("org.freedesktop.impl.portal.Access", in_signature="osssssa{sv}", out_signature="ua{sv}")
+    def AccessDialog(self, handle, app_id, parent_window, title, subtitle, body, options):
+        with open(self.log, "a") as f:
+            f.write(f"access {app_id}\n")
+        return dbus.UInt32(0), {}
 
 
 HELD = []

@@ -29,7 +29,7 @@ offers privileged protocols to every client, an app with nothing but a window ca
 | capture | `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_manager_v1` | the contents of the whole screen |
 | input | `zwp_virtual_keyboard_manager_v1`, `zwlr_virtual_pointer_manager_v1`, input methods | typing and clicking into other apps |
 | clipboard | `ext_data_control_manager_v1`, `zwlr_data_control_manager_v1` | reading and replacing the clipboard without having the focus |
-| windows | foreign toplevel management, layer shell, output management, session lock | seeing and controlling other windows, the screen layout, the lock screen |
+| windows | foreign toplevel management, activation feedback, layer shell, output management, session lock | seeing and controlling other windows, seeing which apps start, the screen layout, the lock screen |
 | desktop | KWin's screen power, brightness, virtual desktops, screen edges, lock keys | changing the desktop itself |
 
 Compositors differ widely. Measured on Debian 13, Ubuntu 26.04 and Fedora 45 (headless, with real clients trying each capability):

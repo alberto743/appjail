@@ -49,5 +49,6 @@ v4l-utils             # v4l2-ctl: identifies and queries the vivid virtual camer
 gstreamer1.0-tools    # gst-launch-1.0: v4l2src writes a frame as a PNG in tests/test_camera.py
 gstreamer1.0-plugins-good # v4l2src and pngenc
 gstreamer1.0-plugins-base # videoconvert
+gstreamer1.0-pipewire # pipewiresrc: reads a frame from the fd of the Camera portal (tests/test_camera_portal.py)
 wireplumber           # the session manager of the private audio graph (audiojail.py, tests/test_private_audio.py) and of the test camera portal
 pulseaudio-utils      # pactl, parec and paplay: the Pulse clients of tests/test_private_audio.py

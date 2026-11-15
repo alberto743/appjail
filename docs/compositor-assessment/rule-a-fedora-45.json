@@ -29,9 +29,6 @@
   },
   "cinnamon": {
    "left": {
-    "shell": [
-     "xapp_shell_v1"
-    ],
     "windows": [
      "zwlr_layer_shell_v1"
     ]
@@ -240,7 +237,7 @@
  "distro": {
   "arch": "x86_64",
   "id": "fedora",
-  "kernel": "7.2.11-300.fc45.x86_64",
+  "kernel": "7.3.3-300.fc45.x86_64",
   "name": "Fedora Linux 45 (Cloud Edition)",
   "version": "45"
  }
