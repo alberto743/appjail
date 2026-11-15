@@ -8,6 +8,7 @@ Thank you for helping. Everything you need is in the documentation:
   [Architecture](https://alberto743.github.io/appjail/develop/architecture/): how the code is organised.
 - [Testing in the guests](https://alberto743.github.io/appjail/develop/testing/): nothing that runs software runs on
   your own machine, tests included.
+- [Contributors](CONTRIBUTORS.md): you keep the copyright of your work (MPL-2.0); add yourself if you want to be named.
 - [Principles](https://alberto743.github.io/appjail/understand/principles/): a change that breaks one is a change of
   design; open an issue to discuss it first.
 
