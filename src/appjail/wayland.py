@@ -32,21 +32,19 @@ MANAGER = "wp_security_context_manager_v1"
 SANDBOX_ENGINE = "appjail"
 TIMEOUT = 5.0
 
-# What an app's Wayland socket may list. Every global is in one of two lists, or it is unknown:
+# What an app's Wayland socket may list. Every global is in one of two tables, or it is unknown. A global is classified by
+# what it gives the app, not by whether refusing it would refuse a common desktop (docs/decisions/desktop/wayland-allowlist.md):
 #
-# PRIVILEGED: globals that let a client act on more than its own windows, by what they allow. An app whose socket lists
-#   one is refused unless it has full_wayland.
-# ALLOWED: globals checked to act only on the client's own surfaces, input while it has the focus, or its own buffers.
-#   Every non-privileged global the measured compositors (docs/compositor-assessment) list is here.
+# 1. Can it act on, or observe, other apps, the screen, input in general or the user's activity beyond the app's own focus?
+#    PRIVILEGED. An app whose socket lists one is refused unless it has full_wayland.
+# 2. Does it hand over a host resource that a permission gates, or reach a service the app could not otherwise reach?
+#    Allowed only as an accepted limit (basis LIMIT in RATIONALE), when the cost is bounded, with what ends the exception.
+# 3. Otherwise it acts on the app's own surfaces, buffers or settings, on input while it has the focus, behind a token, or
+#    only describes the hardware: ALLOWED, with the reason in RATIONALE.
+#
 # Anything else is unknown (a compositor that was not measured, or a new protocol in one that was) and is refused like a
 #   privileged global: appjail cannot say what it allows. tests/test_wayland.py checks that every measured name is in one
-#   of the lists, so new measurements have to be classified.
-#
-# Allowed after a decision (docs/decisions/desktop/wayland-allowlist.md): ext_idle_notifier_v1 and org_kde_kwin_idle (they tell an app
-# whether the user is idle, a privacy signal, not control; sway and Hyprland list the first), wp_drm_lease_device_v1
-# (leases an output the desktop does not use, such as a VR headset; GNOME lists it),
-# zwp_keyboard_shortcuts_inhibit_manager_v1 and zwp_pointer_constraints_v1 (they act while the app has the focus), the
-# capture-*source* managers (they name a target; the copy manager, privileged, is what captures).
+#   of the tables, so new measurements have to be classified.
 PRIVILEGED = {
     "capture": ("zwlr_screencopy_manager_v1", "ext_image_copy_capture_manager_v1", "zwlr_export_dmabuf_manager_v1",
                 "hyprland_toplevel_export_manager_v1", "zkde_screencast_unstable_v1", "weston_capture_v1"),
@@ -60,45 +58,112 @@ PRIVILEGED = {
                 "zwlr_output_power_manager_v1", "zwlr_gamma_control_manager_v1", "kde_output_management_v2",
                 "kde_output_management_v1", "ext_session_lock_manager_v1", "ext_workspace_manager_v1",
                 "zcosmic_workspace_manager_v1", "hyprland_toplevel_mapping_manager_v1", "hyprland_ctm_control_manager_v1",
-                "hyprland_lock_notifier_v1", "kde_lockscreen_overlay_v1", "org_kde_plasma_activation_feedback"),
+                "hyprland_lock_notifier_v1", "kde_lockscreen_overlay_v1", "org_kde_plasma_activation_feedback",
+                "org_kde_kwin_appmenu_manager"),
     "desktop": ("org_kde_kwin_dpms_manager", "kde_external_brightness_v1", "org_kde_plasma_virtual_desktop_management",
                 "kde_screen_edge_manager_v1", "org_kde_kwin_keystate"),
 }
-ALLOWED = frozenset({
+OWN, FOCUS, TOKEN, FACTS, LIMIT = "own", "focus", "token", "facts", "limit"
+BASIS = {
+    OWN: "acts only on the client's own surfaces, buffers or settings",
+    FOCUS: "acts only while the client has the focus, or on an input serial it was given",
+    TOKEN: "needs a token or handle that another client or the compositor handed over",
+    FACTS: "describes the hardware, the outputs or the settings; changes nothing",
+    LIMIT: "accepted limit, decided (docs/decisions/desktop/wayland-allowlist.md)",
+}
+# Where the protocol was read: "wayland-protocols" and "plasma-wayland-protocols" are the XML shipped by the distributions
+# (read in the Fedora 45 guest); "core" is wayland.xml; UNREAD is a name appjail only knows from the compositors that list it.
+READ_WP, READ_PLASMA, READ_CORE, UNREAD = "wayland-protocols", "plasma-wayland-protocols", "core", "unread"
+
+# Every global an app's socket may list without full_wayland, with why: (basis, where its protocol was read, note).
+# The basis answers the rule in docs/decisions/desktop/wayland-allowlist.md; tests/test_wayland.py checks the table is complete.
+RATIONALE = {
     # core, xdg and stable or staging client protocols
-    "wl_compositor", "wl_subcompositor", "wl_shm", "wl_seat", "wl_output", "wl_data_device_manager", "wl_drm", "wl_fixes",
-    "xdg_wm_base", "xdg_wm_dialog_v1", "xdg_activation_v1", "xdg_system_bell_v1", "xdg_toplevel_drag_manager_v1",
-    "xdg_toplevel_icon_manager_v1", "xdg_toplevel_tag_manager_v1", "zxdg_decoration_manager_v1", "zxdg_output_manager_v1",
-    "zxdg_exporter_v1", "zxdg_exporter_v2", "zxdg_importer_v1", "zxdg_importer_v2", "xwayland_shell_v1",
-    "wp_viewporter", "wp_presentation", "wp_single_pixel_buffer_manager_v1", "wp_fractional_scale_manager_v1",
-    "wp_cursor_shape_manager_v1", "wp_tearing_control_manager_v1", "wp_content_type_manager_v1", "wp_alpha_modifier_v1",
-    "wp_fifo_manager_v1", "wp_commit_timing_manager_v1", "wp_color_manager_v1", "wp_color_representation_manager_v1",
-    "wp_linux_drm_syncobj_manager_v1", "wp_pointer_warp_v1", "wp_drm_lease_device_v1", "wp_security_context_manager_v1",
-    "zwp_linux_dmabuf_v1", "zwp_linux_explicit_synchronization_v1", "zwp_primary_selection_device_manager_v1",
-    "zwp_relative_pointer_manager_v1", "zwp_pointer_constraints_v1", "zwp_pointer_gestures_v1", "zwp_tablet_manager_v2",
-    "zwp_idle_inhibit_manager_v1", "zwp_input_timestamps_manager_v1", "zwp_keyboard_shortcuts_inhibit_manager_v1",
-    "zwp_text_input_manager_v1", "zwp_text_input_manager_v2", "zwp_text_input_manager_v3",
-    "ext_idle_notifier_v1", "ext_output_image_capture_source_manager_v1",
-    "ext_foreign_toplevel_image_capture_source_manager_v1",
+    "wl_compositor": (OWN, READ_CORE, "creates the client's surfaces"),
+    "wl_subcompositor": (OWN, READ_CORE, "sub-surfaces of the client's own surfaces"),
+    "wl_shm": (OWN, READ_CORE, "the client's own shared-memory buffers"),
+    "wl_seat": (FOCUS, READ_CORE, "input goes to the focused client only"),
+    "wl_output": (FACTS, READ_CORE, "geometry, make, model and scale of the outputs"),
+    "wl_data_device_manager": (FOCUS, READ_CORE, "selection and drag-and-drop reach the focused client; reading the clipboard needs a paste"),
+    "wl_drm": (OWN, UNREAD, "Mesa's legacy buffer sharing: buffers of the client; not in wayland-protocols"),
+    "wl_fixes": (OWN, READ_CORE, "destroys the client's own registry"),
+    "xdg_wm_base": (OWN, READ_WP, "makes the client's surfaces windows"),
+    "xdg_wm_dialog_v1": (OWN, READ_WP, "marks the client's own dialog modal"),
+    "xdg_activation_v1": (TOKEN, READ_WP, "needs a serial of the client or a token it was handed; the compositor may ignore it"),
+    "xdg_system_bell_v1": (OWN, READ_WP, "rings the system bell"),
+    "xdg_toplevel_drag_manager_v1": (FOCUS, READ_WP, "attaches the client's window to a drag it started"),
+    "xdg_toplevel_icon_manager_v1": (OWN, READ_WP, "the icon of the client's own window"),
+    "xdg_toplevel_tag_manager_v1": (OWN, READ_WP, "a tag and description of the client's own window"),
+    "zxdg_decoration_manager_v1": (OWN, READ_WP, "the decoration mode of the client's own window"),
+    "zxdg_output_manager_v1": (FACTS, READ_WP, "names and logical layout of the outputs"),
+    "zxdg_exporter_v1": (TOKEN, READ_WP, "gives out a handle to the client's own window"),
+    "zxdg_exporter_v2": (TOKEN, READ_WP, "gives out a handle to the client's own window"),
+    "zxdg_importer_v1": (TOKEN, READ_WP, "needs a handle another client exported"),
+    "zxdg_importer_v2": (TOKEN, READ_WP, "needs a handle another client exported"),
+    "xwayland_shell_v1": (OWN, READ_WP, "pairs the client's surface with an X11 window; compositors hide it from clients but Xwayland"),
+    "wp_viewporter": (OWN, READ_WP, "crops and scales the client's own surface"),
+    "wp_presentation": (FACTS, READ_WP, "timing of the client's own frames"),
+    "wp_single_pixel_buffer_manager_v1": (OWN, READ_WP, "a buffer of the client"),
+    "wp_fractional_scale_manager_v1": (FACTS, READ_WP, "the preferred scale of the client's own surface"),
+    "wp_cursor_shape_manager_v1": (FOCUS, READ_WP, "the cursor shape while the client has the pointer"),
+    "wp_tearing_control_manager_v1": (OWN, READ_WP, "a hint about the client's own surface"),
+    "wp_content_type_manager_v1": (OWN, READ_WP, "a hint about the client's own surface"),
+    "wp_alpha_modifier_v1": (OWN, READ_WP, "the opacity of the client's own surface"),
+    "wp_fifo_manager_v1": (OWN, READ_WP, "presentation order of the client's own commits"),
+    "wp_commit_timing_manager_v1": (OWN, READ_WP, "timing of the client's own commits"),
+    "wp_color_manager_v1": (LIMIT, READ_WP, "colour of the client's own surface, and the colour profile (ICC) of the outputs: a hardware fingerprint"),
+    "wp_color_representation_manager_v1": (OWN, READ_WP, "how the client's own buffer is interpreted"),
+    "wp_linux_drm_syncobj_manager_v1": (OWN, READ_WP, "synchronisation of the client's own buffers"),
+    "wp_pointer_warp_v1": (FOCUS, READ_WP, "moves the pointer within the client's focused surface, on a serial"),
+    "wp_drm_lease_device_v1": (LIMIT, READ_WP, ("sends the client an unprivileged DRM file descriptor (a render node on GNOME) without the "
+                                                "gpu permission; leasing a display needs an output the desktop does not use")),
+    "wp_security_context_manager_v1": (OWN, READ_WP, "can only make another socket that is more restricted"),
+    "zwp_linux_dmabuf_v1": (OWN, READ_WP, "the client's own GPU buffers; feedback names the device, it does not open it"),
+    "zwp_linux_explicit_synchronization_v1": (OWN, READ_WP, "synchronisation of the client's own buffers"),
+    "zwp_primary_selection_device_manager_v1": (FOCUS, READ_WP, "the primary selection reaches the focused client"),
+    "zwp_relative_pointer_manager_v1": (FOCUS, READ_WP, "relative motion while the client has the pointer"),
+    "zwp_pointer_constraints_v1": (FOCUS, READ_WP, "locks or confines the pointer while the client has the focus"),
+    "zwp_pointer_gestures_v1": (FOCUS, READ_WP, "gestures on the client's focused surface"),
+    "zwp_tablet_manager_v2": (FOCUS, READ_WP, "tablet input while the client has the focus"),
+    "zwp_idle_inhibit_manager_v1": (LIMIT, READ_WP, "keeps the screen from blanking or locking while the client's surface is visible"),
+    "zwp_input_timestamps_manager_v1": (FOCUS, READ_WP, "timestamps of the input the client receives"),
+    "zwp_keyboard_shortcuts_inhibit_manager_v1": (FOCUS, READ_WP, "receives the desktop's shortcuts while focused"),
+    "zwp_text_input_manager_v1": (FOCUS, READ_WP, "the input method of the focused client"),
+    "zwp_text_input_manager_v2": (FOCUS, READ_PLASMA, "the input method of the focused client"),
+    "zwp_text_input_manager_v3": (FOCUS, READ_WP, "the input method of the focused client"),
+    "ext_idle_notifier_v1": (LIMIT, READ_WP, "tells whether the user is idle: a privacy signal, no request acts on anything"),
+    "ext_output_image_capture_source_manager_v1": (OWN, READ_WP, "names an output as a capture source; capturing needs the copy manager, which is privileged"),
+    "ext_foreign_toplevel_image_capture_source_manager_v1": (OWN, READ_WP, "names a window as a capture source; capturing needs the copy manager, which is privileged"),
     # older versions of the above, which Muffin lists: the deprecated core shell and the unstable xdg shell (own windows),
     # and GTK's own primary selection and text input (the focused client's selection and input method, as the zwp_ ones)
-    "wl_shell", "zxdg_shell_v6", "gtk_primary_selection_device_manager", "gtk_text_input_manager",
-    # compositor extras that act on the client's own surfaces or only describe the outputs
-    "gtk_shell1", "hyprland_surface_manager_v1", "frog_color_management_factory_v1", "org_kde_kwin_idle",
-    "org_kde_kwin_server_decoration_manager", "org_kde_kwin_server_decoration_palette_manager",
-    "org_kde_kwin_shadow_manager", "org_kde_kwin_appmenu_manager", "kde_output_device_v2", "kde_output_order_v1",
-    # new in Fedora 45: blur behind the client's own translucent surface; the client's own toplevels, restored through a
-    # session token the compositor makes; the list of outputs, as kde_output_device_v2 describes them
-    "ext_background_effect_manager_v1", "xdg_session_manager_v1", "kde_output_device_registry_v2",
-    # XApp's hints for the client's own windows (icon, progress); Cinnamon's Muffin stores them without opening anything
-    "xapp_shell_v1",
-})
+    "wl_shell": (OWN, READ_CORE, "the deprecated shell: the client's own windows"),
+    "zxdg_shell_v6": (OWN, READ_WP, "the unstable xdg shell: the client's own windows"),
+    "gtk_primary_selection_device_manager": (FOCUS, UNREAD, "GTK's own version of the primary selection"),
+    "gtk_text_input_manager": (FOCUS, UNREAD, "GTK's own version of text input"),
+    # compositor extras
+    "gtk_shell1": (OWN, UNREAD, "GTK's hints for the client's own windows (startup notification, application id)"),
+    "hyprland_surface_manager_v1": (OWN, UNREAD, "Hyprland's per-surface hints; only what a client sets on its own surface"),
+    "frog_color_management_factory_v1": (OWN, UNREAD, "colour management of the client's own surface"),
+    "org_kde_kwin_idle": (LIMIT, READ_PLASMA, "idle notification; simulate_user_activity resets the idle timer, as an idle inhibitor already can"),
+    "org_kde_kwin_server_decoration_manager": (OWN, READ_PLASMA, "the decoration mode of the client's own window"),
+    "org_kde_kwin_server_decoration_palette_manager": (OWN, READ_PLASMA, "the title-bar colours of the client's own window"),
+    "org_kde_kwin_shadow_manager": (OWN, READ_PLASMA, "the shadow of the client's own surface"),
+    "kde_output_device_v2": (LIMIT, READ_PLASMA, "describes the outputs, with their EDID and serial numbers: a hardware fingerprint"),
+    "kde_output_order_v1": (FACTS, READ_PLASMA, "the order of the outputs; events only"),
+    # new in Fedora 45
+    "ext_background_effect_manager_v1": (OWN, READ_WP, "blur behind the client's own translucent surface"),
+    "xdg_session_manager_v1": (TOKEN, READ_WP, "the client's own toplevels, restored through a session token the compositor makes"),
+    "kde_output_device_registry_v2": (LIMIT, READ_PLASMA, "the list of outputs, as kde_output_device_v2 describes them"),
+    "xapp_shell_v1": (OWN, UNREAD, "XApp's hints for the client's own windows (icon, progress); Muffin stores them without opening anything"),
+}
+ALLOWED = frozenset(RATIONALE)
 UNKNOWN = "unknown"
 CAPABILITY = {
     "capture": "capture the screen",
     "input": "type or click for other apps, or take over the keyboard",
     "clipboard": "read and replace the clipboard without having the focus",
-    "windows": "see or control other apps' windows, see which apps start, or change the screen layout or the lock screen",
+    "windows": "see or control other apps' windows, see which apps start, change the screen layout or the lock screen, or make the "
+               "shell call a D-Bus service of the app's choosing",
     "desktop": "switch the screens off, change their brightness, the virtual desktops or the screen edges, or read the "
                "lock keys",
     UNKNOWN: "do something appjail has not checked: these interfaces are not known to it",

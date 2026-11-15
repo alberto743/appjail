@@ -47,11 +47,13 @@ offer them on the only socket they have.
 - **The registry rule.** Before starting anything, `run` reads the registry of the socket the app will get. If it lists
   a privileged interface, or one appjail has not classified, the app is refused, with the names of the interfaces and
   what they would allow. The permission `full_wayland` accepts that risk for one app: it then runs, with a warning.
-- **Two lists.** `wayland.py` holds the privileged interfaces by kind and the interfaces checked to act only on the
-  app's own windows, on input while it has the focus, or on its own buffers. Anything in neither list is *unknown* and
-  treated as privileged. A few interfaces are allowed after a decision, because they reveal little and refusing them
-  would refuse otherwise sound compositors (idle notification, leasing a display the desktop does not use, pointer
-  locking and shortcut inhibition while focused).
+- **Two tables.** `wayland.py` holds the privileged interfaces by kind and, for every allowed interface, the reason
+  (`RATIONALE`): it acts only on the app's own windows or buffers, on input while it has the focus, behind a token another
+  client handed over, or it only describes the hardware. Anything in neither table is *unknown* and treated as
+  privileged. An interface is judged by what it gives the app, not by whether refusing it would refuse a common desktop
+  ([the three questions](../../decisions/desktop/wayland-allowlist.md)). A few are allowed as *accepted limits*, with the
+  cost written down: idle notification and inhibition, the colour profile and EDID of the outputs (a hardware
+  fingerprint), and, on GNOME, the unprivileged GPU render-node descriptor that `wp_drm_lease_device_v1` sends.
 - **Apps without a window** (`display = none`) get no socket, no display variables, and no check; they also run
   without a Wayland session, over `ssh` for instance.
 
@@ -76,7 +78,13 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 
 - KWin is refused until it hides data-control on restricted sockets; Plasma users need `full_wayland` per app.
 - The classification is by interface name, not version.
-- An app can learn when you are idle where the compositor offers idle notification.
+- An app can learn when you are idle where the compositor offers idle notification, and keep the screen from blanking or
+  locking while its window is visible.
+- An app can read the hardware description of the outputs (make, model, EDID, serial numbers, colour profile), a
+  fingerprint. On GNOME it also receives an unprivileged GPU render-node descriptor without the `gpu` permission: the
+  driver's attack surface, not control of anything. A filtering proxy would remove it ([deferred](../../decisions/deferred.md)).
+- The registry is read once, when the app starts. A global the compositor adds later (a plugin, a restart of the shell) is
+  not seen.
 - The measurements are of headless compositors, not of complete desktop sessions. A compositor update that adds an
   interface refuses apps until it is classified; the message names it, and a report is welcome.
 - Muffin, and so Cinnamon, crashes when some ordinary clients use the clipboard; any app with a window can end a Cinnamon

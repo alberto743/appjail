@@ -69,7 +69,7 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
 | **Wayland** (client/compositor, registry of globals, protocols as interfaces) | the app gets a Wayland socket as its only display | `wayland.py`, `runtimejail._wayland_args` | `test_wayland.py` | `display = wayland` | |
-| **Privileged Wayland protocols** (screencopy, virtual input, data-control, foreign toplevel, layer shell, ...) | registry rule: refuse privileged or unknown globals unless `full_wayland`; `PRIVILEGED` and `ALLOWED` lists | `wayland.privileged` | `test_wayland.py` (replayed registries) | `--allow full_wayland`, refusal messages | measured on nine compositors; KWin refused |
+| **Privileged Wayland protocols** (screencopy, virtual input, data-control, foreign toplevel, layer shell, ...) | registry rule: refuse privileged or unknown globals unless `full_wayland`; `PRIVILEGED` and `RATIONALE` tables | `wayland.privileged` | `test_wayland.py` (replayed registries) | `--allow full_wayland`, refusal messages | measured on twelve compositors; KWin refused |
 | **`wp_security_context_v1`** | restricted socket per app with engine `appjail` and app id | `wayland.RestrictedSocket` | `test_wayland.py` | | not sufficient alone (KWin, Hyprland 0.53) |
 | **Compositor assessment** | measured registries and real clients; saved results drive tests | `tests/compositors/` | `test_assessment.py` | Wayland compositors page | headless only |
 | **X11 and its lack of isolation** | host X socket never bound; private `/tmp` | `runtimejail.runtime_args` | `test_runner_jail.py` | | Flatpak-style X socket rejected |

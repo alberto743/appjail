@@ -56,6 +56,13 @@
    "status": "ok",
    "version": "mutter 50.1-0ubuntu2.5"
   },
+  "plasmashell": {
+   "app_socket": "restricted",
+   "inbound": "ok",
+   "outbound": "ok",
+   "status": "ok",
+   "version": "plasma-workspace 4:6.6.6-0ubuntu0.1"
+  },
   "sway": {
    "app_socket": "restricted",
    "inbound": "ok",
