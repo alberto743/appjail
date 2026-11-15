@@ -271,6 +271,7 @@ def permissions_editor(parent, name, state):
         "dbus_filter": ListEditor(lists, "D-Bus names (talk)", state.get("dbus_filter", ())),
         "dbus_own": ListEditor(lists, "D-Bus names (own)", state.get("dbus_own", ())),
         "portal_interfaces": ListEditor(lists, "Privileged portals", state.get("portal_interfaces", ()), "needs portals"),
+        "env": ListEditor(lists, "Environment", state.get("env", ()), "NAME=VALUE; plain text, no secrets"),
     }
     for i, ed in enumerate(editors.values()):
         ed.grid(row=i // 2, column=i % 2, sticky="nsew", padx=4, pady=4)

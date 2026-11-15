@@ -55,6 +55,16 @@ def test_perms_dir_mode_change_removes_then_adds():
     assert (args.rm_dir, args.add_dir) == (["~/a"], ["~/a:rw"])
 
 
+def test_perms_env_changes_set_and_unset():
+    old = dict(STATE, env=("A=1", "B=2", "C=3"))
+    command = argv.perms_argv("app", old, dict(old, env=("A=1", "B=changed", "D=x y")))
+    assert "--yes" not in command
+    args = parses(command)
+    assert (args.set_env, args.unset_env) == (["B=changed", "D=x y"], ["C"])
+    assert argv.perms_argv("app", old, dict(old)) == ["perms", "app"]
+    assert parses(argv.perms_argv("app", STATE, dict(STATE, env=("A=1",)))).set_env == ["A=1"]
+
+
 def test_add_target():
     assert argv.add_target("github:o/r") == ("github", "o/r")
     assert argv.add_target("url:https://x.example/a.AppImage") == ("url", "https://x.example/a.AppImage")

@@ -112,6 +112,17 @@ def test_rows_lists_installed_apps(h):
     (row,) = apps.rows()
     assert row[0] == "app" and "display=wayland" in row[4] and row[5] == ""
     assert apps.load_permissions("app")["display"] == "wayland"
+    assert apps.load_permissions("app")["env"] == ()
+
+
+def test_load_permissions_carries_the_env_pairs(h):
+    from dataclasses import replace
+
+    from appjail import manifest, store
+    h.add()
+    m = manifest.load(store.manifest_path("app"))
+    manifest.dump(store.manifest_path("app"), replace(m, env=(("A", "1"), ("B", "x=y"))))
+    assert apps.load_permissions("app")["env"] == ("A=1", "B=x=y")
 
 
 def test_rows_marks_unreadable_manifest(h):

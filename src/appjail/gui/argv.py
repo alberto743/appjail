@@ -72,7 +72,7 @@ def perms_argv(name, old, new):
     """`appjail perms NAME ...` for the difference between two permission states.
 
     A state is a dict: the boolean flags by name, "audio_mode", "display", "display_size", and the tuples "dirs", "dbus_filter", "dbus_own",
-    "portal_interfaces". The command shows the before/after review and asks; the option that skips the question is never added here.
+    "portal_interfaces", "env" ("NAME=VALUE" strings). The command shows the before/after review and asks; the option that skips the question is never added here.
     """
     argv = ["perms", name]
     for flag in PERMISSION_FLAGS:
@@ -95,7 +95,14 @@ def perms_argv(name, old, new):
             removed = [v.rpartition(":")[0] if v.endswith((":ro", ":rw")) else v for v in removed]
         argv += _repeat(rm, removed)
         argv += _repeat(add, [v for v in after if v not in before])
-    return argv
+    return argv + _env_argv(old.get("env", ()), new.get("env", ()))
+
+
+def _env_argv(before, after):
+    """--unset-env for the names that are gone and --set-env for each NAME=VALUE that is new or changed."""
+    names = {v.partition("=")[0] for v in after}
+    argv = _repeat("--unset-env", [n for n in dict.fromkeys(v.partition("=")[0] for v in before) if n not in names])
+    return argv + _repeat("--set-env", [v for v in after if v not in before])
 
 
 def add_target(source):

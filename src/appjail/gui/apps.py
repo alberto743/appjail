@@ -13,16 +13,17 @@ from ..errors import RunError
 from ..permargs import PERMISSION_FLAGS
 
 
-def permission_state(p):
-    """A Permissions as the dict argv.perms_argv compares."""
+def permission_state(p, env=()):
+    """A Permissions (and the manifest's [env] pairs) as the dict argv.perms_argv compares."""
     state = {k: getattr(p, k) for k in PERMISSION_FLAGS}
     state.update(audio_mode=p.audio_mode, display=p.display, display_size=p.display_size, dirs=tuple(p.dirs), dbus_filter=tuple(p.dbus_filter), dbus_own=tuple(p.dbus_own),
-                 portal_interfaces=tuple(p.portal_interfaces))
+                 portal_interfaces=tuple(p.portal_interfaces), env=tuple(f"{k}={v}" for k, v in env))
     return state
 
 
 def load_permissions(name):
-    return permission_state(manifest.load(store.manifest_path(name)).permissions)
+    m = manifest.load(store.manifest_path(name))
+    return permission_state(m.permissions, m.env)
 
 
 def detail(name):
