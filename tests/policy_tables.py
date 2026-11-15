@@ -70,11 +70,17 @@ def render():
 
     out += ["## Wayland interfaces", "",
             "Explained in [Wayland](../understand/desktop/wayland.md). A socket that lists a privileged interface, or one",
-            "in neither list, refuses a windowed app without `full_wayland`.", "",
+            "in neither table, refuses a windowed app without `full_wayland`.", "",
             "| Privileged kind | Lets a client | Interfaces |", "|---|---|---|"]
     for kind, names in wayland.PRIVILEGED.items():
         out.append(f"| {kind} | {wayland.CAPABILITY[kind]} | {_codes(names)} |")
-    out += ["", f"Allowed (`wayland.ALLOWED`): {_codes(sorted(wayland.ALLOWED))}.", ""]
+    out += ["", "Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: " +
+            "; ".join(f"**{b}**: {text}" for b, text in wayland.BASIS.items()) + ". *Read* says where the protocol was read; "
+            "`unread` names are known only from the compositors that list them.", "",
+            "| Interface | Basis | Read | Why |", "|---|---|---|---|"]
+    for name, (basis, read, note) in sorted(wayland.RATIONALE.items()):
+        out.append(f"| `{name}` | {basis} | {read} | {note} |")
+    out.append("")
 
     out += ["## System calls", "",
             "Explained in [seccomp](../understand/isolation/seccomp.md).", "",

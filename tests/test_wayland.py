@@ -198,6 +198,27 @@ def test_the_lists_do_not_overlap_and_every_kind_says_what_it_allows():
     assert set(wayland.CAPABILITY) == set(wayland.PRIVILEGED) | {wayland.UNKNOWN}
 
 
+def test_every_allowed_global_says_why_and_the_limits_are_in_the_decision_page():
+    """RATIONALE is the table of allowed globals: a known basis, where the protocol was read, a reason; every accepted
+    limit is named on the decision page, which is where a reader looks for what the permission-less app can still do."""
+    assert wayland.ALLOWED == frozenset(wayland.RATIONALE)
+    reads = {wayland.READ_WP, wayland.READ_PLASMA, wayland.READ_CORE, wayland.UNREAD}
+    for name, (basis, read, note) in wayland.RATIONALE.items():
+        assert basis in wayland.BASIS, name
+        assert read in reads, name
+        assert len(note) > 10, name
+    page = (Path(__file__).resolve().parents[1] / "docs" / "decisions" / "desktop" / "wayland-allowlist.md").read_text()
+    for name, (basis, _read, _note) in wayland.RATIONALE.items():
+        if basis == wayland.LIMIT:
+            assert name in page, f"{name} is an accepted limit and must be explained in wayland-allowlist.md"
+
+
+def test_what_acts_on_the_shell_or_the_desktop_is_not_allowed():
+    """The appmenu address makes the shell call a service the app names; it is privileged though only KDE lists it."""
+    assert "org_kde_kwin_appmenu_manager" not in wayland.ALLOWED
+    assert wayland.privileged({"org_kde_kwin_appmenu_manager"}) == {"windows": ["org_kde_kwin_appmenu_manager"]}
+
+
 @pytest.mark.parametrize("name", ["ext_idle_notifier_v1", "wp_drm_lease_device_v1", "zwp_pointer_constraints_v1",
                                   "zwp_keyboard_shortcuts_inhibit_manager_v1", "ext_output_image_capture_source_manager_v1"])
 def test_the_globals_allowed_after_a_decision_stay_allowed(name):
@@ -249,7 +270,7 @@ def test_the_rule_matches_the_registries_measured_on_real_compositors(label, nam
 
 @pytest.mark.skipif(not ASSESSMENT.is_dir(), reason="the measurements are not in this tree")
 def test_every_global_a_measured_compositor_lists_is_classified():
-    """New measurements fail here until each new name is put in wayland.ALLOWED or wayland.PRIVILEGED; the full socket
+    """New measurements fail here until each new name is put in wayland.RATIONALE or wayland.PRIVILEGED; the full socket
     of every compositor is read too, not only the socket an app gets."""
     names = set()
     for results in ASSESSMENT.glob("results-*.json"):

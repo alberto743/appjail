@@ -57,17 +57,91 @@ Explained in [portals](../understand/desktop/portals.md). Names are the part aft
 ## Wayland interfaces
 
 Explained in [Wayland](../understand/desktop/wayland.md). A socket that lists a privileged interface, or one
-in neither list, refuses a windowed app without `full_wayland`.
+in neither table, refuses a windowed app without `full_wayland`.
 
 | Privileged kind | Lets a client | Interfaces |
 |---|---|---|
 | capture | capture the screen | `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_manager_v1`, `zwlr_export_dmabuf_manager_v1`, `hyprland_toplevel_export_manager_v1`, `zkde_screencast_unstable_v1`, `weston_capture_v1` |
 | input | type or click for other apps, or take over the keyboard | `zwlr_virtual_pointer_manager_v1`, `zwp_virtual_keyboard_manager_v1`, `zwp_input_method_manager_v2`, `zwp_input_method_v1`, `zwp_input_panel_v1`, `org_kde_kwin_fake_input`, `zwlr_input_inhibit_manager_v1`, `hyprland_global_shortcuts_manager_v1`, `zwf_shell_manager_v2`, `ext_transient_seat_manager_v1`, `hyprland_focus_grab_manager_v1` |
 | clipboard | read and replace the clipboard without having the focus | `zwlr_data_control_manager_v1`, `ext_data_control_manager_v1` |
-| windows | see or control other apps' windows, see which apps start, or change the screen layout or the lock screen | `zwlr_foreign_toplevel_manager_v1`, `ext_foreign_toplevel_list_v1`, `org_kde_plasma_window_management`, `zwlr_layer_shell_v1`, `org_kde_plasma_shell`, `weston_desktop_shell`, `zwlr_output_manager_v1`, `zwlr_output_power_manager_v1`, `zwlr_gamma_control_manager_v1`, `kde_output_management_v2`, `kde_output_management_v1`, `ext_session_lock_manager_v1`, `ext_workspace_manager_v1`, `zcosmic_workspace_manager_v1`, `hyprland_toplevel_mapping_manager_v1`, `hyprland_ctm_control_manager_v1`, `hyprland_lock_notifier_v1`, `kde_lockscreen_overlay_v1`, `org_kde_plasma_activation_feedback` |
+| windows | see or control other apps' windows, see which apps start, change the screen layout or the lock screen, or make the shell call a D-Bus service of the app's choosing | `zwlr_foreign_toplevel_manager_v1`, `ext_foreign_toplevel_list_v1`, `org_kde_plasma_window_management`, `zwlr_layer_shell_v1`, `org_kde_plasma_shell`, `weston_desktop_shell`, `zwlr_output_manager_v1`, `zwlr_output_power_manager_v1`, `zwlr_gamma_control_manager_v1`, `kde_output_management_v2`, `kde_output_management_v1`, `ext_session_lock_manager_v1`, `ext_workspace_manager_v1`, `zcosmic_workspace_manager_v1`, `hyprland_toplevel_mapping_manager_v1`, `hyprland_ctm_control_manager_v1`, `hyprland_lock_notifier_v1`, `kde_lockscreen_overlay_v1`, `org_kde_plasma_activation_feedback`, `org_kde_kwin_appmenu_manager` |
 | desktop | switch the screens off, change their brightness, the virtual desktops or the screen edges, or read the lock keys | `org_kde_kwin_dpms_manager`, `kde_external_brightness_v1`, `org_kde_plasma_virtual_desktop_management`, `kde_screen_edge_manager_v1`, `org_kde_kwin_keystate` |
 
-Allowed (`wayland.ALLOWED`): `ext_background_effect_manager_v1`, `ext_foreign_toplevel_image_capture_source_manager_v1`, `ext_idle_notifier_v1`, `ext_output_image_capture_source_manager_v1`, `frog_color_management_factory_v1`, `gtk_primary_selection_device_manager`, `gtk_shell1`, `gtk_text_input_manager`, `hyprland_surface_manager_v1`, `kde_output_device_registry_v2`, `kde_output_device_v2`, `kde_output_order_v1`, `org_kde_kwin_appmenu_manager`, `org_kde_kwin_idle`, `org_kde_kwin_server_decoration_manager`, `org_kde_kwin_server_decoration_palette_manager`, `org_kde_kwin_shadow_manager`, `wl_compositor`, `wl_data_device_manager`, `wl_drm`, `wl_fixes`, `wl_output`, `wl_seat`, `wl_shell`, `wl_shm`, `wl_subcompositor`, `wp_alpha_modifier_v1`, `wp_color_manager_v1`, `wp_color_representation_manager_v1`, `wp_commit_timing_manager_v1`, `wp_content_type_manager_v1`, `wp_cursor_shape_manager_v1`, `wp_drm_lease_device_v1`, `wp_fifo_manager_v1`, `wp_fractional_scale_manager_v1`, `wp_linux_drm_syncobj_manager_v1`, `wp_pointer_warp_v1`, `wp_presentation`, `wp_security_context_manager_v1`, `wp_single_pixel_buffer_manager_v1`, `wp_tearing_control_manager_v1`, `wp_viewporter`, `xapp_shell_v1`, `xdg_activation_v1`, `xdg_session_manager_v1`, `xdg_system_bell_v1`, `xdg_toplevel_drag_manager_v1`, `xdg_toplevel_icon_manager_v1`, `xdg_toplevel_tag_manager_v1`, `xdg_wm_base`, `xdg_wm_dialog_v1`, `xwayland_shell_v1`, `zwp_idle_inhibit_manager_v1`, `zwp_input_timestamps_manager_v1`, `zwp_keyboard_shortcuts_inhibit_manager_v1`, `zwp_linux_dmabuf_v1`, `zwp_linux_explicit_synchronization_v1`, `zwp_pointer_constraints_v1`, `zwp_pointer_gestures_v1`, `zwp_primary_selection_device_manager_v1`, `zwp_relative_pointer_manager_v1`, `zwp_tablet_manager_v2`, `zwp_text_input_manager_v1`, `zwp_text_input_manager_v2`, `zwp_text_input_manager_v3`, `zxdg_decoration_manager_v1`, `zxdg_exporter_v1`, `zxdg_exporter_v2`, `zxdg_importer_v1`, `zxdg_importer_v2`, `zxdg_output_manager_v1`, `zxdg_shell_v6`.
+Allowed (`wayland.RATIONALE`), with why each is not privileged. Basis: **own**: acts only on the client's own surfaces, buffers or settings; **focus**: acts only while the client has the focus, or on an input serial it was given; **token**: needs a token or handle that another client or the compositor handed over; **facts**: describes the hardware, the outputs or the settings; changes nothing; **limit**: accepted limit, decided (docs/decisions/desktop/wayland-allowlist.md). *Read* says where the protocol was read; `unread` names are known only from the compositors that list them.
+
+| Interface | Basis | Read | Why |
+|---|---|---|---|
+| `ext_background_effect_manager_v1` | own | wayland-protocols | blur behind the client's own translucent surface |
+| `ext_foreign_toplevel_image_capture_source_manager_v1` | own | wayland-protocols | names a window as a capture source; capturing needs the copy manager, which is privileged |
+| `ext_idle_notifier_v1` | limit | wayland-protocols | tells whether the user is idle: a privacy signal, no request acts on anything |
+| `ext_output_image_capture_source_manager_v1` | own | wayland-protocols | names an output as a capture source; capturing needs the copy manager, which is privileged |
+| `frog_color_management_factory_v1` | own | unread | colour management of the client's own surface |
+| `gtk_primary_selection_device_manager` | focus | unread | GTK's own version of the primary selection |
+| `gtk_shell1` | own | unread | GTK's hints for the client's own windows (startup notification, application id) |
+| `gtk_text_input_manager` | focus | unread | GTK's own version of text input |
+| `hyprland_surface_manager_v1` | own | unread | Hyprland's per-surface hints; only what a client sets on its own surface |
+| `kde_output_device_registry_v2` | limit | plasma-wayland-protocols | the list of outputs, as kde_output_device_v2 describes them |
+| `kde_output_device_v2` | limit | plasma-wayland-protocols | describes the outputs, with their EDID and serial numbers: a hardware fingerprint |
+| `kde_output_order_v1` | facts | plasma-wayland-protocols | the order of the outputs; events only |
+| `org_kde_kwin_idle` | limit | plasma-wayland-protocols | idle notification; simulate_user_activity resets the idle timer, as an idle inhibitor already can |
+| `org_kde_kwin_server_decoration_manager` | own | plasma-wayland-protocols | the decoration mode of the client's own window |
+| `org_kde_kwin_server_decoration_palette_manager` | own | plasma-wayland-protocols | the title-bar colours of the client's own window |
+| `org_kde_kwin_shadow_manager` | own | plasma-wayland-protocols | the shadow of the client's own surface |
+| `wl_compositor` | own | core | creates the client's surfaces |
+| `wl_data_device_manager` | focus | core | selection and drag-and-drop reach the focused client; reading the clipboard needs a paste |
+| `wl_drm` | own | unread | Mesa's legacy buffer sharing: buffers of the client; not in wayland-protocols |
+| `wl_fixes` | own | core | destroys the client's own registry |
+| `wl_output` | facts | core | geometry, make, model and scale of the outputs |
+| `wl_seat` | focus | core | input goes to the focused client only |
+| `wl_shell` | own | core | the deprecated shell: the client's own windows |
+| `wl_shm` | own | core | the client's own shared-memory buffers |
+| `wl_subcompositor` | own | core | sub-surfaces of the client's own surfaces |
+| `wp_alpha_modifier_v1` | own | wayland-protocols | the opacity of the client's own surface |
+| `wp_color_manager_v1` | limit | wayland-protocols | colour of the client's own surface, and the colour profile (ICC) of the outputs: a hardware fingerprint |
+| `wp_color_representation_manager_v1` | own | wayland-protocols | how the client's own buffer is interpreted |
+| `wp_commit_timing_manager_v1` | own | wayland-protocols | timing of the client's own commits |
+| `wp_content_type_manager_v1` | own | wayland-protocols | a hint about the client's own surface |
+| `wp_cursor_shape_manager_v1` | focus | wayland-protocols | the cursor shape while the client has the pointer |
+| `wp_drm_lease_device_v1` | limit | wayland-protocols | sends the client an unprivileged DRM file descriptor (a render node on GNOME) without the gpu permission; leasing a display needs an output the desktop does not use |
+| `wp_fifo_manager_v1` | own | wayland-protocols | presentation order of the client's own commits |
+| `wp_fractional_scale_manager_v1` | facts | wayland-protocols | the preferred scale of the client's own surface |
+| `wp_linux_drm_syncobj_manager_v1` | own | wayland-protocols | synchronisation of the client's own buffers |
+| `wp_pointer_warp_v1` | focus | wayland-protocols | moves the pointer within the client's focused surface, on a serial |
+| `wp_presentation` | facts | wayland-protocols | timing of the client's own frames |
+| `wp_security_context_manager_v1` | own | wayland-protocols | can only make another socket that is more restricted |
+| `wp_single_pixel_buffer_manager_v1` | own | wayland-protocols | a buffer of the client |
+| `wp_tearing_control_manager_v1` | own | wayland-protocols | a hint about the client's own surface |
+| `wp_viewporter` | own | wayland-protocols | crops and scales the client's own surface |
+| `xapp_shell_v1` | own | unread | XApp's hints for the client's own windows (icon, progress); Muffin stores them without opening anything |
+| `xdg_activation_v1` | token | wayland-protocols | needs a serial of the client or a token it was handed; the compositor may ignore it |
+| `xdg_session_manager_v1` | token | wayland-protocols | the client's own toplevels, restored through a session token the compositor makes |
+| `xdg_system_bell_v1` | own | wayland-protocols | rings the system bell |
+| `xdg_toplevel_drag_manager_v1` | focus | wayland-protocols | attaches the client's window to a drag it started |
+| `xdg_toplevel_icon_manager_v1` | own | wayland-protocols | the icon of the client's own window |
+| `xdg_toplevel_tag_manager_v1` | own | wayland-protocols | a tag and description of the client's own window |
+| `xdg_wm_base` | own | wayland-protocols | makes the client's surfaces windows |
+| `xdg_wm_dialog_v1` | own | wayland-protocols | marks the client's own dialog modal |
+| `xwayland_shell_v1` | own | wayland-protocols | pairs the client's surface with an X11 window; compositors hide it from clients but Xwayland |
+| `zwp_idle_inhibit_manager_v1` | limit | wayland-protocols | keeps the screen from blanking or locking while the client's surface is visible |
+| `zwp_input_timestamps_manager_v1` | focus | wayland-protocols | timestamps of the input the client receives |
+| `zwp_keyboard_shortcuts_inhibit_manager_v1` | focus | wayland-protocols | receives the desktop's shortcuts while focused |
+| `zwp_linux_dmabuf_v1` | own | wayland-protocols | the client's own GPU buffers; feedback names the device, it does not open it |
+| `zwp_linux_explicit_synchronization_v1` | own | wayland-protocols | synchronisation of the client's own buffers |
+| `zwp_pointer_constraints_v1` | focus | wayland-protocols | locks or confines the pointer while the client has the focus |
+| `zwp_pointer_gestures_v1` | focus | wayland-protocols | gestures on the client's focused surface |
+| `zwp_primary_selection_device_manager_v1` | focus | wayland-protocols | the primary selection reaches the focused client |
+| `zwp_relative_pointer_manager_v1` | focus | wayland-protocols | relative motion while the client has the pointer |
+| `zwp_tablet_manager_v2` | focus | wayland-protocols | tablet input while the client has the focus |
+| `zwp_text_input_manager_v1` | focus | wayland-protocols | the input method of the focused client |
+| `zwp_text_input_manager_v2` | focus | plasma-wayland-protocols | the input method of the focused client |
+| `zwp_text_input_manager_v3` | focus | wayland-protocols | the input method of the focused client |
+| `zxdg_decoration_manager_v1` | own | wayland-protocols | the decoration mode of the client's own window |
+| `zxdg_exporter_v1` | token | wayland-protocols | gives out a handle to the client's own window |
+| `zxdg_exporter_v2` | token | wayland-protocols | gives out a handle to the client's own window |
+| `zxdg_importer_v1` | token | wayland-protocols | needs a handle another client exported |
+| `zxdg_importer_v2` | token | wayland-protocols | needs a handle another client exported |
+| `zxdg_output_manager_v1` | facts | wayland-protocols | names and logical layout of the outputs |
+| `zxdg_shell_v6` | own | wayland-protocols | the unstable xdg shell: the client's own windows |
 
 ## System calls
 
