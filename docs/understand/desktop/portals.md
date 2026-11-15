@@ -41,9 +41,64 @@ offer the dialogs its backend implements.
   into the *proxy's* jail, because the proxy's connection is what the portal sees as the caller, never into the app's,
   so the app can neither read nor forge it. Nothing depends on Flatpak; this is a compatibility shim.
 - **The document portal** is started if needed, and only the app's own view of it is bound into the jail.
+- **Each portal in turn** is described in [The portals appjail knows](#the-portals-appjail-knows) below.
 - **Taking back.** `appjail portals NAME` lists the files the app received and revokes them (`--revoke`,
   `--revoke-all`), through the portal itself, so the files disappear from the app's view at once. `remove` also deletes
   the app's remembered portal decisions, so a later app with the same name starts with none.
+
+## The portals appjail knows
+
+The names are the part after `org.freedesktop.portal.`. "Dialog" says what the portal documentation states about asking
+you; a backend may ask more or less, and where the documentation is silent the table says so.
+
+### Safe set (`portals = true`)
+
+| Portal | What the app can do | Dialog |
+| --- | --- | --- |
+| `FileChooser` | Ask you to open files, save a file or pick a folder. The app gets only what you chose, often through the document portal, and keeps access across sessions. | A file chooser the app does not control |
+| `Notification` | Send and withdraw notifications, with icons, sounds and buttons. Clicking one after the app exited starts it again. | None |
+| `Settings` | Read a few desktop settings: colour scheme, accent colour, contrast, reduced motion. Read-only. | None |
+| `Trash` | Move a file to the trash, only a file it can already open for writing. | None stated |
+| `Print` | Print a file it already has open, after choosing settings. | A print dialog |
+| `Inhibit` | Hold off logout, user switch, suspend or idle (a video player keeping the screen on), and learn that the session is ending. | None stated |
+| `NetworkMonitor` | Read whether the network is up, metered, and whether a host and port are reachable. | None |
+| `ProxyResolver` | Ask which proxy to use for an address. | None |
+| `Secret` | Receive one master secret of its own, to encrypt its own data. It does not reach your keyring's other entries. | None stated |
+| `Realtime` | Ask for real-time or high priority scheduling for a thread, within the limits RealtimeKit sets. | None |
+| `MemoryMonitor` | Be told that memory is low (a level from 0 to 255). | None |
+| `PowerProfileMonitor` | Read whether power-saver mode is on. | None |
+
+Of these, only `FileChooser` and `Print` ask you; the rest reveal little or act only on what the app already holds.
+The document portal comes with the set.
+
+### Opt-in (`portal_interfaces`)
+
+Each needs its name in `portal_interfaces` and raises a warning when you grant it.
+
+| Portal | What the app can do | Dialog |
+| --- | --- | --- |
+| `OpenURI` | Open a link, a file or the folder holding a file in another application. | Optionally asks which application |
+| `Email` | Have your mail client compose a message with recipients, subject, body and attachments. | A compose window |
+| `Screenshot` | Take a screenshot of the screen, a window or an area, and pick a colour. The image may arrive through the document portal. | The documentation names an interactive option but no consent prompt |
+| `ScreenCast` | Receive the screen or a window as a PipeWire video stream; a restore token can skip the dialog later. | A source selection dialog |
+| `RemoteDesktop` | Control the keyboard, pointer and touchscreen, optionally with screen and clipboard. | A dialog choosing devices and content |
+| `GlobalShortcuts` | Bind shortcuts that fire whatever window has focus. | A dialog to configure the shortcuts |
+| `InputCapture` | Capture keyboard and pointer input at screen edges (the way a keyboard-sharing tool works). The compositor can stop it at any time. | A dialog allowing the capture |
+| `Camera` | Ask for camera access and receive a PipeWire connection to the camera. Binds no device: see [GPU and camera](devices.md). | Not described by the portal documentation |
+| `Location` | Receive your coordinates, accuracy, speed and heading as they change. | None stated |
+| `Account` | Read your user id, name and avatar. | A dialog may show the app's reason |
+| `Wallpaper` | Set the desktop or lock-screen wallpaper. | None stated; a preview may show |
+| `Background` | Ask to keep running in the background and to start at login. See the Limits about `flatpak run`. | None stated |
+| `Usb` | List, watch and open USB devices, each handed over as a file descriptor. Needs a general permission and one per device. | A prompt to allow or deny each device |
+
+### Never available
+
+| Portal | Why it is refused |
+| --- | --- |
+| `Flatpak` | It spawns commands on the host outside the jail, which would end the confinement. |
+| `DynamicLauncher` | It installs launcher files that run on your desktop, outside the jail, and rewrites their command for Flatpak apps. |
+
+Asking for either in `portal_interfaces` is an error, as is any name not listed above.
 
 ## Connections
 
@@ -66,3 +121,9 @@ offer the dialogs its backend implements.
   [FileChooser](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html),
   [Documents](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Documents.html) and
   [Settings](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Settings.html).
+- The per-portal tables follow the interface pages of the same documentation, named
+  `doc-org.freedesktop.portal.NAME.html` (for example
+  [ScreenCast](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.ScreenCast.html) and
+  [DynamicLauncher](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.DynamicLauncher.html)).
+  The documentation has no page for `Flatpak`; that row rests on what the interface does (it starts processes on the
+  host), not on a cited page.

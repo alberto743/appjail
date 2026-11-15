@@ -26,7 +26,8 @@ appjail perms NAME --add-portal ScreenCast    # share the screen or a window, af
 
 The others are `Email`, `Screenshot`, `RemoteDesktop`, `GlobalShortcuts`, `InputCapture`, `Location`, `Account`,
 `Wallpaper`, `Background` and `Usb`; `add` and `perms` warn for each. Two are never available: spawning commands on the
-host and installing launchers.
+host and installing launchers. What each portal lets an app do is in
+[The portals appjail knows](../understand/desktop/portals.md#the-portals-appjail-knows).
 
 Files an app received through the file chooser stay available to it until you take them back:
 
