@@ -113,7 +113,7 @@ def require_network_isolation(perms):
         raise Abort(landlock.NEEDED_FOR_NETWORK_HOST)
     if perms.pasta and not jail.find_pasta():
         raise Abort("network access runs the app in a private network namespace made by pasta, which is not installed "
-                    "(package passt, e.g. `apt install passt`). Install it, or use --allow network_host to give the "
+                    "(package passt). Install it, or use --allow network_host to give the "
                     "app the host's own network, localhost services included.")
 
 

@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-# Debian 13 and Ubuntu 26.04 ship no ruff package: install the pinned release from PyPI into
+# Debian 13 and Ubuntu 26.04 ship no ruff package (Fedora does, but not the pinned release): install the pinned release from PyPI into
 # /usr/local (needs sudo and python3-pip; dev-only, tests/test_lint.py skips without it).
 # Used by provision.sh (guest) and by the CI workflow.
 set -eu

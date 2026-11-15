@@ -242,8 +242,8 @@ def measured():
 @pytest.mark.skipif(not ASSESSMENT.is_dir(), reason="the measurements are not in this tree")
 @pytest.mark.parametrize(("label", "names", "decided"), measured(), ids=[m[0] for m in measured()])
 def test_the_rule_matches_the_registries_measured_on_real_compositors(label, names, decided):
-    """The registries are those of real compositors on Debian 13 and Ubuntu 26.04; `decided` is what option A decided when it
-    was run live against them: GNOME, sway, labwc and Hyprland 0.55 run; KWin, Wayfire, Cage and Weston are refused."""
+    """The registries are those of real compositors on Debian 13, Ubuntu 26.04 and Fedora 45; `decided` is what option A decided when it
+    was run live against them: GNOME, sway, labwc and Hyprland 0.55 run; KWin, Cinnamon 6.8, Wayfire, Cage and Weston are refused."""
     assert bool(wayland.privileged(names)) == (decided == "refuse")
 
 

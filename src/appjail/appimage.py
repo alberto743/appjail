@@ -244,7 +244,7 @@ def extract(appimage, dest, runtime_fallback=False):
     if kind == "dwarfs":
         return extract_dwarfs(appimage, dest, offset)
     if not have_unsquashfs() and not runtime_fallback:
-        raise ExtractError("unsquashfs is not installed (apt install squashfs-tools)")
+        raise ExtractError("unsquashfs is not installed (package squashfs-tools)")
 
     def build(work):
         if have_unsquashfs():

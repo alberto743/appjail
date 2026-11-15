@@ -197,7 +197,7 @@ class Proxy:
 
     def __enter__(self):
         if not os.access(PROXY, os.X_OK):
-            raise RunError("dbus_filter, dbus_own and portals need xdg-dbus-proxy (apt install xdg-dbus-proxy)")
+            raise RunError("dbus_filter, dbus_own and portals need xdg-dbus-proxy (package xdg-dbus-proxy)")
         bus = host_bus(self.host_env)
         check_owners(self.perms, bus, self._owners)
         runtime_dir = self.host_env.get("XDG_RUNTIME_DIR")

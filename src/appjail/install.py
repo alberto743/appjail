@@ -13,7 +13,7 @@ from .console import ARROW, ARROW_NB, INDENTED_LABEL, Abort, human_size
 from .permargs import granted_summary
 
 MAX_ASSET = 2 * 1024 ** 3
-NEED_SQUASHFS = "install squashfs-tools (apt install squashfs-tools) and retry"
+NEED_SQUASHFS = "install the package squashfs-tools and retry"
 
 
 def default_name(repo):
