@@ -34,13 +34,13 @@ class Tool:
     exe_sha256: str = None
 
 
-# mhx/dwarfs v0.15.8, static multi-call binary (dwarfsextract is one of its tools). Not packaged in
+# mhx/dwarfs v0.15.10, static multi-call binary (dwarfsextract is one of its tools). Not packaged in
 # Debian 13, trixie-backports or sid (checked 2026-10-18). GitHub's own digest for the asset is the same.
 TOOLS = {
     "dwarfs": Tool(
         "dwarfs",
-        "https://github.com/mhx/dwarfs/releases/download/v0.15.8/dwarfs-universal-small-0.15.8-Linux-x86_64",
-        2195148, "d29734ed51547f5a5e1c92ede3ea0f2e003902f5c58df10d5e060c87b4e07e69",
+        "https://github.com/mhx/dwarfs/releases/download/v0.15.10/dwarfs-universal-small-0.15.10-Linux-x86_64",
+        2195213, "c68ace6ad391a420044803967f9d845e74d7201d5273c001194dcecbb803dfd9",
         "extracting DwarFS AppImages"),
     # GitHub CLI v2.103.3: used only for `gh attestation verify --bundle` (Sigstore verification), inside a
     # jail, on bundles appjail fetched itself. Not packaged in Debian 13 in a usable version.
