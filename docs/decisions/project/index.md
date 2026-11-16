@@ -13,3 +13,4 @@ Decisions about the platform appjail supports, its interface, and how it is buil
 | [Release notes from the files touched](release-notes.md) | how release notes are grouped |
 | [Commit messages checked for personal data](commit-hygiene.md) | the hook and the CI check |
 | [Related projects](related-projects.md) | other tools that cover parts of the same need |
+| [Flatpak compared](flatpak-comparison.md) | the security and functional gaps with Flatpak |

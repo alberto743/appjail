@@ -25,4 +25,5 @@ can never be granted, and its handling of the environment led to appjail clearin
 
 **Consequences.** appjail depends on bubblewrap 0.10 or later and on unprivileged user namespaces being allowed.
 Everything bubblewrap does not offer (Landlock, the D-Bus filter, the audio graph) is a separate program appjail starts.
-Flatpak remains the better choice for apps it carries; appjail does not compete with it.
+Flatpak remains the better choice for apps it carries; appjail does not compete with it ([Flatpak
+compared](../project/flatpak-comparison.md)).

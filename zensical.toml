@@ -134,6 +134,7 @@ nav = [
       "decisions/project/release-notes.md",
       "decisions/project/commit-hygiene.md",
       "decisions/project/related-projects.md",
+      "decisions/project/flatpak-comparison.md",
     ] },
   ] },
   { "Reference" = [

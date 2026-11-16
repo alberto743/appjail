@@ -23,7 +23,7 @@ updates held in quarantine. Other tools cover other parts of this; if one fits y
 
 | Project | What it is | Relation to appjail |
 |---|---|---|
-| [Flatpak](https://flatpak.org/) | runtimes, portals, signed repositories | the mature route when an app is on Flathub; appjail writes a Flatpak-style identity only so the portals recognise its jail |
+| [Flatpak](https://flatpak.org/) | runtimes, portals, signed repositories | the mature route when an app is on Flathub; appjail writes a Flatpak-style identity only so the portals recognise its jail; the gaps are in [Flatpak compared](flatpak-comparison.md) |
 | [sas](https://github.com/Samueru-sama/simple-appimage-sandbox), [aisap](https://github.com/mgord9518/aisap) | bubblewrap wrappers for AppImages you have | neither fetches, pins or updates; sas leaves sockets and the network on by default |
 | [FlatImage](https://github.com/flatimage/flatimage) | a different format, sandboxed by default | not an AppImage manager |
 | [Bubblejail](https://github.com/igo95862/bubblejail) | bubblewrap profiles and a GUI for any desktop app | not AppImage-specific; fetches nothing |
