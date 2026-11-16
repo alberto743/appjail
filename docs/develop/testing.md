@@ -80,9 +80,14 @@ GUEST=fedora tests/vm/test.sh       # and on Fedora 45
 tests/vm/test.sh -k appimage -x     # any pytest arguments
 ```
 
-Every supported system must pass before a commit and before a push: a pass on one is not a pass. Tests that start real
-jails run only with `APPJAIL_INTEGRATION=1`, which `test.sh` sets. Opt-in suites download from the network and are run
-by hand, one group at a time:
+Every supported system must pass before a commit and before a push: a pass on one is not a pass. A documentation-only
+commit is the exception: one that changes only `docs/`, Markdown files outside `src/` and `tests/`, or `zensical.toml`
+(but not `docs/reference/policy.md`, which is generated from the source) is checked with `tests/container/run.sh build`
+and `tests/container/run.sh check` in [the tooling container](#the-tooling-container), or without it with
+`tests/vm/docs.sh` and `tests/vm/test.sh tests/test_docs.py tests/test_reuse.py` on one guest. A push whose batch
+includes any other commit still needs every guest, and CI runs the full suite on every push. Tests that start real jails
+run only with `APPJAIL_INTEGRATION=1`, which `test.sh` sets. Opt-in suites download from the network and are run by
+hand, one group at a time:
 
 | Suite | Environment | File |
 |---|---|---|

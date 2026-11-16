@@ -16,7 +16,8 @@
 - **Tests and documentation in the same commit as the code.** When behaviour changes, update the affected pages of this
   site (the concept page, the guide, the reference, a decision page if a choice was made) and the tests.
 - **Every guest passes** before a commit: `tests/vm/test.sh`, `GUEST=ubuntu tests/vm/test.sh` and `GUEST=fedora
-  tests/vm/test.sh`.
+  tests/vm/test.sh`. A documentation-only commit needs only the documentation checks
+  ([testing](testing.md#running-the-tests)).
 - **Licensing:** MPL-2.0, REUSE-compliant at every commit. Contributors keep the copyright of their work and license it
   under MPL-2.0 (no CLA, no assignment). Every code file starts with at least one `SPDX-FileCopyrightText` line and
   an `SPDX-License-Identifier` line for MPL-2.0 (after a shebang). A new file takes its author's line
