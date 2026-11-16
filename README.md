@@ -12,6 +12,7 @@
 [![CI](https://github.com/alberto743/appjail/actions/workflows/ci.yml/badge.svg)](https://github.com/alberto743/appjail/actions/workflows/ci.yml)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/alberto743/appjail/blob/main/LICENSES/MPL-2.0.txt)
 [![REUSE](https://github.com/alberto743/appjail/actions/workflows/reuse.yml/badge.svg)](https://github.com/alberto743/appjail/actions/workflows/reuse.yml)
+[![Docs](https://github.com/alberto743/appjail/actions/workflows/docs.yml/badge.svg)](https://github.com/alberto743/appjail/actions/workflows/docs.yml)
 
 A small command-line manager for [AppImages](https://appimage.org/) that runs every app inside a
 [bubblewrap](https://github.com/containers/bubblewrap) sandbox. It works in user mode (no sudo), supports GUI apps
