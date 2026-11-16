@@ -1,0 +1,4 @@
+# The linter of tests/test_lint.py, pinned to an exact version. Read by tests/vm/install-ruff.sh (the guests and CI) and by
+# tests/container/Containerfile; Dependabot (pip, /.github, weekly) proposes new releases, to be reviewed like any dependency.
+# Not hash-pinned: ruff ships one wheel per platform, and it is a development tool that never touches appjail's own code path.
+ruff==0.17.1

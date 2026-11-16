@@ -23,7 +23,7 @@ esac
 if [ "$GUEST" = debian-compositors ]; then  # Hyprland is only in backports, whose dependencies apt takes only on request; best effort
 	ssh_ 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -t trixie-backports hyprland' || echo "hyprland: not installed (backports)"
 fi
-ssh_ 'sh -s' < "$here/install-ruff.sh"
+ssh_ "sh -s -- '$(grep '^ruff==' "$here/../../.github/requirements-ruff.txt")'" < "$here/install-ruff.sh"
 if [ "${GUEST%%-*}" = ubuntu ]; then  # as the CI action does: Ubuntu restricts unprivileged user namespaces through AppArmor
 	ssh_ 'sudo sysctl -qw kernel.apparmor_restrict_unprivileged_userns=0 && echo kernel.apparmor_restrict_unprivileged_userns=0 | sudo tee /etc/sysctl.d/99-appjail.conf >/dev/null'
 fi

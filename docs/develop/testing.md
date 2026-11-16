@@ -2,7 +2,8 @@
 
 appjail runs untrusted software, so its own tests do too: they download real AppImages, start real jails and talk to
 real compositors and audio servers. None of that runs on the developer's machine. Everything that executes software runs
-in a disposable qemu-kvm guest built from tracked files; the host only edits files, runs `git` and runs qemu.
+in a disposable qemu-kvm guest built from tracked files; the host only edits files, runs `git`, runs qemu and, for the
+documentation and the static checks only, runs podman ([the tooling container](#the-tooling-container)).
 
 ## The guests
 
@@ -20,7 +21,7 @@ hosts, console log), which is ignored by git and can be deleted and rebuilt. The
 install the same packages under their Fedora names, listed in `tests/vm/packages-fedora.map`.
 
 Host requirements (Debian 13): qemu with KVM, `qemu-img`, `cloud-localds`, `genisoimage`, OVMF, `curl`, and access to
-`/dev/kvm`.
+`/dev/kvm`. The tooling container below also needs rootless podman.
 
 The images are the distributions' cloud images: Debian 13 genericcloud (about 340 MB, verified against `SHA512SUMS`),
 Ubuntu 26.04 `resolute-server-cloudimg-amd64.img` (about 860 MB, verified against `SHA256SUMS`) and Fedora 45 Cloud Base
@@ -31,18 +32,42 @@ and adds `tester` to the `video` and `render` groups; the guest has passwordless
 load the kernel's `vivid` virtual camera with `sudo modprobe` inside the guest and skip where they cannot.
 `tests/vm/guest.sh` holds the differences between the guests.
 
+Debian and Ubuntu are fetched through names that do not change (`trixie/latest`, `resolute/current`). Fedora publishes
+none: the image and its `CHECKSUM` file are named after the build (`45-1.4` in `guest.sh`), so that pin is bumped by
+hand. Do it when `create.sh` fails to download a new guest (the mirror drops old builds), or when you want a newer build:
+read the current build number in the release's `Cloud/x86_64/images/` directory, change the image and checksum names in
+`guest.sh`, and rebuild with `create.sh --force`. A new Fedora release, as opposed to a new build, is reported by the
+monthly `check-platforms.yml` ([CI and release](ci-release.md)).
+
 ## The scripts (`tests/vm/`, all honour `GUEST`)
 
 1. `create.sh` downloads the cloud image (verified against the distribution's checksums), creates the overlay disk, the
    ssh key and the cloud-init seed. `--force` rebuilds the overlay and the seed.
 2. `start.sh` boots the guest (ssh on 127.0.0.1 at its port, user `tester`); wait with
-   `tests/vm/ssh.sh 'cloud-init status --wait'`.
+   `tests/vm/ssh.sh 'sudo cloud-init status --wait'`.
 3. `provision.sh` brings it to the expected state: packages, a regular kernel for `/dev/dri`, group memberships. It is
    idempotent; rerun it after editing `packages.txt`.
 4. `sync.sh` copies the project to `~/appjail` in the guest; `ssh.sh CMD` runs a command there; `test.sh` syncs and runs
    the suite; `docs.sh` builds this site; `down.sh` stops the guest.
 
 To resume work: `start.sh`, wait for ssh, `provision.sh` if `packages.txt` changed, then `test.sh`.
+
+## The tooling container
+
+`tests/container/run.sh` is a quick loop for what needs no kernel feature and starts no jail: building the site and the
+static checks. It is a rootless podman container (`debian:13-slim`, the hashed requirements of
+`.github/requirements-docs.txt` and the ruff of `.github/requirements-ruff.txt`) that runs no appjail code. It never
+replaces the guests: the suite on all three is still the gate before a commit and a push. The repository is mounted
+read-only (`serve` needs the live sources and mounts it read-write; zensical then writes `site/` and `.cache/`, both
+ignored by git), and every command but `image` and `serve` runs without a network. Moving to a new Debian stable is a
+manual change of the `FROM` line.
+
+```sh
+tests/container/run.sh image    # build the image (the only step with network access)
+tests/container/run.sh build    # strict site build, offline, into ./site
+tests/container/run.sh serve    # live reload at http://127.0.0.1:8000
+tests/container/run.sh check    # ruff, reuse lint, and the tests that need no jail (lint, reuse, docs, CI scripts)
+```
 
 ## Running the tests
 

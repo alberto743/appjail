@@ -35,4 +35,4 @@ if [ "$force" = 1 ] || [ ! -f "$vm/run/disk.qcow2" ]; then
 	printf 'instance-id: appjail-%s-%s\nlocal-hostname: appjail-%s\n' "$GUEST" "$(date +%s)" "$GUEST" > "$vm/run/meta-data"
 	cloud-localds "$vm/run/seed.iso" "$vm/run/user-data" "$vm/run/meta-data"
 fi
-echo "guest $GUEST ready: run tests/vm/start.sh, wait for cloud-init (tests/vm/ssh.sh 'cloud-init status --wait'), then tests/vm/provision.sh"
+echo "guest $GUEST ready: run tests/vm/start.sh, wait for cloud-init (tests/vm/ssh.sh 'sudo cloud-init status --wait'), then tests/vm/provision.sh"

@@ -8,7 +8,8 @@ updates:
     commit-message:
       prefix: ci
   # The release tooling (.github/requirements-build.txt) and the documentation tooling (.github/requirements-docs.txt) are
-  # pinned by version and hash; Dependabot proposes new versions with their hashes, to be reviewed like any dependency.
+  # pinned by version and hash, and the linter (.github/requirements-ruff.txt) pinned by version; Dependabot proposes new
+  # versions (with their hashes where there are any), to be reviewed like any dependency.
   - package-ecosystem: pip
     directory: /.github
     schedule:

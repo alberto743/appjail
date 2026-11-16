@@ -549,7 +549,7 @@ On a machine with qemu/KVM (see `CLAUDE.md`, Testing environment), for each of `
 
     GUEST=<distro>-compositors tests/vm/create.sh      # reuses the base image; the first creation of that image downloads it
     GUEST=<distro>-compositors tests/vm/start.sh
-    GUEST=<distro>-compositors tests/vm/ssh.sh 'cloud-init status --wait'
+    GUEST=<distro>-compositors tests/vm/ssh.sh 'sudo cloud-init status --wait'
     GUEST=<distro>-compositors tests/vm/provision.sh   # installs the compositors (several hundred packages) and reboots
     GUEST=<distro>-compositors tests/vm/sync.sh
     GUEST=<distro>-compositors tests/vm/ssh.sh 'cd ~/appjail && python3 tests/compositors/probe.py --out /tmp/results.json'
