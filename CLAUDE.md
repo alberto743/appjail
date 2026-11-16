@@ -16,14 +16,8 @@ A Python (stdlib only) AppImage manager: GitHub, URL and file installs with pinn
 - Licensing: MPL-2.0, REUSE-compliant at every commit. Contributors keep their own copyright (no assignment, no CLA): every code file has at least one `SPDX-FileCopyrightText` line and an `SPDX-License-Identifier` line for MPL-2.0 (after a shebang if any). A new file takes its author's line; an existing file gains the line of a contributor whose change is creative and non-trivial, and may become `appjail contributors` with the individual lines kept. Existing files keep `2026 Alberto P`. Other files (Markdown, config, templates) are covered by `REUSE.toml`. New file types need a header or a `REUSE.toml` entry in the same commit. `CONTRIBUTORS.md` lists those who want to be named.
 
 ## Open items
-No planned code work is pending (`docs/decisions/deferred.md`). Everything else needs a decision or an app/session the user approves.
+Open work, its status and what unblocks it are in the table of `docs/decisions/deferred.md`; the manual checks on the user's machine are under "Not yet verified" there. Nothing marked Scheduled, Waiting, Undecided, Paused or Deferred is started without the user, and anything that needs an app or a session needs the user's approval. When an item changes status, update that table in the same commit.
 - Assessing a compositor: follow `docs/develop/assessing-compositors.md`.
-- Manual checks on the user's machine: the list under "Not yet verified" in `docs/decisions/deferred.md`.
-- Paused by the user: arm64 support. Deferred by the user: the GPG tier, resolvers for other forges, an allowlisting proxy for the LAN (`docs/decisions/deferred.md`).
-- Scheduled, after the next release tag: decide how an app's terminal output is handled (it shares the terminal it was started from; options in `docs/decisions/deferred.md`, Scheduled).
-- Scheduled, when a PipeWire release after 1.6.2 carries the V4L2 fixes: re-run the Camera portal measurement (`docs/decisions/deferred.md`, Scheduled; done on Fedora 45 with 1.6.11, Debian and Ubuntu remain).
-- The user's call, not decided: whether to report upstream the crashes found while measuring (Muffin and Cinnamon on `wl-copy`/`wl-paste`, Hyprland 0.53.3 when a window closes; `docs/compositor-assessment/ASSESSMENT.md`).
-- Scheduled, December 2026: switch the workflows from `ubuntu-26.04` to `ubuntu-latest` (GitHub's move ends 2026-11-19) and check CI; `check-platforms.yml` then has no runner label to read for Ubuntu (its script skips that check), so give it another target.
 
 ## Docs
 - The site (`docs/`, `zensical.toml`) is the documentation; how it is organised and written is in `docs/develop/writing-docs.md`. Build it in the guest with `tests/vm/docs.sh` or in the tooling container with `tests/container/run.sh build` (strict: a broken link or anchor fails). `docs.yml` builds it on every push and publishes it on `vX.Y.Z` tags.
