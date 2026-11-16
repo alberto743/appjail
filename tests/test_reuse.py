@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", ".ruff_cache", "*.pyc", ".git", ".claude", "vm")
+IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", ".ruff_cache", "*.pyc", ".git", ".claude", "vm", "site", ".cache")
 
 
 @pytest.mark.skipif(not shutil.which("reuse"), reason="needs reuse (tests/vm/packages.txt)")
