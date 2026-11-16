@@ -59,14 +59,15 @@ static checks. It is a rootless podman container (`debian:13-slim`, the hashed r
 `.github/requirements-docs.txt` and the ruff of `.github/requirements-ruff.txt`) that runs no appjail code. It never
 replaces the guests: the suite on all three is still the gate before a commit and a push. The repository is mounted
 read-only (`serve` needs the live sources and mounts it read-write; zensical then writes `site/` and `.cache/`, both
-ignored by git), and every command but `image` and `serve` runs without a network. `serve` listens on the loopback only, on port 62080, above the range Linux gives to outgoing connections
-(`/proc/sys/net/ipv4/ip_local_port_range`, 32768-60999 by default); `PORT` changes it. Moving to a new Debian stable is a
-manual change of the `FROM` line.
+ignored by git), and every command but `image` and `serve` runs without a network. `serve` listens on the loopback
+only, on a port above the range Linux gives to outgoing connections (`/proc/sys/net/ipv4/ip_local_port_range`,
+32768-60999 by default; the default is in `run.sh`, `PORT` changes it). Moving to a new Debian stable is a manual change
+of the `FROM` line.
 
 ```sh
 tests/container/run.sh image    # build the image (the only step with network access)
 tests/container/run.sh build    # strict site build, offline, into ./site
-tests/container/run.sh serve    # live reload at http://127.0.0.1:62080 (PORT=... to change it)
+tests/container/run.sh serve    # live reload on the loopback (the URL is printed; PORT=... to change the port)
 tests/container/run.sh check    # ruff, reuse lint, and the tests that need no jail (lint, reuse, docs, CI scripts)
 ```
 

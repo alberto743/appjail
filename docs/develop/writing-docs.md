@@ -8,7 +8,7 @@ It is a single connected text: every page says where it sits in the argument, an
 ```sh
 tests/vm/docs.sh                # builds in the guest, strict; the result is in vm/<guest>/site
 tests/container/run.sh build    # the same in a podman container (site/), offline
-tests/container/run.sh serve    # live preview at http://127.0.0.1:62080
+tests/container/run.sh serve    # live preview on the loopback (the URL is printed)
 ```
 
 The build is strict: a link to a missing page or anchor fails it. The tooling is pinned with hashes in

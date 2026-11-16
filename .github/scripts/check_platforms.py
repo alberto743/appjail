@@ -3,9 +3,9 @@
 
 """Open an issue when a supported system has a newer release (run by check-platforms.yml, monthly).
 
-Compares what the project targets (the guest images of tests/vm/guest.sh and the runner label of the workflows) with
-endoflife.date (https://endoflife.date/docs/api/v1/): the current Debian stable, the newest Ubuntu LTS and the newest
-Fedora. It only reports: moving to a new release is a decision (support matrix, CI, docs). The API answer is parsed as
+Compares what the project targets (Debian and Fedora from the guest images of tests/vm/guest.sh, Ubuntu from the runner
+label of the workflows) with endoflife.date (https://endoflife.date/docs/api/v1/): the current Debian stable, the newest
+Ubuntu LTS and the newest Fedora. It only reports: moving to a new release is a decision (support matrix, CI, docs). The API answer is parsed as
 JSON and never executed; text that reaches an issue is reduced to a safe alphabet. Stdlib only; `gh` comes from the runner.
 """
 

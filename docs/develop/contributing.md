@@ -26,8 +26,8 @@
   files are covered by `REUSE.toml`. A new file type needs a header or a `REUSE.toml` entry in the same commit.
   [`CONTRIBUTORS.md`](https://github.com/alberto743/appjail/blob/main/CONTRIBUTORS.md) lists those who want to be named.
 - **No personal data** in tracked files or commit messages: no home paths, user names, host names, e-mail addresses
-  other than GitHub's no-reply ones, session links or IDs. A copyright name that its owner chose is allowed. Use `~` and placeholders. Enable the check once per clone:
-  `git config core.hooksPath .githooks`.
+  other than GitHub's no-reply ones, session links or IDs. A copyright name that its owner chose is allowed. Use `~` and placeholders. Enable the check
+  once per clone: `git config core.hooksPath .githooks`.
 
 ## Git
 
