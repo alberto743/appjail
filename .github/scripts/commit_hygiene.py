@@ -16,6 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PATTERNS = ROOT / ".githooks" / "forbidden-patterns"
 MAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# Dependabot's own sign-off carries GitHub's public support address; nothing else is exempt.
+BOT_TRAILER = re.compile(r"^Signed-off-by: dependabot\[bot\] <support@github\.com>[ \t]*$", re.MULTILINE)
 
 
 def load_patterns(path=PATTERNS):
@@ -26,7 +28,7 @@ def load_patterns(path=PATTERNS):
 def problems(message, patterns):
     """What is wrong with one commit message, as short strings; empty if nothing."""
     found = [m.group(0) for p in patterns for m in [p.search(message)] if m]
-    found += [mail for mail in MAIL.findall(message) if "noreply" not in mail.lower()]
+    found += [mail for mail in MAIL.findall(BOT_TRAILER.sub("", message)) if "noreply" not in mail.lower()]
     return found
 
 

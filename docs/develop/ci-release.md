@@ -6,7 +6,7 @@ only; Debian and Fedora are verified in their guests before a push ([testing](te
 
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` | every push and pull request | the full suite with `APPJAIL_INTEGRATION=1` (the `guest-setup` action, shared with `e2e.yml`, relaxes `kernel.apparmor_restrict_unprivileged_userns` where present, installs `tests/vm/packages.txt` minus the kernel, and prints the versions under test; tests needing missing hardware skip); `package`: the packaging test and the pinned build tooling; `hygiene`: every commit message checked by `.github/scripts/commit_hygiene.py` |
+| `ci.yml` | every push and pull request | the full suite with `APPJAIL_INTEGRATION=1` (the `guest-setup` action, shared with `e2e.yml`, relaxes `kernel.apparmor_restrict_unprivileged_userns` where present, installs `tests/vm/packages.txt` minus the kernel, and prints the versions under test; tests needing missing hardware skip); `package`: the packaging test and the pinned build tooling; `hygiene`: every commit message checked by `.github/scripts/commit_hygiene.py` (Dependabot's own `Signed-off-by` line is the only e-mail exempted) |
 | `reuse.yml` | every push and pull request | REUSE compliance |
 | `docs.yml` | pull requests and `main`: build; `v*` tags and by hand: deploy | this site, built strictly and published to GitHub Pages |
 | `e2e.yml` | by hand and weekly | every opt-in suite, with `GITHUB_TOKEN` for the API limit |

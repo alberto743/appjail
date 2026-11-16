@@ -38,3 +38,10 @@ def test_a_leak_is_found(line):
 
 def test_the_trailer_pattern_is_anchored_to_a_line():
     assert hygiene.problems("subject\n\nClaude-Session: x\n", PATTERNS) == ["Claude-Session:"]
+
+
+def test_dependabots_signoff_passes_but_the_address_elsewhere_does_not():
+    signoff = "Signed-off-by: dependabot[bot] <support@github.com>"
+    assert hygiene.problems(f"ci: bump x\n\n{signoff}\n", PATTERNS) == []
+    assert hygiene.problems(f"ci: bump x\n\nwrite to support@github.com\n\n{signoff}\n", PATTERNS)
+    assert hygiene.problems("ci: bump x\n\nSigned-off-by: someone <support@github.com>\n", PATTERNS)
