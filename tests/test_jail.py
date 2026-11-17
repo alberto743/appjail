@@ -5,12 +5,14 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
 import pytest
 
 from appjail import cli, fetcher, jail
+from appjail.errors import JailError
 
 from .helpers import Script, integration, needs_pasta, pairs
 
@@ -233,3 +235,41 @@ def test_url_downloads_pass_the_private_redirect_switch_to_the_fetcher(monkeypat
     assert calls[0][:2] == ["--any", "https://e.test/a"]
     assert calls[1][:3] == ["--any", "--allow-private-redirects", "https://e.test/a"]
     assert calls[2][:3] == ["--check", "--allow-private-redirects", "https://e.test/a"]
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("bubblewrap 0.11.0\n", (0, 11, 0)),
+    ("bubblewrap 0.10.0", (0, 10, 0)),
+    ("bubblewrap 0.9", (0, 9, 0)),
+    ("bwrap 1.2.3-rc1", (1, 2, 3)),
+    ("nonsense", None),
+    ("", None),
+])
+def test_bwrap_version_is_parsed(text, expected):
+    assert jail.parse_bwrap_version(text) == expected
+
+
+def _fake_bwrap(monkeypatch, output):
+    jail.find_bwrap.cache_clear()
+    monkeypatch.setattr(jail.shutil, "which", lambda name: "/usr/bin/bwrap")
+    monkeypatch.setattr(jail.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout=output, stderr=""))
+
+
+def test_old_bwrap_is_refused_with_the_needed_version(monkeypatch):
+    _fake_bwrap(monkeypatch, "bubblewrap 0.9.0\n")
+    with pytest.raises(JailError, match=r"0\.9\.0.*0\.10"):
+        jail.find_bwrap()
+    jail.find_bwrap.cache_clear()
+
+
+def test_unreadable_bwrap_version_is_refused(monkeypatch):
+    _fake_bwrap(monkeypatch, "who knows\n")
+    with pytest.raises(JailError, match="version"):
+        jail.find_bwrap()
+    jail.find_bwrap.cache_clear()
+
+
+def test_new_enough_bwrap_is_accepted(monkeypatch):
+    _fake_bwrap(monkeypatch, "bubblewrap 0.10.0\n")
+    assert jail.find_bwrap() == "/usr/bin/bwrap"
+    jail.find_bwrap.cache_clear()

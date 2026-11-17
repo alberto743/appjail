@@ -7,8 +7,10 @@ Argument builders are pure functions so they can be unit-tested without bwrap.
 """
 
 import contextlib
+import functools
 import json
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -131,10 +133,34 @@ def _watchdog(fifo):
             '>/dev/null 2>&1 & ')
 
 
+# The oldest bubblewrap appjail relies on: --bind-fd and --ro-bind-fd (grants are bound by descriptor, so a path swapped
+# after the checks changes nothing). An older one would fail on an unknown option, with a message that does not say why.
+MIN_BWRAP = (0, 10, 0)
+
+
+def parse_bwrap_version(text):
+    """(major, minor, patch) from the output of `bwrap --version`, or None when it cannot be read."""
+    m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", text)
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None
+
+
+@functools.lru_cache(maxsize=1)
 def find_bwrap():
+    """The bwrap executable, checked once per process to be new enough."""
     path = shutil.which("bwrap")
     if not path:
         raise JailError("bwrap (bubblewrap) is not installed")
+    try:
+        out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=10, check=False).stdout
+    except (OSError, subprocess.SubprocessError) as e:
+        raise JailError(f"could not run {path} --version: {e}") from e
+    version = parse_bwrap_version(out)
+    need = ".".join(map(str, MIN_BWRAP[:2]))
+    if version is None:
+        raise JailError(f"could not read the version of bubblewrap ({clean(out.strip(), 80)!r}); appjail needs {need} or later")
+    if version < MIN_BWRAP:
+        raise JailError(f"bubblewrap {'.'.join(map(str, version))} is too old: appjail needs {need} or later (--bind-fd); "
+                        "install a newer bubblewrap")
     return path
 
 
