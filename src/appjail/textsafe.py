@@ -13,9 +13,16 @@ _ESC = re.compile(
     r"|\x1b\[[0-?]*[ -/]*[@-~]?"
     r"|\x1b[ -~]?"
     r"|\x9b[0-?]*[ -/]*[@-~]?"
+    r"|[\x90\x98\x9d-\x9f][^\x07\x9c\x1b]*(?:\x07|\x9c|\x1b\\)?"
 )
-# C0/C1 controls and DEL, plus zero-width and bidirectional characters (spoofing).
-_CTRL = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]")
+# C0/C1 controls and DEL, plus characters that are invisible or spoof text: zero-width and bidirectional controls,
+# soft hyphen, fillers (braille blank, hangul), interlinear annotation, Unicode tag characters and the variation
+# selectors other than the emoji presentation selector U+FE0F (which is kept so emoji still render).
+_CTRL = re.compile(
+    "[\x00-\x08\x0b-\x1f\x7f-\x9f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180b-\u180f\u200b-\u200f"
+    "\u2028-\u202e\u2060-\u2069\u2800\u3164\ufe00-\ufe0e\ufeff\uffa0\ufff9-\ufffb"
+    "\U000e0000-\U000e007f\U000e0100-\U000e01ef]"
+)
 _SPACE = re.compile(r"[\t\n\r]+")
 
 
