@@ -49,7 +49,7 @@ Every helper jail starts from a common base (`jail.common_args`: all namespaces,
 capabilities, a cleared environment, the read-only system, a private `/tmp`) and adds only the one or two paths its
 step needs. The app jail is built the same way with more inside.
 
-appjail requires bubblewrap 0.10 or later, for `--bind-fd` and `--ro-bind-fd`. Both minimum supported systems ship a
+appjail requires bubblewrap 0.10 or later, for `--bind-fd` and `--ro-bind-fd`. The three supported systems (Debian 13, Ubuntu 26.04, Fedora 45) all ship a
 newer version.
 
 ## Connections

@@ -8,7 +8,8 @@ and where it is put into practice.
 
 **Rule.** An app is described by a declarative manifest: its source, its pinned hash, its permissions. No shell
 script, configuration code or program text that comes from the network is ever sourced, evaluated or executed by
-appjail, and catalogs of applications are parsed as data.
+appjail, and catalogs of applications are parsed as data. The programs it downloads (the app, the pinned helper
+binaries) are run, never sourced, and only inside a jail.
 
 **Answers.** Install scripts are code written by someone else and run with your privileges, usually outside any
 sandbox; one compromised script, or one compromised repository of scripts, reaches every user. A manifest that can
