@@ -80,8 +80,8 @@ GUEST=fedora tests/vm/test.sh       # and on Fedora 45
 tests/vm/test.sh -k appimage -x     # any pytest arguments
 ```
 
-Every supported system must pass before a commit and before a push: a pass on one is not a pass. A documentation-only
-commit is the exception: one that changes only `docs/`, Markdown files outside `src/` and `tests/`, or `zensical.toml`
+The full suite must pass on Debian 13 before a commit, and on every supported system before a push: a pass on one is
+not a pass for the push. A documentation-only commit is the exception: one that changes only `docs/`, Markdown files outside `src/` and `tests/`, or `zensical.toml`
 (but not `docs/reference/policy.md`, which is generated from the source) is checked with `tests/container/run.sh build`
 and `tests/container/run.sh check` in [the tooling container](#the-tooling-container), or without it with
 `tests/vm/docs.sh` and `tests/vm/test.sh tests/test_docs.py tests/test_reuse.py` on one guest. A push whose batch
