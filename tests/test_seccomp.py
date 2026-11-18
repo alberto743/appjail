@@ -165,3 +165,42 @@ def test_bwrap_refuses_nested_user_namespaces_without_the_grant(sandbox, runtime
     args = runtimejail.runtime_args(**build(sandbox, runtime))
     assert "--disable-userns" in args
     assert "--disable-userns" not in runtimejail.runtime_args(**build(sandbox, runtime, userns=True))
+
+
+def _every_denied_call_script():
+    """A probe that issues each denied syscall (with zero arguments) and prints the errno of each, by name."""
+    names = [*seccomp.ALWAYS, *seccomp.NAMESPACE]
+    table = {n: seccomp.SYSCALLS[n] for n in names}
+    return f'''#!/usr/bin/python3
+import ctypes, json
+libc = ctypes.CDLL(None, use_errno=True)
+out = {{}}
+for name, nr in {table!r}.items():
+    ctypes.set_errno(0)
+    r = libc.syscall(nr, *[ctypes.c_long(0)] * 6)
+    out[name] = ctypes.get_errno() if r == -1 else 0
+print(json.dumps(out))
+'''
+
+
+@integration
+def test_every_denied_call_is_refused_inside_a_real_jail(sandbox, runtime):
+    """Not only the table (a unit test checks that): the kernel really returns EPERM for each denied call, so a
+    change to the filter program that lets one through fails here. ioctl, socket and the like have rules of their
+    own and are covered by the probe above."""
+    proc = run_in_jail(sandbox, runtime, script=_every_denied_call_script())
+    assert proc.returncode == 0, proc.stderr
+    results = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert set(results) == {*seccomp.ALWAYS, *seccomp.NAMESPACE}
+    assert {name: err for name, err in results.items() if err != errno.EPERM} == {}
+
+
+@integration
+def test_namespace_calls_are_allowed_again_only_with_the_userns_grant(sandbox, runtime):
+    """With `userns`, the NAMESPACE calls are no longer refused by the filter (they may still fail for other
+    reasons); the always-denied ones stay refused."""
+    proc = run_in_jail(sandbox, runtime, script=_every_denied_call_script(), userns=True)
+    assert proc.returncode == 0, proc.stderr
+    results = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert all(results[n] == errno.EPERM for n in seccomp.ALWAYS)
+    assert any(results[n] != errno.EPERM for n in seccomp.NAMESPACE)
