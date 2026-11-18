@@ -98,17 +98,20 @@ def test_fetcher_main_refuses_bad_url_without_network():
 # -- real bwrap (guest only) --------------------------------------------------------------
 
 CODE = r'''
-import json, os, urllib.request
+import json, os, time, urllib.request
 def can_write(p):
     try:
         open(p, "w").close(); os.unlink(p); return True
     except OSError:
         return False
 caps = [l for l in open("/proc/self/status") if l.startswith("CapEff")][0].split()[1]
-try:
-    status = urllib.request.urlopen("https://api.github.com/rate_limit", timeout=20).status
-except Exception as e:
-    status = repr(e)
+for attempt in range(3):  # a real request: one slow moment on the network must not fail an isolation test
+    try:
+        status = urllib.request.urlopen("https://api.github.com/rate_limit", timeout=10).status
+        break
+    except Exception as e:
+        status = repr(e)
+        time.sleep(2)
 print(json.dumps({
     "env": sorted(os.environ), "pid": os.getpid(), "caps": caps, "net": status,
     "home_exists": os.path.exists("/home"), "host_marker": os.path.exists("/tmp/host-marker"),
@@ -214,14 +217,21 @@ def test_run_wraps_only_jails_with_a_network(monkeypatch):
 
 
 PROBE = r'''
-import socket, sys, urllib.request
+import socket, sys, time, urllib.request
 def reach(host, port):
     try:
         socket.create_connection((host, port), timeout=3).close(); return True
     except OSError:
         return False
 if len(sys.argv) > 3:
-    urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # DNS and TLS still work through pasta; not counted against the limit
+    for attempt in range(3):  # a real request: one slow moment on the network must not fail an isolation test
+        try:
+            urllib.request.urlopen("https://api.github.com/rate_limit", timeout=10).close()  # DNS and TLS still work through pasta; not counted against the limit
+            break
+        except OSError:
+            if attempt == 2:
+                raise
+            time.sleep(2)
 print(reach("127.0.0.1", int(sys.argv[1])), reach(sys.argv[2], int(sys.argv[1])))
 '''
 
