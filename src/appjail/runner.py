@@ -48,11 +48,17 @@ def _warner(say, warn):
 
 
 def prepare(name, extract=appimage.extract, say=print, warn=None):
-    """Return (manifest, root, home, etc_dir) ready for launch.
+    """Return (manifest, root, home, etc_dir) ready for launch. Holds the app's lock meanwhile, so an update cannot swap
+    the tree under an extraction (and two launches do not extract at once); it is released before the app starts.
 
     Refuses to run when the stored AppImage no longer matches the pinned sha256. Re-extracts
     when the tree is missing or was made from a different file.
     """
+    with store.app_lock(manifest.check_name(name)):
+        return _prepare(name, extract, say, warn)
+
+
+def _prepare(name, extract, say, warn):
     mpath = store.manifest_path(manifest.check_name(name))
     if not mpath.exists():
         raise RunError(f"unknown app '{name}'")
@@ -87,8 +93,8 @@ def prepare(name, extract=appimage.extract, say=print, warn=None):
     for d in (home, etc):
         store.make_private(d)
     passwd, group = _passwd(os.getuid(), os.getgid())
-    (etc / "passwd").write_text(passwd)
-    (etc / "group").write_text(group)
+    store.atomic_write(etc / "passwd", passwd, 0o644)
+    store.atomic_write(etc / "group", group, 0o644)
     return m, root, home, etc
 
 

@@ -100,8 +100,9 @@ class Console:
         print(text, file=sys.stderr)
 
     def ask(self, prompt):
+        """The prompt may hold text from the network (an asset or repository name): it is cleaned like any output."""
         try:
-            return input(prompt).strip()
+            return input(textsafe.clean(prompt, None)).strip()
         except EOFError:
             raise Abort("no input available") from None
 

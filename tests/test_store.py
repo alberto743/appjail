@@ -36,3 +36,37 @@ def test_make_private_gives_every_new_directory_mode_0700(tmp_path):
     assert oct((tmp_path / "keep").stat().st_mode & 0o777) == "0o755"
     for d in ("a", "a/b"):
         assert oct((tmp_path / "keep" / d).stat().st_mode & 0o777) == "0o700"
+
+
+# -- per-app lock -------------------------------------------------------------------------------
+
+
+def test_app_lock_excludes_a_second_holder_of_the_same_app(data, monkeypatch):
+    monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
+    with store.app_lock("a"):
+        with pytest.raises(store.StoreBusy, match="another appjail command"), store.app_lock("a"):
+            pass
+        with store.app_lock("b"):  # another app is not held up
+            pass
+    with store.app_lock("a"):  # released when the block ends
+        pass
+
+
+def test_app_lock_is_released_when_the_block_fails(data, monkeypatch):
+    monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
+    with pytest.raises(RuntimeError), store.app_lock("a"):
+        raise RuntimeError("boom")
+    with store.app_lock("a"):
+        pass
+
+
+def test_app_lock_is_private_and_not_followed_through_a_symlink(data):
+    with store.app_lock("a"):
+        lock = store.lock_path("a")
+        assert oct(lock.stat().st_mode & 0o777) == "0o600"
+        assert oct(lock.parent.stat().st_mode & 0o777) == "0o700"
+    lock.unlink()
+    lock.symlink_to(data / "elsewhere")
+    with pytest.raises(OSError), store.app_lock("a"):
+        pass
+    assert not (data / "elsewhere").exists()

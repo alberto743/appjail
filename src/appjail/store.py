@@ -5,11 +5,13 @@
 and icons the user asks for, and short-lived files in the runtime directory and the temporary directory."""
 
 import contextlib
+import fcntl
 import hashlib
 import os
 import secrets
 import shutil
 import stat
+import time
 from pathlib import Path
 
 
@@ -41,6 +43,40 @@ def appimage_path(name):
 
 def manifest_path(name):
     return config_dir() / "apps" / f"{name}.toml"
+
+
+LOCK_TIMEOUT = 60.0  # seconds a command waits for another one working on the same app
+
+
+class StoreBusy(OSError):
+    """Another appjail command is working on the same app."""
+
+
+def lock_path(name):
+    return data_dir() / "locks" / f"{name}.lock"
+
+
+@contextlib.contextmanager
+def app_lock(name):
+    """Exclusive lock on one app while its files are changed or its tree is prepared (flock: the kernel releases it if
+    the process dies, so there is no stale lock). Held for those short steps only, never while an app runs or while a
+    download is in progress. Waits up to LOCK_TIMEOUT, then raises StoreBusy."""
+    path = lock_path(name)
+    make_private(path.parent)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        deadline = time.monotonic() + LOCK_TIMEOUT
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise StoreBusy(f"another appjail command is working on '{name}'; try again when it has finished") from None
+                time.sleep(0.05)
+        yield
+    finally:
+        os.close(fd)
 
 
 def staging_root():
@@ -91,16 +127,39 @@ def staging(prefix=""):
         remove_tree(stage)
 
 
-def remove_tree(path):
-    """Delete a tree that may contain read-only directories. Never follows symlinks."""
+def _open_up(path):
+    """Make one directory listable and writable by its owner; True when that worked. Never follows a symlink."""
+    try:
+        if stat.S_ISDIR(os.lstat(path).st_mode):
+            os.chmod(path, 0o700)
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def remove_tree(path, strict=False):
+    """Delete a tree that may contain read-only or unreadable directories (an app can make them in its home).
+    Never follows symlinks. With strict, raise OSError when anything is left; otherwise leftovers are ignored
+    (cleanup of scratch space)."""
     path = str(path)
-    for dirpath, _, _ in os.walk(path, followlinks=False):
-        try:
-            if stat.S_ISDIR(os.lstat(dirpath).st_mode):
-                os.chmod(dirpath, 0o700)
-        except OSError:
-            pass
+    opened = set()
+    while True:
+        unreadable = []
+        for dirpath, _, _ in os.walk(path, onerror=unreadable.append, followlinks=False):
+            _open_up(dirpath)
+        # a directory that could not be listed is opened up and the walk repeated, one level deeper each time;
+        # stop when a pass opens nothing new (so a directory that stays unreadable cannot loop forever)
+        new = [e.filename for e in unreadable if e.filename and e.filename not in opened]
+        opened.update(new)
+        progress = False
+        for p in new:
+            progress = _open_up(p) or progress
+        if not progress:
+            break
     shutil.rmtree(path, ignore_errors=True)
+    if strict and os.path.lexists(path):
+        raise OSError(f"could not remove all of {path}; fix its permissions or delete it by hand")
 
 
 def root_path(name):

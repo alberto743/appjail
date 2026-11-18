@@ -318,3 +318,13 @@ def test_live_cli_cli():
     assert rel.assets and all(a.sha256 for a in rel.assets)
     a = next(a for a in rel.assets if a.name.endswith("_linux_amd64.tar.gz"))
     assert c.has_attestation("cli/cli", a.sha256)
+
+
+@pytest.mark.parametrize("value", ["2026-13-45T00:00:00Z", "2026-02-30T10:00:00Z", "2026-01-01T25:00:00Z"])
+def test_impossible_dates_are_rejected_when_read(value):
+    """Shaped like a timestamp but not a date: it must fail here, not later as a traceback in `add`."""
+    bad = release_json([])
+    bad["published_at"] = value
+    c, _ = client({"/repos/o/r/releases/latest": (200, {}, bad)})
+    with pytest.raises(GitHubError, match="timestamp"):
+        c.latest_release("o/r")

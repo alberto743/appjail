@@ -26,8 +26,8 @@ can reach them, and the abstract unix sockets of your session, such as the X ser
 - **`network_host`** (it implies `network`): the app shares your network namespace, for apps that need local services.
   Your abstract unix sockets are then reachable by name, so [Landlock](../isolation/landlock.md) refuses connections to
   those created outside the jail; without Landlock (Linux 6.12) this permission is refused.
-- **The download jails** use the same `pasta` namespace. Without `pasta` they use the host network, with a warning, which
-  is why `passt` is listed among the packages to install.
+- **The download jails** use the same `pasta` namespace. Without `pasta` they are refused, since they would share the
+  host network; `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a warning on each command that does it.
 
 ## Connections
 

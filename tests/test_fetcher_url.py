@@ -262,3 +262,66 @@ def test_main_passes_the_switch(monkeypatch, capsys):
     assert fetcher.main(["f", "--any", "https://e.test/y", "/o", "5"]) == 0
     assert fetcher.main(["f", "--check", "--allow-private-redirects", "https://e.test/z", '"v1"']) == 0
     assert seen == [("https://e.test/x", True), ("https://e.test/y", False), ("https://e.test/z", True)]
+
+
+# -- connect-time address check (DNS rebinding) --------------------------------------------------
+
+
+class _FakeSocket:
+    def settimeout(self, *_):
+        pass
+
+    def close(self):
+        pass
+
+
+def _resolving(monkeypatch, *addresses):
+    import ipaddress
+    monkeypatch.setattr(fetcher, "_addresses", lambda host: {ipaddress.ip_address(a) for a in addresses})
+    connected = []
+    monkeypatch.setattr(fetcher.socket, "create_connection",
+                        lambda address, *a, **k: connected.append(address) or _FakeSocket())
+    return connected
+
+
+def test_a_name_that_resolves_to_a_private_address_is_refused_when_connecting(monkeypatch):
+    """The earlier check resolved the name once and urllib again: a server could answer public, then private."""
+    connected = _resolving(monkeypatch, "192.168.1.5")
+    conn = fetcher.pinned_connection(fetcher.http.client.HTTPConnection, refuse_private=True)("rebind.example", 80)
+    with pytest.raises(OSError, match=fetcher.PRIVATE_REFUSED):
+        conn.connect()
+    assert connected == []
+
+
+def test_one_private_address_among_public_ones_refuses_the_name(monkeypatch):
+    connected = _resolving(monkeypatch, "93.184.215.14", "10.0.0.7")
+    conn = fetcher.pinned_connection(fetcher.http.client.HTTPConnection, refuse_private=True)("mixed.example", 80)
+    with pytest.raises(OSError, match=fetcher.PRIVATE_REFUSED):
+        conn.connect()
+    assert connected == []
+
+
+def test_a_public_name_is_connected_by_the_address_that_was_checked(monkeypatch):
+    connected = _resolving(monkeypatch, "2606:2800:21f:cb07:6820:80da:af6b:8b2c", "93.184.215.14")
+    conn = fetcher.pinned_connection(fetcher.http.client.HTTPConnection, refuse_private=True)("example.org", 80)
+    conn.connect()
+    assert connected == [("93.184.215.14", 80)]  # the address that passed the check, IPv4 first, not a second lookup
+
+
+def test_an_intranet_start_may_connect_to_private_addresses(monkeypatch):
+    connected = _resolving(monkeypatch, "192.168.1.5")
+    conn = fetcher.pinned_connection(fetcher.http.client.HTTPConnection, refuse_private=False)("intranet.lan", 80)
+    conn.connect()
+    assert connected == [("192.168.1.5", 80)]
+
+
+def test_a_name_that_does_not_resolve_cannot_connect(monkeypatch):
+    _resolving(monkeypatch)
+    conn = fetcher.pinned_connection(fetcher.http.client.HTTPConnection, refuse_private=True)("nowhere.invalid", 80)
+    with pytest.raises(OSError, match="resolve"):
+        conn.connect()
+
+
+def test_the_openers_of_check_and_download_use_the_pinned_handlers():
+    kinds = {type(h).__name__ for h in fetcher.pinned_handlers(True)}
+    assert kinds == {"PinnedHTTPHandler", "PinnedHTTPSHandler"}

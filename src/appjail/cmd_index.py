@@ -5,7 +5,6 @@
 
 import functools
 import hashlib
-import shutil
 from urllib.parse import urlsplit
 
 from . import catalog, github, index, indexstore, jail, manifest, store
@@ -85,7 +84,7 @@ def download_catalog(url, download_url, console):
     except JailError as e:
         raise IndexProblem(str(e)) from e
     finally:
-        shutil.rmtree(stage, ignore_errors=True)
+        store.remove_tree(stage)
 
 
 def fetch_repo(source, args, console, client, download_url):

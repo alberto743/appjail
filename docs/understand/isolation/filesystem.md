@@ -68,7 +68,9 @@ Some paths are never granted, whatever the mode:
 Some paths are refused **read-write** only, because something outside the jail would later run or decode what an app
 wrote there: `~/.local/bin`, `~/.local/lib` (where every Python of yours, appjail included, looks for modules),
 `~/.config/autostart`, `~/.config/systemd`, the menu entries in `~/.local/share/applications`, icon themes (the desktop
-decodes icons outside any sandbox), thumbnailers, file-manager scripts, and shell and editor startup files. The same
+decodes icons outside any sandbox), thumbnailers, file-manager scripts, `~/.cargo/bin`, and shell, editor and terminal-multiplexer startup files. A directory
+that holds one of those files counts as the file: `~/.config/git` is refused read-write because git reads
+`~/.config/git/config`. The same
 holds for the toolkit settings, themes and fonts that your other apps apply (`~/.config/gtk-3.0`, `~/.config/kdeglobals`,
 `~/.local/share/themes`, `~/.local/share/fonts`, ...): a style sheet written there changes how every GTK app of yours
 looks, and a font is parsed by the desktop outside any jail. Read-only grants of these stay possible.

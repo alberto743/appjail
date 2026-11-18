@@ -172,7 +172,7 @@ class Client:
         _check_source(source)
         repo = self._get(f"/repos/{source}")
         owner = repo["owner"]
-        user = self._get(f"/users/{owner['login']}")
+        user = self._get(f"/users/{urllib.parse.quote(owner['login'], safe='')}")
         parent = (repo.get("parent") or {}).get("full_name", "") if repo.get("fork") else ""
         return RepoInfo(
             full_name=repo["full_name"],
@@ -273,8 +273,12 @@ def _check_source(source):
 
 
 def _timestamp(value):
-    if not isinstance(value, str) or not manifest.PUBLISHED_RE.fullmatch(value):
-        raise GitHubError(f"unexpected timestamp from GitHub: {textsafe.clean(value, 40)!r}")
+    try:
+        if not isinstance(value, str) or not manifest.PUBLISHED_RE.fullmatch(value):
+            raise ValueError(value)
+        datetime.strptime(value, manifest.TIME_FMT)  # the shape is not enough: month 13 or 30 February is not a date
+    except ValueError:
+        raise GitHubError(f"unexpected timestamp from GitHub: {textsafe.clean(value, 40)!r}") from None
     return value
 
 

@@ -45,3 +45,18 @@ def test_non_string():
 
 def test_clean_drops_zero_width_and_bidi_characters():
     assert textsafe.clean("a\u200bb\u202ec\u2066d\ufeffe\u061cf") == "abcdef"
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("x\x9d0;evil title\x07y", "xy"),            # C1 OSC introducer: the payload goes with it
+    ("x\x9d0;evil\x9cy", "xy"),                  # terminated by C1 ST
+    ("x\x90q1;2\x9cy", "xy"),                    # C1 DCS
+    ("a\U000e0041\U000e0042b", "ab"),            # Unicode tag characters hide text
+    ("a­b⠀cㅤd", "abcd"),          # soft hyphen, braille blank, hangul filler
+    ("a￹b￻c", "abc"),                  # interlinear annotation
+    ("a︀b\U000e0100c", "abc"),              # variation selectors that spoof
+    ("❤️", "❤️"),            # emoji presentation selector is kept
+    ("Ünïcödé 日本語 العربية", "Ünïcödé 日本語 العربية"),
+])
+def test_hidden_and_spoofing_characters(raw, expected):
+    assert textsafe.clean(raw) == expected

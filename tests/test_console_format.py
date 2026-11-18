@@ -135,3 +135,14 @@ def test_table_without_rows_prints_nothing(con):
     c, cap = con
     c.table(["Name", "Size"], [])
     assert cap.readouterr().out == "\n"
+
+
+def test_prompts_are_cleaned_of_untrusted_text(monkeypatch):
+    """A name from the network reaches confirm() and choose(): it must not carry escape sequences into the prompt."""
+    from appjail.console import Console
+    seen = []
+    monkeypatch.setattr("builtins.input", lambda prompt="": seen.append(prompt) or "y")
+    c = Console()
+    assert c.confirm("Copy evil\x1b]52;c;QQ==\x07\x1b[2J.AppImage?") is True
+    assert c.ask("name\x1b[31m: ") == "y"
+    assert all("\x1b" not in p and "\x07" not in p for p in seen)

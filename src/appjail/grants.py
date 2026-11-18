@@ -149,7 +149,10 @@ PERSIST_HOME_DIRS = (".local/bin", ".config/autostart", ".config/systemd", ".con
                      ".profile.d", ".config/plasma-workspace", ".config/Code", ".config/nvim", ".config/zsh",
                      ".local/lib", ".local/share/thumbnailers", ".local/share/kio/servicemenus",
                      ".local/share/kservices5", ".local/share/nautilus/scripts", ".local/share/nemo/actions",
-                     ".local/share/nemo/scripts", ".local/share/icons", ".icons")
+                     ".local/share/nemo/scripts", ".local/share/icons", ".icons",
+                     # read by a host program every time it starts: cargo's binaries on PATH, vim and emacs plugins and
+                     # configuration (they run code), tmux's configuration (it runs commands)
+                     ".cargo/bin", ".vim", ".emacs.d", ".config/tmux")
 # Writable access would let the app change what the desktop's own apps show or decode outside the jail: GTK settings
 # and style sheets (gtk.css, applied to every GTK app of the user), KDE and Qt style settings, themes, fonts (parsed by the host's font loaders)
 # and the fontconfig configuration. Not code, but a way to spoof the interface of other apps or reach a parser outside
@@ -160,7 +163,7 @@ APPEARANCE_HOME_DIRS = (".config/gtk-2.0", ".gtkrc-2.0", ".config/gtk-3.0", ".co
 # Single files that run code outside the jail at login or shell start; never granted read-write.
 PERSIST_HOME_FILES = (".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".profile", ".zshrc", ".zshenv", ".zprofile",
                       ".zlogin", ".xprofile", ".xinitrc", ".xsession", ".xsessionrc", ".pam_environment", ".gitconfig", ".npmrc",
-                      ".pypirc", ".netrc", ".vimrc", ".config/git/config")
+                      ".pypirc", ".netrc", ".vimrc", ".config/git/config", ".tmux.conf", ".emacs", ".inputrc")
 # System trees that are never user data; the jail provides its own /dev, /proc, /run and /etc.
 SYSTEM_PATHS = ("/etc", "/dev", "/proc", "/sys", "/run", "/boot", "/root", "/usr", "/bin", "/sbin", "/lib", "/lib32",
                 "/lib64")
@@ -208,8 +211,9 @@ def sensitive_reason(path, mode, media_user=None):
             if rel == d:
                 return f"~/{d} is too broad: it contains the data of every other application"
         if mode == "rw":
-            if rel in PERSIST_HOME_FILES:
-                return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or tool startup)"
+            for f in PERSIST_HOME_FILES:  # the file itself, or a directory that holds it (~/.config/git for git's config)
+                if rel == f or (rel and _within(f, rel)):
+                    return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or tool startup)"
             for d in PERSIST_HOME_DIRS:
                 if _within(rel, d) or (rel and _within(d, rel)):
                     return f"write access to ~/{rel} could plant code that runs outside the jail (login, shell or desktop startup)"

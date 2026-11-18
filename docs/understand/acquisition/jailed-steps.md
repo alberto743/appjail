@@ -28,8 +28,8 @@ capability is held, the environment is cleared.
 
 The network comes from **pasta** (package `passt`), which gives the jail a private network namespace with ordinary
 outbound connections: the internet is reachable, the services on your own machine's loopback and addresses are not,
-nothing can connect in, and name resolution goes through a forwarder address. Without `pasta` the download jails use the
-host network instead, with a warning on every command that does so; installing `passt` is recommended for that reason.
+nothing can connect in, and name resolution goes through a forwarder address. Without `pasta` the download jails are
+refused (they would share the host network); `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a warning.
 
 What the downloader may do is decided by appjail, never by the server:
 
@@ -80,10 +80,10 @@ and a hostile one can fill only its work directory.
 
 ## Limits
 
-- A redirect's host is resolved when it is checked; a host name that resolves to another address a moment later (DNS
-  rebinding) is not caught.
-- Without `pasta`, the download jail can reach services on your own machine; it still sees no files of yours and keeps
-  only what it downloaded into the staging directory.
+- A URL download resolves the host once and connects to an address it has checked, so a name cannot answer public
+  first and private second (DNS rebinding). A host name that does not resolve cannot connect at all.
+- With `APPJAIL_ALLOW_HOST_NETWORK=1` and no `pasta`, the download jail can reach services on your own machine; it still
+  sees no files of yours and keeps only what it downloaded into the staging directory.
 - The limits on size and entries refuse unusually large AppImages; they protect the disk, not the content.
 - The extractor and the kernel are trusted: a flaw in `unsquashfs` reachable by a crafted image is contained by the
   jail, not prevented.

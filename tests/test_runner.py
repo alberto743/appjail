@@ -405,9 +405,16 @@ def reach(host, port):
         socket.create_connection((host, port), timeout=3).close(); return True
     except OSError:
         return False
-import os
+import os, time
 port, own = int(sys.argv[1]), sys.argv[2]
-urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # DNS and TLS work through the namespace; not counted against the limit
+for attempt in range(3):  # a real request: one slow moment on the network must not fail an isolation test
+    try:
+        urllib.request.urlopen("https://api.github.com/rate_limit", timeout=10).close()  # DNS and TLS work through the namespace; not counted against the limit
+        break
+    except OSError:
+        if attempt == 2:
+            raise
+        time.sleep(2)
 print(reach("127.0.0.1", port), reach(own, port), os.getuid() == int(sys.argv[3]) and os.getgid() == int(sys.argv[4]))
 '''
 
@@ -521,8 +528,15 @@ def test_xwayland_script_waits_for_a_slow_start_but_not_for_a_dead_one(sandbox, 
 
 
 PASTA_PROBE = """#!/usr/bin/python3
-import ctypes, socket, sys, urllib.request
-urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # not counted against the limit
+import ctypes, socket, sys, time, urllib.request
+for attempt in range(3):  # a real request: one slow moment on the network must not fail an isolation test
+    try:
+        urllib.request.urlopen("https://api.github.com/rate_limit", timeout=10).close()  # not counted against the limit
+        break
+    except OSError:
+        if attempt == 2:
+            raise
+        time.sleep(2)
 r = ctypes.CDLL(None, use_errno=True).unshare(0x10000000)  # CLONE_NEWUSER: allowed only with the userns permission
 errno_ = ctypes.get_errno() if r == -1 else 0
 v6 = "none"
@@ -806,3 +820,25 @@ def test_x11_apps_are_refused_too_because_xwayland_is_a_client_of_the_same_socke
 def test_a_headless_app_needs_no_wayland_socket_and_is_not_checked(sandbox, runtime):
     code, _, says = launch_windowed(sandbox, runtime, NO_RESTRICTION, CAPTURE, display="none")
     assert code == 0 and not any("full_wayland" in s for s in says)
+
+
+def test_prepare_holds_the_app_lock(h, monkeypatch):
+    """A launch must not extract the tree while an update swaps it."""
+    from appjail import runner
+    h.add()
+    monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
+    with store.app_lock("app"), pytest.raises(store.StoreBusy):
+        runner.prepare("app", extract=h.extract, say=lambda *_: None)
+
+
+def test_prepare_writes_passwd_and_group_atomically(h, monkeypatch):
+    """The two files under etc are replaced through a temp file, never rewritten in place."""
+    from appjail import runner
+    h.add()
+    written = []
+    real = store.atomic_write
+    monkeypatch.setattr(store, "atomic_write", lambda path, *a, **k: (written.append(path.name), real(path, *a, **k))[1])
+    _m, _root, _home, etc = runner.prepare("app", extract=h.extract, say=lambda *_: None)
+    assert {"passwd", "group"} <= set(written)
+    assert (etc / "passwd").read_text().startswith("root:x:0:0:")
+    assert sorted(p.name for p in etc.iterdir()) == ["group", "passwd"]

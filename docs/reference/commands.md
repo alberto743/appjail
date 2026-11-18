@@ -43,11 +43,14 @@ An option that does not apply to the chosen source is refused, never ignored.
 ### `remove`
 
 `appjail remove APP [--yes]`: delete the app, its private home, its menu entry, and its portal grants and decisions.
+Directories the app made unreadable are opened up first; if anything cannot be deleted the command fails, names the path
+and keeps the manifest, so it can be repeated.
 
 ### `reset`
 
 `appjail reset APP [--yes]`: delete the app's private home (its settings and data), keeping the app, its manifest, its
 permissions and its menu entry. The next run starts with an empty home.
+If anything in the home cannot be deleted the command fails instead of reporting success.
 
 ## Running
 

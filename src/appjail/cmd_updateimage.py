@@ -9,6 +9,7 @@ quarantine needs no second download. `file:` apps are replaced by `update APP --
 (the user holds the bytes).
 """
 
+import os
 import shutil
 from dataclasses import replace
 from urllib.parse import urlsplit
@@ -91,6 +92,8 @@ def update_file(run):
     with store.staging() as stage:
         staged = stage / "download.AppImage"
         shutil.copyfile(real, staged)
+        if staged.stat().st_size != st.st_size:
+            raise Abort("the file changed while it was copied")
         digest = store.sha256_file(staged)
         if digest == m.sha256:
             if not confirm_installed_hash(run, expected):
@@ -247,7 +250,10 @@ def start_quarantine(run, stage, staged, digest, info, expected):
     tier = check_expected(digest, expected)
     show_change(run.console, run.m, digest, tier, info["size"])
     updater.clear_pending(run.name)
-    shutil.copyfile(staged, updater.pending_image(run.name))
+    pending = updater.pending_image(run.name)
+    part = pending.with_name(pending.name + ".part")
+    shutil.copyfile(staged, part)
+    os.replace(part, pending)  # a crash leaves no half-written pending image under its real name
     updater.record_url_candidate(run.name, version_of(digest), run.now, digest, fp, info["etag"], info["last_modified"])
     days = run.args.quarantine
     if days > 0:

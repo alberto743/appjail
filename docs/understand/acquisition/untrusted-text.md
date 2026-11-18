@@ -21,9 +21,11 @@ unescaped can also become a command.
 ## How appjail uses it
 
 - **One cleaner for every line.** Everything appjail prints goes through `textsafe.clean`: escape and control sequences
-  (CSI, OSC, DCS and the rest), C0 and C1 control characters, zero-width and bidirectional characters are removed; tabs
-  and newlines become spaces; long texts are cut. The output layer (`Console`) applies it to every line, so a command
-  cannot print untrusted text by mistake. The window does the same before putting text in a widget.
+  (CSI, OSC, DCS and the rest, in their 7-bit and C1 forms, with their payload), C0 and C1 control characters,
+  zero-width and bidirectional characters, and other invisible or spoofing characters (soft hyphen, fillers, Unicode
+  tag characters, variation selectors other than the emoji one) are removed; tabs and newlines become spaces; long
+  texts are cut. The output layer (`Console`) applies it to every line and to every prompt (a prompt names an asset or a
+  repository from the network), so a command cannot print untrusted text by mistake. The window does the same before putting text in a widget.
 - **Strict parsers with limits.** Catalogs, manifests and the GitHub API's answers are parsed against a fixed schema,
   with size limits; an unexpected shape is an error, not a crash or a guess.
 - **Nothing becomes a command.** appjail never passes untrusted text to a shell. Menu entries are generated: the app's

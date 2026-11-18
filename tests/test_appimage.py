@@ -159,6 +159,29 @@ def test_remove_tree_handles_readonly_dirs(tree):
     assert not tree.exists()
 
 
+def test_remove_tree_handles_unreadable_dirs(tree):
+    """A mode-000 directory (an app can make one in its home) must not survive and must not be reported removed."""
+    deep = tree / "a" / "b"
+    deep.mkdir(parents=True)
+    (deep / "f").write_text("x")
+    inner = deep / "c"
+    inner.mkdir()
+    (inner / "g").write_text("y")
+    inner.chmod(0)
+    deep.chmod(0)
+    (tree / "a").chmod(0)
+    store.remove_tree(tree)
+    assert not tree.exists()
+
+
+def test_remove_tree_strict_raises_when_something_is_left(tree, monkeypatch):
+    (tree / "f").write_text("x")
+    monkeypatch.setattr(store.shutil, "rmtree", lambda *a, **k: None)
+    with pytest.raises(OSError):
+        store.remove_tree(tree, strict=True)
+    store.remove_tree(tree)  # lenient by default: no error
+
+
 # -- supervision -------------------------------------------------------------------------------
 
 

@@ -26,7 +26,7 @@ The table gives the Debian and Ubuntu names; where Fedora's differ they follow i
 |---|---|
 | `bubblewrap` (0.10 or later) | every jail |
 | `squashfs-tools` | extracting AppImages (`unsquashfs`) |
-| `passt` | the `network` permission, and a private network for the download jails; without it apps with `network` are refused and downloads use the host network with a warning |
+| `passt` | the `network` permission, and a private network for the download jails; without it apps with `network` are refused and so are the downloads (`APPJAIL_ALLOW_HOST_NETWORK=1` lets one command use the host network instead) |
 | `xdg-dbus-proxy` | D-Bus grants and portals |
 | `xwayland` (`xorg-x11-server-Xwayland`), `openbox` | X11-only apps (`openbox` for `xwayland-rootful`) |
 | `git` | the manifest history |

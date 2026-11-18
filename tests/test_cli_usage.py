@@ -74,3 +74,24 @@ def test_ctrl_c_at_a_prompt_ends_cleanly(monkeypatch):
     monkeypatch.setitem(cli.COMMANDS, "list", lambda *a: (_ for _ in ()).throw(KeyboardInterrupt()))
     console = Out()
     assert cli.main(["list"], console=console) == 130 and console.lines == ["interrupted"]
+
+
+@pytest.mark.parametrize("make", [
+    lambda: cli.tools.ToolError("tool failed"),
+    lambda: __import__("appjail.attest", fromlist=["x"]).AttestError("attestation failed"),
+    lambda: __import__("appjail.desktop", fromlist=["x"]).DesktopError("desktop failed"),
+    lambda: __import__("appjail.appimage", fromlist=["x"]).ExtractError("extract failed"),
+])
+def test_domain_errors_end_with_a_message_not_a_traceback(monkeypatch, make):
+    errors = []
+
+    class Out(cli.Console):
+        def error(self, line):
+            errors.append(line)
+
+    def boom(*a):
+        raise make()
+
+    monkeypatch.setitem(cli.COMMANDS, "list", boom)
+    assert cli.main(["list"], console=Out()) == 1
+    assert errors and "failed" in errors[0]

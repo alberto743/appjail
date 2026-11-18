@@ -5,12 +5,14 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
 import pytest
 
 from appjail import cli, fetcher, jail
+from appjail.errors import JailError
 
 from .helpers import Script, integration, needs_pasta, pairs
 
@@ -96,17 +98,20 @@ def test_fetcher_main_refuses_bad_url_without_network():
 # -- real bwrap (guest only) --------------------------------------------------------------
 
 CODE = r'''
-import json, os, urllib.request
+import json, os, time, urllib.request
 def can_write(p):
     try:
         open(p, "w").close(); os.unlink(p); return True
     except OSError:
         return False
 caps = [l for l in open("/proc/self/status") if l.startswith("CapEff")][0].split()[1]
-try:
-    status = urllib.request.urlopen("https://api.github.com/rate_limit", timeout=20).status
-except Exception as e:
-    status = repr(e)
+for attempt in range(3):  # a real request: one slow moment on the network must not fail an isolation test
+    try:
+        status = urllib.request.urlopen("https://api.github.com/rate_limit", timeout=10).status
+        break
+    except Exception as e:
+        status = repr(e)
+        time.sleep(2)
 print(json.dumps({
     "env": sorted(os.environ), "pid": os.getpid(), "caps": caps, "net": status,
     "home_exists": os.path.exists("/home"), "host_marker": os.path.exists("/tmp/host-marker"),
@@ -157,17 +162,43 @@ def test_net_wrap_prefixes_pasta_without_forwarding(monkeypatch):
         assert out[out.index(opt) + 1] == "none"
 
 
-def test_net_wrap_without_pasta_keeps_the_command_and_warns_once(monkeypatch, capsys):
+def test_net_wrap_without_pasta_refuses_a_helper_jail(monkeypatch):
+    """A download, attestation or catalog jail would otherwise share the host network, localhost services included."""
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.delenv(jail.ALLOW_HOST_NETWORK, raising=False)
+    with pytest.raises(JailError, match=r"passt.*APPJAIL_ALLOW_HOST_NETWORK"):
+        jail.net_wrap(["bwrap", "--share-net"])
+
+
+@pytest.mark.parametrize("value", ["", "0", "no", "yes", "true"])
+def test_only_one_means_yes_for_the_host_network_opt_out(monkeypatch, value):
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, value)
+    with pytest.raises(JailError):
+        jail.net_wrap(["bwrap", "--share-net"])
+
+
+def test_the_opt_out_keeps_the_command_and_warns_once(monkeypatch, capsys):
     monkeypatch.setattr(jail, "find_pasta", lambda: None)
     monkeypatch.setattr(jail, "_warned_no_pasta", False)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, "1")
     argv = ["bwrap", "--share-net"]
     assert jail.net_wrap(argv) == argv and jail.net_wrap(argv) == argv
     assert capsys.readouterr().err.count("pasta") == 1
 
 
+def test_an_app_jail_is_refused_without_pasta_even_with_the_opt_out(monkeypatch):
+    """The opt-out is for helper jails; an app with `network` still needs pasta or network_host."""
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, "1")
+    with pytest.raises(jail.RunError, match="passt"):
+        jail.net_wrap(["bwrap", "--share-net"], required=True)
+
+
 def test_the_no_pasta_warning_reaches_the_console_of_each_command(monkeypatch):
     """A window has no terminal: a warning printed to stderr would never be seen there."""
     monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, "1")
     monkeypatch.setitem(cli.COMMANDS, "list", lambda *a: jail.net_wrap(["bwrap"]) and jail.net_wrap(["bwrap"]) and 0)
     for _ in range(2):
         console = Script()
@@ -186,14 +217,21 @@ def test_run_wraps_only_jails_with_a_network(monkeypatch):
 
 
 PROBE = r'''
-import socket, sys, urllib.request
+import socket, sys, time, urllib.request
 def reach(host, port):
     try:
         socket.create_connection((host, port), timeout=3).close(); return True
     except OSError:
         return False
 if len(sys.argv) > 3:
-    urllib.request.urlopen("https://api.github.com/rate_limit", timeout=15).close()  # DNS and TLS still work through pasta; not counted against the limit
+    for attempt in range(3):  # a real request: one slow moment on the network must not fail an isolation test
+        try:
+            urllib.request.urlopen("https://api.github.com/rate_limit", timeout=10).close()  # DNS and TLS still work through pasta; not counted against the limit
+            break
+        except OSError:
+            if attempt == 2:
+                raise
+            time.sleep(2)
 print(reach("127.0.0.1", int(sys.argv[1])), reach(sys.argv[2], int(sys.argv[1])))
 '''
 
@@ -233,3 +271,41 @@ def test_url_downloads_pass_the_private_redirect_switch_to_the_fetcher(monkeypat
     assert calls[0][:2] == ["--any", "https://e.test/a"]
     assert calls[1][:3] == ["--any", "--allow-private-redirects", "https://e.test/a"]
     assert calls[2][:3] == ["--check", "--allow-private-redirects", "https://e.test/a"]
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("bubblewrap 0.11.0\n", (0, 11, 0)),
+    ("bubblewrap 0.10.0", (0, 10, 0)),
+    ("bubblewrap 0.9", (0, 9, 0)),
+    ("bwrap 1.2.3-rc1", (1, 2, 3)),
+    ("nonsense", None),
+    ("", None),
+])
+def test_bwrap_version_is_parsed(text, expected):
+    assert jail.parse_bwrap_version(text) == expected
+
+
+def _fake_bwrap(monkeypatch, output):
+    jail.find_bwrap.cache_clear()
+    monkeypatch.setattr(jail.shutil, "which", lambda name: "/usr/bin/bwrap")
+    monkeypatch.setattr(jail.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout=output, stderr=""))
+
+
+def test_old_bwrap_is_refused_with_the_needed_version(monkeypatch):
+    _fake_bwrap(monkeypatch, "bubblewrap 0.9.0\n")
+    with pytest.raises(JailError, match=r"0\.9\.0.*0\.10"):
+        jail.find_bwrap()
+    jail.find_bwrap.cache_clear()
+
+
+def test_unreadable_bwrap_version_is_refused(monkeypatch):
+    _fake_bwrap(monkeypatch, "who knows\n")
+    with pytest.raises(JailError, match="version"):
+        jail.find_bwrap()
+    jail.find_bwrap.cache_clear()
+
+
+def test_new_enough_bwrap_is_accepted(monkeypatch):
+    _fake_bwrap(monkeypatch, "bubblewrap 0.10.0\n")
+    assert jail.find_bwrap() == "/usr/bin/bwrap"
+    jail.find_bwrap.cache_clear()
