@@ -806,3 +806,12 @@ def test_x11_apps_are_refused_too_because_xwayland_is_a_client_of_the_same_socke
 def test_a_headless_app_needs_no_wayland_socket_and_is_not_checked(sandbox, runtime):
     code, _, says = launch_windowed(sandbox, runtime, NO_RESTRICTION, CAPTURE, display="none")
     assert code == 0 and not any("full_wayland" in s for s in says)
+
+
+def test_prepare_holds_the_app_lock(h, monkeypatch):
+    """A launch must not extract the tree while an update swaps it."""
+    from appjail import runner
+    h.add()
+    monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
+    with store.app_lock("app"), pytest.raises(store.StoreBusy):
+        runner.prepare("app", extract=h.extract, say=lambda *_: None)

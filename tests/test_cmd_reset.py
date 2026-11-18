@@ -58,3 +58,10 @@ def test_reset_reports_failure_when_the_home_cannot_be_removed(h, monkeypatch):
     with pytest.raises(OSError, match="could not remove"):
         reset("--yes")
     assert home.exists()
+
+
+def test_reset_waits_for_the_app_lock_and_then_gives_up_with_a_message(h, monkeypatch):
+    with_home(h)
+    monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
+    with store.app_lock("app"), pytest.raises(store.StoreBusy):
+        reset("--yes")

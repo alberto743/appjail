@@ -5,11 +5,13 @@
 and icons the user asks for, and short-lived files in the runtime directory and the temporary directory."""
 
 import contextlib
+import fcntl
 import hashlib
 import os
 import secrets
 import shutil
 import stat
+import time
 from pathlib import Path
 
 
@@ -41,6 +43,40 @@ def appimage_path(name):
 
 def manifest_path(name):
     return config_dir() / "apps" / f"{name}.toml"
+
+
+LOCK_TIMEOUT = 60.0  # seconds a command waits for another one working on the same app
+
+
+class StoreBusy(OSError):
+    """Another appjail command is working on the same app."""
+
+
+def lock_path(name):
+    return data_dir() / "locks" / f"{name}.lock"
+
+
+@contextlib.contextmanager
+def app_lock(name):
+    """Exclusive lock on one app while its files are changed or its tree is prepared (flock: the kernel releases it if
+    the process dies, so there is no stale lock). Held for those short steps only, never while an app runs or while a
+    download is in progress. Waits up to LOCK_TIMEOUT, then raises StoreBusy."""
+    path = lock_path(name)
+    make_private(path.parent)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        deadline = time.monotonic() + LOCK_TIMEOUT
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise StoreBusy(f"another appjail command is working on '{name}'; try again when it has finished") from None
+                time.sleep(0.05)
+        yield
+    finally:
+        os.close(fd)
 
 
 def staging_root():

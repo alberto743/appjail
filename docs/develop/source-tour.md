@@ -16,6 +16,7 @@ almost certainly wrong.
 | **Untrusted work happens in a jail** | `jail.py` (helper jails), `runtimejail.py` (the app jail) | a new step that touches downloaded bytes or runs a helper program gets a jail built from `jail.common_args`, never a plain `subprocess` call |
 | **Policy is pure** | `grants.py`, `valid.py`, `manifest.py`, `updater.blocks` | decisions about what is allowed take values and return reasons; they do no I/O, so they are easy to test exhaustively |
 | **Every line printed goes through the console** | `console.Console`, `textsafe.clean` | commands never call `print`; untrusted text cannot reach the terminal unfiltered |
+| **One command changes an app's files at a time** | `store.app_lock` (a `flock` on `locks/NAME.lock`, released by the kernel if the process dies) | taken by `install.swap_in`, `runner.prepare`, `remove` and `reset` for those short steps only: never while a download runs or an app is running. A second command waits up to `store.LOCK_TIMEOUT`, then fails with `StoreBusy` |
 | **Every write is atomic, every temporary directory is cleaned up** | `store.atomic_write`, `store.staging`, `store.remove_tree` | no `open(path, "w")` on a file appjail keeps; staging goes in a `with store.staging()` block |
 
 ## From the command line to a command

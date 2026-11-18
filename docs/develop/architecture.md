@@ -16,7 +16,7 @@ pieces depend on each other. To follow the code itself, command by command, read
 | Jails | `jail.py` (helper jails, `pasta`), `runtimejail.py` (the app jail), `seccomp.py`, `landlock.py`, `reopen.py`, `linger.py` |
 | Running | `runner.py` (verify, prepare, launch), `wayland.py`, `dbusproxy.py`, `portal.py`, `audiomode.py`, `audiojail.py` |
 | Acquiring | `github.py`, `fetcher.py` (runs inside the download jail), `appimage.py`, `attest.py`, `snappy.py`, `tools.py` |
-| Updates and state | `updater.py`, `history.py`, `store.py` (paths, atomic writes, staging) |
+| Updates and state | `updater.py`, `history.py`, `store.py` (paths, atomic writes, staging, per-app lock) |
 | Desktop | `desktop.py`, `pngclean.py` |
 | Catalog | `catalog.py`, `indexstore.py`, `index.py` |
 | Text and output | `textsafe.py`, `console.py`, `errors.py` |

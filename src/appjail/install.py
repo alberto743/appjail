@@ -95,7 +95,14 @@ def ask_extractor(console, extract_ok):
 
 
 def swap_in(name, staged, stage, record, extract, fallback):
-    """Extract `staged` inside `stage`, then put image, tree, markers and manifest (last) in place.
+    """Extract `staged` inside `stage`, then put image, tree, markers and manifest (last) in place, under the app's lock
+    (a launch must not extract its tree while it is being swapped)."""
+    with store.app_lock(name):
+        return _swap_in(name, staged, stage, record, extract, fallback)
+
+
+def _swap_in(name, staged, stage, record, extract, fallback):
+    """The body of swap_in.
 
     A new app (no app directory yet) is removed again if anything fails; for an update the previous image and tree
     are kept aside until everything worked and are restored on failure. Returns (entries, size) of the tree."""

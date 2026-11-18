@@ -149,9 +149,10 @@ def cmd_remove(args, console):
     console.out(f"This deletes the manifest and the app's files, including its private home (its settings and data): {adir}")
     if not args.yes and not console.confirm(f"Remove {name}?"):
         raise Abort("cancelled")
-    revoke_portal_grants(name, mpath, console)
-    store.remove_tree(adir, strict=True)  # the manifest stays when something is left, so the removal can be repeated
-    mpath.unlink(missing_ok=True)
+    with store.app_lock(name):
+        revoke_portal_grants(name, mpath, console)
+        store.remove_tree(adir, strict=True)  # the manifest stays when something is left, so the removal can be repeated
+        mpath.unlink(missing_ok=True)
     history.record(f"remove {name}")
     console.out(f"Removed {name}.")
     forget(name, console)
@@ -169,7 +170,8 @@ def cmd_reset(args, console):
     console.out("The app, its manifest, its permissions and its menu entry are kept; the next run starts with an empty home.")
     if not args.yes and not console.confirm(f"Reset {name}?"):
         raise Abort("cancelled")
-    store.remove_tree(home, strict=True)
+    with store.app_lock(name):
+        store.remove_tree(home, strict=True)
     history.record(f"reset {name}")
     console.out(f"Reset {name}.")
 
