@@ -281,6 +281,21 @@ def test_merge_dirs_read_write_wins_and_order_is_kept():
     ("~/.local/bin", "rw", True),
     ("~/.config/myapp", "rw", False),
     ("~/.config/autostart/x", "rw", True),
+    # a directory that holds a startup file is as dangerous as the file: git reads ~/.config/git/config
+    ("~/.config/git", "rw", True),
+    ("~/.config/git", "", False),
+    ("~/.config/git/other", "rw", False),
+    # more places a host program reads code or commands from
+    ("~/.cargo/bin", "rw", True),
+    ("~/.cargo/bin", "", False),
+    ("~/.vim", "rw", True),
+    ("~/.vim/colors", "rw", True),
+    ("~/.emacs.d", "rw", True),
+    ("~/.config/tmux", "rw", True),
+    ("~/.tmux.conf", "rw", True),
+    ("~/.emacs", "rw", True),
+    ("~/.inputrc", "rw", True),
+    ("~/.tmux.conf", "", False),
     ("~/.local/lib", "", False),
     ("~/.local/lib/python3.13/site-packages", "rw", True),  # a .pth there runs in every host Python
     ("~/.local/share/thumbnailers", "rw", True),
