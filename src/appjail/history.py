@@ -44,13 +44,18 @@ def _ready(create):
     return _git(["init", "-q", "-b", "main"], base).returncode == 0
 
 
+IGNORE_TEXT = "*.tmp\n.*.tmp\n"  # atomic_write's temporary files must not be committed
+
+
 def record(message):
     """Commit the current state of the config directory. Returns True if a commit was made."""
     try:
         if not _ready(create=True):
             return False
         base = store.config_dir()
-        (base / ".gitignore").write_text("*.tmp\n.*.tmp\n")
+        ignore = base / ".gitignore"
+        if not ignore.is_file() or ignore.read_text() != IGNORE_TEXT:
+            store.atomic_write(ignore, IGNORE_TEXT)
         _git(["add", "-A"], base)
         if _git(["diff", "--cached", "--quiet"], base).returncode == 0:
             return False

@@ -815,3 +815,16 @@ def test_prepare_holds_the_app_lock(h, monkeypatch):
     monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
     with store.app_lock("app"), pytest.raises(store.StoreBusy):
         runner.prepare("app", extract=h.extract, say=lambda *_: None)
+
+
+def test_prepare_writes_passwd_and_group_atomically(h, monkeypatch):
+    """The two files under etc are replaced through a temp file, never rewritten in place."""
+    from appjail import runner
+    h.add()
+    written = []
+    real = store.atomic_write
+    monkeypatch.setattr(store, "atomic_write", lambda path, *a, **k: (written.append(path.name), real(path, *a, **k))[1])
+    _m, _root, _home, etc = runner.prepare("app", extract=h.extract, say=lambda *_: None)
+    assert {"passwd", "group"} <= set(written)
+    assert (etc / "passwd").read_text().startswith("root:x:0:0:")
+    assert sorted(p.name for p in etc.iterdir()) == ["group", "passwd"]

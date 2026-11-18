@@ -93,8 +93,8 @@ def _prepare(name, extract, say, warn):
     for d in (home, etc):
         store.make_private(d)
     passwd, group = _passwd(os.getuid(), os.getgid())
-    (etc / "passwd").write_text(passwd)
-    (etc / "group").write_text(group)
+    store.atomic_write(etc / "passwd", passwd, 0o644)
+    store.atomic_write(etc / "group", group, 0o644)
     return m, root, home, etc
 
 

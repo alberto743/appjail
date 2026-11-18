@@ -79,3 +79,14 @@ def test_history_command_without_history(h):
     c = Script()
     cli.cmd_history(cli.build_parser().parse_args(["history"]), c)
     assert "No recorded history" in c.text
+
+
+@needs_git
+def test_gitignore_is_written_once_not_on_every_record(h, on):
+    h.add()
+    ignore = store.config_dir() / ".gitignore"
+    assert ignore.read_text() == "*.tmp\n.*.tmp\n"
+    os.utime(ignore, ns=(10**9, 10**9))  # an old mtime: a rewrite would change it
+    history.record("second")
+    history.record("third")
+    assert ignore.stat().st_mtime_ns == 10**9 and ignore.read_text() == "*.tmp\n.*.tmp\n"
