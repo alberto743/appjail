@@ -6,7 +6,15 @@ from datetime import timedelta
 
 import pytest
 
-from appjail import appimage, cli, cmd_addimage, manifest, store, updater
+from appjail import (
+    appimage,
+    cli,
+    cmd_addimage,
+    cmd_updateimage,
+    manifest,
+    store,
+    updater,
+)
 from appjail.console import Abort
 from appjail.services import Services
 
@@ -429,3 +437,21 @@ def test_an_unrecordable_download_keeps_the_old_install(h):
     assert code == 1 and "app: cannot record this download: fingerprint.etag is too long or contains control" in c.text
     assert store.manifest_path("app").read_text() == before and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
     assert list(store.staging_root().iterdir()) == []
+
+
+def test_update_file_refuses_a_file_that_changed_while_it_was_copied(file_app, monkeypatch):
+    """As `add --file` does: the size seen before the copy must be the size of the copy."""
+    h, old, new = file_app
+    install_file(h, old)
+    real_copy = cmd_updateimage.shutil.copyfile
+
+    def copy_then_grow(src, dst):
+        out = real_copy(src, dst)
+        with open(dst, "ab") as f:
+            f.write(b"more")
+        return out
+
+    monkeypatch.setattr(cmd_updateimage.shutil, "copyfile", copy_then_grow)
+    code, c = update(h, None, extra=("--file", str(new)))
+    assert code != 0 and "changed while" in c.text
+    assert mf().sha256 == SHA and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
