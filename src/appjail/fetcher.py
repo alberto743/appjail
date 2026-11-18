@@ -18,6 +18,7 @@ window arithmetic, so both sides compute the same fingerprint).
 """
 
 import hashlib
+import http.client
 import ipaddress
 import json
 import socket
@@ -66,15 +67,58 @@ def _addresses(host):
     return {ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos}
 
 
+def _private_address(address):
+    if address.version == 6 and address.ipv4_mapped:
+        address = address.ipv4_mapped
+    return not address.is_global
+
+
 def private_host(host):
     """Whether a host is, or resolves to, an address that is not on the public internet: the LAN, loopback, link-local,
     carrier-grade NAT, unique-local IPv6, an IPv4 address written as IPv6 that is one of those."""
-    for address in _addresses(host or ""):
-        if address.version == 6 and address.ipv4_mapped:
-            address = address.ipv4_mapped
-        if not address.is_global:
-            return True
-    return False
+    return any(_private_address(a) for a in _addresses(host or ""))
+
+
+def pinned_connection(base, refuse_private):
+    """`base` (HTTPConnection or HTTPSConnection) that resolves its host once, refuses it when any of its addresses is
+    private (with refuse_private), and connects to an address it has checked. Checking in one lookup and letting urllib
+    resolve again would let a server answer a public address first and a private one second (DNS rebinding)."""
+    class Pinned(base):
+        def connect(self):
+            addresses = sorted(_addresses(self.host), key=lambda a: (a.version, int(a)))  # IPv4 first, like most hosts
+            if not addresses:
+                raise OSError(f"cannot resolve {self.host}")
+            if refuse_private and any(_private_address(a) for a in addresses):
+                raise OSError(f"{PRIVATE_REFUSED}: {self.host} (allow it with {PRIVATE_SWITCH})")
+            error = None
+            for address in addresses:
+                try:
+                    sock = socket.create_connection((str(address), self.port), self.timeout, self.source_address)
+                    break
+                except OSError as e:
+                    error = e
+            else:
+                raise error
+            if issubclass(base, http.client.HTTPSConnection):
+                sock = self._context.wrap_socket(sock, server_hostname=self.host)  # the name is verified, not the address
+            self.sock = sock
+    return Pinned
+
+
+def pinned_handlers(refuse_private):
+    """The urllib handlers that use pinned_connection, to pass to build_opener next to the redirect guard."""
+    plain = pinned_connection(http.client.HTTPConnection, refuse_private)
+    secure = pinned_connection(http.client.HTTPSConnection, refuse_private)
+
+    class PinnedHTTPHandler(urllib.request.HTTPHandler):
+        def http_open(self, req):
+            return self.do_open(plain, req)
+
+    class PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+        def https_open(self, req):
+            return self.do_open(secure, req, context=self._context)
+
+    return [PinnedHTTPHandler(), PinnedHTTPSHandler()]
 
 
 class _Guard(urllib.request.HTTPRedirectHandler):
@@ -184,7 +228,8 @@ def check(url, etag=None, modified=None, opener=None, private_ok=False):
     {"status": "fingerprint", "size", "chunks", "etag", "last_modified"}   what the server serves now
     {"status": "no-range", "etag", "last_modified"}  it does not support range requests: a full download is needed
     """
-    opener = opener or urllib.request.build_opener(any_guard(url, private_ok))
+    guard = any_guard(url, private_ok)
+    opener = opener or urllib.request.build_opener(guard, *pinned_handlers(guard.refuse_private))
     headers = {"Range": f"bytes=0-{HEAD - 1}"}
     if etag:
         headers["If-None-Match"] = etag
@@ -217,7 +262,7 @@ def check(url, etag=None, modified=None, opener=None, private_ok=False):
 def download_any(url, out, cap, opener=None, private_ok=False):
     """Download to `out` (exclusive create); returns what the server said, or raises ValueError past the cap."""
     guard = any_guard(url, private_ok)
-    opener = opener or urllib.request.build_opener(guard)
+    opener = opener or urllib.request.build_opener(guard, *pinned_handlers(guard.refuse_private))
     total = 0
     with _open(opener, url) as resp, open(out, "xb") as f:
         announced = resp.headers.get("Content-Length")

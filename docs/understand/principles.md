@@ -58,9 +58,10 @@ it fails, the damage must be limited to what was granted.
 **In practice.** A grant that cannot be honoured stops the app with a message instead of starting it with less
 protection than promised: `network` without the `pasta` tool, `network_host` without Landlock, a Wayland socket that
 offers screen capture to an app without `full_wayland`. When the private audio graph cannot start, an app without
-the `mic` permission gets no sound rather than the host's audio socket, which would also open the microphone. Where a missing
-helper only weakens a *helper* jail, appjail says so and goes on: without `pasta` the download jails share the host
-network, with a warning on every command that does it (install `passt` to avoid it). One permission knowingly gives
+the `mic` permission gets no sound rather than the host's audio socket, which would also open the microphone. Without `pasta`
+the download, attestation and catalog jails are refused too, since they would share the host network and reach services
+on your own machine; `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a warning, and an app's jail is
+never put on the host network whatever it says. One permission knowingly gives
 more than its name: `audio_mode = pulse` hands the app the host's Pulse socket, which always includes the microphone.
 You choose that mode, and `add` and `perms` say so when you do; the default mode keeps the promise.
 

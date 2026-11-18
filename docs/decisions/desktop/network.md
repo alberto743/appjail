@@ -13,8 +13,10 @@ inside the jail (new code on the path of every download, and `git` and `gh` spea
 **Decision.** `pasta`. With `network`, the app runs in a private namespace where outbound TCP and UDP work and the
 host's loopback and own addresses are unreachable; DNS goes through a forwarder address, and nothing is forwarded into
 the namespace. Without `pasta` an app with `network` is refused, never put on the host network. The download jails use
-the same mechanism; without `pasta` they fall back to the host network with a warning, which is why `passt` is listed
-among the packages to install. `network_host` keeps the host network for apps that need local services, and then
+the same mechanism; without `pasta` they are refused too (November 2026: they used to fall back to the host network with
+a warning, which let a hostile server's redirect or a flaw in the downloader reach the services on localhost). The
+variable `APPJAIL_ALLOW_HOST_NETWORK=1` is the opt-out for a machine that cannot have `passt`; it applies to helper
+jails only. `network_host` keeps the host network for apps that need local services, and then
 requires Landlock.
 
 **Consequences.** Other machines on your LAN remain reachable: attacks on them are outside the threat model, whose aim

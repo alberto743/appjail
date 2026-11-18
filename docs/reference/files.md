@@ -29,6 +29,7 @@ temporary files in `/tmp` (the seccomp filter of an app behind `pasta`, an icon 
 |---|---|
 | `APPJAIL_DATA_DIR` | replaces `~/.local/share/appjail` |
 | `APPJAIL_CONFIG_DIR` | replaces `~/.config/appjail` |
+| `APPJAIL_ALLOW_HOST_NETWORK` | `1`: without `pasta`, download, attestation and catalog jails share the host network (with a warning) instead of being refused; an app's jail is never affected |
 | `GITHUB_TOKEN` | raises the GitHub API rate limit; sent only to `api.github.com` |
 | `NO_COLOR` | no colour in the output (also when `TERM=dumb` or not on a terminal) |
 | `XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY` | where the Wayland socket and the audio sockets are |

@@ -44,6 +44,9 @@ PASTA_DNS = "169.254.1.53"
 PASTA_ARGS = ("--config-net", "--quiet", "--no-map-gw", "--dns-forward", PASTA_DNS,
               "-t", "none", "-u", "none", "-T", "none", "-U", "none")
 NO_PASTA = "pasta (package passt) is not installed: network jails share the host network, including services on localhost"
+# Without pasta the download, attestation and catalog jails refuse to run, unless this variable is `1`: then they run
+# on the host network with the warning above on every command that does it.
+ALLOW_HOST_NETWORK = "APPJAIL_ALLOW_HOST_NETWORK"
 _warned_no_pasta = False
 _warn = None  # the running command's console.warn (see warn_with)
 
@@ -64,9 +67,10 @@ def net_wrap(argv, required=False, fd_files=None, lifeline=None):
 
     pasta gives the namespace outbound access through ordinary host sockets, but no path to the host's loopback
     (no port forwarding, no gateway mapping), so the jail cannot reach services bound to localhost. Without
-    pasta the jail keeps sharing the host network (warned once). argv is a complete bwrap command line that
+    pasta a helper jail (download, attestation, catalog) is refused with JailError, unless APPJAIL_ALLOW_HOST_NETWORK=1:
+    then it keeps sharing the host network (warned once). argv is a complete bwrap command line that
     uses --share-net, which then shares pasta's namespace and not the host's. required (an app's jail, which runs
-    untrusted code): raise RunError instead of falling back to the host network. pasta closes every inherited
+    untrusted code): raise RunError instead, whatever the variable says. pasta closes every inherited
     descriptor, so fd_files ({fd number: host path, or (shell redirect operator, host path)}) are opened inside
     the namespace for bwrap (--seccomp N, and the portal's --json-status-fd / --block-fd through FIFOs): the
     caller keeps those files private and removes them after the run. Descriptor numbers must be one digit (dash).
@@ -78,6 +82,10 @@ def net_wrap(argv, required=False, fd_files=None, lifeline=None):
         raise RunError("network access needs pasta (package passt) to keep the app off the host's loopback; "
                        "install it, or grant network_host (`appjail perms APP --allow network_host`)")
     if pasta is None:
+        if os.environ.get(ALLOW_HOST_NETWORK) != "1":
+            raise JailError("this step needs a private network and pasta (package passt) is not installed, so it would "
+                            "share the host network, localhost services included. Install passt, or accept that for "
+                            f"this command with {ALLOW_HOST_NETWORK}=1")
         if not _warned_no_pasta:
             _warned_no_pasta = True
             if _warn:

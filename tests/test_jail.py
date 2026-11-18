@@ -159,17 +159,43 @@ def test_net_wrap_prefixes_pasta_without_forwarding(monkeypatch):
         assert out[out.index(opt) + 1] == "none"
 
 
-def test_net_wrap_without_pasta_keeps_the_command_and_warns_once(monkeypatch, capsys):
+def test_net_wrap_without_pasta_refuses_a_helper_jail(monkeypatch):
+    """A download, attestation or catalog jail would otherwise share the host network, localhost services included."""
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.delenv(jail.ALLOW_HOST_NETWORK, raising=False)
+    with pytest.raises(JailError, match=r"passt.*APPJAIL_ALLOW_HOST_NETWORK"):
+        jail.net_wrap(["bwrap", "--share-net"])
+
+
+@pytest.mark.parametrize("value", ["", "0", "no", "yes", "true"])
+def test_only_one_means_yes_for_the_host_network_opt_out(monkeypatch, value):
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, value)
+    with pytest.raises(JailError):
+        jail.net_wrap(["bwrap", "--share-net"])
+
+
+def test_the_opt_out_keeps_the_command_and_warns_once(monkeypatch, capsys):
     monkeypatch.setattr(jail, "find_pasta", lambda: None)
     monkeypatch.setattr(jail, "_warned_no_pasta", False)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, "1")
     argv = ["bwrap", "--share-net"]
     assert jail.net_wrap(argv) == argv and jail.net_wrap(argv) == argv
     assert capsys.readouterr().err.count("pasta") == 1
 
 
+def test_an_app_jail_is_refused_without_pasta_even_with_the_opt_out(monkeypatch):
+    """The opt-out is for helper jails; an app with `network` still needs pasta or network_host."""
+    monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, "1")
+    with pytest.raises(jail.RunError, match="passt"):
+        jail.net_wrap(["bwrap", "--share-net"], required=True)
+
+
 def test_the_no_pasta_warning_reaches_the_console_of_each_command(monkeypatch):
     """A window has no terminal: a warning printed to stderr would never be seen there."""
     monkeypatch.setattr(jail, "find_pasta", lambda: None)
+    monkeypatch.setenv(jail.ALLOW_HOST_NETWORK, "1")
     monkeypatch.setitem(cli.COMMANDS, "list", lambda *a: jail.net_wrap(["bwrap"]) and jail.net_wrap(["bwrap"]) and 0)
     for _ in range(2):
         console = Script()
