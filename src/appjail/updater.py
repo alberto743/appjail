@@ -135,7 +135,9 @@ def record_url_candidate(name, tag, now, digest, fingerprint, etag=None, last_mo
 
 def clear_pending(name):
     pending_path(name).unlink(missing_ok=True)
-    pending_image(name).unlink(missing_ok=True)
+    image = pending_image(name)
+    image.unlink(missing_ok=True)
+    image.with_name(image.name + ".part").unlink(missing_ok=True)  # left by a crash while it was copied
 
 
 def installed():

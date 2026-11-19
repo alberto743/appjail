@@ -62,12 +62,12 @@ names of the other accounts on the machine are not visible either.
 
 ### Nested user namespaces
 
-A process in a user namespace may normally create a further one inside it, and with it new mount and network
-namespaces of its own. appjail forbids that by default, in two ways: bubblewrap's `--disable-userns` stops the processes in the jail from
-creating further user namespaces, and the [seccomp filter](seccomp.md) refuses the system
-calls that create or join namespaces (`unshare`, `setns`, `clone` with any of the "new namespace" flags) and the mount
-API. Nested namespaces are where much of the kernel's privilege-escalation history begins, and an app has no need for
-them unless it builds a sandbox of its own.
+A process in a user namespace may normally create a further one inside it, and with it new mount and network namespaces
+of its own. appjail forbids that by default, in two ways: bubblewrap's `--disable-userns` stops the processes in the
+jail from creating further user namespaces, and the [seccomp filter](seccomp.md) refuses the system calls that create or
+join namespaces (`unshare`, `setns`, `clone` with any of the "new namespace" flags) and the mount API. Nested namespaces
+are where much of the kernel's privilege-escalation history begins, and an app has no need for them unless it builds a
+sandbox of its own.
 
 Some apps do: Chromium and every Electron app isolate their renderer processes in namespaces, and an app that runs
 `bwrap` itself needs them too. For those, the `userns` permission lifts exactly this restriction and nothing else.
@@ -106,4 +106,5 @@ without it; with it, the jail is weaker against kernel bugs.
   [capabilities(7)](https://man7.org/linux/man-pages/man7/capabilities.7.html).
 - Michael Kerrisk, [Namespaces in operation, part 1: namespaces overview](https://lwn.net/Articles/531114/),
   LWN.net, 2013.
-- Canonical, [Restricted unprivileged user namespaces are coming to Ubuntu 23.10](https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces).
+- Canonical, [Restricted unprivileged user namespaces are coming to Ubuntu
+  23.10](https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces).

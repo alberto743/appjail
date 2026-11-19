@@ -99,7 +99,7 @@ The helper jails are built from the same parts, with even less inside:
 
 | Helper jail | Sees | Network |
 |---|---|---|
-| download (also catalogs and pinned tools) | the read-only system, `/etc/ssl`, the downloader, one staging directory | a private namespace made by `pasta`, or the host's with a warning when `pasta` is missing |
+| download (also catalogs and pinned tools) | the read-only system, `/etc/ssl`, the downloader, one staging directory | a private namespace made by `pasta`; without `pasta` the step is refused, unless `APPJAIL_ALLOW_HOST_NETWORK=1` gives it the host's, with a warning |
 | attestation check | the downloaded file, the attestation bundles, a scratch directory, the pinned `gh` | as the download |
 | extraction | the AppImage (read-only) and one work directory | none |
 | manifest history (`git`) | appjail's configuration directory | none |

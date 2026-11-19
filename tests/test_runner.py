@@ -7,12 +7,14 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
 from appjail import (
+    cli,
     jail,
     linger,
     manifest,
@@ -28,6 +30,7 @@ from .helpers import (
     NO_RESTRICTION,
     RESTRICTED,
     Extractor,
+    Script,
     build,
     install,
     integration,
@@ -115,6 +118,51 @@ def test_networked_app_runs_in_pasta_and_is_refused_without_it(sandbox, runtime,
     with pytest.raises(RunError, match="passt"):
         go()
     assert len(captured) == 1
+
+
+def test_a_launch_holds_the_running_lock_until_the_app_ends(sandbox, runtime):
+    install(sandbox)
+    seen = []
+
+    def run(argv):
+        with pytest.raises(store.StoreBusy):
+            store.refuse_if_running("app")
+        seen.append(argv)
+        return 0
+    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
+    runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None, runner=run, **COMPOSITOR)
+    assert seen
+    store.refuse_if_running("app")
+
+
+@integration
+def test_reset_is_refused_while_a_real_jail_runs_and_the_lock_is_not_inherited(sandbox, runtime):
+    install(sandbox, display="none")
+
+    def extract(image, dest, fallback=False):
+        (Path(dest) / "usr").mkdir(parents=True)
+        (Path(dest) / "AppRun").write_text("#!/bin/sh\nls -l /proc/$$/fd > /home/app/fds\ntouch /home/app/started\n"
+                                           "while [ ! -e /home/app/stop ]; do sleep 0.1; done\n")
+        (Path(dest) / "AppRun").chmod(0o755)
+        return 1, 1
+    codes = []
+    t = threading.Thread(target=lambda: codes.append(runner.launch(
+        "app", [], host_env={"XDG_RUNTIME_DIR": str(runtime)}, extract=extract, say=lambda *_: None)))
+    t.start()
+    home = store.home_path("app")
+    args = cli.build_parser().parse_args(["reset", "app", "--yes"])
+    try:
+        assert wait_for(lambda: (home / "started").exists(), 30)
+        with pytest.raises(store.StoreBusy, match="is running"):
+            cli.cmd_reset(args, Script())
+        assert (home / "started").exists()
+        assert ".run" not in (home / "fds").read_text()
+    finally:
+        (home / "stop").touch()
+        t.join(30)
+    assert codes == [0]
+    cli.cmd_reset(args, Script())
+    assert not home.exists()
 
 
 def test_network_host_and_offline_apps_are_not_wrapped(sandbox, runtime, monkeypatch):

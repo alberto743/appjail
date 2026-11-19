@@ -24,7 +24,7 @@ def _desktop_entry(args):
         print(f"error: {e}", file=sys.stderr)
         return 1
     if importlib.util.find_spec("tkinter") is None:
-        print("note: tkinter is missing; install the system package python3-tk before using the entry", file=sys.stderr)
+        print("note: tkinter is missing; install the system package python3-tk (python3-tkinter on Fedora) before using the entry", file=sys.stderr)
     return 0
 
 
@@ -39,7 +39,7 @@ def main(argv=None):
     try:
         import tkinter
     except ImportError:
-        print("appjail-gui needs tkinter: install the system package python3-tk", file=sys.stderr)
+        print("appjail-gui needs tkinter: install the system package python3-tk (python3-tkinter on Fedora)", file=sys.stderr)
         return 1
     from .app import main as run
 

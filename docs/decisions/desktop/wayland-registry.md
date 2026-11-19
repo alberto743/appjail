@@ -28,10 +28,10 @@ about, and so a warning that scrolls past is never taken for consent.
 **Consequences.** Apps run on GNOME, sway, labwc and Hyprland 0.55 (and on Cinnamon 6.4; Cinnamon 6.8 offers the layer
 shell and is refused) without the permission. **KWin is refused**, like any compositor whose app socket lists a
 privileged interface: accepting what it lists there would grant what `full_wayland` grants without asking, and would go
-stale with KWin. Plasma users need `full_wayland` per app until KWin hides the layer shell, the Plasma shell and output
-management. Ordinary copy and paste is not affected anywhere: it uses the core clipboard, which needs keyboard focus
-(measured on every compositor, in both directions). The measurements are of headless compositors, not of full desktop
-sessions.
+stale with KWin. Plasma users need `full_wayland` per app until KWin hides the layer shell, the Plasma shell, output
+management, the appmenu manager and the desktop controls. Ordinary copy and paste is not affected anywhere: it uses the
+core clipboard, which needs keyboard focus (measured on every compositor, in both directions). The measurements are of
+headless compositors, not of full desktop sessions.
 
 **Revisit when** KWin hides its privileged globals on restricted sockets, or a narrower grant for the clipboard alone is
 wanted.

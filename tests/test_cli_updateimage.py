@@ -51,9 +51,11 @@ def test_an_incomplete_pending_candidate_starts_over(h):
     install_url(h, server)
     updater.note_seen("app", "k", "t", NOW)  # a well-formed pending file that holds no URL candidate
     updater.pending_image("app").write_bytes(b"x")
+    part = updater.pending_image("app").with_name("pending.AppImage.part")  # a copy cut short by a crash
+    part.write_bytes(b"x")
     code, c = run(h, server)
     assert code == 0 and "up to date" in c.text
-    assert updater.load_pending("app") is None and not updater.pending_image("app").exists()
+    assert updater.load_pending("app") is None and not updater.pending_image("app").exists() and not part.exists()
 
 
 def test_unchanged_url_is_a_304_and_downloads_nothing(h):

@@ -50,8 +50,8 @@ appjail perms NAME --unset-env CLAUDE_USE_WAYLAND
 ```
 
 It is not a permission and grants nothing, and it survives `update` and `reset`. The manifest is plain text kept in git,
-so keep tokens and passwords out of it. Names appjail sets itself (`HOME`, `DISPLAY`, the toolkit hints) and names that
-load code (`LD_PRELOAD`, `PYTHONPATH`, ...) are refused: see the [policy
+so keep tokens and passwords out of it. Names appjail sets itself (`HOME`, `DISPLAY`, the toolkit hints) and common
+names that load code (`LD_PRELOAD`, `PYTHONPATH`, `GTK_MODULES`, ...) are refused: see the [policy
 lists](../reference/policy.md#environment-variables).
 
 ## Warnings and refusals

@@ -47,15 +47,20 @@ def _warner(say, warn):
     return warn or (lambda text: say(f"! warning: {text}"))
 
 
-def prepare(name, extract=appimage.extract, say=print, warn=None):
+def prepare(name, extract=appimage.extract, say=print, warn=None, hold=None):
     """Return (manifest, root, home, etc_dir) ready for launch. Holds the app's lock meanwhile, so an update cannot swap
     the tree under an extraction (and two launches do not extract at once); it is released before the app starts.
+    hold: an ExitStack that receives store.running(name), taken before the app's lock is released, so remove and reset
+    refuse until the stack closes.
 
     Refuses to run when the stored AppImage no longer matches the pinned sha256. Re-extracts
     when the tree is missing or was made from a different file.
     """
     with store.app_lock(manifest.check_name(name)):
-        return _prepare(name, extract, say, warn)
+        prepared = _prepare(name, extract, say, warn)
+        if hold is not None:
+            hold.enter_context(store.running(name))
+        return prepared
 
 
 def _prepare(name, extract, say, warn):
@@ -283,13 +288,13 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
            registry=wayland.interfaces):
     """Start the app in its jail and return its exit status."""
     warn = _warner(say, warn)
-    m, root, home, etc = prepare(name, extract, say, warn)
-    if history.modified(name):
-        warn(f"the manifest of {name} was changed outside appjail since its last recorded change "
-             f"(see `appjail history {name}` and the config directory's git log)")
     env = dict(os.environ if host_env is None else host_env)
     scoped = landlock.available()
     with contextlib.ExitStack() as stack:
+        m, root, home, etc = prepare(name, extract, say, warn, hold=stack)
+        if history.modified(name):
+            warn(f"the manifest of {name} was changed outside appjail since its last recorded change "
+                 f"(see `appjail history {name}` and the config directory's git log)")
         perms, opened, extra_args = _open_grants(stack, m.permissions, extra_dirs, extra_files, extra_args, say)
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)

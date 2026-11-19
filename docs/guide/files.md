@@ -7,7 +7,8 @@ built, and why, is explained in [the filesystem view](../understand/isolation/fi
 
 Each app has a private home that it sees as `/home/app`. On your side it is
 `~/.local/share/appjail/apps/NAME/home`. Settings, caches and anything the app saves "in its home" land there and are
-kept between runs. `appjail remove NAME` deletes it, after asking.
+kept between runs. `appjail reset NAME` empties it and keeps the app; `appjail remove NAME` deletes it with the app.
+Both ask first, and both refuse while the app runs.
 
 To give an app a file, you can copy it into that folder; the ways below avoid copies.
 
@@ -54,7 +55,8 @@ These are refused in every mode, with a message:
 
 These are refused **read-write** only, because something outside the jail would later run or decode what the app writes
 there: `~/.local/bin`, `~/.local/lib`, autostart and systemd user folders, menu entries, icon themes, thumbnailers,
-file-manager scripts, and shell and editor startup files; and the toolkit settings, themes and fonts your other apps use
+file-manager scripts, cargo's `~/.cargo/bin`, and shell, editor and tmux startup files (and any folder that holds
+one, such as `~/.config/git`); and the toolkit settings, themes and fonts your other apps use
 (`~/.config/gtk-3.0`, `~/.config/gtk-4.0`, `~/.config/kdeglobals`, `~/.local/share/themes`, `~/.local/share/fonts`,
 `~/.config/fontconfig`, ...), where a written file would change how they look.
 
@@ -80,7 +82,8 @@ under `/run/user/UID` are your session bus, your Wayland socket, your audio serv
 agents. A grant of anything there would put those within reach, so appjail refuses `/run` as a whole, for folders and
 for single files alike, rather than judging which parts of it are harmless. The one exception is a mount point below
 your own `/run/media/USER`, or a path inside one: nothing but drives is mounted there, and the name has to be yours (the
-account running the app), so another user's drive is refused.
+account running the app), so another user's drive is refused. A manifest does not know whose name that will be, so
+`perms` accepts any name there and `run` refuses a drive that is not yours.
 
 ## Alternatives
 

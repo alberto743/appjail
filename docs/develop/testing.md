@@ -57,12 +57,12 @@ To resume work: `start.sh`, wait for ssh, `provision.sh` if `packages.txt` chang
 `tests/container/run.sh` is a quick loop for what needs no kernel feature and starts no jail: building the site and the
 static checks. It is a rootless podman container (`debian:13-slim`, the hashed requirements of
 `.github/requirements-docs.txt` and the ruff of `.github/requirements-ruff.txt`) that runs no appjail code. It never
-replaces the guests: the suite on all three is still the gate before a commit and a push. The repository is mounted
-read-only (`serve` needs the live sources and mounts it read-write; zensical then writes `site/` and `.cache/`, both
-ignored by git), and every command but `image` and `serve` runs without a network. `serve` listens on the loopback
-only, on a port above the range Linux gives to outgoing connections (`/proc/sys/net/ipv4/ip_local_port_range`,
-32768-60999 by default; the default is in `run.sh`, `PORT` changes it). Moving to a new Debian stable is a manual change
-of the `FROM` line.
+replaces the guests: the suite on Debian is still the gate before a commit, and on all three before a push. The
+repository is mounted read-only (`serve` needs the live sources and mounts it read-write; zensical then writes `site/`
+and `.cache/`, both ignored by git), and every command but `image` and `serve` runs without a network. `serve` listens
+on the loopback only, on a port above the range Linux gives to outgoing connections
+(`/proc/sys/net/ipv4/ip_local_port_range`, 32768-60999 by default; the default is in `run.sh`, `PORT` changes it).
+Moving to a new Debian stable is a manual change of the `FROM` line.
 
 ```sh
 tests/container/run.sh image    # build the image (the only step with network access)
@@ -80,14 +80,14 @@ GUEST=fedora tests/vm/test.sh       # and on Fedora 45
 tests/vm/test.sh -k appimage -x     # any pytest arguments
 ```
 
-The full suite must pass on Debian 13 before a commit, and on every supported system before a push: a pass on one is
-not a pass for the push. A documentation-only commit is the exception: one that changes only `docs/`, Markdown files outside `src/` and `tests/`, or `zensical.toml`
-(but not `docs/reference/policy.md`, which is generated from the source) is checked with `tests/container/run.sh build`
-and `tests/container/run.sh check` in [the tooling container](#the-tooling-container), or without it with
-`tests/vm/docs.sh` and `tests/vm/test.sh tests/test_docs.py tests/test_reuse.py` on one guest. A push whose batch
-includes any other commit still needs every guest, and CI runs the full suite on every push. Tests that start real jails
-run only with `APPJAIL_INTEGRATION=1`, which `test.sh` sets. Opt-in suites download from the network and are run by
-hand, one group at a time:
+The full suite must pass on Debian 13 before a commit, and on every supported system before a push: a pass on one is not
+a pass for the push. A documentation-only commit is the exception: one that changes only `docs/`, Markdown files outside
+`src/` and `tests/`, or `zensical.toml` (but not `docs/reference/policy.md`, which is generated from the source) is
+checked with `tests/container/run.sh build` and `tests/container/run.sh check` in [the tooling
+container](#the-tooling-container), or without it with `tests/vm/docs.sh` and `tests/vm/test.sh tests/test_docs.py
+tests/test_reuse.py` on one guest. A push whose batch includes any other commit still needs every guest, and CI runs the
+full suite on every push. Tests that start real jails run only with `APPJAIL_INTEGRATION=1`, which `test.sh` sets.
+Opt-in suites download from the network and are run by hand, one group at a time:
 
 | Suite | Environment | File |
 |---|---|---|

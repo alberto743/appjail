@@ -47,7 +47,8 @@ appjail --help
 ```
 
 From a clone of the repository: `pipx install .`, or without installing, `PYTHONPATH=src python3 -m appjail --help`.
-appjail never updates itself: upgrade with `pipx upgrade appjail` after reading what changed.
+appjail never updates itself: upgrade with `pipx upgrade appjail` after reading what changed
+([release notes](https://github.com/alberto743/appjail/releases)).
 
 ## A first app
 

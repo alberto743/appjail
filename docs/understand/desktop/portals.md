@@ -26,13 +26,11 @@ offer the dialogs its backend implements.
 
 ## How appjail uses it
 
-- **`portals = true`** gives the app a **safe set** through the [filtering proxy](dbus.md): file chooser, notifications,
-  settings, trash, printing, inhibiting sleep, network, proxy, power and memory status, the secret portal, real-time
-  scheduling, and the document portal. Everything else on the portal's name is invisible.
-- **Opt-in interfaces** that give more must be named one by one, with a warning: opening URIs in other apps, e-mail,
-  screenshots, screen casting, remote desktop, global shortcuts, input capture, camera, location, account information,
-  wallpaper, running in the background, USB devices. Spawning commands on the host and installing launchers are never
-  available.
+- **`portals = true`** gives the app a **safe set** through the [filtering proxy](dbus.md). Everything else on the
+  portal's name is invisible.
+- **Opt-in interfaces** that give more must be named one by one, with a warning. Spawning commands on the host and
+  installing launchers are never available. Each portal of the three groups is described
+  [below](#the-portals-appjail-knows).
 - **An identity the portal understands.** appjail writes a Flatpak-style identity for each running app: the file the
   portal reads, with the application id `app.appjail.NAME`, and the jail's process id taken from bubblewrap. The id is the portal's
   whole notion of who the app is, so two apps must never share one: in each dot-separated part of the name, `_` becomes
@@ -41,17 +39,16 @@ offer the dialogs its backend implements.
   into the *proxy's* jail, because the proxy's connection is what the portal sees as the caller, never into the app's,
   so the app can neither read nor forge it. Nothing depends on Flatpak; this is a compatibility shim.
 - **The document portal** is started if needed, and only the app's own view of it is bound into the jail.
-- **Each portal in turn** is described in [The portals appjail knows](#the-portals-appjail-knows) below.
 - **Taking back.** `appjail portals NAME` lists the files the app received and revokes them (`--revoke`,
   `--revoke-all`), through the portal itself, so the files disappear from the app's view at once. `remove` also deletes
   the app's remembered portal decisions, so a later app with the same name starts with none.
 
-## The portals appjail knows
+### The portals appjail knows
 
 The names are the part after `org.freedesktop.portal.`. "Dialog" says what the portal documentation states about asking
 you; a backend may ask more or less, and where the documentation is silent the table says so.
 
-### Safe set (`portals = true`)
+#### Safe set (`portals = true`)
 
 | Portal | What the app can do | Dialog |
 | --- | --- | --- |
@@ -71,7 +68,7 @@ you; a backend may ask more or less, and where the documentation is silent the t
 Of these, only `FileChooser` and `Print` ask you; the rest reveal little or act only on what the app already holds.
 The document portal comes with the set.
 
-### Opt-in (`portal_interfaces`)
+#### Opt-in (`portal_interfaces`)
 
 Each needs its name in `portal_interfaces` and raises a warning when you grant it.
 
@@ -91,7 +88,7 @@ Each needs its name in `portal_interfaces` and raises a warning when you grant i
 | `Background` | Ask to keep running in the background and to start at login. See the Limits about `flatpak run`. | None stated |
 | `Usb` | List, watch and open USB devices, each handed over as a file descriptor. Needs a general permission and one per device. | A prompt to allow or deny each device |
 
-### Never available
+#### Never available
 
 | Portal | Why it is refused |
 | --- | --- |

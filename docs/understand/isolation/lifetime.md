@@ -31,6 +31,12 @@ launcher starts the real program in the background and exits would be killed the
   of a private PID namespace, so it can never reach anything outside).
 - **Helper processes die with the app.** The D-Bus proxy, the private audio graph and the portal identity are started
   for the app and stopped when it ends; each of them also dies with appjail.
+- **An app's files stay while it runs.** Every launch holds a shared lock on the app (`locks/NAME.run`) from the moment
+  its tree is ready until the jail ends; the kernel drops it when appjail exits, however it exits. `remove` and `reset`
+  refuse while any launch holds it, and so does an update when it comes to replace the tree (the running jail binds the
+  old one, which is then deleted), so a running app never loses its files under it. Changes to the files themselves (an
+  update swapping the tree, a launch extracting it, a removal) take turns through a second, exclusive lock
+  (`locks/NAME.lock`): a command that finds it taken waits up to a minute, then gives up with a message.
 
 ### Apps that detach: `linger`
 
@@ -46,6 +52,7 @@ grants nothing: it only changes when the jail ends.
 - `pasta` and its private network namespace are why the lifeline exists.
 - [bubblewrap](bubblewrap.md)'s `--die-with-parent` and `--new-session` are the first two mechanisms above.
 - Decision: [The jail ends with its command](../../decisions/isolation/lifetime.md).
+- Decision: [No change under a running app](../../decisions/isolation/app-lock.md).
 
 ## Limits
 
@@ -54,6 +61,10 @@ grants nothing: it only changes when the jail ends.
   runtime directory is emptied.
 - With `linger`, an app that leaves a process behind (a crash reporter, a background service of its own) keeps
   `appjail run` from returning until that process exits. Ctrl-C still ends everything.
+- An update of a running app downloads and checks the new version, then fails before replacing anything; a candidate
+  in quarantine stays pending, and `update` installs it once the app is closed.
+- Extracting a large app can hold the exclusive lock for longer than a minute, so a command started meanwhile on the
+  same app gives up and has to be repeated.
 
 ## References
 

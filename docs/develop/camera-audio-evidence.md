@@ -47,6 +47,7 @@ camera, microphone or headset.
 | The seccomp filter lets V4L2 ioctls through | it blocks only `TIOCSTI` and `TIOCLINUX` on `ioctl` | measured |
 | No camera present, or two cameras | the jail starts with none; both usable with two | measured |
 | The camera grant gives no audio | no `/dev/snd` | measured |
+| An app that finds cameras by listing `/dev` | a real laptop camera (UVC) with Webcamoid's V4L2 plugin: in the jail it lists no camera, because bwrap's `/dev` reports the bound nodes as regular files; with the host's `/dev` bound whole, as an experiment, it lists both nodes | measured on the maintainer's machine (2026-11-15) |
 | Real USB webcam, hot-unplug, effect of the capability query on a real device | not tested | not done |
 
 ## Camera and screen through portals
@@ -119,7 +120,7 @@ differed:
 | Why | WirePlumber's `monitors/v4l2/enumerate-device.lua` starts the V4L2 monitor, when the feature `monitor.camera.seat-monitoring` is on, only once logind reports the seat `active`; an ssh session on a headless guest is `online` (the log says "Seat state changed: online"). A real desktop session has an active seat |
 | `monitor.camera.seat-monitoring = disabled` in the profile (`wireplumber.profiles`, `main`) | the V4L2 device and `v4l2_input.platform-vivid.0` (`Video/Source`, role `Camera`) appear, `wpctl status` lists them, and the 1.6.11 plugin reads the controls the earlier releases could not, so WirePlumber activates and links the node |
 | The Camera portal, by hand, then as `tests/test_camera_portal.py` | `IsCameraPresent` true; `OpenPipeWireRemote` after a stored "yes" returned a remote; GStreamer's `pipewiresrc` on its fd wrote a 320x180 PNG, linked by the session manager and not by `pw-link`; in the test, from inside the app jail through the filtered bus. With the stored decision "no" the portal answers `NotAllowed` and the app gets no remote |
-| The same test on Debian 13 (PipeWire 1.4.2) and Ubuntu 26.04 (1.6.2) | skipped: the node's Props cannot be read, so WirePlumber never links it (the explained fault below) |
+| The same test on Debian 13 (PipeWire 1.4.2) and Ubuntu 26.04 (1.6.2) | skipped: the node's Props cannot be read, so WirePlumber never links it (the explained fault above) |
 
 Both audio differences keep the property the graph is for: nothing of the host's devices is reachable from the jail.
 

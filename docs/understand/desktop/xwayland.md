@@ -45,7 +45,8 @@ Giving a jailed app that server would give it every other X11 app.
 - GPU acceleration through the private Xwayland, and clipboard and drag and drop through the rootful window, have not
   been verified.
 - In rootless mode on a scaled screen, X11 apps can look blurry.
-- Needs the `xwayland` package, and `openbox` for the rootful mode; `run` stops with a message when one is missing.
+- Needs the `xwayland` package (`xorg-x11-server-Xwayland` on Fedora), and `openbox` for the rootful mode; `run` stops
+  with a message when one is missing.
 
 ## References
 

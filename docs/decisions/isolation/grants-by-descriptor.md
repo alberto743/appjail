@@ -16,5 +16,5 @@ Behind `pasta`, which closes inherited descriptors, a wrapper opens each path ag
 start unless device and inode match what was checked. Checking after the open makes walking each component
 unnecessary: a swapped component changes what is opened, and that is what gets judged.
 
-**Consequences.** bubblewrap 0.10 or later is required; all three supported systems (Debian 13, Ubuntu 26.04, Fedora 45) have it. A `dirs` entry that names a
-regular file is refused (`--file` is the way to grant one file).
+**Consequences.** bubblewrap 0.10 or later is required; all three supported systems (Debian 13, Ubuntu 26.04, Fedora 45)
+have it. A `dirs` entry that names a regular file is refused (`--file` is the way to grant one file).

@@ -95,6 +95,7 @@ nav = [
       "decisions/isolation/landlock.md",
       "decisions/isolation/environment.md",
       "decisions/isolation/lifetime.md",
+      "decisions/isolation/app-lock.md",
     ] },
     { "Desktop access" = [
       "decisions/desktop/index.md",

@@ -65,3 +65,10 @@ def test_reset_waits_for_the_app_lock_and_then_gives_up_with_a_message(h, monkey
     monkeypatch.setattr(store, "LOCK_TIMEOUT", 0.3)
     with store.app_lock("app"), pytest.raises(store.StoreBusy):
         reset("--yes")
+
+
+def test_reset_is_refused_while_the_app_runs(h):
+    home = with_home(h)
+    with store.running("app"), pytest.raises(store.StoreBusy, match="is running"):
+        reset("--yes")
+    assert (home / "data.txt").exists()
