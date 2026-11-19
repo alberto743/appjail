@@ -27,7 +27,7 @@ the other switches only when true. Each key is described in the [permission refe
 
 | Key | Type |
 |---|---|
-| `network`, `network_host`, `audio`, `mic`, `gpu`, `camera`, `portals`, `userns`, `linger`, `full_wayland` | boolean |
+| `network`, `network_host`, `audio`, `mic`, `gpu`, `camera`, `portals`, `userns`, `linger`, `full_wayland`, `raw_terminal` | boolean |
 | `audio_mode` | `"pipewire"` (default, not written) or `"pulse"` |
 | `display` | `"wayland"` (default), `"xwayland"`, `"xwayland-rootful"`, `"none"` |
 | `display_size` | `"WxH"`, each side 320 to 8192; written only when not `1280x800` |
