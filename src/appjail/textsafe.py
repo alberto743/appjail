@@ -37,3 +37,17 @@ def clean(text, max_len=2000):
     if max_len is not None and len(text) > max_len:
         text = text[: max_len - 1] + "…"
     return text
+
+
+def has_escape(text):
+    """Whether the text holds an escape sequence (what clean_output would remove)."""
+    return _ESC.search(str(text)) is not None
+
+
+def clean_output(text):
+    """One line of an app's output without escape sequences and control characters; tabs and spaces are kept.
+
+    For text that is shown as it was written (an app's output), unlike clean, which turns the line into one short
+    sentence: it does not collapse white space and does not cut the line.
+    """
+    return _CTRL.sub("", _ESC.sub("", str(text)))

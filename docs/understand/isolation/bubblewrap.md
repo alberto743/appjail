@@ -71,8 +71,9 @@ and refuses an older or unreadable one with a message that names the needed vers
   appjail's options, which is why they are built in one place and tested.
 - It cannot apply Landlock, and it has no notion of resource limits (memory, processes); an app can still exhaust
   memory or CPU.
-- The app shares the terminal it was started from (standard input, output and error): it can read what you type there
-  while it runs, and write control sequences to it ([untrusted text](../acquisition/untrusted-text.md#limits)).
+- With `raw_terminal`, the app shares the terminal it was started from (standard input, output and error): it can read
+  what you type there while it runs, and write control sequences to it. Without it, appjail gives the app no input and
+  cleans its output ([untrusted text](../acquisition/untrusted-text.md#limits)).
 - The system directories are bound read-only, not hidden: the app can read the programs and libraries installed on
   your system, and their configuration under `/usr`.
 

@@ -90,7 +90,10 @@ RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopb
                 ("userns", "nested user namespaces (weakens the kernel-level isolation: needed by Electron/Chromium sandboxes)"),
                 ("full_wayland", ("running on a compositor whose Wayland socket for the app still lists privileged interfaces "
                                   "(the app may then capture the screen, inject input, read the clipboard without focus or control "
-                                  "other windows, depending on the compositor); a socket that lists none is unaffected")))
+                                  "other windows, depending on the compositor); a socket that lists none is unaffected")),
+                ("raw_terminal", ("your terminal as it is: what the app prints is not cleaned, so it can set your clipboard or "
+                                  "window title, rewrite the screen and make the terminal type replies into your input, and it "
+                                  "can read what you type in that terminal")))
 
 
 def warn_new_grants(console, old, new):
@@ -131,7 +134,7 @@ def permissions_from_args(args):
         dbus_own=dbus_from_args(args.dbus_own, check=grants.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
         portals="portals" in allowed, userns="userns" in allowed, linger="linger" in allowed,
-        full_wayland="full_wayland" in allowed,
+        full_wayland="full_wayland" in allowed, raw_terminal="raw_terminal" in allowed,
         audio="audio" in allowed or "mic" in allowed, mic="mic" in allowed, audio_mode=args.audio_mode,
         gpu="gpu" in allowed, camera="camera" in allowed,
         display=args.display, display_size=args.display_size,

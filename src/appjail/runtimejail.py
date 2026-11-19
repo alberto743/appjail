@@ -6,6 +6,7 @@
 import fcntl
 import os
 import pwd
+import re
 import stat
 import struct
 from pathlib import Path
@@ -221,6 +222,22 @@ def _app_env(host_env, rt, xwayland, windowed=True):
     return env
 
 
+TERM_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,63}")
+TERMINFO_DIRS = ("/usr/share/terminfo", "/usr/lib/terminfo")  # the jail sees the host's /usr (its /etc is its own)
+
+
+def _terminal_env(host_env, exists=os.path.isdir):
+    """TERM from the host (when it looks like a terminal name) and the terminfo directories of the host's /usr, which
+    an app that bundles its own curses does not always find; for an app that has your terminal as it is."""
+    env = {}
+    if TERM_RE.fullmatch(host_env.get("TERM", "")):
+        env["TERM"] = host_env["TERM"]
+    dirs = [d for d in TERMINFO_DIRS if exists(d)]
+    if dirs:
+        env["TERMINFO_DIRS"] = ":".join(dirs)
+    return env
+
+
 def _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env):
     """The filtered bus socket and the document portal's directory; adds their variables to `env`."""
     args = []
@@ -388,6 +405,9 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
         if k in env:
             raise RunError(f"env {k} is set by appjail and cannot be overridden")
         env[k] = v
+    if perms.raw_terminal:  # what the app's own [env] says wins
+        for k, v in _terminal_env(host_env).items():
+            env.setdefault(k, v)
     for k, v in env.items():
         args += ["--setenv", k, v]
     if status_fd is not None:

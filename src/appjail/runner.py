@@ -10,6 +10,7 @@ import select
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 from dataclasses import replace
 from pathlib import Path
@@ -28,6 +29,7 @@ from . import (
     runtimejail,
     seccomp,
     store,
+    termfilter,
     wayland,
 )
 from .errors import RunError
@@ -158,18 +160,33 @@ def _wait_group(proc):
             os.killpg(proc.pid, signal.SIGKILL)
 
 
-def _run_app(argv, filter_fd=None, pipes=None, instance=None, grant_fds=()):
+def _run_app(argv, filter_fd=None, pipes=None, instance=None, grant_fds=(), terminal=None):
     """Start the jail, publish its init pid for the portal, then let the app run; return its exit status.
 
     filter_fd: the seccomp memfd bwrap inherits; None behind pasta, which closes inherited descriptors (the filter
     then reaches bwrap through a file, see jail.net_wrap). grant_fds: the granted paths bwrap binds; empty behind pasta.
+    terminal: a termfilter.Terminal that cleans the app's output when it goes to a terminal (None: the app keeps the streams).
     """
     env = {"PATH": "/usr/bin:/bin"}
     keep = (*grant_fds, *(() if filter_fd is None else (filter_fd,)))
+    io = terminal.popen_kwargs() if terminal else {}
+    try:
+        return _start_and_wait(argv, env, keep, pipes, instance, io, terminal)
+    finally:
+        if terminal:
+            terminal.finish()
+
+
+def _start_and_wait(argv, env, keep, pipes, instance, io, terminal):
     if instance is None:
-        return _wait_group(subprocess.Popen(argv, env=env, pass_fds=keep, start_new_session=True))
-    proc = subprocess.Popen(argv, env=env, start_new_session=True,
+        proc = subprocess.Popen(argv, env=env, pass_fds=keep, start_new_session=True, **io)
+        if terminal:
+            terminal.start(proc)
+        return _wait_group(proc)
+    proc = subprocess.Popen(argv, env=env, start_new_session=True, **io,
                             pass_fds=(*keep, *(pipes.fds[n] for n in ("status_w", "block_r") if n in pipes.fds)))
+    if terminal:
+        terminal.start(proc)
     try:
         pipes.close("status_w")
         pipes.close("block_r")
@@ -285,8 +302,11 @@ def _check_wayland_socket(name, perms, restricted_socket, offered, warn):
 
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, warn=None, runner=None,
            extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket,
-           registry=wayland.interfaces):
-    """Start the app in its jail and return its exit status."""
+           registry=wayland.interfaces, raw=False):
+    """Start the app in its jail and return its exit status.
+
+    raw: this run gives the app your terminal as it is, as the `raw_terminal` permission does for every run.
+    """
     warn = _warner(say, warn)
     env = dict(os.environ if host_env is None else host_env)
     scoped = landlock.available()
@@ -296,6 +316,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             warn(f"the manifest of {name} was changed outside appjail since its last recorded change "
                  f"(see `appjail history {name}` and the config directory's git log)")
         perms, opened, extra_args = _open_grants(stack, m.permissions, extra_dirs, extra_files, extra_args, say)
+        if raw:
+            perms = replace(perms, raw_terminal=True)  # for this run: the app also gets TERM, as with the permission
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
@@ -321,4 +343,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             argv = landlock.wrap(argv)  # start its command under the no_new_privs that Landlock needs
         if runner:
             return runner(argv)
-        return _run_app(argv, filter_fd, pipes, instance, () if in_pasta else opened.fds)
+        terminal = termfilter.plan(perms.raw_terminal, sys.stdin, sys.stdout, sys.stderr)
+        status = _run_app(argv, filter_fd, pipes, instance, () if in_pasta else opened.fds, terminal)
+        if terminal and terminal.saw_escape:
+            say(termfilter.HINT.replace("NAME", name))
+        return status

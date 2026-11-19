@@ -30,6 +30,22 @@ installation review then lists them with the others.
 
 Permissions take effect at the next start of the app. Several can be combined in one command.
 
+## Apps that run in a terminal
+
+When an app's output goes to your terminal, appjail gives the app no input and removes the control sequences from what
+it prints: some of them set your clipboard or window title, rewrite the screen or make the terminal type into your input.
+A command-line tool that only prints keeps working (without colours, and its output may come late). A tool that asks
+questions, or a full-screen program such as `htop`, needs your terminal as it is:
+
+```sh
+appjail run htop --raw                       # this run only
+appjail perms htop --allow raw_terminal      # every run; it also gets your TERM so the program can draw
+```
+
+Grant it only to an app you trust. After a run that had sequences removed, appjail says so and names these two ways.
+Apps started from the menu or the window are not affected. See [untrusted
+text](../understand/acquisition/untrusted-text.md#limits) for what is and is not cleaned.
+
 ## Grant for one run only
 
 ```sh

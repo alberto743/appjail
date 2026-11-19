@@ -20,6 +20,7 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `userns` | off | nested user namespaces and the mount API inside the jail ([namespaces](../understand/isolation/namespaces.md#nested-user-namespaces)) | | yes |
 | `linger` | off | nothing; the jail lasts until every process in it has exited ([process lifetime](../understand/isolation/lifetime.md)) | | no |
 | `full_wayland` | off | running although the app's Wayland socket lists privileged interfaces, or interfaces appjail does not know | | yes |
+| `raw_terminal` | off | your terminal as it is: without it, when the app's output goes to a terminal, appjail gives the app no input and cleans its output of control sequences ([untrusted text](../understand/acquisition/untrusted-text.md#limits)). With it, the app sees your terminal and a validated `TERM` | | yes |
 
 ## Values
 

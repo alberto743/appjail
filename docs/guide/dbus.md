@@ -67,7 +67,8 @@ talking to whoever holds the name now
 
 ## Finding the names an app needs
 
-- **The app's own messages.** Run it from a terminal (`appjail run NAME`) and look for D-Bus errors such as
+- **The app's own messages.** Run it from a terminal (`appjail run NAME`; appjail removes control sequences from what
+  it prints, which leaves these messages readable) and look for D-Bus errors such as
   `The name org.example.Service was not provided by any .service files` or `ServiceUnknown`: they name the service.
 - **The app's Flatpak manifest**, if it is on Flathub: the `--talk-name=` and `--own-name=` lines of its `finish-args`
   are the names its developers found necessary. They are a starting point, not a list to copy whole: a Flatpak app

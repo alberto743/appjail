@@ -201,6 +201,9 @@ def build_parser():
     run.add_argument("--file", action="append", default=[], metavar="PATH[:ro|:rw]",
                      help="bind just this file for this run (read-only unless :rw) and pass its in-jail path to the app; "
                           "repeatable. To name a file that ends in :rw or :ro, add the mode yourself (x:rw:ro)")
+    run.add_argument("--raw", action="store_true",
+                     help="for this run only, give the app your terminal as it is (like the raw_terminal permission): "
+                          "its output is not cleaned of control sequences")
     return p
 
 
@@ -234,7 +237,7 @@ def _index(args, client, console, app_args):
 
 def _run(args, client, console, app_args):
     return runner.launch(args.name, app_args, say=console.out, warn=console.warn, extra_dirs=dirs_from_args(args.dir),
-                         extra_files=files_from_args(args.file))
+                         extra_files=files_from_args(args.file), raw=args.raw)
 
 
 # command -> handler(args, client, console, app_args); the return value, if any, is the exit status
