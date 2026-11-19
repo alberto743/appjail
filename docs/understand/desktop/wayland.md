@@ -29,15 +29,16 @@ offers privileged protocols to every client, an app with nothing but a window ca
 | capture | `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_manager_v1` | the contents of the whole screen |
 | input | `zwp_virtual_keyboard_manager_v1`, `zwlr_virtual_pointer_manager_v1`, input methods | typing and clicking into other apps |
 | clipboard | `ext_data_control_manager_v1`, `zwlr_data_control_manager_v1` | reading and replacing the clipboard without having the focus |
-| windows | foreign toplevel management, activation feedback, layer shell, output management, session lock | seeing and controlling other windows, seeing which apps start, the screen layout, the lock screen |
+| windows | foreign toplevel management, activation feedback, layer shell, output management, session lock, KWin's appmenu and the XApp shell | seeing and controlling other windows, seeing which apps start, the screen layout, the lock screen; making the shell call a D-Bus service or open an icon file the app names |
 | desktop | KWin's screen power, brightness, virtual desktops, screen edges, lock keys | changing the desktop itself |
 
 Compositors differ widely. Measured on Debian 13, Ubuntu 26.04 and Fedora 45 (headless, with real clients trying each
 capability): sway, labwc and Hyprland 0.55 hide all of these on the restricted socket; KWin 6.3 and 6.6 hide only the
 manager of the protocol, so data-control stays listed and a client read another client's clipboard through it (KWin 6.8
-hides data-control, fake input and a few more, but still lists the layer shell, the Plasma shell and output management);
-GNOME and Cinnamon have no restricted socket, but their own socket lists none of these, because they keep capture and
-remote input on D-Bus; Wayfire, Cage and Weston offer them on the only socket they have.
+hides data-control, fake input and a few more, but still lists the layer shell, the Plasma shell, output management, the
+appmenu manager and the desktop controls); GNOME and Cinnamon have no restricted socket, but their own socket lists none
+of these, because they keep capture and remote input on D-Bus; Wayfire, Cage and Weston offer them on the only socket
+they have.
 
 ## How appjail uses it
 
@@ -54,7 +55,8 @@ remote input on D-Bus; Wayfire, Cage and Weston offer them on the only socket th
   privileged. An interface is judged by what it gives the app, not by whether refusing it would refuse a common desktop
   ([the three questions](../../decisions/desktop/wayland-allowlist.md)). A few are allowed as *accepted limits*, with the
   cost written down: idle notification and inhibition, the colour profile and EDID of the outputs (a hardware
-  fingerprint), and, on GNOME, the unprivileged GPU render-node descriptor that `wp_drm_lease_device_v1` sends.
+  fingerprint), on GNOME the unprivileged GPU render-node descriptor that `wp_drm_lease_device_v1` sends, and
+  `gtk_shell1`, through which an app can take the keyboard focus (see Limits).
 - **Apps without a window** (`display = none`) get no socket, no display variables, and no check; they also run
   without a Wayland session, over `ssh` for instance.
 
@@ -77,8 +79,8 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
 
 ## Limits
 
-- KWin is refused until it hides the layer shell, the Plasma shell and output management (and, before 6.8, data-control)
-  on restricted sockets; Plasma users need `full_wayland` per app.
+- KWin is refused until it hides the layer shell, the Plasma shell, output management, the appmenu manager and the
+  desktop controls (and, before 6.8, data-control) on restricted sockets; Plasma users need `full_wayland` per app.
 - The classification is by interface name, not version.
 - An app can learn when you are idle where the compositor offers idle notification, and keep the screen from blanking or
   locking while its window is visible.

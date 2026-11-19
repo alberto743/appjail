@@ -39,11 +39,11 @@ from being allowed because a compositor lists it.
 | `kde_output_device_v2`, `kde_output_device_registry_v2` | The outputs with their EDID and serial numbers | The same: a hardware fingerprint, no control | The same |
 | `gtk_shell1` | The window hints GTK sends (application id, startup notification, modal), and two things beyond the app's own window. **Any client can take the keyboard focus** from another app, with no token: `gtk_surface1.present(0)` (Mutter treats timestamp 0 as "now" and skips its focus-stealing check), or `gtk_shell1.notify_launch` followed by `gtk_surface1.request_focus` with the same id (the app makes the startup sequence itself). Measured on Mutter, Muffin and Cinnamon on Debian 13, Ubuntu 26.04 and Fedora 45 (`tests/compositors/focus_steal.py`): a window-only client had the focus, the other window had lost it; a client that sent nothing, or `present` with an old timestamp, did not take it. After the steal the app receives the keys the user types in what they took to be the other window. Second, `set_dbus_properties` gives GNOME Shell a bus name and object paths that it builds `org.gtk.Actions` and `org.gtk.Application` proxies to, on the host session bus (`shell-app.c`) | Every GNOME and Cinnamon 6.4 lists it and GTK clients bind it, so refusing it refuses them all. The focus is taken in the open (the window changes), the app gets nothing it did not already draw but the keys that follow, and an X11 application can do the same on a classic desktop. The proxies are calls the shell makes to a name it was given, read mostly and only to services that implement those interfaces | A filtering proxy that drops `present`, `request_focus` and `notify_launch` (the first job of the [deferred proxy](../deferred.md)), or a compositor that applies its focus-stealing check to these requests |
 
-Other interfaces allowed after a decision, as they act only while the app has the focus or name a target without
-capturing: `zwp_keyboard_shortcuts_inhibit_manager_v1`, `zwp_pointer_constraints_v1` (an app may keep the desktop's
-shortcuts from reaching the compositor while it has the focus; whether a compositor keeps a way to take the shortcuts
-back was not measured), and the capture-*source* managers (naming a screen or a window as a source; the copy manager,
-privileged, is what captures).
+Two kinds of allowed interfaces needed a closer look and fall under the third question: those that act only
+while the app has the focus, `zwp_keyboard_shortcuts_inhibit_manager_v1` (an app may keep the desktop's shortcuts from
+reaching the compositor while it has the focus; whether a compositor keeps a way to take the shortcuts back was not
+measured) and `zwp_pointer_constraints_v1`; and the capture-*source* managers, which name a screen or a window as a
+source without capturing (the copy manager, privileged, is what captures).
 
 Interfaces seen on Fedora 45 are privileged under "windows": `kde_lockscreen_overlay_v1` (a surface shown over the lock
 screen) and `org_kde_plasma_activation_feedback` (it tells any client which app is being started, which is what refusing

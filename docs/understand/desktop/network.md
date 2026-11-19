@@ -32,8 +32,9 @@ can reach them, and the abstract unix sockets of your session, such as the X ser
 ## Connections
 
 - `pasta` closes inherited file descriptors and runs its command as root of a user namespace, which is why the seccomp
-  filter, the granted paths and the user ids are handed over inside it ([the filesystem view](../isolation/filesystem.md#grants-are-bound-by-descriptor)),
-  and why a lifeline ends the jail if appjail is killed ([process lifetime](../isolation/lifetime.md)).
+  filter, the granted paths and the user ids are handed over inside it ([the filesystem
+  view](../isolation/filesystem.md#grants-are-bound-by-descriptor)), and why a lifeline ends the jail if appjail is
+  killed ([process lifetime](../isolation/lifetime.md)).
 - Decision: [Network through pasta](../../decisions/desktop/network.md).
 
 ## Limits

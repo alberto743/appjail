@@ -34,7 +34,7 @@ appjail builds each jail as a list of `bwrap` options. The ones that matter, and
 | `--share-net` | keep the network namespace bwrap was started in | only with `network` (inside `pasta`'s private namespace) or `network_host` |
 | `--unshare-user --disable-userns` | no further user namespaces inside the jail | refuses nested namespaces, unless the app has `userns` |
 | `--cap-drop ALL` | no capabilities, even inside the jail's own namespaces | the app holds no privilege at all |
-| `--clearenv` | start with an empty environment | no variable of yours reaches the app: no tokens, no `SSH_AUTH_SOCK`, no session addresses. appjail then sets a short fixed list (home, path, language, time zone, display variables) |
+| `--clearenv` | start with an empty environment | no variable of yours reaches the app: no tokens, no `SSH_AUTH_SOCK`, no session addresses. appjail then sets a short fixed list (home, path, language, time zone, display variables), plus the app's own `[env]` table |
 | `--die-with-parent` | the jail is killed when appjail exits | no jail outlives the command that started it ([process lifetime](lifetime.md)) |
 | `--new-session` | the app runs in a new terminal session | a program that shares your terminal's session can push characters into its input with the `TIOCSTI` request, typing commands into your shell after it exits |
 | `--ro-bind`, `--symlink` | the system directories (`/usr`, `/bin`, `/lib`, ...) read-only | programs and libraries of the host are usable but not changeable ([the filesystem view](filesystem.md)) |
@@ -49,9 +49,9 @@ Every helper jail starts from a common base (`jail.common_args`: all namespaces,
 capabilities, a cleared environment, the read-only system, a private `/tmp`) and adds only the one or two paths its
 step needs. The app jail is built the same way with more inside.
 
-appjail requires bubblewrap 0.10 or later, for `--bind-fd` and `--ro-bind-fd`; it reads `bwrap --version` once per run and
-refuses an older or unreadable one with a message that names the needed version. The three supported systems (Debian 13, Ubuntu 26.04, Fedora 45) all ship a
-newer version.
+appjail requires bubblewrap 0.10 or later, for `--bind-fd` and `--ro-bind-fd`; it reads `bwrap --version` once per run
+and refuses an older or unreadable one with a message that names the needed version. The three supported systems (Debian
+13, Ubuntu 26.04, Fedora 45) all ship a newer version.
 
 ## Connections
 

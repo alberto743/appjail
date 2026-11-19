@@ -40,8 +40,8 @@ Why each of these, and how it works: [Understanding appjail](https://alberto743.
 
 ## Requirements
 
-Linux on x86-64 (Debian 13, Ubuntu 26.04 or Fedora 45, or later), Python 3.12 or later, a Wayland desktop for apps with a
-window. On Debian or Ubuntu:
+Linux on x86-64 (Debian 13, Ubuntu 26.04 or Fedora 45, or later), Python 3.12 or later, bubblewrap 0.10 or later, a
+Wayland desktop for apps with a window. On Debian or Ubuntu:
 
 ```sh
 sudo apt install bubblewrap squashfs-tools passt xdg-dbus-proxy xwayland openbox git \
@@ -64,7 +64,7 @@ pipx install appjail        # or: pip install --user appjail
 ```
 
 appjail has no Python dependencies and never updates itself: upgrade with `pipx upgrade appjail` after reading what
-changed.
+changed ([release notes](https://github.com/alberto743/appjail/releases)).
 
 ## Quick start
 
@@ -92,7 +92,7 @@ appjail remove lagrange          # delete the app and its private home
 - **Not audited.** bubblewrap and the Linux kernel do the isolation; appjail configures them conservatively but has had
   no external review.
 - **The Wayland socket is only as restricted as the compositor makes it.** appjail refuses an app whose socket offers
-  privileged interfaces, unless you accept that per app; on KDE Plasma that is every app for now.
+  privileged interfaces, unless you accept that per app; on KDE Plasma and Cinnamon 6.8 that is every app for now.
 - **Evidence proves "unchanged", not "safe".** A publisher who ships malware from the start passes every check;
   containment is what limits it.
 - **A grant widens what a compromised app can do.** An app with `network` reaches your LAN; a granted D-Bus name of an

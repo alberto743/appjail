@@ -57,8 +57,9 @@ Flatpak remains the mature route.
 - Input, USB, KVM and Bluetooth devices; `ssh-auth`, `gpg-agent`, `pcsc` and `cups` sockets.
 - The accessibility bus, through a filtered proxy on by default: screen readers work. appjail refuses
   `org.freedesktop.a11y`, so they do not.
-- File types and URL handlers from the app's menu entry; a working Background portal (appjail's autostart entries say
-  `flatpak run`); software centres and permission editors; the permission store's command line.
+- URL handlers from the app's menu entry (file types are offered with `desktop --mime`); a working Background portal
+  (appjail's autostart entries say `flatpak run`); software centres and permission editors; the permission store's
+  command line.
 - `--persist`, file forwarding, conditional permissions, a `devel` mode for debuggers and profilers.
 - Masking and pinning updates, `repair`, end-of-life notices for runtimes.
 

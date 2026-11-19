@@ -24,6 +24,7 @@ download uses. Two cases are allowed:
 The URL you type is never judged: naming a private address yourself is your decision.
 
 **Consequences.** An internet download that legitimately ends on a private address (a mirror inside a company network
-reached through a public front) needs the switch at every update. The check is made before each request; a host name
-that resolves differently a moment later (DNS rebinding) is not caught. GitHub downloads are unaffected: they may only
-go to GitHub's own hosts.
+reached through a public front) needs the switch at every update. Each connection resolves its host once, refuses it
+when any address is private, and connects to an address it checked, so a redirect target cannot answer public first and
+private second (DNS rebinding). Whether the URL you gave is an intranet server is decided by what its own name resolves
+to, whoever answers its DNS. GitHub downloads are unaffected: they may only go to GitHub's own hosts.

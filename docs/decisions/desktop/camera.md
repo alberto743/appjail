@@ -27,9 +27,9 @@ narrow bind is the point of this decision) and masking everything else in it (a 
 Camera portal is no substitute: it hands a PipeWire connection to apps that ask for it, and these apps do not. The cure is
 in the app, which should open or `stat` the nodes instead of trusting the listing.
 
-The Camera portal path is tested with a real V4L2 node where the PipeWire can read the test camera's controls (Fedora 45,
-PipeWire 1.6.11): the session manager links it and an app in its jail receives a frame through the portal
-([measurements](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)).
+The Camera portal path is tested with `vivid`'s V4L2 node (a virtual camera) where the PipeWire can read the test
+camera's controls (Fedora 45, PipeWire 1.6.11): the session manager links it and an app in its jail receives a frame
+through the portal ([measurements](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)).
 
 **Revisit when** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted, or Debian and Ubuntu
 package a PipeWire that reads the test camera's controls (then their skipped portal camera test runs).

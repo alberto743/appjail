@@ -2,10 +2,10 @@
 
 *Decision on [isolation](index.md).*
 
-**Context.** `remove` and `reset` deleted an app's private home without knowing whether the app was running; whatever
-it wrote afterwards was lost, without a message. An update moved the old tree aside and deleted it, while the running
-jail still bound it, so files the app had not loaded yet disappeared. Two commands on the same app (a launch extracting its tree while an
-update swaps it) could also interleave.
+**Context.** `remove` and `reset` deleted an app's private home without knowing whether the app was running; whatever it
+wrote afterwards was lost, without a message. An update moved the old tree aside and deleted it, while the running jail
+still bound it, so files the app had not loaded yet disappeared. Two commands on the same app (a launch extracting its
+tree while an update swaps it) could also interleave.
 
 **Options.** Check the process list for the app's jail; record the running instances in a file; hold a lock for the
 app's lifetime.
@@ -28,7 +28,7 @@ Keeping the old tree until the last launch ends was rejected: it needs a tree pe
 that survives a killed launcher, for a case a restart solves.
 
 **Consequences.** Close the app before removing, resetting or updating it. An update of a running app is reported as
-failed after its download and checks; a candidate in quarantine stays pending. The lock files stay after `remove` (deleting a lock
-file someone may be about to open is a race); they are empty.
+failed after its download and checks; a candidate in quarantine stays pending. The lock files stay after `remove`
+(deleting a lock file someone may be about to open is a race); they are empty.
 
 **Revisit when** a command needs to stop a running app itself.

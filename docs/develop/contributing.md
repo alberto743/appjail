@@ -15,9 +15,9 @@
   printing.
 - **Tests and documentation in the same commit as the code.** When behaviour changes, update the affected pages of this
   site (the concept page, the guide, the reference, a decision page if a choice was made) and the tests.
-- **Every guest passes** before a commit: `tests/vm/test.sh`, `GUEST=ubuntu tests/vm/test.sh` and `GUEST=fedora
-  tests/vm/test.sh`. A documentation-only commit needs only the documentation checks
-  ([testing](testing.md#running-the-tests)).
+- **The suite passes on Debian** before a commit (`tests/vm/test.sh`), **and on every guest** before a push (also
+  `GUEST=ubuntu tests/vm/test.sh` and `GUEST=fedora tests/vm/test.sh`). A documentation-only commit needs only the
+  documentation checks ([testing](testing.md#running-the-tests)).
 - **Licensing:** MPL-2.0, REUSE-compliant at every commit. Contributors keep the copyright of their work and license it
   under MPL-2.0 (no CLA, no assignment). Every code file starts with at least one `SPDX-FileCopyrightText` line and
   an `SPDX-License-Identifier` line for MPL-2.0 (after a shebang). A new file takes its author's line
@@ -27,8 +27,8 @@
   files are covered by `REUSE.toml`. A new file type needs a header or a `REUSE.toml` entry in the same commit.
   [`CONTRIBUTORS.md`](https://github.com/alberto743/appjail/blob/main/CONTRIBUTORS.md) lists those who want to be named.
 - **No personal data** in tracked files or commit messages: no home paths, user names, host names, e-mail addresses
-  other than GitHub's no-reply ones, session links or IDs. A copyright name that its owner chose is allowed. Use `~` and placeholders. Enable the check
-  once per clone: `git config core.hooksPath .githooks`.
+  other than GitHub's no-reply ones, session links or IDs. A copyright name that its owner chose is allowed. Use `~` and
+  placeholders. Enable the check once per clone: `git config core.hooksPath .githooks`.
 
 ## Git
 

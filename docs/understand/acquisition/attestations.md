@@ -1,6 +1,7 @@
 # Build attestations
 
-*Part of [Acquisition](index.md). Previous: [hashes and evidence tiers](evidence.md). Next: [jailed download and extraction](jailed-steps.md).*
+*Part of [Acquisition](index.md). Previous: [hashes and evidence tiers](evidence.md). Next: [jailed download and
+extraction](jailed-steps.md).*
 
 ## What it is
 
@@ -45,7 +46,8 @@ evidence a GitHub release can carry.
 ## Connections
 
 - The tier this earns, and how it is protected on updates: [hashes and evidence tiers](evidence.md).
-- The pinned `gh` is one of two helper tools: Decision [Helper tools pinned in the source](../../decisions/acquisition/pinned-tools.md).
+- The pinned `gh` is one of two helper tools: Decision [Helper tools pinned in the
+  source](../../decisions/acquisition/pinned-tools.md).
 - Decision: [Attestations verified with a pinned `gh`](../../decisions/acquisition/attestations.md).
 
 ## Limits
@@ -58,7 +60,8 @@ evidence a GitHub release can carry.
 ## References
 
 - GitHub Docs, [Artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations) and
-  [Using artifact attestations to establish provenance for builds](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+  [Using artifact attestations to establish provenance for
+  builds](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
 - GitHub CLI manual, [gh attestation verify](https://cli.github.com/manual/gh_attestation_verify).
 - Sigstore, [Overview](https://docs.sigstore.dev/about/overview/): Fulcio, Rekor and keyless signing.
 - SLSA, [Provenance](https://slsa.dev/spec/v1.0/provenance).

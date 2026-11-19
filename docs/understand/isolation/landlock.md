@@ -73,4 +73,5 @@ enters the domain, and replaces itself with `bwrap`. It is a separate process ra
   [landlock.io](https://landlock.io/).
 - Linux kernel documentation, [No New Privileges Flag](https://docs.kernel.org/userspace-api/no_new_privs.html).
 - Linux manual page [unix(7)](https://man7.org/linux/man-pages/man7/unix.7.html), section "Abstract sockets".
-- X.Org Foundation, [Access control and authentication in X](https://www.x.org/Development/Documentation/Security/): ordinary ("trusted") clients can read other clients' windows and input.
+- X.Org Foundation, [Access control and authentication in X](https://www.x.org/Development/Documentation/Security/):
+  ordinary ("trusted") clients can read other clients' windows and input.

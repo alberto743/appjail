@@ -129,7 +129,7 @@ What the table shows:
    the shell for any client of the bus (GNOME Shell refuses that outside its unsafe mode), and `org.gnome.Shell.Screenshot`.
    What that gives is in the D-Bus section below.
 9. **Plasma's shell, plasmashell 6.3.6 and 6.6.6** (`plasma-workspace`, measured 2026-11-13): a Wayland client of a virtual
-   KWin, started with the activity manager it needs, so the Wayland socket is KWin's (point 6 and the rule's verdict for
+   KWin, started with the activity manager it needs, so the Wayland socket is KWin's (point 2 and the rule's verdict for
    KWin apply: `rule_a.py` refuses it like KWin; the clipboard works on its restricted socket, rerun 2026-11-15). On the bus, one plasmashell connection owns
    `org.kde.plasmashell`, `org.kde.klipper`, `org.freedesktop.Notifications`, `org.kde.JobViewServer`, `org.kde.kuiserver`,
    `com.canonical.Unity` and a `org.kde.StatusNotifierHost-PID` name. Two of its calls answer any client: the shell's
@@ -480,7 +480,7 @@ another app's clipboard or take over the desktop?". The compositors answer it in
 | Model | Compositors | What keeps an app out | What appjail has to do |
 |---|---|---|---|
 | Restricted socket | sway, labwc, Hyprland (0.55) | the compositor hides privileged globals from clients of a security context | use the restricted socket (done) |
-| Mixed | KWin | the restricted socket hides almost nothing; KWin gates sensitive interfaces by authorisation, but data-control (clipboard) stays visible | use the restricted socket and decide whether the clipboard exposure is acceptable |
+| Mixed | KWin | the restricted socket hides little; KWin gates sensitive interfaces by authorisation, but data-control (clipboard, before 6.8), the layer shell, the Plasma shell and output management stay visible | refuse (decided: the registry rule below) |
 | Nothing privileged on Wayland; D-Bus instead | GNOME, Cinnamon | the socket has no privileged global; the privileged APIs are on D-Bus and are only as protected as the bus | keep the app off those bus names (filter, denylist), keep portals consent-based |
 | Nothing restricts it | Wayfire, Cage (and any compositor without the protocol that offers wlroots-style interfaces) | nothing | refuse, or accept knowingly (`full_wayland`) |
 
@@ -493,13 +493,14 @@ app will get actually lets a client do**, plus, for GNOME and KDE, **which bus n
 **A. Decide from the registry of the socket the app will get.** Chosen. After choosing the socket, `run` refuses a windowed
 app when the registry lists a privileged global (capture, virtual input, input method, data-control, foreign-toplevel, layer
 shell, session lock, output management, gamma, ...) and names them; `full_wayland` overrides the refusal. It matched the
-measurements of all 28 compositor and distribution runs. Weakness: a denylist of interface names misses interfaces not on it
-(the inverse, allowing only known-harmless globals, would refuse compositors on their own extras).
+measurements of every compositor and distribution run. It began as a denylist of interface names, which misses interfaces
+not on it; it is now an allowlist: every allowed global has a reason, and an unknown one is refused like a privileged one
+([the allowlist](../decisions/desktop/wayland-allowlist.md)).
 
 **B. Warn only without the protocol.** Rejected: Wayfire and Cage let an app capture, type and read the clipboard, and a
 terminal warning is not a decision.
 
-**C. A table of compositors.** Rejected: right for the nine measured, stale with every release, silent on the rest; A reads
+**C. A table of compositors.** Rejected: right for the twelve measured, stale with every release, silent on the rest; A reads
 the registry anyway.
 
 **D. Close the D-Bus gaps.** Done alongside A: `org.gnome.Mutter` and, after Muffin and Cinnamon were measured,
