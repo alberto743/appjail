@@ -50,9 +50,9 @@ Explained in [the manifest](../understand/acquisition/manifest.md). Names the `[
 | List | Names |
 |---|---|
 | set by appjail itself (`grants.ENV_REFUSED`) | `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`, `LANG`, `TZ`, `XDG_RUNTIME_DIR`, `APPDIR`, `APPIMAGE_EXTRACT_AND_RUN`, `TMPDIR`, `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE`, `GDK_BACKEND`, `QT_QPA_PLATFORM`, `MOZ_ENABLE_WAYLAND`, `ELECTRON_OZONE_PLATFORM_HINT`, `SDL_VIDEODRIVER`, `DBUS_SESSION_BUS_ADDRESS`, `PULSE_SERVER`, `GTK_USE_PORTAL` |
-| loader and interpreter hooks (`grants.ENV_REFUSED_HOOKS`) | `BASH_ENV`, `ENV`, `NODE_OPTIONS` |
-| any name starting with (`grants.ENV_REFUSED_PREFIXES`) | `LD_*`, `PYTHON*`, `PERL5*` |
-| limits | 32 entries, values up to 1024 characters |
+| loader, interpreter and plugin hooks, not exhaustive (`grants.ENV_REFUSED_HOOKS`) | `BASH_ENV`, `ENV`, `NODE_OPTIONS`, `NODE_PATH`, `ELECTRON_RUN_AS_NODE`, `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `GTK_MODULES`, `GTK3_MODULES`, `GTK_PATH`, `GIO_EXTRA_MODULES`, `GIO_MODULE_DIR`, `GDK_PIXBUF_MODULE_FILE`, `GDK_PIXBUF_MODULEDIR`, `QT_PLUGIN_PATH`, `QT_QPA_PLATFORM_PLUGIN_PATH`, `LIBGL_DRIVERS_PATH`, `GBM_BACKENDS_PATH`, `__EGL_VENDOR_LIBRARY_FILENAMES`, `__EGL_VENDOR_LIBRARY_DIRS`, `GCONV_PATH` |
+| any name starting with (`grants.ENV_REFUSED_PREFIXES`) | `LD_*`, `PYTHON*`, `PERL*`, `RUBY*`, `LUA_*`, `GST_PLUGIN*`, `VK_*` |
+| limits | 32 entries, names up to 64 characters, values up to 1024 characters |
 
 ## Portal interfaces
 

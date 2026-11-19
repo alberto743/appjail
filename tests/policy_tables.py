@@ -62,9 +62,9 @@ def render():
             "Explained in [the manifest](../understand/acquisition/manifest.md). Names the `[env]` table refuses.", "",
             "| List | Names |", "|---|---|",
             f"| set by appjail itself (`grants.ENV_REFUSED`) | {_codes(grants.ENV_REFUSED)} |",
-            f"| loader and interpreter hooks (`grants.ENV_REFUSED_HOOKS`) | {_codes(grants.ENV_REFUSED_HOOKS)} |",
+            f"| loader, interpreter and plugin hooks, not exhaustive (`grants.ENV_REFUSED_HOOKS`) | {_codes(grants.ENV_REFUSED_HOOKS)} |",
             f"| any name starting with (`grants.ENV_REFUSED_PREFIXES`) | {_codes(grants.ENV_REFUSED_PREFIXES, suffix='*')} |",
-            f"| limits | {grants.ENV_MAX_ENTRIES} entries, values up to {grants.ENV_MAX_VALUE} characters |",
+            f"| limits | {grants.ENV_MAX_ENTRIES} entries, names up to 64 characters, values up to {grants.ENV_MAX_VALUE} characters |",
             ""]
 
     out += ["## Portal interfaces", "",

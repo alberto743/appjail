@@ -43,7 +43,9 @@ def test_env_round_trips_sorted():
 
 @pytest.mark.parametrize("key", ["lower", "1X", "A-B", "", "A" * 65, "PATH", "HOME", "DISPLAY", "WAYLAND_DISPLAY", "GDK_BACKEND",
                                  "LD_PRELOAD", "LD_LIBRARY_PATH", "BASH_ENV", "ENV", "PYTHONPATH", "PERL5LIB", "NODE_OPTIONS",
-                                 "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER"])
+                                 "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER", "PERLLIB", "RUBYOPT", "LUA_INIT", "GTK_MODULES",
+                                 "GIO_EXTRA_MODULES", "QT_PLUGIN_PATH", "GST_PLUGIN_PATH_1_0", "VK_LAYER_PATH",
+                                 "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "ELECTRON_RUN_AS_NODE", "__EGL_VENDOR_LIBRARY_FILENAMES"])
 def test_refused_names(key):
     with pytest.raises(ManifestError):
         manifest.validate(sample(env=((key, "x"),)))
@@ -81,6 +83,16 @@ def test_user_env_reaches_the_jail(sandbox, runtime):
     env = setenv(runtimejail.runtime_args(**kw, user_env=(("CLAUDE_USE_WAYLAND", "1"),)))
     assert env["CLAUDE_USE_WAYLAND"] == "1" and env["HOME"] == runtimejail.APP_HOME
     assert "CLAUDE_USE_WAYLAND" not in setenv(runtimejail.runtime_args(**kw))
+
+
+@pytest.mark.parametrize("display", sorted(manifest.DISPLAYS))
+def test_every_name_appjail_sets_is_refused_in_env(sandbox, runtime, display):
+    """ENV_REFUSED must name every variable the jail sets, whatever the permissions, or [env] could override one."""
+    kw = build(sandbox, runtime, display=display, portals=True, dbus_filter=("org.example.App",))
+    kw["host_env"]["TZ"] = "Europe/Rome"
+    args = runtimejail.runtime_args(**kw, dbus_socket=sandbox / "bus", portal_docs=sandbox / "doc",
+                                    audio_sockets=(sandbox / "pw", sandbox / "pulse"))
+    assert set(setenv(args)) - set(grants.ENV_REFUSED) == set()
 
 
 @pytest.mark.parametrize("key", ["HOME", "LD_PRELOAD", "GDK_BACKEND", "TZ"])
