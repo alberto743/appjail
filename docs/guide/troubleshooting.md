@@ -24,6 +24,8 @@
 | A grant is refused as a sensitive path | It holds credentials, is too broad, or would let the app change things outside the jail. Grant a narrower path. See [Files and folders](files.md#what-cannot-be-granted). |
 | An app looks different from your other apps | See [Appearance](appearance.md). |
 | `the manifest of APP was changed outside appjail` | Something other than appjail edited `~/.config/appjail/apps/APP.toml`. Check `appjail history APP` and the directory's git log. |
+| `APP is running; close it, then try again` | `remove`, `reset` and an update of the app wait until it is closed. With `linger`, every process of the app counts. |
+| `another appjail command is working on APP` | Another command is adding, updating, extracting or removing that app, and did not finish within a minute (a large app can take longer to extract). Run the command again when it has finished. |
 | `refusing to run`: the stored AppImage does not match the pinned sha256 | The file on disk was changed. Remove and add the app again from its source. |
 
 ## Reporting a problem

@@ -60,6 +60,15 @@ def test_app_lock_is_released_when_the_block_fails(data, monkeypatch):
         pass
 
 
+def test_running_is_shared_and_makes_refuse_if_running_refuse(data):
+    store.refuse_if_running("a")  # nothing runs
+    with store.running("a"), store.running("a"):  # two launches of the same app
+        with pytest.raises(store.StoreBusy, match="'a' is running"):
+            store.refuse_if_running("a")
+        store.refuse_if_running("b")  # another app is not affected
+    store.refuse_if_running("a")  # released when the app ends
+
+
 def test_app_lock_is_private_and_not_followed_through_a_symlink(data):
     with store.app_lock("a"):
         lock = store.lock_path("a")

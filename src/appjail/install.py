@@ -96,8 +96,11 @@ def ask_extractor(console, extract_ok):
 
 def swap_in(name, staged, stage, record, extract, fallback):
     """Extract `staged` inside `stage`, then put image, tree, markers and manifest (last) in place, under the app's lock
-    (a launch must not extract its tree while it is being swapped)."""
+    (a launch must not extract its tree while it is being swapped). Refused while the app runs: its jail binds the old
+    tree, which is deleted with the stage."""
     with store.app_lock(name):
+        if store.app_dir(name).exists():
+            store.refuse_if_running(name)
         return _swap_in(name, staged, stage, record, extract, fallback)
 
 

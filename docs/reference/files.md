@@ -19,6 +19,7 @@ temporary files in `/tmp` (the seccomp filter of an app behind `pasta`, an icon 
 | `~/.local/share/appjail/index/sources.json` | the registered catalog sources |
 | `~/.local/share/appjail/index/NAME/` | per source: `current.json`, `previous.json` (for `index rollback`) and `state.json` (hash, revision, update time and, for appjail-db, the commit) |
 | `~/.local/share/appjail/staging/` | temporary directories, removed when the step ends |
+| `~/.local/share/appjail/locks/` | per app, `NAME.lock` (one change at a time) and `NAME.run` (held while the app runs); empty, kept after `remove` ([why](../decisions/isolation/app-lock.md)) |
 | `${XDG_DATA_HOME:-~/.local/share}/applications/appjail-NAME.desktop` | an app's menu entry |
 | `${XDG_DATA_HOME:-~/.local/share}/icons/hicolor/*/apps/appjail-NAME.png` | its icon |
 | `$XDG_RUNTIME_DIR/appjail-*`, `$XDG_RUNTIME_DIR/.flatpak/INSTANCE` | sockets and portal identity files of running apps, removed when they end |

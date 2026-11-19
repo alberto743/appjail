@@ -56,14 +56,21 @@ def lock_path(name):
     return data_dir() / "locks" / f"{name}.lock"
 
 
+def run_lock_path(name):
+    return data_dir() / "locks" / f"{name}.run"
+
+
+def _open_lock(path):
+    make_private(path.parent)
+    return os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+
+
 @contextlib.contextmanager
 def app_lock(name):
-    """Exclusive lock on one app while its files are changed or its tree is prepared (flock: the kernel releases it if
-    the process dies, so there is no stale lock). Held for those short steps only, never while an app runs or while a
-    download is in progress. Waits up to LOCK_TIMEOUT, then raises StoreBusy."""
-    path = lock_path(name)
-    make_private(path.parent)
-    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    """Exclusive lock on one app while its files are changed or its tree is extracted and prepared (flock: the kernel
+    releases it if the process dies, so there is no stale lock). Never held while an app runs or while a download is in
+    progress, but an extraction can take minutes. Waits up to LOCK_TIMEOUT, then raises StoreBusy."""
+    fd = _open_lock(lock_path(name))
     try:
         deadline = time.monotonic() + LOCK_TIMEOUT
         while True:
@@ -75,6 +82,29 @@ def app_lock(name):
                     raise StoreBusy(f"another appjail command is working on '{name}'; try again when it has finished") from None
                 time.sleep(0.05)
         yield
+    finally:
+        os.close(fd)
+
+
+@contextlib.contextmanager
+def running(name):
+    """Shared lock that every launch of the app holds while the app runs, so that remove and reset can refuse. Take it
+    under app_lock: refuse_if_running checks under app_lock too, so no launch can start between its check and the change."""
+    fd = _open_lock(run_lock_path(name))
+    try:
+        fcntl.flock(fd, fcntl.LOCK_SH)
+        yield
+    finally:
+        os.close(fd)
+
+
+def refuse_if_running(name):
+    """Raise StoreBusy while a launch of the app holds `running`. Call it under app_lock."""
+    fd = _open_lock(run_lock_path(name))
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        raise StoreBusy(f"'{name}' is running; close it, then try again") from None
     finally:
         os.close(fd)
 

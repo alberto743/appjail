@@ -153,6 +153,15 @@ def test_failure_while_swapping_restores_the_old_install(h, monkeypatch):
     assert manifest.load(path).sha256 == SHA
 
 
+def test_an_update_is_not_swapped_in_while_the_app_runs(h):
+    path = installed(h)
+    with store.running("app"):
+        code, c = update(h, FakeClient(release_=release2()), days=0)
+    assert code == 1 and "is running" in c.text
+    assert manifest.load(path).sha256 == SHA and store.appimage_path("app").read_bytes() == FAKE_APPIMAGE
+    assert (store.root_path("app") / "AppRun").exists()
+
+
 def test_tier4_rolling_tag_unchanged_is_current(h):
     installed(h, client=FakeClient(release_=release(asset(sha=""))))
     same = github.Release("v1.0", "2026-09-30T02:40:02Z", False, "https://x", (asset(sha=""),))
@@ -255,6 +264,14 @@ def test_remove_deletes_everything_after_confirmation(h):
     assert store.manifest_path("app").exists()
     cli.cmd_remove(args, Script(["y"]))
     assert not store.manifest_path("app").exists() and not store.app_dir("app").exists()
+
+
+def test_remove_is_refused_while_the_app_runs(h):
+    installed(h)
+    args = cli.build_parser().parse_args(["remove", "app", "--yes"])
+    with store.running("app"), pytest.raises(store.StoreBusy, match="is running"):
+        cli.cmd_remove(args, Script())
+    assert store.manifest_path("app").exists() and store.app_dir("app").exists()
 
 
 def test_remove_unknown_or_invalid(h):

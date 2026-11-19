@@ -14,3 +14,4 @@ Decisions about the jail an app runs in. How it works is explained in
 | [Landlock for abstract sockets only](landlock.md) | Landlock is used for abstract sockets only |
 | [Environment variables in the manifest](environment.md) | the `[env]` table, and the names it refuses |
 | [The jail ends with its command](lifetime.md) | when a jail ends, and the `linger` permission |
+| [No change under a running app](app-lock.md) | the per-app locks; `remove` and `reset` refuse while the app runs |

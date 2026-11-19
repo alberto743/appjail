@@ -150,6 +150,7 @@ def cmd_remove(args, console):
     if not args.yes and not console.confirm(f"Remove {name}?"):
         raise Abort("cancelled")
     with store.app_lock(name):
+        store.refuse_if_running(name)
         revoke_portal_grants(name, mpath, console)
         store.remove_tree(adir, strict=True)  # the manifest stays when something is left, so the removal can be repeated
         mpath.unlink(missing_ok=True)
@@ -171,6 +172,7 @@ def cmd_reset(args, console):
     if not args.yes and not console.confirm(f"Reset {name}?"):
         raise Abort("cancelled")
     with store.app_lock(name):
+        store.refuse_if_running(name)
         store.remove_tree(home, strict=True)
     history.record(f"reset {name}")
     console.out(f"Reset {name}.")

@@ -15,7 +15,7 @@ For each app, `update` finds the newest release it follows, compares it with wha
 | declined | you answered no | nothing |
 | blocked | the owner changed, the evidence got weaker, or the content changed during the quarantine | read the message; see below |
 | pinned | the app follows no releases | `update APP --channel stable` to follow them |
-| failed | an error; the message says which | fix the cause and run again |
+| failed | an error; the message says which (`APP is running`: the app is open) | fix the cause, or close the app, and run again |
 | not checked | the GitHub rate limit was reached | set `GITHUB_TOKEN`, or wait an hour |
 
 Before installing, `update` shows the old and new version, hash and evidence tier, and the release link, and asks.

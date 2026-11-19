@@ -7,7 +7,8 @@ built, and why, is explained in [the filesystem view](../understand/isolation/fi
 
 Each app has a private home that it sees as `/home/app`. On your side it is
 `~/.local/share/appjail/apps/NAME/home`. Settings, caches and anything the app saves "in its home" land there and are
-kept between runs. `appjail remove NAME` deletes it, after asking.
+kept between runs. `appjail reset NAME` empties it and keeps the app; `appjail remove NAME` deletes it with the app.
+Both ask first, and both refuse while the app runs.
 
 To give an app a file, you can copy it into that folder; the ways below avoid copies.
 

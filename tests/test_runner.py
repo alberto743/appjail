@@ -117,6 +117,21 @@ def test_networked_app_runs_in_pasta_and_is_refused_without_it(sandbox, runtime,
     assert len(captured) == 1
 
 
+def test_a_launch_holds_the_running_lock_until_the_app_ends(sandbox, runtime):
+    install(sandbox)
+    seen = []
+
+    def run(argv):
+        with pytest.raises(store.StoreBusy):
+            store.refuse_if_running("app")
+        seen.append(argv)
+        return 0
+    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
+    runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None, runner=run, **COMPOSITOR)
+    assert seen
+    store.refuse_if_running("app")
+
+
 def test_network_host_and_offline_apps_are_not_wrapped(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(jail, "find_pasta", lambda: None)  # would refuse a wrapped app
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}

@@ -44,13 +44,14 @@ An option that does not apply to the chosen source is refused, never ignored.
 
 `appjail remove APP [--yes]`: delete the app, its private home, its menu entry, and its portal grants and decisions.
 Directories the app made unreadable are opened up first; if anything cannot be deleted the command fails, names the path
-and keeps the manifest, so it can be repeated.
+and keeps the manifest, so it can be repeated. Refused while the app runs: close it first.
 
 ### `reset`
 
 `appjail reset APP [--yes]`: delete the app's private home (its settings and data), keeping the app, its manifest, its
 permissions and its menu entry. The next run starts with an empty home.
-If anything in the home cannot be deleted the command fails instead of reporting success.
+If anything in the home cannot be deleted the command fails instead of reporting success. Refused while the app runs:
+close it first. Document-portal grants are kept (`appjail portals APP` lists and revokes them).
 
 ## Running
 
@@ -105,7 +106,8 @@ portal, or revoke one or all of them.
 
 ### `update`
 
-`appjail update [APP] [options]`: check one app, or every installed app, for a new version.
+`appjail update [APP] [options]`: check one app, or every installed app, for a new version. A new version is not
+installed while the app runs: that app is reported as failed, and a candidate in quarantine stays pending.
 
 | Option | Effect |
 |---|---|
