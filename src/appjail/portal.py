@@ -137,7 +137,7 @@ def bus_call(host_env, dest, path, member, *args, timeout=10.0):
     """Call a method on the host session bus (`dbus-send`, the same way as `activate_documents`)."""
     env = _dbus_send_env(host_env)
     if env is None:
-        raise RunError("dbus-send is needed to reach the portals (package dbus-bin)")
+        raise RunError("dbus-send is needed to reach the portals (package dbus-bin, or dbus-tools on Fedora)")
     try:
         r = subprocess.run([DBUS_SEND, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
                             f"--dest={dest}", path, member, *args],

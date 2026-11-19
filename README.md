@@ -77,7 +77,7 @@ appjail update                   # check every app for a newer release
 appjail remove lagrange          # delete the app and its private home
 ```
 
-`appjail-gui` opens a window with the same commands (needs `python3-tk`).
+`appjail-gui` opens a window with the same commands (needs `python3-tk`, `python3-tkinter` on Fedora).
 
 | Read | For |
 |---|---|

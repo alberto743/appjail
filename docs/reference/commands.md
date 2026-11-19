@@ -166,7 +166,7 @@ installed while the app runs: that app is reported as failed, and a candidate in
 
 | Command | Effect |
 |---|---|
-| `appjail-gui` | open the window (needs `python3-tk` and a display) |
+| `appjail-gui` | open the window (needs `python3-tk`, `python3-tkinter` on Fedora, and a display) |
 | `appjail-gui --desktop` | add appjail itself to the application menu |
 | `appjail-gui --remove-desktop` | take that entry out again |
 

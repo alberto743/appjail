@@ -97,9 +97,9 @@ def install_entry(name, console, args, yes=False):
     if note:
         console.note(note)
     if size and not shutil.which(desktop.ICON_CACHE_TOOL):
-        console.note("gtk-update-icon-cache (libgtk-3-bin) is not installed; the icon may appear only after the next login")
+        console.note("gtk-update-icon-cache (package libgtk-3-bin, or gtk-update-icon-cache on Fedora) is not installed; the icon may appear only after the next login")
     if mimes and not shutil.which(desktop.DESKTOP_DB_TOOL):
-        console.note("update-desktop-database (desktop-file-utils) is not installed; the file types may appear after the next login")
+        console.note("update-desktop-database (package desktop-file-utils) is not installed; the file types may appear after the next login")
 
 
 def cmd_desktop(args, console):

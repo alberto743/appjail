@@ -185,7 +185,7 @@ def xwayland_command(command, rootful=False, size=manifest.DEFAULT_DISPLAY_SIZE)
     """Wrap the app command so a private Xwayland (rootful: with a window manager) is running before it starts."""
     xwayland = _executable(XWAYLAND_PATHS)
     if not xwayland:
-        raise RunError("display = xwayland needs the Xwayland binary in /usr/bin (package xwayland)")
+        raise RunError("display = xwayland needs the Xwayland binary in /usr/bin (package xwayland, or xorg-x11-server-Xwayland on Fedora)")
     openbox = _executable(OPENBOX_PATHS) if rootful else ""
     if rootful and not openbox:
         raise RunError("display = xwayland-rootful needs openbox in /usr/bin (package openbox)")

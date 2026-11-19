@@ -132,7 +132,7 @@ def bus_owners(bus, wanted=None, timeout=5.0):
 
     def call(member, *args):
         if not os.access(DBUS_SEND, os.X_OK):
-            raise RunError("dbus-send is needed to check who owns the granted D-Bus names (package dbus-bin)")
+            raise RunError("dbus-send is needed to check who owns the granted D-Bus names (package dbus-bin, or dbus-tools on Fedora)")
         try:
             r = subprocess.run([DBUS_SEND, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
                                 "--dest=org.freedesktop.DBus", "/org/freedesktop/DBus", f"org.freedesktop.DBus.{member}", *args],
