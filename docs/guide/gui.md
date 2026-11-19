@@ -16,3 +16,5 @@ It runs the same commands as the terminal and shows their output in one pane. Ev
 a dialog, with the facts the command printed just before it, and the same default answer: No, except when writing a
 menu entry you asked for. The window never answers for you. Apps started from it run in their own session, so closing
 the window does not close them.
+Their output is shown in the pane with the control sequences removed, so the `raw_terminal` check box (your terminal as it
+is, for `appjail run` in a terminal) has no effect on the output of a run started from the window.

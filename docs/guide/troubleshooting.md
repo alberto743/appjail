@@ -9,6 +9,7 @@
 | `run` refuses an app, naming privileged interfaces or interfaces "not known to it" | See [Wayland compositors](compositors.md). |
 | `run` refuses an app, saying a `dbus_filter` entry "is owned by the same process as" a refused name | The granted name's process also serves a name that controls the desktop, and a grant reaches the whole process. Remove the entry: `perms APP --rm-dbus NAME`. Notifications, the secret service, media players and the tray watcher are confined and never refused this way. See [D-Bus and portals](dbus.md). |
 | An app exits at once with status 0 and no window | Its launcher starts the real app in the background and exits. `perms APP --allow linger`, or the app's own wait option (`appjail run vscodium -- --wait`). |
+| A terminal program (`htop`, an editor) shows nothing or text soup, or asks a question and gets no answer | appjail cleans an app's terminal output and gives it no input unless it may have your terminal: `run APP --raw`, or `perms APP --allow raw_terminal`. See [Permissions](permissions.md#apps-that-run-in-a-terminal). |
 | An app with `network` is refused, naming `passt` | Install `passt`. |
 | `add`, `update` or `index` fails saying a step needs a private network and `passt` is missing | Install `passt`. Only if you cannot, `APPJAIL_ALLOW_HOST_NETWORK=1 appjail ...` lets that command's download jail share the host network, with a warning. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12). Use `network` instead. |
