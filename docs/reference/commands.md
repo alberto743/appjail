@@ -57,12 +57,13 @@ close it first. Document-portal grants are kept (`appjail portals APP` lists and
 
 ### `run`
 
-`appjail run APP [--dir PATH[:ro|:rw]]... [--file PATH[:ro|:rw]]... [-- ARGS]`
+`appjail run APP [--dir PATH[:ro|:rw]]... [--file PATH[:ro|:rw]]... [--raw] [-- ARGS]`
 
 | Option | Effect |
 |---|---|
 | `--dir PATH[:ro\|:rw]` | grant this directory for this run only; repeatable |
 | `--file PATH[:ro\|:rw]` | bind only this file for this run, read-only unless `:rw`, and pass its path in the jail to the app; repeatable. For a file whose name ends in `:rw` or `:ro`, write the mode yourself (`x:rw:ro`) |
+| `--raw` | for this run only, give the app your terminal as it is, as the `raw_terminal` permission does for every run: without it, when the app's output goes to a terminal, the app gets no input and its output is cleaned of control sequences |
 
 ### `open`
 

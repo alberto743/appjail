@@ -890,3 +890,28 @@ def test_prepare_writes_passwd_and_group_atomically(h, monkeypatch):
     assert {"passwd", "group"} <= set(written)
     assert (etc / "passwd").read_text().startswith("root:x:0:0:")
     assert sorted(p.name for p in etc.iterdir()) == ["group", "passwd"]
+
+
+def _terms(captured):
+    argv = captured[0]
+    return {argv[i + 1]: argv[i + 2] for i, a in enumerate(argv) if a == "--setenv"}
+
+
+def _launch_for_terminal(sandbox, runtime, **kw):
+    captured = []
+    env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test", "TERM": "xterm-256color"}
+    runner.launch("app", [], host_env=env, extract=Extractor(), say=lambda *_: None, runner=lambda argv: captured.append(argv) or 0,
+                  **COMPOSITOR, **kw)
+    return _terms(captured)
+
+
+def test_the_app_gets_no_terminal_variables_by_default(sandbox, runtime):
+    install(sandbox)
+    assert "TERM" not in _launch_for_terminal(sandbox, runtime)
+
+
+def test_the_raw_terminal_permission_and_the_raw_option_give_the_app_term(sandbox, runtime):
+    install(sandbox, raw_terminal=True)
+    assert _launch_for_terminal(sandbox, runtime)["TERM"] == "xterm-256color"
+    install(sandbox)
+    assert _launch_for_terminal(sandbox, runtime, raw=True)["TERM"] == "xterm-256color"

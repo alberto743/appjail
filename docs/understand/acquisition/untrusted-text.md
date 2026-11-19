@@ -27,6 +27,14 @@ unescaped can also become a command.
   cut. The output layer (`Console`) applies it to every line and to every prompt (a prompt names an asset or a
   repository from the network), so a command cannot print untrusted text by mistake. The window does the same before
   putting text in a widget.
+- **An app's own output is cleaned too, on a terminal.** An app that shares your terminal could send the same sequences.
+  When an app's output goes to a terminal and the app does not have `raw_terminal`, appjail gives it no input (a terminal
+  answers some sequences by typing into its input), reads its output through a pipe in pieces of 64 KiB, removes every
+  escape sequence and control character (`textsafe.clean_output`: tabs and spaces are kept, a carriage return ends a line,
+  nothing is cut except that a line without a newline is written out at 64 KiB, so memory stays bounded) and writes the
+  lines to your terminal. Standard output and standard error of one terminal share one pipe, which keeps their order.
+  When the output is redirected, and for apps started from a menu or the window (which are not terminals; the window
+  cleans the lines itself), nothing changes. If sequences were removed, appjail says so after the run.
 - **Strict parsers with limits.** Catalogs, manifests and the GitHub API's answers are parsed against a fixed schema,
   with size limits; an unexpected shape is an error, not a crash or a guess.
 - **Nothing becomes a command.** appjail never passes untrusted text to a shell. Menu entries are generated: the app's
@@ -41,14 +49,22 @@ unescaped can also become a command.
   [Menu entries are written by appjail](../../decisions/desktop/menu-entries.md) and
   [Icons rewritten, not decoded](../../decisions/desktop/icons.md).
 - Decision: [One output vocabulary, errors on stderr](../../decisions/project/output.md).
+- Decision: [An app's terminal output is cleaned unless granted](../../decisions/isolation/terminal-output.md).
 
 ## Limits
 
-- What appjail prints is cleaned; what an *app* prints is not. An app started from a terminal (`appjail run`) shares that
-  terminal for its input and output, as command-line tools must: control sequences it writes reach the terminal, and
-  some terminals let them set the window title, create hyperlinks or write to the clipboard. The jail stops it from
-  pushing keystrokes into your shell (`TIOCSTI` is refused, and the app runs in a session of its own). Start untrusted
-  graphical apps from the menu, or use a terminal that ignores clipboard and title sequences.
+- An app with `raw_terminal` (or started with `appjail run --raw`) shares your terminal as it is, as command-line and
+  terminal apps must: control sequences it writes reach the terminal, and some terminals let them set the window title,
+  create hyperlinks or write to the clipboard, or answer by typing into your input; it can also read what you type there.
+  The jail stops it from pushing keystrokes into your shell (`TIOCSTI` is refused, and the app runs in a session of its
+  own). Grant it only to an app you trust, or use a terminal that ignores clipboard and title sequences.
+- Without `raw_terminal`, a terminal app (a full-screen program) does not work: it gets no input, and its drawing is cleaned
+  away. What the filter cannot give: colours, because the sequences that make them are removed; output that appears as it
+  is written, because a program that writes to a pipe usually buffers it until it exits or fills its buffer; output faster
+  than about 30 MB a second, which is slowed down. Binary output to a terminal is not meaningful and is cleaned like text.
+- When `raw_terminal` is granted, appjail passes the app `TERM` from your environment (when it looks like a terminal
+  name) and the terminfo directories of the host's `/usr`, because an app that carries its own curses library often does
+  not find them; `[env]` entries of the manifest win. Without the grant the app has no `TERM`.
 - Cleaning removes what changes the display; it does not stop a misleading but plain text, such as a description that
   claims to be something it is not, or a lookalike name. The review shows the facts (account id, age) that such a text
   cannot change.
