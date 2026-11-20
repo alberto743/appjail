@@ -37,6 +37,7 @@ nav = [
       "understand/isolation/seccomp.md",
       "understand/isolation/landlock.md",
       "understand/isolation/lifetime.md",
+      "understand/isolation/resource-limits.md",
     ] },
     { "Desktop access" = [
       "understand/desktop/index.md",

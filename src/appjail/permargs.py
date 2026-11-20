@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import grants, jail, landlock, manifest
 from .console import ARROW, Abort
-from .valid import display_size
+from .valid import cpu_quota, display_size, memory_max, tasks_max
 
 PERMISSION_FLAGS = manifest.BOOL_PERMS
 
@@ -129,6 +129,10 @@ def permissions_from_args(args):
         raise Abort("--portal needs --allow portals")
     try:
         display_size(args.display_size, "--display-size")
+        for value, check, flag in ((args.memory_max, memory_max, "--memory-max"), (args.cpu_quota, cpu_quota, "--cpu-quota"),
+                                   (args.tasks_max, tasks_max, "--tasks-max")):
+            if value:
+                check(value, flag)
     except manifest.ManifestError as e:
         raise Abort(str(e)) from e
     return manifest.Permissions(
@@ -141,6 +145,7 @@ def permissions_from_args(args):
         audio="audio" in allowed or "mic" in allowed, mic="mic" in allowed, audio_mode=args.audio_mode,
         gpu="gpu" in allowed, camera="camera" in allowed,
         display=args.display, display_size=args.display_size,
+        memory_max=args.memory_max, cpu_quota=args.cpu_quota, tasks_max=args.tasks_max,
     )
 
 
@@ -155,6 +160,9 @@ def permission_lines(p):
     lines = [("grants", ", ".join(k for k in PERMISSION_FLAGS if getattr(p, k)) or "none"), ("display", display)]
     if p.audio:
         lines.append(("audio-mode", p.audio_mode))
+    for label, value in (("memory-max", p.memory_max), ("cpu-quota", p.cpu_quota), ("tasks-max", p.tasks_max)):
+        if value:
+            lines.append((label, value))
     for label, values in (("dirs", p.dirs), ("dbus", p.dbus_filter), ("dbus-own", p.dbus_own), ("portals", p.portal_interfaces)):
         if values:
             lines.append((label, ", ".join(values)))
@@ -167,9 +175,9 @@ def permission_changes(old, new):
     for k in PERMISSION_FLAGS:
         if getattr(old, k) != getattr(new, k):
             lines.append((k, f"{'yes' if getattr(old, k) else 'no'} {ARROW} {'yes' if getattr(new, k) else 'no'}"))
-    for k in ("audio_mode", "display", "display_size"):
+    for k in ("audio_mode", "display", "display_size", *manifest.LIMIT_KEYS):
         if getattr(old, k) != getattr(new, k):
-            lines.append((k.replace("_", "-"), f"{getattr(old, k)} {ARROW} {getattr(new, k)}"))
+            lines.append((k.replace("_", "-"), f"{getattr(old, k) or 'none'} {ARROW} {getattr(new, k) or 'none'}"))
     for label, a, b in (("dirs", old.dirs, new.dirs), ("dbus", old.dbus_filter, new.dbus_filter),
                         ("dbus-own", old.dbus_own, new.dbus_own), ("portals", old.portal_interfaces, new.portal_interfaces)):
         lines += [(label, f"+ {x}") for x in b if x not in a] + [(label, f"- {x}") for x in a if x not in b]

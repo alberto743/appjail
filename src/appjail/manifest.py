@@ -22,7 +22,17 @@ from .grants import (
     check_env_table,
     check_portal_interface,
 )
-from .valid import ManifestError, boolean, display_size, match, str_list, string
+from .valid import (
+    ManifestError,
+    boolean,
+    cpu_quota,
+    display_size,
+    match,
+    memory_max,
+    str_list,
+    string,
+    tasks_max,
+)
 
 SCHEMA_VERSION = 1
 
@@ -51,7 +61,8 @@ CHANNELS = ("stable", "prerelease", "pinned")
 AUDIO_MODES = ("pipewire", "pulse")
 DEFAULT_AUDIO_MODE = "pipewire"
 BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal", "devel")
-PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "dirs"}
+LIMIT_KEYS = ("memory_max", "cpu_quota", "tasks_max")  # strings in systemd syntax; empty when not set
+PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "memory_max", "cpu_quota", "tasks_max", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -75,6 +86,9 @@ class Permissions:
     full_wayland: bool = False  # run although the app's Wayland socket lists privileged or unknown globals (wayland.privileged)
     raw_terminal: bool = False  # the app's output reaches your terminal as it is (otherwise cleaned of control sequences when it is a terminal)
     devel: bool = False  # debuggers and tracers: ptrace and one personality value are allowed (seccomp.DEVEL)
+    memory_max: str = ""  # MemoryMax= of the app's systemd scope ("2G", "50%"); empty: no limit (docs/decisions/isolation/resource-limits.md)
+    cpu_quota: str = ""  # CPUQuota= ("200%" is two CPUs)
+    tasks_max: str = ""  # TasksMax=: processes and threads
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
     @property
@@ -161,7 +175,7 @@ def _permissions(table):
         raise ManifestError("permissions must be a table")
     _unknown(table, PERM_KEYS, "[permissions]")
     # Only the shape is settled here (lists of strings); validate() checks every value.
-    perms = {key: table[key] for key in (*BOOL_PERMS, "audio_mode", "display", "display_size") if key in table}
+    perms = {key: table[key] for key in (*BOOL_PERMS, "audio_mode", "display", "display_size", *LIMIT_KEYS) if key in table}
     for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs"):
         if key in table:
             perms[key] = tuple(str_list(table[key], f"permissions.{key}"))
@@ -268,6 +282,9 @@ def validate(m):
     if p.display not in DISPLAYS:
         raise ManifestError(f"permissions.display must be one of {', '.join(DISPLAYS)}")
     display_size(p.display_size)
+    for key, check in zip(LIMIT_KEYS, (memory_max, cpu_quota, tasks_max)):
+        if getattr(p, key) != "":
+            check(getattr(p, key))
     for n in p.dbus_filter:
         check_dbus_name(n)
     for n in p.dbus_own:
@@ -386,6 +403,7 @@ def dumps(m):
         *(["full_wayland = true"] if p.full_wayland else []),
         *(["raw_terminal = true"] if p.raw_terminal else []),
         *(["devel = true"] if p.devel else []),
+        *(f"{key} = {_quote(getattr(p, key))}" for key in LIMIT_KEYS if getattr(p, key)),
         f"dirs = {_array(p.dirs)}",
         "",
         *(["[env]", *(f"{k} = {_quote(v)}" for k, v in sorted(m.env)), ""] if m.env else []),

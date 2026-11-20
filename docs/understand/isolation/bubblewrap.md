@@ -69,7 +69,8 @@ and refuses an older or unreadable one with a message that names the needed vers
 
 - bubblewrap trusts its caller: it enforces whatever options it is given. The security of a jail is the security of
   appjail's options, which is why they are built in one place and tested.
-- It cannot apply Landlock, and it has no notion of resource limits (memory, processes); an app can still exhaust
+- It cannot apply Landlock, and it has no notion of resource limits (memory, processes); appjail adds them through a
+  systemd scope when an app has a limit ([resource limits](resource-limits.md)), and without one an app can exhaust
   memory or CPU.
 - With `raw_terminal`, the app shares the terminal it was started from (standard input, output and error): it can read
   what you type there while it runs, and write control sequences to it. Without it, appjail gives the app no input and

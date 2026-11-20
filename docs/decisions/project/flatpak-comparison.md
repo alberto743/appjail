@@ -39,7 +39,7 @@ Flatpak remains the mature route.
   public manifest on its own infrastructure. appjail runs the publisher's binary; GPG is a deferred tier and nothing is
   rebuilt.
 - **Resource accounting.** Each instance runs in a systemd scope (`app-flatpak-ID-INSTANCE.scope`), where the session's
-  resource control and `systemd-oomd` apply. appjail sets no cgroup or limit: an app can exhaust memory or CPU.
+  resource control and `systemd-oomd` apply. appjail has the three optional limits `memory_max`, `cpu_quota` and `tasks_max`, applied through a `systemd-run --user --scope` around the launch when set ([resource limits](../isolation/resource-limits.md)); without one an app can exhaust memory or CPU.
 - **Mediated hardware.** A USB portal with per-device grants, conditional permissions (`--device-if`, `--socket-if`) and
   parental controls. appjail binds no input, USB or Bluetooth device.
 - **Sandboxes inside the app.** `flatpak-spawn --sandbox` gives a child a stricter sandbox without letting the app

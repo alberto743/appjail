@@ -79,6 +79,8 @@ Read from the inside out:
    network namespace rather than in the filesystem.
 6. **[Process lifetime](lifetime.md)** makes sure the jail ends when the app ends, and that nothing of it keeps running
    when appjail is stopped.
+7. **[Resource limits](resource-limits.md)** cap the memory, CPU time and processes of an app that has a limit, through
+   a systemd scope around its start.
 
 ## Why several layers
 
