@@ -90,6 +90,59 @@ def test_add_form_passes_the_limits(window, monkeypatch):
     assert seen == [["add", "o/App", "--memory-max", "2G", "--cpu-quota", "200%"]]
 
 
+def test_the_private_redirect_choice_is_for_urls_only_and_a_search_hit_never_carries_it(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    window.kind.set("url")
+    window.source.set("https://x.example/a.AppImage")
+    window.private_redirects.set(True)
+    assert str(window.private_check.cget("state")) == "normal"
+    window._add()
+    assert seen[-1] == ["add", "--url", "https://x.example/a.AppImage", "--allow-private-redirects"]
+    window.kind.set("github")
+    assert str(window.private_check.cget("state")) == "disabled"
+    window.source.set("o/App")
+    window._add()
+    assert "--allow-private-redirects" not in seen[-1]
+    window.kind.set("url")
+    window.hits = [type("Hit", (), {"source": "github:o/r", "name": "r", "description": "", "note": "", "catalog": "c"})()]
+    window.hit_tree.insert("", "end", iid="0", values=("r", "", "github:o/r", "c"))
+    window.hit_tree.selection_set("0")
+    window._use_hit()
+    assert window.private_redirects.get() is False
+
+
+def test_open_file_asks_whether_the_app_may_change_it(window, monkeypatch):
+    launched = []
+    monkeypatch.setattr(window, "launch", launched.append)
+    monkeypatch.setattr(app.filedialog, "askopenfilename", lambda **kw: "/data/-notes.txt")
+    for rw in (False, True):
+        monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, _rw=rw, **kw: {"rw": _rw})
+        window._open_file("app")
+    assert launched == [["open", "app", "--", "/data/-notes.txt"], ["open", "app", "--rw", "--", "/data/-notes.txt"]]
+    monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, **kw: None)  # cancelled: nothing starts
+    window._open_file("app")
+    assert len(launched) == 2
+
+
+def test_the_update_dialog_and_the_catalog_buttons_send_the_new_options(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, **kw: {
+        "prerelease": False, "channel": app.KEEP, "quarantine": "", "file": "", "sha256": "", "verify": False,
+        "pattern": "*.AppImage", "private": True})
+    window._update_options("app")
+    assert seen[-1] == ["update", "app", "--pattern", "*.AppImage", "--allow-private-redirects"]
+    window.source_name.set("db")
+    window.index_commit.set("b" * 40)
+    window.index_private.set(True)
+    window._index("update")
+    assert seen[-1] == ["index", "update", "db", "--commit", "b" * 40, "--allow-private-redirects"]
+    monkeypatch.setattr(app.simpledialog, "askstring", lambda *a, **kw: "https://x.example/c.json")
+    window._index_add("--url")
+    assert seen[-1] == ["index", "add", "db", "--url", "https://x.example/c.json", "--allow-private-redirects"]
+
+
 def test_add_form_offers_a_check_box_for_each_opt_in_portal(window, monkeypatch):
     seen = []
     monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))

@@ -44,6 +44,8 @@ def add_argv(form):
         argv += ["--display", form["display"]]
     if form.get("display") == manifest.ROOTFUL and form.get("display_size"):
         argv += ["--display-size", form["display_size"]]
+    if kind == "url" and form.get("allow_private_redirects"):
+        argv.append("--allow-private-redirects")
     for key in manifest.LIMIT_KEYS:
         if str(form.get(key, "")).strip():
             argv += [LIMIT_FLAGS[key], str(form[key]).strip()]
@@ -122,7 +124,8 @@ def add_target(source):
     return kind, target
 
 
-def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=None, sha256=None, verify=False):
+def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=None, sha256=None, verify=False, pattern=None,
+                allow_private_redirects=False):
     argv = ["update"]
     if app:
         argv.append(app)
@@ -138,7 +141,32 @@ def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=
         argv += ["--sha256", sha256.strip()]
     if verify:
         argv.append("--verify")
+    if pattern:
+        argv += ["--pattern", pattern.strip()]
+    if allow_private_redirects:
+        argv.append("--allow-private-redirects")
     return argv
+
+
+def index_argv(sub, name=None, commit=None, allow_private_redirects=False):
+    """`index update|rollback [NAME]`; the commit and the private redirects only concern `update`."""
+    argv = ["index", sub, *([name] if name else [])]
+    if sub == "update":
+        if commit:
+            argv += ["--commit", commit.strip()]
+        if allow_private_redirects:
+            argv.append("--allow-private-redirects")
+    return argv
+
+
+def index_add_argv(name, flag, where, allow_private_redirects=False):
+    """`index add NAME --url URL|--file PATH`; private redirects only concern a URL."""
+    return ["index", "add", name, flag, where, *(["--allow-private-redirects"] if allow_private_redirects and flag == "--url" else [])]
+
+
+def open_argv(app, path, rw=False):
+    """`open APP -- PATH`: the file is bound alone into the jail, read-only unless `rw`."""
+    return ["open", app, *(["--rw"] if rw else []), "--", path]
 
 
 def run_argv(app, dirs=(), files=()):

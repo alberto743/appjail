@@ -5,7 +5,7 @@
 
 The check looks for the option's text in the window's source, so it finds an option nobody wired up (a new permission
 key, a new `add` flag), not one wired to the wrong command. It cannot tell two commands that share an option name apart
-(`--rw` of `desktop` and of `open`): see the known gaps below."""
+(`--rw` of `desktop` and of `open`): `open --rw` is sent by the Apps tab's Open file dialog and tested there."""
 
 import argparse
 from pathlib import Path
@@ -25,11 +25,7 @@ NEVER = {
 }
 
 # Known gaps: the window cannot send these yet. An entry goes when the window gains the option (the test says so).
-GAPS = {
-    "--allow-private-redirects": "add, update and `index add/update`: following a redirect to a private address",
-    "--pattern": "update: change the release-asset pattern of a GitHub app",
-    "--commit": "`index update`: fetch one appjail-db commit",
-}
+GAPS = {}
 
 
 def options(parser, path=()):

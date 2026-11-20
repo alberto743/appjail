@@ -237,10 +237,13 @@ class App:
                 ("text", "quarantine", "Quarantine days (default 7)"),
                 ("text", "file", "New AppImage (file apps)"),
                 ("text", "sha256", "sha256 of the new content"),
-                ("check", "verify", "URL apps: verify after the quarantine")),
+                ("check", "verify", "URL apps: verify after the quarantine"),
+                ("text", "pattern", "Asset pattern, from now on (GitHub apps)"),
+                ("check", "private", "URL apps: follow redirects to private addresses (the LAN, loopback); only for a server of your own")),
             "The update shows its review and asks before installing.")
         if got:
-            self.run(argv.update_argv(app, got["prerelease"], None if got["channel"] == KEEP else got["channel"], got["quarantine"], got["file"], got["sha256"], got["verify"]))
+            self.run(argv.update_argv(app, got["prerelease"], None if got["channel"] == KEEP else got["channel"], got["quarantine"], got["file"], got["sha256"], got["verify"],
+                                          got["pattern"], got["private"]))
 
     def _portals(self, app):
         header, grants = apps.portal_grants(app)
@@ -277,8 +280,13 @@ class App:
 
     def _open_file(self, app):
         path = filedialog.askopenfilename(parent=self.root, title=f"Open with {app}")
-        if path:  # choosing the file is the consent; it is bound read-only, like the menu entry
-            self.launch(["open", app, "--", path])
+        if not path:
+            return
+        got = dialogs.options_dialog(
+            self.root, f"Open with {app}", (("check", "rw", "Let the app change this file"),),
+            f"{textsafe.clean(path)}\n\nThe file is bound alone into the jail, read-only unless you tick the box.", ok="Open")
+        if got:
+            self.launch(argv.open_argv(app, path, got["rw"]))
 
     def _permissions(self, app):
         try:
@@ -317,6 +325,12 @@ class App:
             self.text[key] = tk.StringVar()
             self.entries[key] = ttk.Entry(opts, textvariable=self.text[key], width=24)
             self.entries[key].grid(row=i // 2, column=(i % 2) * 2 + 1, sticky="w")
+        self.private_redirects = tk.BooleanVar()
+        private = ttk.Frame(opts)
+        private.grid(row=2, column=0, columnspan=4, sticky="w", padx=4, pady=2)
+        self.private_check = ttk.Checkbutton(private, text="Follow redirects to private addresses (URL)", variable=self.private_redirects)
+        self.private_check.pack(side="left")
+        ttk.Label(private, text="the LAN and loopback are refused by default; only for a server of your own", foreground="gray40").pack(side="left", padx=8)
         self.kind.trace_add("write", lambda *_: self._kind_changed())
         self.flag = {}
         grants = ttk.LabelFrame(tab, text="Permissions", padding=6)
@@ -375,6 +389,7 @@ class App:
         for key, applies in (("tag", kind == "github"), ("sha256", kind != "github"), ("max_size", kind == "url")):
             self.entries[key].configure(state="normal" if applies else "disabled")
         self.checks["Allow pre-releases"].configure(state="normal" if kind == "github" else "disabled")
+        self.private_check.configure(state="normal" if kind == "url" else "disabled")
 
     def _browse(self):
         path = filedialog.askopenfilename(parent=self.root, title="AppImage")
@@ -390,6 +405,7 @@ class App:
                     desktop=self.desktop.get(), mime_all=self.mime_all.get(),
                     mime=self.mime.get().replace(",", " ").split(), rw=self.rw.get())
         form.update({k: ed.values() for k, ed in self.editors.items()})
+        form["allow_private_redirects"] = self.private_redirects.get()
         if not form["source"].strip():
             messagebox.showinfo("appjail", "Give a source first.", parent=self.root)
             return
@@ -441,6 +457,15 @@ class App:
         ttk.Label(name_row, text="Source name").pack(side="left", padx=4)
         ttk.Entry(name_row, textvariable=self.source_name, width=24).pack(side="left")
         ttk.Label(name_row, text="(optional for update and rollback)", foreground="gray40").pack(side="left", padx=6)
+        more_row = ttk.Frame(idx)
+        more_row.pack(fill="x", pady=(4, 0))
+        self.index_commit = tk.StringVar()
+        ttk.Label(more_row, text="appjail-db commit").pack(side="left", padx=4)
+        ttk.Entry(more_row, textvariable=self.index_commit, width=44).pack(side="left")
+        ttk.Label(more_row, text="(40 hex digits, for Update; empty: the latest)", foreground="gray40").pack(side="left", padx=6)
+        self.index_private = tk.BooleanVar()
+        ttk.Checkbutton(idx, text="Follow redirects to private addresses (Update, Add from URL); only for a server of your own",
+                        variable=self.index_private).pack(anchor="w", padx=4, pady=(4, 0))
         buttons = ttk.Frame(idx)
         buttons.pack(fill="x", pady=(6, 0))
         for text, action in (("Status", lambda: self.run(["index", "status"])),
@@ -496,11 +521,12 @@ class App:
         self.source.set(target[1])
         for key in ("name", "tag", "sha256", "max_size"):
             self.text[key].set("")
+        self.private_redirects.set(False)  # a suggestion never carries the risky choice
         self.notebook.select(self.add_tab)
 
     def _index(self, sub):
         name = self.source_name.get().strip()
-        self.run(["index", sub, *([name] if name else [])])
+        self.run(argv.index_argv(sub, name, self.index_commit.get(), self.index_private.get()))
 
     def _index_add(self, flag):
         name = self.source_name.get().strip()
@@ -512,7 +538,7 @@ class App:
         else:
             where = simpledialog.askstring("appjail", "https URL of the catalog:", parent=self.root)
         if where:
-            self.run(["index", "add", name, flag, where])
+            self.run(argv.index_add_argv(name, flag, where, self.index_private.get()))
 
     def _index_remove(self):
         name = self.source_name.get().strip()

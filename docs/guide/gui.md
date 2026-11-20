@@ -16,6 +16,12 @@ It runs the same commands as the terminal and shows their output in one pane. Ev
 a dialog, with the facts the command printed just before it, and the same default answer: No, except when writing a
 menu entry you asked for. The window never answers for you. Apps started from it run in their own session, so closing
 the window does not close them.
+Every command-line option has a place in the window, except the few that make no sense there (`--yes`, because the
+command asks and you answer; `--json`; `run --raw`). **Open file…** asks whether the app may change the file, with the
+file bound alone into the jail and read-only unless you tick the box. Following redirects to private addresses (the LAN and
+loopback, refused by default) is a check box on the Add tab (URL sources), in the update dialog and under Catalogs, each
+with its warning; the asset pattern of a GitHub app is a field of the update dialog, and the appjail-db commit a field
+under Catalogs.
 Their output is shown in the pane with the control sequences removed, so the `raw_terminal` check box (your terminal as it
 is, for `appjail run` in a terminal) has no effect on the output of a run started from the window.
 
