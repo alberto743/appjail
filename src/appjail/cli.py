@@ -97,6 +97,10 @@ def build_parser():
                      help="wayland (default), xwayland or xwayland-rootful for X11-only apps, none for an app with no window")
     add.add_argument("--display-size", default=manifest.DEFAULT_DISPLAY_SIZE, metavar="WxH",
                      help="with --display xwayland-rootful: the size of its window (default %(default)s)")
+    add.add_argument("--memory-max", default="", metavar="SIZE",
+                     help="limit the app's memory (systemd syntax: 2G, 512M, 50%%); needs a systemd user session")
+    add.add_argument("--cpu-quota", default="", metavar="PERCENT", help="limit the app's CPU (200%% is two CPUs)")
+    add.add_argument("--tasks-max", default="", metavar="N", help="limit the app's processes and threads (512, or 20%%)")
     add.add_argument("--desktop", action="store_true", help="also create a menu entry that starts the app through appjail")
     add.add_argument("--mime", action="append", default=[], metavar="TYPE",
                      help="with --desktop: offer the app for this file type (must be declared by the app); repeatable")
@@ -183,6 +187,9 @@ def build_parser():
     perms.add_argument("--audio-mode", choices=manifest.AUDIO_MODES)
     perms.add_argument("--display", choices=manifest.DISPLAYS)
     perms.add_argument("--display-size", metavar="WxH")
+    perms.add_argument("--memory-max", metavar="SIZE", help="a limit in systemd syntax (2G, 50%%), or infinity to remove it")
+    perms.add_argument("--cpu-quota", metavar="PERCENT", help="a limit (200%% is two CPUs), or infinity to remove it")
+    perms.add_argument("--tasks-max", metavar="N", help="a limit (512, or 20%%), or infinity to remove it")
     perms.add_argument("--add-dir", action="append", default=[], metavar="PATH[:ro|:rw]")
     perms.add_argument("--rm-dir", action="append", default=[], metavar="PATH")
     perms.add_argument("--add-dbus", action="append", default=[], metavar="NAME", help="allow talking to this session-bus name")

@@ -33,6 +33,9 @@ appjail add --url URL [options]
 | `--audio-mode pipewire\|pulse` | with `--allow audio`: the private graph (default) or the host's Pulse socket |
 | `--display none\|wayland\|xwayland\|xwayland-rootful` | the display mode (default `wayland`) |
 | `--display-size WxH` | with `--display xwayland-rootful`: the size of its window (default 1280x800) |
+| `--memory-max SIZE` | limit the app's memory, in systemd's syntax (`2G`, `512M`, `50%`) |
+| `--cpu-quota PERCENT` | limit the app's CPU (`200%` is two CPUs) |
+| `--tasks-max N` | limit the app's processes and threads (`512`, `20%`) |
 | `--desktop` | also create a menu entry |
 | `--mime TYPE` | with `--desktop`: offer the app for this file type; repeatable |
 | `--mime-all` | with `--desktop`: offer every file type the app declares, minus refused ones |
@@ -87,6 +90,7 @@ after and ask before saving.
 | `--allow PERMISSION`, `--deny PERMISSION` | grant or take back a switch (the same names as `add --allow`) |
 | `--audio-mode pipewire\|pulse` | how `audio` and `mic` are provided |
 | `--display MODE`, `--display-size WxH` | the display mode and the rootful window size |
+| `--memory-max SIZE`, `--cpu-quota PERCENT`, `--tasks-max N` | the limits of the app; the value `infinity` removes one |
 | `--add-dir PATH[:ro\|:rw]`, `--rm-dir PATH` | a directory |
 | `--add-dbus NAME`, `--rm-dbus NAME` | a session-bus name to talk to |
 | `--add-dbus-own NAME`, `--rm-dbus-own NAME` | a session-bus name to own |

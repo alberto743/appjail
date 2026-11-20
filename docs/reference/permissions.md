@@ -29,6 +29,9 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 |---|---|---|---|
 | `display` | `wayland`, `xwayland`, `xwayland-rootful`, `none` | `wayland` | `--display` |
 | `display_size` | `WxH`, each side 320 to 8192 (for `xwayland-rootful`) | `1280x800` | `--display-size` |
+| `memory_max` | `K`, `M`, `G`, `T` sizes or a percentage (`2G`, `50%`); not set = no limit | not set | `--memory-max` |
+| `cpu_quota` | a percentage of one CPU, above 100% for several (`200%`); not set = no limit | not set | `--cpu-quota` |
+| `tasks_max` | a number or a percentage (`512`, `20%`); not set = no limit | not set | `--tasks-max` |
 | `audio_mode` | `pipewire` (a private audio graph per app), `pulse` (the host's Pulse socket, which always includes capture) | `pipewire` | `--audio-mode` |
 
 ## Lists

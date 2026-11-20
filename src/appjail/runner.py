@@ -24,6 +24,7 @@ from . import (
     history,
     jail,
     landlock,
+    limits,
     manifest,
     portal,
     runtimejail,
@@ -318,6 +319,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         perms, opened, extra_args = _open_grants(stack, m.permissions, extra_dirs, extra_files, extra_args, say)
         if raw:
             perms = replace(perms, raw_terminal=True)  # for this run: the app also gets TERM, as with the permission
+        limits.check(perms, env)
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None
@@ -341,6 +343,8 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
                 **({PASTA_STATUS_FD: (">", pipes.paths["status"]), PASTA_BLOCK_FD: ("<", pipes.paths["block"])} if pipes else {})})
         if scoped and not in_pasta:  # pasta's private namespace already isolates abstract sockets, and pasta does not
             argv = landlock.wrap(argv)  # start its command under the no_new_privs that Landlock needs
+        if limits.active(perms):
+            argv = limits.wrap(argv, perms, name, env)
         if runner:
             return runner(argv)
         terminal = termfilter.plan(perms.raw_terminal, sys.stdin, sys.stdout, sys.stderr)

@@ -31,6 +31,7 @@ the other switches only when true. Each key is described in the [permission refe
 | `audio_mode` | `"pipewire"` (default, not written) or `"pulse"` |
 | `display` | `"wayland"` (default), `"xwayland"`, `"xwayland-rootful"`, `"none"` |
 | `display_size` | `"WxH"`, each side 320 to 8192; written only when not `1280x800` |
+| `memory_max`, `cpu_quota`, `tasks_max` | strings in systemd's syntax (`"2G"`, `"200%"`, `"512"`); written only when set ([resource limits](../understand/isolation/resource-limits.md)) |
 | `dirs` | list of absolute or `~/` paths, each optionally `:ro` or `:rw` |
 | `dbus_filter`, `dbus_own` | lists of D-Bus names, optionally ending in `.*` |
 | `portal_interfaces` | list of opt-in portal interface names (needs `portals = true`) |

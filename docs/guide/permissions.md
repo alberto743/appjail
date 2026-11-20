@@ -45,6 +45,22 @@ your system: with `kernel.yama.ptrace_scope` at 1 (Ubuntu) it can attach only to
 and `gdb PROG` work and `strace -p PID` on an unrelated process does not. `perf` is not supported: it needs a sysctl
 the jail cannot change and the host's `/sys`. Revoke it when you are done (`--deny devel`). See [debugging](../decisions/isolation/debugging.md).
 
+## Limiting memory, CPU and processes
+
+An app can use as much memory and CPU as your session has. To cap it, set one or more limits, in systemd's own syntax:
+
+```sh
+appjail perms NAME --memory-max 2G --cpu-quota 200% --tasks-max 512
+appjail perms NAME --memory-max infinity     # remove one
+appjail add owner/repo --memory-max 1G       # or when installing
+```
+
+`--memory-max` is a size (`512M`, `2G`) or a percentage of the host's memory; `--cpu-quota` is a percentage of one CPU
+(`200%` is two); `--tasks-max` is a number of processes and threads or a percentage. An app that goes over its memory
+limit is stopped at once, all of it, so start high and lower it. The limits need a systemd user session (a normal login
+has one); without it the app does not start, and the message says how to remove them. See [resource
+limits](../understand/isolation/resource-limits.md).
+
 ## Apps that run in a terminal
 
 When an app's output goes to your terminal, appjail gives the app no input and removes the control sequences from what

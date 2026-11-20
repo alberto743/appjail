@@ -17,6 +17,7 @@ from . import (
     store,
     tools,
     updater,
+    valid,
 )
 from .cmd_desktop import forget
 from .console import Abort, human_size
@@ -85,6 +86,7 @@ def list_json(name, m):
                  portal_interfaces=list(p.portal_interfaces))
     if p.rootful:
         perms["display_size"] = p.display_size
+    perms.update({k: getattr(p, k) for k in manifest.LIMIT_KEYS if getattr(p, k)})
     pending = updater.load_pending(name)
     return {"name": name, "version": m.version, "source": m.source, "tier": m.evidence_tier, "channel": m.channel,
             "update_seen": pending["tag"] if pending else None, "permissions": perms,
@@ -209,6 +211,15 @@ def flag_changes(args):
         changes["display"] = args.display
     if args.display_size:
         changes["display_size"] = args.display_size
+    for key, check in (("memory_max", valid.memory_max), ("cpu_quota", valid.cpu_quota), ("tasks_max", valid.tasks_max)):
+        value = getattr(args, key)
+        if value == "infinity":
+            changes[key] = ""
+        elif value:
+            try:
+                changes[key] = check(value, "--" + key.replace("_", "-"))
+            except manifest.ManifestError as e:
+                raise Abort(str(e)) from e
     return changes
 
 

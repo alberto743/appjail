@@ -1,6 +1,6 @@
 # Process lifetime
 
-*Part of [Isolation](index.md). Previous: [Landlock](landlock.md).*
+*Part of [Isolation](index.md). Previous: [Landlock](landlock.md). Next: [resource limits](resource-limits.md).*
 
 ## What it is
 

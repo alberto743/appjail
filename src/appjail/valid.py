@@ -13,6 +13,10 @@ class ManifestError(ValueError):
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 DISPLAY_SIZE_RE = re.compile(r"([1-9][0-9]{2,3})x([1-9][0-9]{2,3})")
 DISPLAY_SIZE_RANGE = (320, 8192)
+# Limits in systemd's own syntax (MemoryMax=, CPUQuota=, TasksMax=); the value reaches `systemd-run -p`, so only these shapes pass.
+MEMORY_MAX_RE = re.compile(r"[1-9][0-9]{0,9}[KMGT]?|[1-9][0-9]?%|100%")
+CPU_QUOTA_RE = re.compile(r"[1-9][0-9]{0,3}%|10000%")
+TASKS_MAX_RE = re.compile(r"[1-9][0-9]{0,6}|[1-9][0-9]?%|100%")
 
 
 def string(value, what, max_len=256):
@@ -49,3 +53,24 @@ def display_size(value, what="permissions.display_size"):
     if not m or not all(low <= int(side) <= high for side in m.groups()):
         raise ManifestError(f"{what} must be WIDTHxHEIGHT, each between {low} and {high}")
     return value
+
+
+def _limit(value, regex, what, shape):
+    if not isinstance(value, str) or not regex.fullmatch(value):
+        raise ManifestError(f"{what} must be {shape}")
+    return value
+
+
+def memory_max(value, what="permissions.memory_max"):
+    """Bytes with an optional K, M, G or T suffix (1024-based), or a percentage of the host's memory (systemd's MemoryMax=)."""
+    return _limit(value, MEMORY_MAX_RE, what, "a size such as 512M or 2G, or a percentage such as 50%")
+
+
+def cpu_quota(value, what="permissions.cpu_quota"):
+    """A percentage of one CPU, which may exceed 100% (systemd's CPUQuota=): 200% is two CPUs."""
+    return _limit(value, CPU_QUOTA_RE, what, "a percentage of one CPU such as 50% or 200%")
+
+
+def tasks_max(value, what="permissions.tasks_max"):
+    """A number of processes and threads, or a percentage of the host's limit (systemd's TasksMax=)."""
+    return _limit(value, TASKS_MAX_RE, what, "a number such as 512, or a percentage such as 20%")
