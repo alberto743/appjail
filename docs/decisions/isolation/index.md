@@ -15,4 +15,5 @@ Decisions about the jail an app runs in. How it works is explained in
 | [Environment variables in the manifest](environment.md) | the `[env]` table, and the names it refuses |
 | [The jail ends with its command](lifetime.md) | when a jail ends, and the `linger` permission |
 | [An app's terminal output is cleaned unless granted](terminal-output.md) | control sequences from an app, the `raw_terminal` permission |
+| [Debuggers need the `devel` permission](debugging.md) | `ptrace` and one `personality` value for tracers and debuggers; `perf` stays refused |
 | [No change under a running app](app-lock.md) | the per-app locks; `remove` and `reset` refuse while the app runs |

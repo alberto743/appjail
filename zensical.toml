@@ -96,6 +96,7 @@ nav = [
       "decisions/isolation/environment.md",
       "decisions/isolation/lifetime.md",
       "decisions/isolation/terminal-output.md",
+      "decisions/isolation/debugging.md",
       "decisions/isolation/app-lock.md",
     ] },
     { "Desktop access" = [
