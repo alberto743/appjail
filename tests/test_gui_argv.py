@@ -138,3 +138,23 @@ def test_every_opt_in_portal_has_a_one_line_description():
     assert list(grants.PORTAL_DESCRIPTIONS) == list(grants.PORTAL_OPT_IN)
     assert all(text and "\n" not in text for text in grants.PORTAL_DESCRIPTIONS.values())
     assert "Not the V4L2" in grants.PORTAL_DESCRIPTIONS["Camera"]
+
+
+def test_add_passes_the_limits_the_form_holds():
+    command = argv.add_argv({"kind": "github", "source": "o/App", "memory_max": " 2G ", "cpu_quota": "", "tasks_max": "512"})
+    assert command == ["add", "o/App", "--memory-max", "2G", "--tasks-max", "512"]
+    args = parses(command)
+    assert (args.memory_max, args.cpu_quota, args.tasks_max) == ("2G", "", "512")
+    assert "--memory-max" not in argv.add_argv({"kind": "github", "source": "o/App", "memory_max": ""})
+
+
+def test_perms_sets_changes_and_removes_limits_and_leaves_alone_what_did_not_change():
+    old = dict(STATE, memory_max="2G", cpu_quota="", tasks_max="64")
+    assert argv.perms_argv("app", old, dict(old)) == ["perms", "app"]
+    command = argv.perms_argv("app", old, dict(old, memory_max="4G", cpu_quota="150%", tasks_max=""))
+    assert command == ["perms", "app", "--memory-max", "4G", "--cpu-quota", "150%", "--tasks-max", "infinity"]
+    assert "--yes" not in command
+    args = parses(command)
+    assert (args.memory_max, args.cpu_quota, args.tasks_max) == ("4G", "150%", "infinity")
+    # a state without the keys (an older caller) is the same as no limits
+    assert argv.perms_argv("app", STATE, dict(STATE, tasks_max="")) == ["perms", "app"]

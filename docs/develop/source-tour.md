@@ -157,7 +157,8 @@ new helper jail follows the same pattern: a `*_args` builder that binds only wha
    consistency rule (`_network_consistency` is an example);
 2. `permargs.py`: `permissions_from_args`, the summary lines, and a warning in `RISKY_GRANTS` if it widens the jail;
 3. its effect, almost always in `runtimejail.runtime_args` or `runner.launch`;
-4. the window's argument builder (`gui/argv.py`);
+4. the window's argument builder (`gui/argv.py`) and its form (`test_gui_coverage.py` fails for an option the window cannot send
+   and that is not listed there with its reason);
 5. tests in `test_manifest.py`, `test_cli_add.py`, `test_runner.py` and `test_gui_argv.py`;
 6. the permission reference, the guide, the concept page it belongs to, and a decision page if a choice was made.
 

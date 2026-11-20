@@ -335,6 +335,14 @@ class App:
         ttk.Combobox(modes_row, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=16).pack(side="left")
         self.display_size = tk.StringVar(value=manifest.DEFAULT_DISPLAY_SIZE)
         ttk.Entry(modes_row, textvariable=self.display_size, width=10).pack(side="left", padx=(8, 0))
+        limits_row = ttk.Frame(grants)
+        limits_row.pack(fill="x", pady=(4, 0))
+        self.limits = {}
+        for key, label in (("memory_max", "memory limit"), ("cpu_quota", "CPU limit"), ("tasks_max", "process limit")):
+            self.limits[key] = tk.StringVar()
+            ttk.Label(limits_row, text=label).pack(side="left", padx=(0 if key == "memory_max" else 12, 4))
+            ttk.Entry(limits_row, textvariable=self.limits[key], width=8).pack(side="left")
+        ttk.Label(limits_row, text="2G, 200%, 512; empty for none", foreground="gray40").pack(side="left", padx=8)
         extra = ttk.Frame(tab)
         extra.pack(fill="both", expand=True)
         self.editors = {}
@@ -378,6 +386,7 @@ class App:
         form = {k: v.get() for k, v in self.text.items()}
         form.update(kind=self.kind.get(), source=self.source.get(), prerelease=self.prerelease.get(),
                     allow=[f for f, v in self.flag.items() if v.get()], audio_mode=self.audio_mode.get(), display=self.display.get(), display_size=self.display_size.get().strip(),
+                    **{k: v.get().strip() for k, v in self.limits.items()},
                     desktop=self.desktop.get(), mime_all=self.mime_all.get(),
                     mime=self.mime.get().replace(",", " ").split(), rw=self.rw.get())
         form.update({k: ed.values() for k, ed in self.editors.items()})

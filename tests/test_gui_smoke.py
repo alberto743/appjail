@@ -80,6 +80,16 @@ def test_add_form_builds_the_expected_command(window, monkeypatch):
     assert seen == [["add", "o/App", "--dir", "~/x:rw", "--allow", "network"]]
 
 
+def test_add_form_passes_the_limits(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    window.source.set("o/App")
+    window.limits["memory_max"].set("2G")
+    window.limits["cpu_quota"].set(" 200% ")
+    window._add()
+    assert seen == [["add", "o/App", "--memory-max", "2G", "--cpu-quota", "200%"]]
+
+
 def test_add_form_offers_a_check_box_for_each_opt_in_portal(window, monkeypatch):
     seen = []
     monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
@@ -285,6 +295,23 @@ def test_permissions_editor_returns_the_state_it_was_given_when_nothing_changes(
     got = _open_permissions(window, monkeypatch, lambda top, ed, bt: bt["Review changes…"].invoke())
     assert got["env"] == ("A=1", "B=x=y") and got["dirs"] == ("~/a",) and got["network"] is True
     assert not app.argv.perms_argv("app", PERMS_STATE, got)[2:]
+
+
+def test_permissions_editor_shows_and_changes_the_limits(window, monkeypatch):
+    state = dict(PERMS_STATE, memory_max="2G", cpu_quota="", tasks_max="")
+
+    def act(top, ed, bt):
+        box = next(w for w in _walk(top) if isinstance(w, dialogs.ttk.LabelFrame) and w.cget("text") == "Permissions")
+        _size, memory, cpu, tasks = [w for w in box.winfo_children() if type(w) is dialogs.ttk.Entry]
+        assert (memory.get(), cpu.get(), tasks.get()) == ("2G", "", "")
+        memory.delete(0, "end")  # emptied: the limit goes
+        cpu.insert(0, "150%")
+        bt["Review changes…"].invoke()
+
+    monkeypatch.setattr(dialogs, "_wait", lambda top, focus=None: (top.update(), act(top, {}, {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)})))
+    got = dialogs.permissions_editor(window.root, "app", state)
+    assert (got["memory_max"], got["cpu_quota"], got["tasks_max"]) == ("", "150%", "")
+    assert app.argv.perms_argv("app", state, got) == ["perms", "app", "--memory-max", "infinity", "--cpu-quota", "150%"]
 
 
 def test_permissions_editor_edits_the_environment_and_the_other_lists(window, monkeypatch):

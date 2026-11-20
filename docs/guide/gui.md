@@ -8,7 +8,7 @@ appjail-gui --desktop           # add appjail to your application menu (--remove
 
 The window has four tabs: **Apps** (run, run with extra access for one run, open a file, update, permissions and
 environment variables, portals, history, menu entry and file types, reset the app's private home, remove), **Add** (from
-GitHub, a URL or a file, with every permission option; options that do not apply to the chosen source are greyed out),
+GitHub, a URL or a file, with every permission option, the memory, CPU and process limits included; options that do not apply to the chosen source are greyed out),
 **Search** (results from the catalogs, and "Add this app…" to copy a hit into the Add form), and **Tools** (helpers,
 version, the history of all apps).
 

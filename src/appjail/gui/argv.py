@@ -44,6 +44,9 @@ def add_argv(form):
         argv += ["--display", form["display"]]
     if form.get("display") == manifest.ROOTFUL and form.get("display_size"):
         argv += ["--display-size", form["display_size"]]
+    for key in manifest.LIMIT_KEYS:
+        if str(form.get(key, "")).strip():
+            argv += [LIMIT_FLAGS[key], str(form[key]).strip()]
     if form.get("desktop"):
         argv.append("--desktop")
         if form.get("mime_all"):
@@ -52,6 +55,9 @@ def add_argv(form):
         if form.get("rw"):
             argv.append("--rw")
     return argv
+
+
+LIMIT_FLAGS = {"memory_max": "--memory-max", "cpu_quota": "--cpu-quota", "tasks_max": "--tasks-max"}
 
 
 def defers_menu_entry(form):
@@ -71,7 +77,7 @@ def add_followup(before, after, rw=False):
 def perms_argv(name, old, new):
     """`appjail perms NAME ...` for the difference between two permission states.
 
-    A state is a dict: the boolean flags by name, "audio_mode", "display", "display_size", and the tuples "dirs", "dbus_filter", "dbus_own",
+    A state is a dict: the boolean flags by name, "audio_mode", "display", "display_size", the limits "memory_max", "cpu_quota" and "tasks_max" (strings, empty for none), and the tuples "dirs", "dbus_filter", "dbus_own",
     "portal_interfaces", "env" ("NAME=VALUE" strings). The command shows the before/after review and asks; the option that skips the question is never added here.
     """
     argv = ["perms", name]
@@ -86,6 +92,9 @@ def perms_argv(name, old, new):
         argv += ["--display", new["display"]]
     if new.get("display_size") != old.get("display_size") and new.get("display") == manifest.ROOTFUL:
         argv += ["--display-size", new["display_size"]]
+    for key in manifest.LIMIT_KEYS:  # empty means no limit; the command takes `infinity` to remove one
+        if str(new.get(key, "")).strip() != str(old.get(key, "")).strip():
+            argv += [LIMIT_FLAGS[key], str(new.get(key, "")).strip() or "infinity"]
     for key, add, rm in (("dirs", "--add-dir", "--rm-dir"), ("dbus_filter", "--add-dbus", "--rm-dbus"),
                          ("dbus_own", "--add-dbus-own", "--rm-dbus-own"),
                          ("portal_interfaces", "--add-portal", "--rm-portal")):
