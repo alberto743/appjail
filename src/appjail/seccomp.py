@@ -4,7 +4,8 @@
 """Seccomp filter for the app jail and the helper jails, as a classic BPF program that bubblewrap loads (`--seccomp FD`).
 
 Default allow, deny list (what Flatpak blocks plus extra hardening; the lists are below). Unless the manifest grants
-`userns`, creating namespaces and mounting are denied too; `clone3` answers ENOSYS so libc falls back to `clone`, whose
+`userns`, creating namespaces and mounting are denied too; with `devel` (debuggers) `ptrace` and one `personality` value
+are allowed (docs/decisions/isolation/debugging.md); `clone3` answers ENOSYS so libc falls back to `clone`, whose
 flags can be inspected. x86_64 only: other architectures are refused rather than left unfiltered. Written by hand to
 stay stdlib-only.
 """
@@ -53,6 +54,8 @@ ALWAYS = ("_sysctl", "acct", "add_key", "bpf", "create_module", "delete_module",
           "open_by_handle_at", "perf_event_open", "process_vm_readv", "process_vm_writev", "ptrace",
           "query_module", "quotactl", "reboot", "request_key", "set_mempolicy", "swapoff", "swapon", "syslog",
           "uselib", "userfaultfd")
+# Allowed again with the manifest's `devel`: a tracer or debugger. `perf_event_open` is not (it cannot work in the jail).
+DEVEL = ("ptrace",)
 # Denied unless the manifest grants `userns`: namespace creation and the mount API.
 NAMESPACE = ("chroot", "fsconfig", "fsmount", "fsopen", "fspick", "mount", "mount_setattr", "move_mount",
              "open_tree", "pivot_root", "setns", "umount2", "unshare")
@@ -64,6 +67,9 @@ SOCKET_FAMILIES = (0, 1, 2, 10, 16)
 # personality(2): only PER_LINUX and the query value; switching personalities can turn off ASLR (ADDR_NO_RANDOMIZE)
 # or make data executable (READ_IMPLIES_EXEC) for the programs the app starts.
 PERSONALITIES = (0, 0xFFFFFFFF)
+# With `devel`, also PER_LINUX | ADDR_NO_RANDOMIZE: what gdb asks for to run a program at the same addresses every time.
+# MMAP_PAGE_ZERO, READ_IMPLIES_EXEC and the other flags stay refused.
+DEVEL_PERSONALITIES = (0x0040000,)
 # io_uring has been the source of many kernel privilege escalations; ENOSYS, so libraries fall back to plain calls.
 IO_URING = ("io_uring_enter", "io_uring_register", "io_uring_setup")
 
@@ -110,18 +116,19 @@ def _block_unless(nr, arg, allowed, action):
     return [_ld(OFF_NR), _ins(BPF_JMP | BPF_JEQ | BPF_K, nr, 0, len(body))] + body
 
 
-def program(userns=False):
+def program(userns=False, devel=False):
     """The BPF program as bytes (struct sock_filter array)."""
     if platform.machine() != "x86_64":
         raise RunError("the seccomp filter is only implemented for x86_64; refusing to run unfiltered")
     prog = [_ld(OFF_ARCH), _ins(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0), _ret(SECCOMP_RET_KILL_PROCESS),
             _ld(OFF_NR), _ins(BPF_JMP | BPF_JGE | BPF_K, X32_BIT, 0, 1), DENY]  # x32 ABI would dodge the table
     for name in ALWAYS:
-        prog += _block(SYSCALLS[name])
+        if not (devel and name in DEVEL):
+            prog += _block(SYSCALLS[name])
     prog += _block(SYSCALLS["ioctl"], [(1, "eq", TIOCSTI), (1, "eq", TIOCLINUX)])
     for name in ("socket", "socketpair"):
         prog += _block_unless(SYSCALLS[name], 0, SOCKET_FAMILIES, _ret(SECCOMP_RET_ERRNO | errno.EAFNOSUPPORT))
-    prog += _block_unless(SYSCALLS["personality"], 0, PERSONALITIES, DENY)
+    prog += _block_unless(SYSCALLS["personality"], 0, PERSONALITIES + (DEVEL_PERSONALITIES if devel else ()), DENY)
     for name in IO_URING:
         prog += _block(SYSCALLS[name], action=_ret(SECCOMP_RET_ERRNO | errno.ENOSYS))
     if not userns:
@@ -135,10 +142,10 @@ def program(userns=False):
     return b"".join(prog)
 
 
-def open_fd(userns=False):
+def open_fd(userns=False, devel=False):
     """A memfd holding the program, positioned at 0 and inheritable, for bwrap's --seccomp."""
     fd = os.memfd_create("appjail-seccomp", 0)
-    os.write(fd, program(userns))
+    os.write(fd, program(userns, devel))
     os.lseek(fd, 0, os.SEEK_SET)
     os.set_inheritable(fd, True)
     return fd

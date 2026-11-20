@@ -30,6 +30,21 @@ installation review then lists them with the others.
 
 Permissions take effect at the next start of the app. Several can be combined in one command.
 
+## Tracing and debugging an app
+
+Inside the jail `ptrace` is refused, so `strace` and `gdb` cannot trace the app. Grant `devel` while you diagnose it:
+
+```sh
+appjail perms NAME --allow devel
+appjail run NAME --raw -- ...                # a debugger that asks questions also needs your terminal
+```
+
+With it the app can trace its own processes, and run them at fixed addresses (`gdb` asks for that). It cannot reach
+processes outside its jail, and the filter still applies to whatever it traces. What a debugger can attach to depends on
+your system: with `kernel.yama.ptrace_scope` at 1 (Ubuntu) it can attach only to its own descendants, so `strace CMD`
+and `gdb PROG` work and `strace -p PID` on an unrelated process does not. `perf` is not supported: it needs a sysctl
+the jail cannot change and the host's `/sys`. Revoke it when you are done (`--deny devel`). See [debugging](../decisions/isolation/debugging.md).
+
 ## Apps that run in a terminal
 
 When an app's output goes to your terminal, appjail gives the app no input and removes the control sequences from what

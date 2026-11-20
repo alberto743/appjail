@@ -50,8 +50,8 @@ FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
 AUDIO_MODES = ("pipewire", "pulse")
 DEFAULT_AUDIO_MODE = "pipewire"
-BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal")
-PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "dirs"}
+BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal", "devel")
+PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "dirs"}
 
 
 @dataclass(frozen=True)
@@ -74,6 +74,7 @@ class Permissions:
     linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
     full_wayland: bool = False  # run although the app's Wayland socket lists privileged or unknown globals (wayland.privileged)
     raw_terminal: bool = False  # the app's output reaches your terminal as it is (otherwise cleaned of control sequences when it is a terminal)
+    devel: bool = False  # debuggers and tracers: ptrace and one personality value are allowed (seccomp.DEVEL)
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
 
     @property
@@ -384,6 +385,7 @@ def dumps(m):
         *(["linger = true"] if p.linger else []),
         *(["full_wayland = true"] if p.full_wayland else []),
         *(["raw_terminal = true"] if p.raw_terminal else []),
+        *(["devel = true"] if p.devel else []),
         f"dirs = {_array(p.dirs)}",
         "",
         *(["[env]", *(f"{k} = {_quote(v)}" for k, v in sorted(m.env)), ""] if m.env else []),

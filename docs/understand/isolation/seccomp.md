@@ -32,12 +32,12 @@ adds `io_uring` and, unless the app has `userns`, the refusal of nested namespac
 | any architecture but x86-64, and the x32 ABI | process killed / `EPERM` | a call made through another architecture's numbering would slip past a filter written for x86-64 |
 | loading kernel modules, `kexec`, `reboot`, swap, quotas, `acct`, port I/O (`ioperm`, `iopl`), `syslog` | `EPERM` | administration of the machine, never the business of an app |
 | `bpf`, `perf_event_open`, `userfaultfd`, `fanotify_init`, the keyring calls (`add_key`, `keyctl`, `request_key`) | `EPERM` | large kernel interfaces with a history of privilege escalations |
-| `ptrace`, `process_vm_readv`, `process_vm_writev` | `EPERM` | reading and changing the memory of other processes |
+| `ptrace`, `process_vm_readv`, `process_vm_writev` | `EPERM` | reading and changing the memory of other processes; `ptrace` is lifted by the `devel` permission |
 | `name_to_handle_at`, `open_by_handle_at` | `EPERM` | opening files by handle, which bypasses the paths a mount namespace controls |
 | memory-policy calls (`mbind`, `set_mempolicy`, `migrate_pages`, `move_pages`, ...) | `EPERM` | as in Flatpak: rarely needed, a source of bugs |
 | `ioctl` with `TIOCSTI` or `TIOCLINUX` | `EPERM` | pushing characters into a terminal's input, which runs commands in the shell the app was started from (`TIOCLINUX` does the same on a virtual console: CVE-2023-28100) |
 | `socket` and `socketpair` of any family other than unix, IPv4, IPv6 and netlink | `EAFNOSUPPORT` | Bluetooth, packet, vsock, TIPC, crypto (`AF_ALG`) and other families: rarely needed by desktop apps, a steady source of kernel bugs |
-| `personality` other than the default and the query | `EPERM` | switching personality can turn off address-space randomisation or make data executable for the programs the app starts |
+| `personality` other than the default and the query | `EPERM` | switching personality can turn off address-space randomisation or make data executable for the programs the app starts; `devel` also allows the value that turns randomisation off, which `gdb` asks for |
 | `io_uring_setup`, `io_uring_enter`, `io_uring_register` | `ENOSYS` | a large, fast-moving interface behind 60% of the kernel exploits submitted to Google's kCTF bug bounty in the year to June 2023 |
 | creating or joining namespaces (`unshare`, `setns`, `clone` with a "new namespace" flag), the mount API, `pivot_root`, `chroot` | `EPERM` | nested sandboxes; lifted by the `userns` permission ([namespaces](namespaces.md#nested-user-namespaces)) |
 | `clone3` | `ENOSYS` | its flags are in memory the filter cannot read; the C library falls back to `clone`, whose flags it can |
@@ -54,7 +54,7 @@ than x86-64 appjail refuses to start an app at all rather than run it unfiltered
 
 - [bubblewrap](bubblewrap.md) loads the filter; appjail passes it as an in-memory file, or, behind `pasta`, which closes
   inherited descriptors, as a private temporary file opened inside the network namespace.
-- The `userns` permission removes exactly the namespace rows of the table; everything else stays.
+- The `userns` permission removes exactly the namespace rows of the table; everything else stays. The `devel` permission removes the `ptrace` row and adds one `personality` value, and nothing else: `perf_event_open` stays refused, because it cannot work in the jail ([debugging](../../decisions/isolation/debugging.md)).
 - [Landlock](landlock.md) is the other kernel restriction appjail adds: seccomp filters *calls*, Landlock filters
   *access to objects*.
 - Decision: [A seccomp deny list](../../decisions/isolation/seccomp.md).

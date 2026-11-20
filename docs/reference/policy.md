@@ -163,6 +163,7 @@ Explained in [seccomp](../understand/isolation/seccomp.md).
 | `ioctl` refused, `EPERM` | `TIOCSTI`, `TIOCLINUX` |
 | `socket`, `socketpair`: only these families, else `EAFNOSUPPORT` | `AF_UNSPEC`, `AF_UNIX`, `AF_INET`, `AF_INET6`, `AF_NETLINK` |
 | `personality`: only the default and the query, else `EPERM` | `PER_LINUX`, `0xffffffff` |
+| allowed again with `devel` (`seccomp.DEVEL`, `seccomp.DEVEL_PERSONALITIES`) | `ptrace`, `personality` `0x0040000` |
 | answered `ENOSYS` (`seccomp.IO_URING`) | `io_uring_enter`, `io_uring_register`, `io_uring_setup` |
 | refused without `userns`, `EPERM` (`seccomp.NAMESPACE`) | `chroot`, `fsconfig`, `fsmount`, `fsopen`, `fspick`, `mount`, `mount_setattr`, `move_mount`, `open_tree`, `pivot_root`, `setns`, `umount2`, `unshare`, `clone` with a new-namespace flag; `clone3` answers `ENOSYS` |
 | any architecture but x86-64, the x32 ABI | process killed / `EPERM` |

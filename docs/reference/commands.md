@@ -25,7 +25,7 @@ appjail add --url URL [options]
 | `--name NAME` | the app's local name (default: from the repository or the file) |
 | `--prerelease` | allow pre-releases (the app then follows the `prerelease` channel) |
 | `--tag TAG` | install this release instead of the latest; the app is then pinned |
-| `--allow PERMISSION` | grant `network`, `network_host`, `audio`, `mic`, `gpu`, `camera`, `portals`, `userns`, `linger`, `full_wayland` or `raw_terminal`; repeatable |
+| `--allow PERMISSION` | grant `network`, `network_host`, `audio`, `mic`, `gpu`, `camera`, `portals`, `userns`, `linger`, `full_wayland`, `raw_terminal` or `devel`; repeatable |
 | `--dir PATH[:ro\|:rw]` | let the app see this directory, read-only unless `:rw`; repeatable |
 | `--dbus NAME` | let the app talk to this session-bus name through the filtering proxy; repeatable |
 | `--dbus-own NAME` | let the app own this session-bus name; repeatable |

@@ -131,3 +131,10 @@ def test_audio_mode_and_mic_reach_the_argv():
     assert command == ["perms", "app", "--allow", "mic", "--audio-mode", "pulse"]
     assert parses(command).audio_mode == "pulse"
     assert "--audio-mode" not in argv.perms_argv("app", STATE, dict(STATE))
+
+
+def test_every_opt_in_portal_has_a_one_line_description():
+    from appjail import grants
+    assert list(grants.PORTAL_DESCRIPTIONS) == list(grants.PORTAL_OPT_IN)
+    assert all(text and "\n" not in text for text in grants.PORTAL_DESCRIPTIONS.values())
+    assert "Not the V4L2" in grants.PORTAL_DESCRIPTIONS["Camera"]

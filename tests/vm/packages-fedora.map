@@ -14,6 +14,7 @@ libgl1-mesa-dri       mesa-dri-drivers
 libxkbcommon0         libxkbcommon
 libwayland-client0    libwayland-client
 linux-libc-dev        kernel-headers
+linux-perf            perf
 dbus-bin              dbus-tools dbus-daemon
 fonts-dejavu-core     dejavu-sans-fonts
 python3-gi            python3-gobject

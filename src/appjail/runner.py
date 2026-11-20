@@ -224,14 +224,14 @@ def _open_grants(stack, perms, extra_dirs, extra_files, extra_args, say):
 def _seccomp_filter(stack, perms, env, in_pasta):
     """The seccomp filter as (lifeline, memfd, file): a file behind pasta, which closes inherited descriptors."""
     if not in_pasta:
-        filter_fd = seccomp.open_fd(perms.userns)
+        filter_fd = seccomp.open_fd(perms.userns, perms.devel)
         stack.callback(os.close, filter_fd)
         return None, filter_fd, None
     life = stack.enter_context(jail.Lifeline(env.get("XDG_RUNTIME_DIR")))
     fd, filter_file = tempfile.mkstemp(prefix="appjail-seccomp-", dir=env.get("XDG_RUNTIME_DIR") or None)
     stack.callback(os.unlink, filter_file)
     with os.fdopen(fd, "wb") as f:
-        f.write(seccomp.program(perms.userns))
+        f.write(seccomp.program(perms.userns, perms.devel))
     return life, None, filter_file
 
 

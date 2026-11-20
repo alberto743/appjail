@@ -18,3 +18,7 @@ menu entry you asked for. The window never answers for you. Apps started from it
 the window does not close them.
 Their output is shown in the pane with the control sequences removed, so the `raw_terminal` check box (your terminal as it
 is, for `appjail run` in a terminal) has no effect on the output of a run started from the window.
+
+The privileged portals are one check box each, with what the portal lets the app do beside it, in the **Add** tab and in
+the permissions editor (they need the `portals` permission). Checking one builds the same `--portal`, `--add-portal` or
+`--rm-portal` option as in the terminal, and the command still shows what changes and asks. D-Bus names stay free text.

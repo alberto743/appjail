@@ -12,6 +12,7 @@ import pytest
 
 tk = pytest.importorskip("tkinter")
 
+from appjail import grants
 from appjail.gui import app, dialogs
 from appjail.gui.console import Request
 
@@ -77,6 +78,20 @@ def test_add_form_builds_the_expected_command(window, monkeypatch):
     window.editors["dirs"].add()
     window._add()
     assert seen == [["add", "o/App", "--dir", "~/x:rw", "--allow", "network"]]
+
+
+def test_add_form_offers_a_check_box_for_each_opt_in_portal(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    checks = window.editors["portals"].checks
+    assert list(checks) == list(grants.PORTAL_OPT_IN) and not any(v.get() for v in checks.values())
+    window.source.set("o/App")
+    window.flag["portals"].set(True)
+    checks["OpenURI"].set(True)
+    checks["Camera"].set(True)
+    window._add()
+    assert seen == [["add", "o/App", "--portal", "OpenURI", "--portal", "Camera", "--allow", "portals"]]
+    assert "--yes" not in seen[0]
 
 
 def test_confirm_dialog_answer_and_default(window):
@@ -186,6 +201,13 @@ def test_table_rows_are_tall_enough_for_the_font(display, h):
         root.destroy()
 
 
+def _ancestors(widget):
+    while widget is not None:
+        widget = getattr(widget, "master", None)
+        if widget is not None:
+            yield widget
+
+
 def test_every_button_is_visible_at_the_starting_size(window):
     """The window starts at the size its layout asks for: nothing needs enlarging to be reached."""
     root = window.root
@@ -198,7 +220,10 @@ def test_every_button_is_visible_at_the_starting_size(window):
         while stack:
             widget = stack.pop()
             stack.extend(widget.winfo_children())
-            if widget.winfo_class() in ("TButton", "TCheckbutton", "TEntry", "TCombobox"):
+            scrolled = isinstance(widget, dialogs.PortalChecks)  # its list scrolls: the box must fit, not every row in it
+            if widget.winfo_class() in ("TButton", "TCheckbutton", "TEntry", "TCombobox") or scrolled:
+                if widget.winfo_class() == "TCheckbutton" and any(isinstance(a, dialogs.PortalChecks) for a in _ancestors(widget)):
+                    continue
                 assert widget.winfo_ismapped(), (index, widget)
                 assert widget.winfo_rooty() + widget.winfo_height() <= root.winfo_rooty() + root.winfo_height(), (index, widget)
                 assert widget.winfo_rootx() + widget.winfo_width() <= root.winfo_rootx() + root.winfo_width(), (index, widget)
@@ -248,7 +273,7 @@ def _open_permissions(window, monkeypatch, act):
     """Run permissions_editor with `act(top, editors, buttons)` standing in for the person at the dialog."""
     def fake_wait(top, focus=None):
         top.update()
-        editors = {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ListEditor)}
+        editors = {w.cget("text"): w for w in _walk(top) if isinstance(w, (dialogs.ListEditor, dialogs.PortalChecks))}
         buttons = {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)}
         act(top, editors, buttons)
 
@@ -277,6 +302,24 @@ def test_permissions_editor_edits_the_environment_and_the_other_lists(window, mo
     command = app.argv.perms_argv("app", PERMS_STATE, got)
     assert command[:2] == ["perms", "app"] and "--yes" not in command
     assert command[command.index("--unset-env") + 1] == "A" and "CLAUDE_USE_WAYLAND=1" in command
+
+
+def test_permissions_editor_shows_the_granted_portals_and_builds_the_changes(window, monkeypatch):
+    state = dict(PERMS_STATE, portals=True, portal_interfaces=("Camera", "Usb"))
+
+    def act(top, ed, bt):
+        checks = ed["Privileged portals"].checks
+        assert {n for n, v in checks.items() if v.get()} == {"Camera", "Usb"}
+        checks["Camera"].set(False)
+        checks["OpenURI"].set(True)
+        bt["Review changes…"].invoke()
+
+    monkeypatch.setattr(dialogs, "_wait", lambda top, focus=None: act(top, {w.cget("text"): w for w in _walk(top) if isinstance(
+        w, dialogs.PortalChecks)}, {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)}))
+    got = dialogs.permissions_editor(window.root, "app", state)
+    assert got["portal_interfaces"] == ("OpenURI", "Usb")
+    command = app.argv.perms_argv("app", state, got)
+    assert command == ["perms", "app", "--rm-portal", "Camera", "--add-portal", "OpenURI"]
 
 
 def test_permissions_editor_cancel_returns_none_and_every_editor_fits_the_screen(window, monkeypatch):
