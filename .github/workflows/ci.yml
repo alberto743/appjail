@@ -37,7 +37,7 @@ jobs:
       - name: Run the tests
         env:
           APPJAIL_INTEGRATION: "1"
-        run: python3 -m pytest -q
+        run: python3 -m pytest -v
 
   # No commit message may carry a session link, a local path or a personal e-mail (.githooks/forbidden-patterns).
   hygiene:
