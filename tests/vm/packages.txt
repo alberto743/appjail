@@ -52,3 +52,6 @@ gstreamer1.0-plugins-base # videoconvert
 gstreamer1.0-pipewire # pipewiresrc: reads a frame from the fd of the Camera portal (tests/test_camera_portal.py)
 wireplumber           # the session manager of the private audio graph (audiojail.py, tests/test_private_audio.py) and of the test camera portal
 pulseaudio-utils      # pactl, parec and paplay: the Pulse clients of tests/test_private_audio.py
+strace                # a real tracer for the devel grant's tests (tests/test_devel.py)
+gdb                   # a real debugger for the devel grant's tests
+linux-perf            # perf, a real profiler for the devel grant's tests (the `perf` package on Fedora)

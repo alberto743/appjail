@@ -360,7 +360,7 @@ def run_in_jail(sandbox, runtime, script=FACTS, extra=(), host_home=None, **perm
     (kw["root"] / "AppRun").write_text(script)
     (kw["root"] / "AppRun").chmod(0o755)
     kw["command"] = ["/app/AppRun", *extra]
-    fd = seccomp.open_fd(kw["perms"].userns)
+    fd = seccomp.open_fd(kw["perms"].userns, kw["perms"].devel)
     try:
         with runtimejail.Grants(kw["perms"].dirs, (), host_home or Path.home()) as opened:
             args = runtimejail.runtime_args(**kw, seccomp_fd=fd, binds=opened.args())

@@ -98,6 +98,7 @@ def render():
             (f"| `socket`, `socketpair`: only these families, else `EAFNOSUPPORT` | "
              f"{', '.join(f'`{SOCKET_FAMILY_NAMES.get(f, f)}`' for f in seccomp.SOCKET_FAMILIES)} |"),
             "| `personality`: only the default and the query, else `EPERM` | `PER_LINUX`, `0xffffffff` |",
+            f"| allowed again with `devel` (`seccomp.DEVEL`, `seccomp.DEVEL_PERSONALITIES`) | {_codes(seccomp.DEVEL)}, `personality` `0x{seccomp.DEVEL_PERSONALITIES[0]:07x}` |",
             f"| answered `ENOSYS` (`seccomp.IO_URING`) | {_codes(seccomp.IO_URING)} |",
             (f"| refused without `userns`, `EPERM` (`seccomp.NAMESPACE`) | {_codes(seccomp.NAMESPACE)}, `clone` with a "
              "new-namespace flag; `clone3` answers `ENOSYS` |"),
