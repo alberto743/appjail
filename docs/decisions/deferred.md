@@ -6,7 +6,7 @@ on the decision page linked.
 ## Open work
 
 Every open item is one row with one status. The status says what unblocks it; the table is sorted by how close each
-item is to being taken up. No planned code work is pending: nothing below is started without the maintainer.
+item is to being taken up. Work on the `resource-limits` branch is in progress; nothing else below is started without the maintainer.
 
 - **Scheduled**: the maintainer set a date or an event.
 - **Waiting**: an outside event, not under the maintainer's control.
@@ -18,11 +18,11 @@ item is to being taken up. No planned code work is pending: nothing below is sta
 | Item | Status | Waiting on | Next step, or why not now | Reasoning |
 |---|---|---|---|---|
 | Workflows on `ubuntu-latest` | Scheduled | December 2026, when GitHub's move to Ubuntu 26.04 completes (planned for 2026-11-19) | Switch the workflows from `ubuntu-26.04` to `ubuntu-latest` and check CI. `check-platforms.yml` then has no runner label to read for Ubuntu (its script skips that check), so give it another target | [workflows](project/workflows.md) |
+| Memory and CPU limits | Scheduled | the branch `resource-limits`, in progress | Decided in [resource limits](isolation/resource-limits.md): `memory_max`, `cpu_quota` and `tasks_max` through a `systemd-run --user --scope` around the launch. Code, tests and the guide follow on the branch | [resource limits](isolation/resource-limits.md), [Flatpak compared](project/flatpak-comparison.md) |
 | Camera portal measurement on Debian and Ubuntu | Waiting | a PipeWire release after 1.6.2 with the V4L2 fixes (`6734d69c`, `919de4c5`), packaged by Debian and Ubuntu | Re-run the measurement and let the session manager link the `vivid` test camera instead of `pw-link`. Check the release notes; nothing to do before. Done on Fedora 45 (PipeWire 1.6.11); the test skips on Debian and Ubuntu until they package a PipeWire that reads the control | [camera](desktop/camera.md), [measurements](../develop/camera-audio-evidence.md#the-v4l2-node-and-wireplumber-explained-a-test-control-of-vivid), [Fedora 45](../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14) |
 | Re-check related projects and references | Recurring | each minor release | Re-check the facts on related projects and the references cited on the concept pages | [related projects](project/related-projects.md) |
 | Reporting upstream the crashes found while measuring | Undecided | the maintainer | Muffin and Cinnamon on `wl-copy`/`wl-paste`, Hyprland 0.53.3 when a window closes | [assessment](../compositor-assessment/ASSESSMENT.md) |
 | Accessibility bus for screen readers | Undecided | the maintainer | `org.freedesktop.a11y` is refused, so screen readers cannot reach a jailed app. Flatpak proxies the accessibility bus with fixed `--call` and `--broadcast` rules for `org.a11y.atspi.Registry`; an opt-in permission could do the same, with the proxy in its own jail | [Flatpak compared](project/flatpak-comparison.md) |
-| Memory and CPU limits | Undecided | the maintainer | An app can exhaust memory or CPU. Flatpak runs each instance in a systemd user scope, where resource control and `systemd-oomd` apply; appjail could do the same, or set resource limits | [Flatpak compared](project/flatpak-comparison.md) |
 | A narrower view of the host's system | Undecided | the maintainer | The host's `/usr`, `/lib*` and part of `/etc` are bound read-only, so an app can list installed software and reach every host library. A runtime is out of scope; binding only what the AppImage needs could be studied | [Flatpak compared](project/flatpak-comparison.md) |
 | URL handlers | Undecided | the maintainer | Menu entries declare file types (`desktop --mime`) but never `x-scheme-handler/`, so a jailed app is never offered to open a link. `appjail open` already binds one file alone and could back them | [Flatpak compared](project/flatpak-comparison.md) |
 | Other architectures (arm64) | Paused | the maintainer resumes it | Evaluated: moderate code, expensive verification | [platform](project/platform.md) |
