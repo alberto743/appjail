@@ -6,6 +6,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from ..grants import PORTAL_DESCRIPTIONS, PORTAL_OPT_IN
 from ..manifest import AUDIO_MODES, DEFAULT_AUDIO_MODE, DEFAULT_DISPLAY_SIZE, DISPLAYS
 from ..permargs import PERMISSION_FLAGS
 
@@ -175,6 +176,37 @@ class ListEditor(ttk.LabelFrame):
         return tuple(self.box.get(0, "end"))
 
 
+class PortalChecks(ttk.LabelFrame):
+    """One check box for each opt-in portal, with what it lets the app do beside it; values() are the checked names."""
+
+    def __init__(self, parent, title, selected=(), hint="", wrap=300, height=150):
+        super().__init__(parent, text=title, padding=6)
+        holder = ttk.Frame(self)
+        holder.pack(fill="both", expand=True)
+        canvas = tk.Canvas(holder, height=height, width=wrap + 120, highlightthickness=0)
+        scroll = ttk.Scrollbar(holder, command=canvas.yview)
+        canvas.configure(yscrollcommand=scroll.set)
+        inner = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+        inner.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
+        self.checks = {}
+        for row, name in enumerate(PORTAL_OPT_IN):
+            self.checks[name] = tk.BooleanVar(value=name in selected)
+            ttk.Checkbutton(inner, text=name, variable=self.checks[name]).grid(row=row, column=0, sticky="nw")
+            ttk.Label(inner, text=PORTAL_DESCRIPTIONS[name], foreground="gray40", wraplength=wrap,
+                      justify="left").grid(row=row, column=1, sticky="w", padx=(6, 0), pady=1)
+        scroll.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"))
+        canvas.bind("<Button-4>", lambda _e: canvas.yview_scroll(-1, "units"))
+        canvas.bind("<Button-5>", lambda _e: canvas.yview_scroll(1, "units"))
+        if hint:
+            ttk.Label(self, text=hint, foreground="gray40").pack(anchor="w", pady=(4, 0))
+
+    def values(self):
+        return tuple(name for name in PORTAL_OPT_IN if self.checks[name].get())
+
+
 class ChoiceList(ttk.LabelFrame):
     """A fixed list of strings to select (extra: {"items": [...], "selected": [...], "hint": ...}); values() are the selected ones."""
 
@@ -270,7 +302,7 @@ def permissions_editor(parent, name, state):
         "dirs": ListEditor(lists, "Directories", state.get("dirs", ()), "PATH or PATH:rw", browse="dir", height=5),
         "dbus_filter": ListEditor(lists, "D-Bus names (talk)", state.get("dbus_filter", ())),
         "dbus_own": ListEditor(lists, "D-Bus names (own)", state.get("dbus_own", ())),
-        "portal_interfaces": ListEditor(lists, "Privileged portals", state.get("portal_interfaces", ()), "needs portals"),
+        "portal_interfaces": PortalChecks(lists, "Privileged portals", state.get("portal_interfaces", ()), "needs the portals permission"),
         "env": ListEditor(lists, "Environment", state.get("env", ()), "NAME=VALUE; plain text, no secrets"),
     }
     for i, ed in enumerate(editors.values()):

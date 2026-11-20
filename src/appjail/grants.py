@@ -46,6 +46,23 @@ PORTAL_SAFE = ("FileChooser", "Notification", "Settings", "Trash", "Print", "Inh
                "ProxyResolver", "Secret", "Realtime", "MemoryMonitor", "PowerProfileMonitor")
 PORTAL_OPT_IN = ("OpenURI", "Email", "Screenshot", "ScreenCast", "RemoteDesktop", "GlobalShortcuts", "InputCapture",
                  "Camera", "Location", "Account", "Wallpaper", "Background", "Usb")
+# What each opt-in portal lets an app do, in one line each: shown beside its check box in the window. The longer account
+# is docs/understand/desktop/portals.md.
+PORTAL_DESCRIPTIONS = {
+    "OpenURI": "Open links, files and folders in other applications.",
+    "Email": "Have your mail client compose a message, with attachments.",
+    "Screenshot": "Take a screenshot of the screen, a window or an area.",
+    "ScreenCast": "Receive the screen or a window as a video stream, after asking you.",
+    "RemoteDesktop": "Control the keyboard, pointer and touchscreen.",
+    "GlobalShortcuts": "Bind shortcuts that fire whatever window has focus.",
+    "InputCapture": "Capture keyboard and pointer input at the screen edges.",
+    "Camera": "Camera through PipeWire and the portal (browsers). Not the V4L2 `camera` permission.",
+    "Location": "Receive your coordinates as they change.",
+    "Account": "Read your user id, name and avatar.",
+    "Wallpaper": "Set the desktop or lock-screen wallpaper.",
+    "Background": "Ask to keep running in the background and to start at login.",
+    "Usb": "List, watch and open USB devices, each after a prompt.",
+}
 PORTAL_NEVER = ("Flatpak", "DynamicLauncher")
 
 
