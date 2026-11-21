@@ -80,6 +80,69 @@ def test_add_form_builds_the_expected_command(window, monkeypatch):
     assert seen == [["add", "o/App", "--dir", "~/x:rw", "--allow", "network"]]
 
 
+def test_add_form_passes_the_limits(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    window.source.set("o/App")
+    window.limits["memory_max"].set("2G")
+    window.limits["cpu_quota"].set(" 200% ")
+    window._add()
+    assert seen == [["add", "o/App", "--memory-max", "2G", "--cpu-quota", "200%"]]
+
+
+def test_the_private_redirect_choice_is_for_urls_only_and_a_search_hit_never_carries_it(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    window.kind.set("url")
+    window.source.set("https://x.example/a.AppImage")
+    window.private_redirects.set(True)
+    assert str(window.private_check.cget("state")) == "normal"
+    window._add()
+    assert seen[-1] == ["add", "--url", "https://x.example/a.AppImage", "--allow-private-redirects"]
+    window.kind.set("github")
+    assert str(window.private_check.cget("state")) == "disabled"
+    window.source.set("o/App")
+    window._add()
+    assert "--allow-private-redirects" not in seen[-1]
+    window.kind.set("url")
+    window.hits = [type("Hit", (), {"source": "github:o/r", "name": "r", "description": "", "note": "", "catalog": "c"})()]
+    window.hit_tree.insert("", "end", iid="0", values=("r", "", "github:o/r", "c"))
+    window.hit_tree.selection_set("0")
+    window._use_hit()
+    assert window.private_redirects.get() is False
+
+
+def test_open_file_asks_whether_the_app_may_change_it(window, monkeypatch):
+    launched = []
+    monkeypatch.setattr(window, "launch", launched.append)
+    monkeypatch.setattr(app.filedialog, "askopenfilename", lambda **kw: "/data/-notes.txt")
+    for rw in (False, True):
+        monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, _rw=rw, **kw: {"rw": _rw})
+        window._open_file("app")
+    assert launched == [["open", "app", "--", "/data/-notes.txt"], ["open", "app", "--rw", "--", "/data/-notes.txt"]]
+    monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, **kw: None)  # cancelled: nothing starts
+    window._open_file("app")
+    assert len(launched) == 2
+
+
+def test_the_update_dialog_and_the_catalog_buttons_send_the_new_options(window, monkeypatch):
+    seen = []
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, **kw: {
+        "prerelease": False, "channel": app.KEEP, "quarantine": "", "file": "", "sha256": "", "verify": False,
+        "pattern": "*.AppImage", "private": True})
+    window._update_options("app")
+    assert seen[-1] == ["update", "app", "--pattern", "*.AppImage", "--allow-private-redirects"]
+    window.source_name.set("db")
+    window.index_commit.set("b" * 40)
+    window.index_private.set(True)
+    window._index("update")
+    assert seen[-1] == ["index", "update", "db", "--commit", "b" * 40, "--allow-private-redirects"]
+    monkeypatch.setattr(app.simpledialog, "askstring", lambda *a, **kw: "https://x.example/c.json")
+    window._index_add("--url")
+    assert seen[-1] == ["index", "add", "db", "--url", "https://x.example/c.json", "--allow-private-redirects"]
+
+
 def test_add_form_offers_a_check_box_for_each_opt_in_portal(window, monkeypatch):
     seen = []
     monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
@@ -285,6 +348,23 @@ def test_permissions_editor_returns_the_state_it_was_given_when_nothing_changes(
     got = _open_permissions(window, monkeypatch, lambda top, ed, bt: bt["Review changes…"].invoke())
     assert got["env"] == ("A=1", "B=x=y") and got["dirs"] == ("~/a",) and got["network"] is True
     assert not app.argv.perms_argv("app", PERMS_STATE, got)[2:]
+
+
+def test_permissions_editor_shows_and_changes_the_limits(window, monkeypatch):
+    state = dict(PERMS_STATE, memory_max="2G", cpu_quota="", tasks_max="")
+
+    def act(top, ed, bt):
+        box = next(w for w in _walk(top) if isinstance(w, dialogs.ttk.LabelFrame) and w.cget("text") == "Permissions")
+        _size, memory, cpu, tasks = [w for w in box.winfo_children() if type(w) is dialogs.ttk.Entry]
+        assert (memory.get(), cpu.get(), tasks.get()) == ("2G", "", "")
+        memory.delete(0, "end")  # emptied: the limit goes
+        cpu.insert(0, "150%")
+        bt["Review changes…"].invoke()
+
+    monkeypatch.setattr(dialogs, "_wait", lambda top, focus=None: (top.update(), act(top, {}, {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)})))
+    got = dialogs.permissions_editor(window.root, "app", state)
+    assert (got["memory_max"], got["cpu_quota"], got["tasks_max"]) == ("", "150%", "")
+    assert app.argv.perms_argv("app", state, got) == ["perms", "app", "--memory-max", "infinity", "--cpu-quota", "150%"]
 
 
 def test_permissions_editor_edits_the_environment_and_the_other_lists(window, monkeypatch):

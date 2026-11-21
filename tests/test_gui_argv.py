@@ -138,3 +138,51 @@ def test_every_opt_in_portal_has_a_one_line_description():
     assert list(grants.PORTAL_DESCRIPTIONS) == list(grants.PORTAL_OPT_IN)
     assert all(text and "\n" not in text for text in grants.PORTAL_DESCRIPTIONS.values())
     assert "Not the V4L2" in grants.PORTAL_DESCRIPTIONS["Camera"]
+
+
+def test_add_passes_the_limits_the_form_holds():
+    command = argv.add_argv({"kind": "github", "source": "o/App", "memory_max": " 2G ", "cpu_quota": "", "tasks_max": "512"})
+    assert command == ["add", "o/App", "--memory-max", "2G", "--tasks-max", "512"]
+    args = parses(command)
+    assert (args.memory_max, args.cpu_quota, args.tasks_max) == ("2G", "", "512")
+    assert "--memory-max" not in argv.add_argv({"kind": "github", "source": "o/App", "memory_max": ""})
+
+
+def test_perms_sets_changes_and_removes_limits_and_leaves_alone_what_did_not_change():
+    old = dict(STATE, memory_max="2G", cpu_quota="", tasks_max="64")
+    assert argv.perms_argv("app", old, dict(old)) == ["perms", "app"]
+    command = argv.perms_argv("app", old, dict(old, memory_max="4G", cpu_quota="150%", tasks_max=""))
+    assert command == ["perms", "app", "--memory-max", "4G", "--cpu-quota", "150%", "--tasks-max", "infinity"]
+    assert "--yes" not in command
+    args = parses(command)
+    assert (args.memory_max, args.cpu_quota, args.tasks_max) == ("4G", "150%", "infinity")
+    # a state without the keys (an older caller) is the same as no limits
+    assert argv.perms_argv("app", STATE, dict(STATE, tasks_max="")) == ["perms", "app"]
+
+
+def test_the_options_that_widen_a_fetch_or_an_open_are_sent_only_where_they_apply():
+    url = {"kind": "url", "source": "https://x.example/a.AppImage", "allow_private_redirects": True}
+    assert "--allow-private-redirects" in argv.add_argv(url) and parses(argv.add_argv(url)).allow_private_redirects
+    assert "--allow-private-redirects" not in argv.add_argv({**url, "kind": "github", "source": "o/a"})
+    assert "--allow-private-redirects" not in argv.add_argv({**url, "allow_private_redirects": False})
+    command = argv.update_argv("app", pattern=" *x86_64.AppImage ", allow_private_redirects=True)
+    args = parses(command)
+    assert (args.pattern, args.allow_private_redirects) == ("*x86_64.AppImage", True)
+    assert argv.update_argv("app", pattern="") == ["update", "app"]
+
+
+def test_index_commands_carry_the_commit_and_the_private_redirects_for_update_only():
+    command = argv.index_argv("update", "appjail-db", " " + "a" * 40 + " ", True)
+    assert command == ["index", "update", "appjail-db", "--commit", "a" * 40, "--allow-private-redirects"]
+    args = parses(command)
+    assert (args.commit, args.allow_private_redirects) == ("a" * 40, True)
+    assert argv.index_argv("rollback", "x", "a" * 40, True) == ["index", "rollback", "x"]
+    assert argv.index_argv("update") == ["index", "update"]
+    assert parses(argv.index_add_argv("n", "--url", "https://x.example/c.json", True)).allow_private_redirects
+    assert argv.index_add_argv("n", "--file", "/c.json", True) == ["index", "add", "n", "--file", "/c.json"]
+
+
+def test_open_is_read_only_unless_asked():
+    assert argv.open_argv("app", "/f/-x") == ["open", "app", "--", "/f/-x"]
+    command = argv.open_argv("app", "/f/-x", True)
+    assert command == ["open", "app", "--rw", "--", "/f/-x"] and parses(command).rw and parses(command).files == ["/f/-x"]

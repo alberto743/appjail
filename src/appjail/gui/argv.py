@@ -44,6 +44,11 @@ def add_argv(form):
         argv += ["--display", form["display"]]
     if form.get("display") == manifest.ROOTFUL and form.get("display_size"):
         argv += ["--display-size", form["display_size"]]
+    if kind == "url" and form.get("allow_private_redirects"):
+        argv.append("--allow-private-redirects")
+    for key in manifest.LIMIT_KEYS:
+        if str(form.get(key, "")).strip():
+            argv += [LIMIT_FLAGS[key], str(form[key]).strip()]
     if form.get("desktop"):
         argv.append("--desktop")
         if form.get("mime_all"):
@@ -52,6 +57,9 @@ def add_argv(form):
         if form.get("rw"):
             argv.append("--rw")
     return argv
+
+
+LIMIT_FLAGS = {"memory_max": "--memory-max", "cpu_quota": "--cpu-quota", "tasks_max": "--tasks-max"}
 
 
 def defers_menu_entry(form):
@@ -71,7 +79,7 @@ def add_followup(before, after, rw=False):
 def perms_argv(name, old, new):
     """`appjail perms NAME ...` for the difference between two permission states.
 
-    A state is a dict: the boolean flags by name, "audio_mode", "display", "display_size", and the tuples "dirs", "dbus_filter", "dbus_own",
+    A state is a dict: the boolean flags by name, "audio_mode", "display", "display_size", the limits "memory_max", "cpu_quota" and "tasks_max" (strings, empty for none), and the tuples "dirs", "dbus_filter", "dbus_own",
     "portal_interfaces", "env" ("NAME=VALUE" strings). The command shows the before/after review and asks; the option that skips the question is never added here.
     """
     argv = ["perms", name]
@@ -86,6 +94,9 @@ def perms_argv(name, old, new):
         argv += ["--display", new["display"]]
     if new.get("display_size") != old.get("display_size") and new.get("display") == manifest.ROOTFUL:
         argv += ["--display-size", new["display_size"]]
+    for key in manifest.LIMIT_KEYS:  # empty means no limit; the command takes `infinity` to remove one
+        if str(new.get(key, "")).strip() != str(old.get(key, "")).strip():
+            argv += [LIMIT_FLAGS[key], str(new.get(key, "")).strip() or "infinity"]
     for key, add, rm in (("dirs", "--add-dir", "--rm-dir"), ("dbus_filter", "--add-dbus", "--rm-dbus"),
                          ("dbus_own", "--add-dbus-own", "--rm-dbus-own"),
                          ("portal_interfaces", "--add-portal", "--rm-portal")):
@@ -113,7 +124,8 @@ def add_target(source):
     return kind, target
 
 
-def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=None, sha256=None, verify=False):
+def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=None, sha256=None, verify=False, pattern=None,
+                allow_private_redirects=False):
     argv = ["update"]
     if app:
         argv.append(app)
@@ -129,7 +141,32 @@ def update_argv(app=None, prerelease=False, channel=None, quarantine=None, file=
         argv += ["--sha256", sha256.strip()]
     if verify:
         argv.append("--verify")
+    if pattern:
+        argv += ["--pattern", pattern.strip()]
+    if allow_private_redirects:
+        argv.append("--allow-private-redirects")
     return argv
+
+
+def index_argv(sub, name=None, commit=None, allow_private_redirects=False):
+    """`index update|rollback [NAME]`; the commit and the private redirects only concern `update`."""
+    argv = ["index", sub, *([name] if name else [])]
+    if sub == "update":
+        if commit:
+            argv += ["--commit", commit.strip()]
+        if allow_private_redirects:
+            argv.append("--allow-private-redirects")
+    return argv
+
+
+def index_add_argv(name, flag, where, allow_private_redirects=False):
+    """`index add NAME --url URL|--file PATH`; private redirects only concern a URL."""
+    return ["index", "add", name, flag, where, *(["--allow-private-redirects"] if allow_private_redirects and flag == "--url" else [])]
+
+
+def open_argv(app, path, rw=False):
+    """`open APP -- PATH`: the file is bound alone into the jail, read-only unless `rw`."""
+    return ["open", app, *(["--rw"] if rw else []), "--", path]
 
 
 def run_argv(app, dirs=(), files=()):

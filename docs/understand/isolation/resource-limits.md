@@ -56,7 +56,6 @@ A limit that is silently not applied would be worse than none.
 - A limit too low ends the app at once, with no chance to save: start high and lower it.
 - The limits cover the app's jail. The helper jails (downloads, extraction, audio, the D-Bus proxy) are not limited.
 - Disk space, video memory and network traffic are not limited.
-- The window (GUI) does not show or edit the limits yet; use `appjail add` and `appjail perms`.
 
 ## References
 

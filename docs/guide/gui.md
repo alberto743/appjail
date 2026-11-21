@@ -8,7 +8,7 @@ appjail-gui --desktop           # add appjail to your application menu (--remove
 
 The window has four tabs: **Apps** (run, run with extra access for one run, open a file, update, permissions and
 environment variables, portals, history, menu entry and file types, reset the app's private home, remove), **Add** (from
-GitHub, a URL or a file, with every permission option; options that do not apply to the chosen source are greyed out),
+GitHub, a URL or a file, with every permission option, the memory, CPU and process limits included; options that do not apply to the chosen source are greyed out),
 **Search** (results from the catalogs, and "Add this app…" to copy a hit into the Add form), and **Tools** (helpers,
 version, the history of all apps).
 
@@ -16,6 +16,12 @@ It runs the same commands as the terminal and shows their output in one pane. Ev
 a dialog, with the facts the command printed just before it, and the same default answer: No, except when writing a
 menu entry you asked for. The window never answers for you. Apps started from it run in their own session, so closing
 the window does not close them.
+Every command-line option has a place in the window, except the few that make no sense there (`--yes`, because the
+command asks and you answer; `--json`; `run --raw`). **Open file…** asks whether the app may change the file, with the
+file bound alone into the jail and read-only unless you tick the box. Following redirects to private addresses (the LAN and
+loopback, refused by default) is a check box on the Add tab (URL sources), in the update dialog and under Catalogs, each
+with its warning; the asset pattern of a GitHub app is a field of the update dialog, and the appjail-db commit a field
+under Catalogs.
 Their output is shown in the pane with the control sequences removed, so the `raw_terminal` check box (your terminal as it
 is, for `appjail run` in a terminal) has no effect on the output of a run started from the window.
 

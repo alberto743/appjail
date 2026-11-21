@@ -8,6 +8,8 @@ from tkinter import filedialog, messagebox, ttk
 
 from ..grants import PORTAL_DESCRIPTIONS, PORTAL_OPT_IN
 from ..manifest import AUDIO_MODES, DEFAULT_AUDIO_MODE, DEFAULT_DISPLAY_SIZE, DISPLAYS
+
+LIMIT_LABELS = (("memory_max", "memory limit (2G, 50%)"), ("cpu_quota", "CPU limit (200% = 2 CPUs)"), ("tasks_max", "process limit (512, 20%)"))
 from ..permargs import PERMISSION_FLAGS
 
 
@@ -296,6 +298,12 @@ def permissions_editor(parent, name, state):
     size = tk.StringVar(value=state.get("display_size", DEFAULT_DISPLAY_SIZE))
     ttk.Label(box, text="window size (xwayland-rootful)").pack(anchor="w", pady=(6, 0))
     ttk.Entry(box, textvariable=size, width=12).pack(anchor="w")
+    limit_vars = {}
+    for key, label in LIMIT_LABELS:
+        limit_vars[key] = tk.StringVar(value=state.get(key, ""))
+        ttk.Label(box, text=label).pack(anchor="w", pady=(6, 0))
+        ttk.Entry(box, textvariable=limit_vars[key], width=12).pack(anchor="w")
+    ttk.Label(box, text="limits: empty for none", foreground="gray40").pack(anchor="w")
     lists = ttk.Frame(frame)
     lists.grid(row=0, column=1, sticky="nsew")
     editors = {
@@ -316,6 +324,7 @@ def permissions_editor(parent, name, state):
         new["audio_mode"] = audio_mode.get()
         new["display"] = display.get()
         new["display_size"] = size.get().strip()
+        new.update({k: v.get().strip() for k, v in limit_vars.items()})
         new.update({k: ed.values() for k, ed in editors.items()})
         result["value"] = new
         top.destroy()
