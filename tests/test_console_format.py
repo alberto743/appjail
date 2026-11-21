@@ -3,6 +3,8 @@
 
 """The layout helpers of Console and the permission formatters."""
 
+import os
+
 import pytest
 
 from appjail import console as console_mod
@@ -114,7 +116,7 @@ class FakeTty:
 
 
 def test_wrapped_only_on_a_terminal_and_never_inside_a_word(monkeypatch, capsys):
-    monkeypatch.setattr(console_mod.shutil, "get_terminal_size", lambda: type("S", (), {"columns": 40})())
+    monkeypatch.setattr(console_mod.shutil, "get_terminal_size", lambda *_, **__: os.terminal_size((40, 24)))
     text = "word " * 30 + "https://example.org/" + "x" * 80
     assert console_mod.wrapped(text, hang=4, stream=object.__new__(type("P", (), {"isatty": lambda s: False}))) == [text]
     lines = console_mod.wrapped(text, hang=4, stream=FakeTty())
@@ -125,7 +127,7 @@ def test_wrapped_only_on_a_terminal_and_never_inside_a_word(monkeypatch, capsys)
 
 
 def test_wrapped_keeps_the_indent_of_a_line_whose_first_word_is_too_long(monkeypatch):
-    monkeypatch.setattr(console_mod.shutil, "get_terminal_size", lambda: type("S", (), {"columns": 80})())
+    monkeypatch.setattr(console_mod.shutil, "get_terminal_size", lambda *_, **__: os.terminal_size((80, 24)))
     value = console_mod.ARROW_NB + "9" * 64
     assert console_mod.wrapped(" " * 14 + value, hang=14, stream=FakeTty()) == [" " * 14 + value]
     assert console_mod.wrapped("  sha256      " + "a" * 64, hang=14, stream=FakeTty()) == ["  sha256      " + "a" * 64]
