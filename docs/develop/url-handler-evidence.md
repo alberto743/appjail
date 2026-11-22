@@ -128,7 +128,7 @@ bound a unix socket there; the host connected to the same path, sent `open appja
 worked on Debian, Ubuntu and Fedora. Seen from inside the jail the host peer's pid is `0` (another pid namespace) and its
 uid is the user's, so a service in a jail could tell callers apart by user and directory permissions, not by process.
 
-## A relay inside the running jail (measured, Debian)
+## A relay inside the running jail (measured, all three guests)
 
 A throwaway prototype (scripts at the end, not part of `src/`): the jail's start command is wrapped so that a small Python
 relay runs as pid 2 and starts the app as its child (pid 3). The relay listens on a unix socket in a directory granted
@@ -146,11 +146,17 @@ with `dirs = ["~/relay-NAME:rw"]` (mode 700, the socket 600). A host client conn
 | Seccomp of the relay and of the app | both `Seccomp: 2`, `NoNewPrivs: 1`, no capabilities: the relay's children inherit the jail's filter |
 | Socket directory | owner the user, mode 700 under the user's home; another user cannot traverse it (reasoned from the modes: the check with `sudo -u nobody` failed on the unreadable client script, not on the socket) |
 
+The Electron rows were repeated on Ubuntu 26.04 (with `--no-sandbox`, as in the sandbox rows above, since the namespace
+sandbox still aborts there) and on Fedora 45 (with the `userns` grant): the same results, `SingletonLock -> appjail-3`, two
+`second-instance` events with the URLs byte for byte, the control-character link refused. Lagrange was run on Debian only.
+In the process list the match for `relay.py` also caught one process outside the jail with `Seccomp: 0` (the host-side
+launcher whose command line names the script); the relay and the app themselves showed `Seccomp: 2`.
+
 An unintended first run is worth keeping: the relay at first passed the app's own arguments to every helper, so the helper
 for the second link also carried the first URL; Lagrange then did not hand over (the extra argument changed its handling)
 and started a second instance that rewrote `.pid`. The helper must get `AppRun` and the new link only.
 
-Open from this run: Ubuntu 26.04 and Fedora 45 were not run with the relay; the real unix path limit (108 bytes) bounds the
+Open from this run: the real unix path limit (108 bytes) bounds the
 length of the socket directory name; a link that arrives before the app writes its own lock may start a first instance in
 the helper (Chromium's lock is atomic, Lagrange's `.pid` is not).
 
