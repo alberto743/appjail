@@ -19,7 +19,7 @@ from . import (
     updater,
     valid,
 )
-from .cmd_desktop import forget
+from .cmd_desktop import forget, refresh_schemes
 from .console import Abort, human_size
 from .errors import RunError
 from .permargs import (
@@ -300,3 +300,5 @@ def cmd_perms(args, console):
     manifest.dump(store.manifest_path(name), new)
     history.record(f"permissions {name}")
     console.out("Saved. The pinned release is unchanged.")
+    if new.permissions.schemes != p.schemes:
+        refresh_schemes(name, console)

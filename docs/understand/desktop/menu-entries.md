@@ -28,9 +28,10 @@ meant to give it.
 - **File types are opt-in.** Nothing is registered unless you pick types the app declares, and only types that pass a
   filter can be picked: no executables, scripts or installers, at most 32. URL schemes are a separate opt-in, below. appjail never makes an app the
   default for anything; with types, the entry runs `appjail open NAME -- FILE...`.
-- **Links are a second opt-in (planned).** An app may be given a list of schemes (`schemes`), each declared by the app's own
-  entry. The entry then runs `appjail open NAME -- %U`, and a small relay inside the running jail receives each checked link
-  through a socket and starts `AppRun LINK` there, so a single-instance app finds its running instance. Decision:
+- **Links are a second opt-in.** An app may be given a list of schemes (`schemes`, `--scheme` and `perms --add-scheme`); the
+  entry registers those that the app's own entry also declares, and runs `appjail open NAME -- %U`. A small relay inside
+  the running jail (planned) receives each checked link through a socket and starts `AppRun LINK` there, so a single-instance
+  app finds its running instance. Decision:
   [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
 - **Opening binds one file.** `appjail open` grants each file alone for that run, read-only unless the entry was created
   with `--rw`, with the same path checks as any grant. Choosing the file in the file manager is the consent, as in the

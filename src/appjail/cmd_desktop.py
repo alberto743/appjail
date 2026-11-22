@@ -26,6 +26,17 @@ def file_type_state(name, fields=None):
     return offered, ignored, (state[0] if state else []), bool(state and state[1]), state is not None
 
 
+def scheme_state(name, fields=None):
+    """(registrable, missing, registered): the granted schemes the app's own entry declares, the granted ones it does not,
+    and the schemes the installed entry registers. `fields`: the app's .desktop fields, if the caller has them."""
+    fields = desktop.read_app_desktop(store.root_path(name)) if fields is None else fields
+    granted = manifest.load(store.manifest_path(name)).permissions.schemes
+    declared = desktop.declared_schemes(fields.get("MimeType"))
+    state = desktop.installed_state(name)
+    registered = [m[len(desktop.SCHEME_PREFIX):] for m in (state[0] if state else []) if m.startswith(desktop.SCHEME_PREFIX)]
+    return [s for s in granted if s in declared], [s for s in granted if s not in declared], registered
+
+
 def show_file_types(name, console):
     _check(name)
     offered, ignored, registered, rw, has_entry = file_type_state(name)
@@ -34,11 +45,17 @@ def show_file_types(name, console):
     else:
         console.kv("Icon", desktop.icon_status(name, store.root_path(name)))
         mode = "read-write" if rw else "read-only"
-        console.kv("Registered", f"{', '.join(registered)} ({mode})" if registered else "none (launcher only)")
+        files = [m for m in registered if not m.startswith(desktop.SCHEME_PREFIX)]
+        console.kv("Registered", f"{', '.join(files)} ({mode})" if files else "none (launcher only)")
     console.kv("Offered", ", ".join(m + (" *" if m in registered else "") for m in offered) or "none")
     if registered and offered:
         console.kv("", "(* = registered)")
     console.kv("Not offered", ", ".join(ignored) or "none")
+    registrable, missing, linked = scheme_state(name)
+    if registrable or missing or linked:
+        console.kv("Links", ", ".join(s + (" *" if s in linked else "") for s in registrable) or "none")
+        if missing:
+            console.kv("", f"granted but not declared by the app: {', '.join(missing)}")
 
 
 def _select(console, declared, args, current, yes):
@@ -79,9 +96,14 @@ def install_entry(name, console, args, yes=False):
     declared, ignored, current, was_rw, has_entry = file_type_state(name, fields)
     mimes = _select(console, declared, args, current if has_entry else None, yes)
     rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
+    schemes, missing, _ = scheme_state(name, fields)
     shown = desktop.display_fields(fields, name)
-    console.kv("Menu entry", f"{shown['Name']} (appjail) {ARROW} {' '.join(desktop.launcher_argv())} {'open' if mimes else 'run'} {name}")
+    console.kv("Menu entry", f"{shown['Name']} (appjail) {ARROW} {' '.join(desktop.launcher_argv())} {'open' if mimes or schemes else 'run'} {name}")
     console.kv("File types", ", ".join(mimes) + (" (read-write)" if rw else " (read-only)") if mimes else "none (launcher only)")
+    if schemes:
+        console.kv("Links", ", ".join(schemes))
+    if missing:
+        console.note(f"granted but not declared by the app, so not registered: {', '.join(missing)}")
     if ignored:
         console.kv("Not offered", ", ".join(ignored))
     if rw and mimes:
@@ -89,7 +111,7 @@ def install_entry(name, console, args, yes=False):
     if not yes and not console.confirm("Write the menu entry?", default=True):
         raise Abort("cancelled")
     try:
-        path, size, note = desktop.install(name, root, mimes, rw)
+        path, size, note = desktop.install(name, root, mimes, rw, schemes=schemes)
     except desktop.DesktopError as e:
         raise Abort(str(e)) from e
     console.kv("Entry", path)
@@ -98,7 +120,7 @@ def install_entry(name, console, args, yes=False):
         console.note(note)
     if size and not shutil.which(desktop.ICON_CACHE_TOOL):
         console.note("gtk-update-icon-cache (package libgtk-3-bin, or gtk-update-icon-cache on Fedora) is not installed; the icon may appear only after the next login")
-    if mimes and not shutil.which(desktop.DESKTOP_DB_TOOL):
+    if (mimes or schemes) and not shutil.which(desktop.DESKTOP_DB_TOOL):
         console.note("update-desktop-database (package desktop-file-utils) is not installed; the file types may appear after the next login")
 
 
@@ -136,7 +158,7 @@ def refresh_after_update(name, console):
     declared = file_type_state(name)[0]
     kept = [m for m in mimes if m in declared]
     try:
-        _, _, note = desktop.install(name, store.root_path(name), kept, rw)
+        _, _, note = desktop.install(name, store.root_path(name), kept, rw, schemes=scheme_state(name)[0])
     except desktop.DesktopError as e:
         console.kv("  menu entry", f"not refreshed: {e}", INDENTED_LABEL)
         return
@@ -155,3 +177,13 @@ def forget(name, console):
         if desktop.mimeapps_mentions(name):
             console.note(f"your mimeapps.list still names appjail-{name}.desktop; desktops ignore a missing entry, "
                          "you can delete the line")
+
+
+def refresh_schemes(name, console):
+    """`perms` changed the schemes: bring an existing entry in line, when the tree is there to read the app's own file from."""
+    if desktop.installed_state(name) is None:
+        return
+    if not store.root_path(name).is_dir():
+        console.note(f"the menu entry of {name} is not updated: run `appjail run {name}` once, then `appjail desktop {name}`")
+        return
+    refresh_after_update(name, console)

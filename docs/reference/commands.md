@@ -71,8 +71,10 @@ close it first. Document-portal grants are kept (`appjail portals APP` lists and
 
 ### `open`
 
-`appjail open APP [--rw] -- FILE...`: open files with an app, each bound alone into its jail, read-only unless `--rw`.
-This is what a menu entry with file types runs. No file means a plain start.
+`appjail open APP [--rw] -- FILE_OR_LINK...`: open files with an app, each bound alone into its jail, read-only unless `--rw`.
+A file may be a path or a `file:` URL. A link of a scheme granted with `--scheme` is passed to the app as one argument,
+after the checks of [Links reach a running app through a relay](../decisions/desktop/url-handlers.md); any other scheme is
+refused. This is what a menu entry with file types or schemes runs. Nothing named means a plain start.
 
 ## Inspecting and changing
 
