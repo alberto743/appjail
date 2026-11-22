@@ -75,6 +75,21 @@ class Console:
         for line in [list(headers), *rows]:
             self.out("  ".join(line[i].ljust(widths[i]) for i in keep).rstrip())
 
+    def stack(self, headers, rows, max_width=40, extra=None):
+        """Each row as its first cell on a line, then one bullet per other non-empty cell (`header: value`), so a long
+        value wraps under its text instead of breaking a table. extra maps a first cell to more bullet texts."""
+        extra = extra or {}
+        for n, row in enumerate(rows):
+            if n:
+                self.out()
+            self.out(textsafe.clean(row[0], max_width))
+            for header, cell in zip(headers[1:], row[1:]):
+                cell = textsafe.clean(cell, max_width)
+                if header and cell:
+                    self.item(f"{header.lower()}: {cell}")
+            for text in extra.get(row[0], []):
+                self.item(text)
+
     def json(self, data):
         """One JSON document on stdout. ASCII only (non-ASCII is escaped), so no terminal control can pass through; never
         cut, since a cut document is no longer JSON."""

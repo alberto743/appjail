@@ -93,7 +93,7 @@ def list_json(name, m):
             "env": dict(m.env)}
 
 
-def cmd_list(console, long=False, as_json=False):
+def cmd_list(console, long=False, as_json=False, table=False):
     names = updater.installed()
     if as_json:
         apps = []
@@ -115,14 +115,18 @@ def cmd_list(console, long=False, as_json=False):
             continue
         rows.append(list_row(name, m))
         details[name] = list_details(m)
-    if rows:
-        console.table(("NAME", "VERSION", "SOURCE", "TIER", "CHANNEL", "UPDATE"), rows, max_width=60)
-    if long:
-        for name, lines in details.items():
-            console.out()
-            console.out(name)
-            for line in lines:
-                console.item(line)
+    headers = ("NAME", "VERSION", "SOURCE", "TIER", "CHANNEL", "UPDATE")
+    if rows and not table:
+        console.stack(headers, rows, max_width=60, extra=details if long else None)
+    else:
+        if rows:
+            console.table(headers, rows, max_width=60)
+        if long:
+            for name, lines in details.items():
+                console.out()
+                console.out(name)
+                for line in lines:
+                    console.item(line)
     for app, path in desktop.dangling():
         console.note(f"menu entry of the missing app '{app}': {path} (`appjail desktop --prune` deletes it)")
 

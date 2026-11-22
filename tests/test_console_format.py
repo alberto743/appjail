@@ -148,3 +148,11 @@ def test_prompts_are_cleaned_of_untrusted_text(monkeypatch):
     assert c.confirm("Copy evil\x1b]52;c;QQ==\x07\x1b[2J.AppImage?") is True
     assert c.ask("name\x1b[31m: ") == "y"
     assert all("\x1b" not in p and "\x07" not in p for p in seen)
+
+
+def test_stack_prints_a_heading_and_a_bullet_per_filled_cell(con):
+    c, cap = con
+    b = console_mod.BULLET
+    c.stack(("NAME", "VERSION", "UPDATE"), [("a", "v1", ""), ("b\x1b[2J", "v2", "v3")], extra={"a": ["grants: net"]})
+    assert cap.readouterr().out.splitlines() == ["a", f"  {b} version: v1", f"  {b} grants: net", "",
+                                                 "b", f"  {b} version: v2", f"  {b} update: v3"]

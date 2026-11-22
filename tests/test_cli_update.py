@@ -228,6 +228,9 @@ def test_list(h):
     update(h, FakeClient(release_=release2()))
     c = Script()
     cli.cmd_list(c)
+    assert c.lines[:5] == ["app", "  • version: v1.0", "  • source: github:o/App", "  • tier: 3", "  • update: v2.0"]
+    c = Script()
+    cli.cmd_list(c, table=True)
     header, row = c.lines[:2]
     assert header.split() == ["NAME", "VERSION", "SOURCE", "TIER", "UPDATE"]
     assert row.split() == ["app", "v1.0", "github:o/App", "3", "v2.0"]
@@ -235,6 +238,10 @@ def test_list(h):
     c = Script()
     cli.cmd_list(c, long=True)
     assert "grants: network" in c.text and "display: wayland" in c.text
+    assert c.lines[0] == "app" and "NAME" not in c.text
+    c = Script()
+    cli.cmd_list(c, long=True, table=True)
+    assert c.lines[0].split()[0] == "NAME" and "grants: network" in c.text
 
 
 def test_list_json(h, capsys):
@@ -330,7 +337,7 @@ def test_perms_declined_or_invalid_changes_nothing(h, tmp_path):
 def test_main_dispatch(h, capsys):
     installed(h)
     assert cli.main(["list"]) == 0
-    assert "app   v1.0" in capsys.readouterr().out
+    assert "  • version: v1.0" in capsys.readouterr().out
     assert cli.main(["perms", "nope"]) == 1
 
 

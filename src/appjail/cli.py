@@ -146,6 +146,7 @@ def build_parser():
                          help="url apps: also follow redirects to private network addresses (the LAN, loopback); refused by default")
     lst = sub.add_parser("list", help="list installed apps")
     lst.add_argument("-l", "--long", action="store_true", help="also show what each app is granted")
+    lst.add_argument("--table", action="store_true", help="print one aligned table row per app instead of a bullet list")
     lst.add_argument("--json", action="store_true", help="print the apps, with their permissions, as JSON")
     dsk = sub.add_parser("desktop", help="create, refresh or remove the menu entry of an app")
     dsk.add_argument("app", nargs="?")
@@ -253,7 +254,7 @@ COMMANDS = {
     "index": _index,
     "search": lambda args, client, console, app_args: cmd_search(args, console),
     "update": lambda args, client, console, app_args: cmd_update(args, client or github.Client(), console),
-    "list": lambda args, client, console, app_args: cmd_list(console, args.long, args.json),
+    "list": lambda args, client, console, app_args: cmd_list(console, args.long, args.json, args.table),
     "version": lambda args, client, console, app_args: console.out(f"appjail {version_string()}"),
     "desktop": lambda args, client, console, app_args: cmd_desktop(args, console),
     "open": lambda args, client, console, app_args: cmd_open(args, [*args.files, *app_args], console),

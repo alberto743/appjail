@@ -77,8 +77,8 @@ This is what a menu entry with file types runs. No file means a plain start.
 
 ### `list`
 
-`appjail list [-l|--long] [--json]`: the installed apps with version, source, evidence tier, channel and any update
-seen. `-l` adds what each app is granted; `--json` prints one JSON document, permissions included.
+`appjail list [-l|--long] [--table] [--json]`: the installed apps with version, source, evidence tier, channel and any update
+seen. `-l` adds what each app is granted; `--json` prints one JSON document, permissions included. Each app is printed as its name followed by one bullet per field (and, with `-l`, per grant), so a long value wraps under its text; `--table` prints one aligned table row per app instead.
 
 ### `perms`
 

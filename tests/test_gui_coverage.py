@@ -19,6 +19,7 @@ NEVER = {
     "--yes": "the window never answers for the user: the command asks, and the answer is the user's",
     "--json": "the window reads the data itself",
     "--long": "the window shows the grants of each app itself",
+    "--table": "the window shows the apps in its own table",
     "--raw": "a run started from the window has no terminal to hand over (its output is shown in the pane)",
     "--all": "the Search tab's `all` check box reads the index itself",
     "--version": "the Version button runs `version`",
