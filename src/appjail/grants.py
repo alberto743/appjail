@@ -77,6 +77,34 @@ def check_portal_interface(name):
     return name
 
 
+# URL schemes an app may be offered as a handler of (`schemes`, docs/decisions/desktop/url-handlers.md).
+SCHEME_RE = re.compile(r"[a-z][a-z0-9+.-]{0,31}")
+SCHEMES_REFUSED = ("file",)  # a path, not a link: `appjail open` binds files itself, one at a time
+MAX_SCHEMES = 16
+MAX_LINK_BYTES = 4000  # a line of this and a newline is written to a pipe atomically (PIPE_BUF is 4096)
+
+
+def check_scheme(name):
+    """A URL scheme an app may be offered as a handler of: lower case, and never `file`."""
+    match(name, SCHEME_RE, "permissions.schemes entry")
+    if name in SCHEMES_REFUSED:
+        raise ManifestError(f"schemes entry {name!r} is refused: files are opened with their own file types")
+    return name
+
+
+def check_link(link, schemes):
+    """A link that came from the desktop, for an app granted `schemes`: its scheme (compared in lower case) must be one of
+    them, and it must be short, free of control characters and unable to read as an option. Returns it unchanged."""
+    if not isinstance(link, str) or not link or len(link.encode("utf-8", "surrogateescape")) > MAX_LINK_BYTES:
+        raise ManifestError(f"a link must be 1 to {MAX_LINK_BYTES} bytes")
+    if any(ord(c) < 32 or ord(c) == 127 for c in link):
+        raise ManifestError("the link contains control characters")
+    scheme, colon, _ = link.partition(":")
+    if not colon or scheme.lower() not in schemes:
+        raise ManifestError(f"the link is not of a scheme this app handles ({', '.join(schemes) or 'none'})")
+    return link
+
+
 def check_dbus_name(name, key="dbus_filter"):
     """A D-Bus name an app may be allowed to talk to; refuses names that hand over the host."""
     match(name, DBUS_NAME_RE, f"permissions.{key} entry")

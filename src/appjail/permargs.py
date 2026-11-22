@@ -67,6 +67,27 @@ def portals_from_args(names, current=()):
     return dbus_from_args(names, current, grants.check_portal_interface, "--portal")
 
 
+def schemes_from_args(names, current=(), flag="--scheme"):
+    """Validated URL schemes (given in any case, stored in lower case) merged into the current list (order kept)."""
+    out = list(current)
+    for name in names:
+        try:
+            grants.check_scheme(name.lower())
+        except manifest.ManifestError as e:
+            raise Abort(f"{flag} {name}: {e}") from e
+        if name.lower() not in out:
+            out.append(name.lower())
+    if len(out) > grants.MAX_SCHEMES:
+        raise Abort(f"{flag}: at most {grants.MAX_SCHEMES} schemes")
+    return tuple(out)
+
+
+def warn_new_schemes(console, names):
+    for n in names:
+        console.warn(f"{n}: a {n}: link opened anywhere on your desktop will start this app with that link, "
+                     "and the app keeps a relay running inside its jail to receive links while it runs")
+
+
 def warn_privileged_portals(console, names):
     for n in names:
         console.warn(f"the {n} portal is privileged: it can act outside the jail (the desktop asks you each time, "
@@ -111,6 +132,7 @@ def warn_new_grants(console, old, new):
     warn_sensitive_dbus(console, [n for n in new.dbus_filter if n not in old.dbus_filter])
     warn_owned_dbus(console, [n for n in new.dbus_own if n not in old.dbus_own])
     warn_privileged_portals(console, [n for n in new.portal_interfaces if n not in old.portal_interfaces])
+    warn_new_schemes(console, [n for n in new.schemes if n not in old.schemes])
 
 
 def require_network_isolation(perms):
@@ -136,7 +158,7 @@ def permissions_from_args(args):
     except manifest.ManifestError as e:
         raise Abort(str(e)) from e
     return manifest.Permissions(
-        portal_interfaces=portals_from_args(args.portal),
+        portal_interfaces=portals_from_args(args.portal), schemes=schemes_from_args(args.scheme),
         dirs=dirs_from_args(args.dir), dbus_filter=dbus_from_args(args.dbus),
         dbus_own=dbus_from_args(args.dbus_own, check=grants.check_dbus_own, flag="--dbus-own"),
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
@@ -163,7 +185,8 @@ def permission_lines(p):
     for label, value in (("memory-max", p.memory_max), ("cpu-quota", p.cpu_quota), ("tasks-max", p.tasks_max)):
         if value:
             lines.append((label, value))
-    for label, values in (("dirs", p.dirs), ("dbus", p.dbus_filter), ("dbus-own", p.dbus_own), ("portals", p.portal_interfaces)):
+    for label, values in (("dirs", p.dirs), ("dbus", p.dbus_filter), ("dbus-own", p.dbus_own), ("portals", p.portal_interfaces),
+                          ("schemes", p.schemes)):
         if values:
             lines.append((label, ", ".join(values)))
     return lines
@@ -179,7 +202,8 @@ def permission_changes(old, new):
         if getattr(old, k) != getattr(new, k):
             lines.append((k.replace("_", "-"), f"{getattr(old, k) or 'none'} {ARROW} {getattr(new, k) or 'none'}"))
     for label, a, b in (("dirs", old.dirs, new.dirs), ("dbus", old.dbus_filter, new.dbus_filter),
-                        ("dbus-own", old.dbus_own, new.dbus_own), ("portals", old.portal_interfaces, new.portal_interfaces)):
+                        ("dbus-own", old.dbus_own, new.dbus_own), ("portals", old.portal_interfaces, new.portal_interfaces),
+                        ("schemes", old.schemes, new.schemes)):
         lines += [(label, f"+ {x}") for x in b if x not in a] + [(label, f"- {x}") for x in a if x not in b]
     return lines
 

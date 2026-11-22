@@ -35,6 +35,7 @@ the other switches only when true. Each key is described in the [permission refe
 | `dirs` | list of absolute or `~/` paths, each optionally `:ro` or `:rw` |
 | `dbus_filter`, `dbus_own` | lists of D-Bus names, optionally ending in `.*` |
 | `portal_interfaces` | list of opt-in portal interface names (needs `portals = true`) |
+| `schemes` | list of lower-case URL schemes (`[a-z][a-z0-9+.-]*`, at most 32 characters each, 16 entries, never `file`); written only when not empty |
 
 Consistency rules: `network_host` needs `network`, `mic` needs `audio`, `portal_interfaces` needs `portals`.
 

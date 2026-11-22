@@ -42,6 +42,7 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `dbus_filter` | session-bus names the app may talk to; a trailing `.*` covers the names below | `--add-dbus`, `--rm-dbus` | `--dbus` |
 | `dbus_own` | session-bus names the app may own | `--add-dbus-own`, `--rm-dbus-own` | `--dbus-own` |
 | `portal_interfaces` | opt-in portal interfaces, with `portals` | `--add-portal`, `--rm-portal` | `--portal` |
+| `schemes` | URL schemes the app is offered as a handler of, and the relay that delivers links to it while it runs (at most 16, lower case, never `file`) | `--add-scheme`, `--rm-scheme` | `--scheme` |
 
 Directory entries are checked against the [paths that can never be granted](../guide/files.md#what-cannot-be-granted)
 when they are given and again, on the folder really opened, at every start.

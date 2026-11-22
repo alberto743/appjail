@@ -12,7 +12,7 @@ import struct
 from pathlib import Path
 from typing import NamedTuple
 
-from . import dbusproxy, grants, linger, manifest, reopen, store, wayland
+from . import dbusproxy, grants, linger, manifest, relay, reopen, store, wayland
 from .errors import RunError
 from .jail import etc_args, system_args
 
@@ -364,12 +364,14 @@ def _base_filesystem_args(etc_dir, rt, perms):
 
 
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
-                 portal_docs=None, status_fd=None, block_fd=None, binds=(), audio_sockets=None, host_audio=True, user_env=()):
+                 portal_docs=None, status_fd=None, block_fd=None, binds=(), audio_sockets=None, host_audio=True, user_env=(),
+                 link_fifo=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     binds: the directory and file grants, from Grants.args.
     audio_sockets: (pipewire, pulse) sockets of the app's private audio graph; without them `audio` is the host's Pulse
     socket, or nothing when host_audio is false (the private graph could not start and the app has no `mic`).
+    link_fifo: the host FIFO of the link relay (relay.py); the app then runs under the relay, which reads the FIFO bound in.
     Nothing is read from the process environment, only from host_env; the host's files decide what can be bound (which
     system directories, GPU nodes and helper binaries exist). Anything the manifest asks for but appjail cannot enforce
     yet is refused instead of ignored.
@@ -377,6 +379,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
     xwayland = perms.xwayland
     if perms.linger:
         command = linger.wrap(command)
+    if link_fifo:
+        command = relay.wrap(command, perms.schemes)
     if xwayland:
         command = xwayland_command(command, perms.rootful, perms.display_size)
     if dbusproxy.needed(perms) and not dbus_socket:
@@ -400,6 +404,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
     if perms.camera:
         args += _camera_args(sysfs=not perms.gpu)
     args += binds
+    if link_fifo:
+        args += ["--bind", str(link_fifo), relay.JAIL_FIFO]
     for k, v in user_env:
         grants.check_env(k, v)
         if k in env:

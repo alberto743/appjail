@@ -311,6 +311,7 @@ def permissions_editor(parent, name, state):
         "dbus_filter": ListEditor(lists, "D-Bus names (talk)", state.get("dbus_filter", ())),
         "dbus_own": ListEditor(lists, "D-Bus names (own)", state.get("dbus_own", ())),
         "portal_interfaces": PortalChecks(lists, "Privileged portals", state.get("portal_interfaces", ()), "needs the portals permission"),
+        "schemes": ListEditor(lists, "URL schemes", state.get("schemes", ()), "gemini; links of these open the app"),
         "env": ListEditor(lists, "Environment", state.get("env", ()), "NAME=VALUE; plain text, no secrets"),
     }
     for i, ed in enumerate(editors.values()):

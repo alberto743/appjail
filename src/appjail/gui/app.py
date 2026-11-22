@@ -361,7 +361,8 @@ class App:
         extra.pack(fill="both", expand=True)
         self.editors = {}
         for i, (key, title, hint) in enumerate((("dirs", "Directories", "PATH or PATH:rw"), ("dbus", "D-Bus names (talk)", ""),
-                                                ("dbus_own", "D-Bus names (own)", ""), ("portals", "Privileged portals", "needs portals"))):
+                                                ("dbus_own", "D-Bus names (own)", ""), ("portals", "Privileged portals", "needs portals"),
+                                                ("schemes", "URL schemes", "gemini; links of these open the app"))):
             self.editors[key] = (dialogs.PortalChecks(extra, title, (), "needs the portals permission", wrap=170, height=110)
                                  if key == "portals" else dialogs.ListEditor(extra, title, (), hint, browse="dir" if key == "dirs" else None))
             self.editors[key].grid(row=0, column=i, sticky="nsew", padx=3)

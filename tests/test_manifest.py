@@ -477,3 +477,29 @@ def test_dirs_entries_must_be_normalised(entry):
 def test_normalize_dir_refuses_a_colon_in_the_path(spec):
     with pytest.raises(ManifestError, match="':'"):
         grants.normalize_dir(spec, "/home/u", "/home/u/work")
+
+
+def test_schemes_round_trip_and_default_to_none(tmp_path):
+    assert make().permissions.schemes == ()
+    assert "schemes" not in manifest.dumps(make())  # nothing written for an app without any
+    m = make(permissions=Permissions(schemes=("gemini", "x-appjail+test")))
+    path = tmp_path / "gh.toml"
+    manifest.dump(path, m)
+    assert manifest.load(path).permissions.schemes == ("gemini", "x-appjail+test")
+
+
+@pytest.mark.parametrize("schemes", [("File",), ("file",), ("1abc",), ("a b",), ("",), ("gemini", "gemini"), ("x" * 33,),
+                                     tuple(f"s{i}" for i in range(17))])
+def test_bad_schemes_are_refused(schemes):
+    with pytest.raises(ManifestError):
+        manifest.validate(make(permissions=Permissions(schemes=schemes)))
+
+
+def test_check_link_compares_the_scheme_in_lower_case_and_keeps_the_link():
+    link = 'GEMINI://example.org/a b?x="q"&y=%20#f'
+    assert grants.check_link(link, ("gemini",)) == link
+    for bad in ("", "gopher://x", "gemini", "-gemini://x", "gemini://x\n", "gemini://x\x7f", "gemini://" + "a" * 4090):
+        with pytest.raises(ManifestError):
+            grants.check_link(bad, ("gemini",))
+    with pytest.raises(ManifestError):
+        grants.check_link("gemini://x", ())

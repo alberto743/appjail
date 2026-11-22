@@ -19,7 +19,7 @@ from . import (
     updater,
     valid,
 )
-from .cmd_desktop import forget
+from .cmd_desktop import forget, refresh_schemes
 from .console import Abort, human_size
 from .errors import RunError
 from .permargs import (
@@ -33,6 +33,7 @@ from .permargs import (
     permission_lines,
     portals_from_args,
     require_network_isolation,
+    schemes_from_args,
     warn_new_grants,
 )
 
@@ -83,7 +84,7 @@ def list_json(name, m):
     p = m.permissions
     perms = {k: getattr(p, k) for k in PERMISSION_FLAGS}
     perms.update(display=p.display, dirs=list(p.dirs), dbus=list(p.dbus_filter), dbus_own=list(p.dbus_own),
-                 portal_interfaces=list(p.portal_interfaces))
+                 portal_interfaces=list(p.portal_interfaces), schemes=list(p.schemes))
     if p.rootful:
         perms["display_size"] = p.display_size
     perms.update({k: getattr(p, k) for k in manifest.LIMIT_KEYS if getattr(p, k)})
@@ -262,6 +263,9 @@ def bus_and_portal_changes(args, p, changes):
         changes["portal_interfaces"] = portal_names
     if portal_names and not changes.get("portals", p.portals):
         raise Abort("--add-portal needs portals to be allowed (--allow portals)")
+    schemes = without(schemes_from_args(args.add_scheme, p.schemes, "--add-scheme"), [s.lower() for s in args.rm_scheme], "not granted")
+    if schemes != p.schemes:
+        changes["schemes"] = schemes
 
 
 def cmd_perms(args, console):
@@ -296,3 +300,5 @@ def cmd_perms(args, console):
     manifest.dump(store.manifest_path(name), new)
     history.record(f"permissions {name}")
     console.out("Saved. The pinned release is unchanged.")
+    if new.permissions.schemes != p.schemes:
+        refresh_schemes(name, console)

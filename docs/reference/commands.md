@@ -30,6 +30,7 @@ appjail add --url URL [options]
 | `--dbus NAME` | let the app talk to this session-bus name through the filtering proxy; repeatable |
 | `--dbus-own NAME` | let the app own this session-bus name; repeatable |
 | `--portal NAME` | also allow this privileged portal interface (needs `--allow portals`); repeatable |
+| `--scheme SCHEME` | offer the app as a handler of this URL scheme (stored in lower case, never `file`); repeatable. A menu entry that registers it is made by `desktop` |
 | `--audio-mode pipewire\|pulse` | with `--allow audio`: the private graph (default) or the host's Pulse socket |
 | `--display none\|wayland\|xwayland\|xwayland-rootful` | the display mode (default `wayland`) |
 | `--display-size WxH` | with `--display xwayland-rootful`: the size of its window (default 1280x800) |
@@ -70,8 +71,10 @@ close it first. Document-portal grants are kept (`appjail portals APP` lists and
 
 ### `open`
 
-`appjail open APP [--rw] -- FILE...`: open files with an app, each bound alone into its jail, read-only unless `--rw`.
-This is what a menu entry with file types runs. No file means a plain start.
+`appjail open APP [--rw] -- FILE_OR_LINK...`: open files with an app, each bound alone into its jail, read-only unless `--rw`.
+A file may be a path or a `file:` URL. A link of a scheme granted with `--scheme` is passed to the app as one argument,
+after the checks of [Links reach a running app through a relay](../decisions/desktop/url-handlers.md); any other scheme is
+refused. This is what a menu entry with file types or schemes runs. Nothing named means a plain start.
 
 ## Inspecting and changing
 
@@ -95,6 +98,7 @@ after and ask before saving.
 | `--add-dbus NAME`, `--rm-dbus NAME` | a session-bus name to talk to |
 | `--add-dbus-own NAME`, `--rm-dbus-own NAME` | a session-bus name to own |
 | `--add-portal NAME`, `--rm-portal NAME` | an opt-in portal interface |
+| `--add-scheme SCHEME`, `--rm-scheme SCHEME` | a URL scheme the app is offered as a handler of |
 | `--set-env NAME=VALUE`, `--unset-env NAME` | an environment variable of the app, from the manifest's `[env]` |
 | `--yes` | do not ask |
 

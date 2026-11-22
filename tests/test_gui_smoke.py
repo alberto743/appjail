@@ -416,7 +416,7 @@ def test_permissions_editor_cancel_returns_none_and_every_editor_fits_the_screen
         bt["Cancel"].invoke()
 
     assert _open_permissions(window, monkeypatch, act) is None
-    assert seen["titles"] == ["D-Bus names (own)", "D-Bus names (talk)", "Directories", "Environment", "Privileged portals"]
+    assert seen["titles"] == ["D-Bus names (own)", "D-Bus names (talk)", "Directories", "Environment", "Privileged portals", "URL schemes"]
 
 
 def test_search_hit_goes_to_the_add_tab(window, monkeypatch):

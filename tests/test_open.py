@@ -70,7 +70,7 @@ def test_several_files_and_no_files(h, launched, tmp_path):
     assert launched[0][1][2]["extra_files"] == ()
 
 
-@pytest.mark.parametrize("bad", ["file:///etc/passwd", "https://example.org/x", "/nonexistent/file"])
+@pytest.mark.parametrize("bad", ["file:///nonexistent/file", "file://otherhost/etc/passwd", "file:///a?x=1", "https://example.org/x", "/nonexistent/file"])
 def test_urls_and_missing_files_are_refused_and_notified(h, launched, bad):
     h.add()
     calls, notes = launched
@@ -104,3 +104,34 @@ def test_the_notice_carries_no_markup(monkeypatch):
     monkeypatch.setattr(cmd_open.subprocess, "run", lambda argv, **kw: sent.append(argv))
     cmd_open.notify('not a regular file: <a href="https://example.test">x</a> & <img src="y">\x1b[2J')
     assert sent[0][-1] == 'not a regular file: a href="https://example.test"x/a  img src="y"'
+
+
+def test_a_file_url_from_the_desktop_names_the_same_file(h, launched, tmp_path):
+    h.add()
+    f = tmp_path / "a b%.txt"
+    f.write_text("x")
+    from urllib.parse import quote
+    assert open_(["open", "app", "--", "file://" + quote(str(f))]) == 0
+    assert launched[0][0][2]["extra_files"] == (f"{f}:ro",)
+
+
+def test_a_granted_scheme_is_passed_on_as_one_argument_and_files_still_bind(h, launched, tmp_path):
+    h.add(extra=("--scheme", "gemini"))
+    f = tmp_path / "doc.txt"
+    f.write_text("x")
+    link = 'GEMINI://example.org/a b?x="q"&y=%20#f'
+    assert open_(["open", "app", "--", link, str(f)]) == 0
+    (name, args, kw), = launched[0]
+    assert (name, args, kw["extra_files"]) == ("app", [link], (f"{f}:ro",))
+
+
+@pytest.mark.parametrize("bad", ["gopher://x/y", "gemini://x/\x01", "gemini://x/" + "a" * 5000, "https://example.org/"])
+def test_other_schemes_and_malformed_links_are_refused(h, launched, bad):
+    h.add(extra=("--scheme", "gemini"))
+    calls, notes = launched
+    assert open_(["open", "app", "--", bad]) == 1 and calls == [] and len(notes) == 1
+
+
+def test_an_app_without_schemes_refuses_every_link(h, launched):
+    h.add()
+    assert open_(["open", "app", "--", "gemini://x/"]) == 1 and launched[0] == []

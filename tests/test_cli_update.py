@@ -651,3 +651,27 @@ def test_pattern_on_a_pinned_app_and_private_redirects_on_a_github_app_are_refus
     assert code == 1 and "a pinned app is never updated" in c.text
     code, c = update(h, FakeClient(release_=release2()), extra=("--channel", "stable", "--allow-private-redirects"))
     assert code == 1 and "--allow-private-redirects applies to apps installed from a URL" in c.text
+
+
+def test_add_and_perms_schemes(h):
+    client = FakeClient()
+    with pytest.raises(Abort, match="refused"):
+        h.add(client=client, extra=("--scheme", "file"))
+    assert client.calls == []
+    path = installed(h, extra=("--scheme", "Gemini"))
+    assert manifest.load(path).permissions.schemes == ("gemini",)
+
+    def perms(*argv):
+        c = Script()
+        cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", "--yes", *argv]), c)
+        return c
+
+    c = perms("--add-scheme", "gopher")
+    assert "+ gopher" in c.text and "gopher: link" in c.text
+    assert manifest.load(path).permissions.schemes == ("gemini", "gopher")
+    perms("--rm-scheme", "GEMINI")
+    assert manifest.load(path).permissions.schemes == ("gopher",)
+    with pytest.raises(Abort, match="not granted"):
+        perms("--rm-scheme", "gemini")
+    with pytest.raises(Abort, match="--add-scheme"):
+        perms("--add-scheme", "bad scheme")

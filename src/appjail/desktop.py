@@ -18,7 +18,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import appimage, jail, pngclean, store
+from . import appimage, grants, jail, pngclean, store
 from .textsafe import clean
 
 MARKER = "X-Appjail-App"
@@ -38,8 +38,10 @@ DISPLAY_KEYS = ("Name", "Comment", "GenericName", "Categories", "Keywords", "Ico
 _CATEGORIES = re.compile(r"[A-Za-z0-9._-]+(;[A-Za-z0-9._-]+)*;?")
 _ICON_NAME = re.compile(r"[A-Za-z0-9._+-]{1,100}")
 _MIME = re.compile(r"[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}")
-# Types that must never be advertised: URL handlers, things that run code, launchers of other programs.
-_MIME_DENY_PREFIX = ("x-scheme-handler/", "inode/")
+SCHEME_PREFIX = "x-scheme-handler/"
+# Types that must never be advertised as file types: URL handlers (only the granted `schemes` are, by their own path),
+# things that run code, launchers of other programs.
+_MIME_DENY_PREFIX = (SCHEME_PREFIX, "inode/")
 _MIME_DENY = frozenset({
     "application/x-desktop", "application/x-executable", "application/x-sharedlib", "application/x-pie-executable",
     "application/x-shellscript", "application/x-appimage", "application/vnd.appimage", "application/x-ms-dos-executable",
@@ -142,6 +144,17 @@ def split_mimes(raw):
     return kept, ignored
 
 
+def declared_schemes(raw):
+    """The URL schemes a MimeType value declares as `x-scheme-handler/S`: well-formed, lower case, not refused, no duplicates."""
+    out = []
+    for item in (raw or "").split(";"):
+        item = item.strip()
+        scheme = item[len(SCHEME_PREFIX):] if item.startswith(SCHEME_PREFIX) else ""
+        if scheme and grants.SCHEME_RE.fullmatch(scheme) and scheme not in grants.SCHEMES_REFUSED and scheme not in out:
+            out.append(scheme)
+    return out
+
+
 # -- the entry -----------------------------------------------------------------------
 
 def launcher_argv():
@@ -160,12 +173,14 @@ def _quote_arg(arg):
     return '"' + re.sub(r'(["`$\\])', r"\\\1", arg) + '"'
 
 
-def exec_line(name, mimes, rw=False, argv=None):
-    """Exec= value. With types, files come as %F after `--` (so a file named -x is not an option); without, a plain run."""
+def exec_line(name, mimes, rw=False, argv=None, schemes=()):
+    """Exec= value. With types, files come as %F after `--` (so a file named -x is not an option); with schemes the list is
+    %U, since links come too; without either, a plain run."""
     argv = argv or launcher_argv()
-    if mimes:
-        words = [*argv, "open", name, *(["--rw"] if rw else []), "--", "%F"]
-        return " ".join(_quote_arg(w) if w != "%F" else w for w in words)
+    if mimes or schemes:
+        field = "%U" if schemes else "%F"
+        words = [*argv, "open", name, *(["--rw"] if rw else []), "--", field]
+        return " ".join(_quote_arg(w) if w != field else w for w in words)
     return " ".join(_quote_arg(w) for w in [*argv, "run", name])
 
 
@@ -173,19 +188,19 @@ def _escape(value):
     return value.replace("\\", "\\\\")
 
 
-def build_entry(name, fields, mimes=(), rw=False, argv=None, icon=False):
+def build_entry(name, fields, mimes=(), rw=False, argv=None, icon=False, schemes=()):
     lines = ["[Desktop Entry]", "Type=Application", f"{MARKER}={name}"]
     shown = display_fields(fields, name)
     lines.append(f"Name={_escape(shown['Name'])} (appjail)")
     for key in ("Comment", "GenericName", "Categories", "Keywords"):
         if key in shown:
             lines.append(f"{key}={_escape(shown[key])}")
-    lines.append("Exec=" + _escape(exec_line(name, mimes, rw, argv)))
+    lines.append("Exec=" + _escape(exec_line(name, mimes, rw, argv, schemes)))
     lines.append("Terminal=false")
     if icon:
         lines.append(f"Icon=appjail-{name}")
-    if mimes:
-        lines.append("MimeType=" + ";".join(mimes) + ";")
+    if mimes or schemes:
+        lines.append("MimeType=" + ";".join([*mimes, *(SCHEME_PREFIX + s for s in schemes)]) + ";")
     return "\n".join(lines) + "\n"
 
 
@@ -211,7 +226,7 @@ def installed_state(name):
     mimes, rw = [], False
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("MimeType="):
-            mimes = [m for m in line.partition("=")[2].split(";") if m]
+            mimes = [m for m in line.partition("=")[2].split(";") if m]  # the registered schemes are in it, as x-scheme-handler/S
         elif line.startswith("Exec=") and " --rw " in line:
             rw = True
     return mimes, rw
@@ -319,7 +334,7 @@ def refresh_cache():
             subprocess.run([tool, str(applications_dir())], capture_output=True, check=False, timeout=60)
 
 
-def install(name, root, mimes=(), rw=False, argv=None, convert=None):
+def install(name, root, mimes=(), rw=False, argv=None, convert=None, schemes=()):
     """Write the entry and the icon for an app. Returns (entry path, icon size or None, icon note or None)."""
     fields = read_app_desktop(root)
     note = None
@@ -328,7 +343,7 @@ def install(name, root, mimes=(), rw=False, argv=None, convert=None):
     except DesktopError as e:
         size, note = None, str(e)
         remove_icons(name)
-    path = write_entry(name, build_entry(name, fields, mimes, rw, argv, icon=size is not None))
+    path = write_entry(name, build_entry(name, fields, mimes, rw, argv, icon=size is not None, schemes=schemes))
     refresh_cache()
     return path, size, note
 

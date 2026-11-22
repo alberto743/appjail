@@ -346,3 +346,48 @@ def test_a_menu_entry_is_refused_for_an_app_without_a_window(h, xdg):
     with pytest.raises(Abort, match="display = none"):
         run(["desktop", "app", "--yes"])
     assert not desktop.entry_path("app").exists()
+
+
+LINK_DESKTOP = DESKTOP.replace("x-scheme-handler/http;", "x-scheme-handler/http;x-scheme-handler/gemini;x-scheme-handler/Bad;")
+
+
+def test_declared_schemes_are_lower_case_well_formed_and_not_file():
+    raw = "x-scheme-handler/gemini;x-scheme-handler/GEMINI;x-scheme-handler/file;x-scheme-handler/a b;x-scheme-handler/gemini;text/plain;"
+    assert desktop.declared_schemes(raw) == ["gemini"]
+    assert desktop.declared_schemes(None) == []
+
+
+def test_a_granted_and_declared_scheme_is_registered_with_a_url_list(h, xdg):
+    h.add(extract=extractor(LINK_DESKTOP, png()), extra=("--scheme", "gemini", "--scheme", "gopher"))
+    out = run(["desktop", "app", "--yes"]).text
+    entry = desktop.entry_path("app").read_text()
+    assert "MimeType=x-scheme-handler/gemini;" in entry and "gopher" not in entry and "x-scheme-handler/http" not in entry
+    assert "open app -- %U" in entry and "granted but not declared" in out and "gopher" in out
+    assert "Not offered" in out and "x-scheme-handler/gemini" not in out.split("Not offered")[1].split("\n")[0]
+    shown = run(["desktop", "app", "--show"]).text
+    assert "Links" in shown and "gemini *" in shown
+
+
+def test_files_and_links_share_one_entry(h, xdg):
+    h.add(extract=extractor(LINK_DESKTOP, png()), extra=("--scheme", "gemini"))
+    run(["desktop", "app", "--mime", "image/png", "--yes"])
+    entry = desktop.entry_path("app").read_text()
+    assert "MimeType=image/png;x-scheme-handler/gemini;" in entry and "open app -- %U" in entry
+    run(["desktop", "app", "--yes"])  # a refresh keeps the file type chosen before
+    assert "MimeType=image/png;x-scheme-handler/gemini;" in desktop.entry_path("app").read_text()
+
+
+def test_without_schemes_the_entry_still_uses_the_file_list(h, xdg):
+    added(h)
+    run(["desktop", "app", "--mime", "image/png", "--yes"])
+    assert "open app -- %F" in desktop.entry_path("app").read_text()
+
+
+def test_perms_keep_an_existing_entry_in_line_with_the_schemes(h, xdg):
+    h.add(extract=extractor(LINK_DESKTOP, png()))
+    run(["desktop", "app", "--yes"])
+    assert "x-scheme" not in desktop.entry_path("app").read_text()
+    cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", "--yes", "--add-scheme", "gemini"]), Script())
+    assert "x-scheme-handler/gemini;" in desktop.entry_path("app").read_text()
+    cli.cmd_perms(cli.build_parser().parse_args(["perms", "app", "--yes", "--rm-scheme", "gemini"]), Script())
+    assert "x-scheme" not in desktop.entry_path("app").read_text() and "run app" in desktop.entry_path("app").read_text()
