@@ -179,6 +179,30 @@ probe ran on a headless weston (`full_wayland` granted; a menu entry is refused 
 Lagrange, run through `perms`, `desktop` and `open` without the desktop tools (Debian), received two links in the running
 process ("Commands sent to Lagrange process 3"). `xdg-utils` is now in the guests (`tests/vm/packages.txt`).
 
+## KDE's and Cinnamon's launchers (measured, Debian 13 with KDE Frameworks 6)
+
+A stand-in entry (`Exec=log.sh %U`, which logs each argument it gets) registered for a scheme and for `text/plain`, with
+`xdg-open` and `kde-open` (package `kde-cli-tools`) run under a private session bus in the `debian-compositors` guest, with
+`XDG_CURRENT_DESKTOP=KDE`, `KDE_SESSION_VERSION=6`, `XDG_MENU_PREFIX=plasma-` (KDE builds its service cache from the Plasma
+menu; without it the entry is not found and `kde-open` tries to read the URL as a file) and Qt's `offscreen` platform.
+No Plasma or Cinnamon session ran: only the launchers that `xdg-open` and the desktops call.
+
+| Input | GLib (`gio open`, also Cinnamon's `xdg-open`) | KDE (`kde-open`, also KDE's `xdg-open`) |
+|---|---|---|
+| `gemini://example.org/plain` | one argument, unchanged | one argument, unchanged |
+| `gemini://example.org/a b/ü?x=%20y&z=é#frag` | unchanged | `%20` **decoded to a space**; the rest unchanged |
+| `GEMINI://example.org/Upper` | the capitals kept | the scheme **lower-cased** |
+| a `"`, `` ` `` or `\|` in the path | unchanged | percent-encoded (`%22`, `%60`, `%7C`); `'`, `$`, `;` and `&` unchanged |
+| a local file (any of `a b%20c.txt`, `-dash.txt`, one with `"'$`) | a path | a plain path (not a `file:` URL), the name intact |
+| a shell | none | none |
+
+Cinnamon's `xdg-open` runs `gio open` (the `cinnamon` branch of `xdg-open`, read in the script), so Cinnamon is the GLib
+column; its own menu and Nemo use GLib's application launching and were not run. Every link and file was one argument in
+both. KDE rewrites a URL (a decoded `%20` can change what a link means to an app that compares it byte for byte), so a link
+that reaches the app is not always the one that was clicked; appjail passes on what it receives. Not run: a click in
+Dolphin or Plasma, KDE's own choice of default handler (its `kdeglobals` and `mimeapps.list`, here only `mimeapps.list`), and
+the same on Ubuntu and Fedora.
+
 ## A real Electron application: Joplin (measured, Debian)
 
 Joplin 3.7.24 (`laurent22/joplin`, the official AppImage, 212 MB, Electron; its entry declares `x-scheme-handler/joplin`)
@@ -201,8 +225,8 @@ Electron's `requestSingleInstanceLock` (the probe) or Lagrange's pid file works 
 
 ## Not measured
 
-- KDE Plasma and Cinnamon launchers (how they quote and what they pass for local files and URLs under `%U`), and a real
-  click in a full desktop session.
+- A click in Dolphin, Plasma, Nemo or the Cinnamon menu (a full desktop session); KDE's default-handler configuration
+  beyond `mimeapps.list`; the KDE launcher on Ubuntu and Fedora.
 - A real Electron application whose single-instance check works (Joplin's is its own and unreliable, see above); a login flow.
 - Profile corruption by two instances on one profile.
 - Why the Chromium namespace sandbox did not start on Ubuntu 26.04 with `userns` granted.

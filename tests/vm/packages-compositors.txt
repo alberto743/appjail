@@ -6,6 +6,7 @@ cage                  # a wlroots kiosk compositor (headless backend; runs one c
 hyprland              # a compositor with its own backend (aquamarine, headless); on Debian only from backports, which provision.sh installs apart; Fedora does not package it, so it is not measured there
 kwin-wayland          # KDE's compositor (`kwin_wayland --virtual`) and its D-Bus interfaces
 plasma-workspace      # KDE's shell (plasmashell, started by kwin_wayland --virtual), which adds org.kde.plasmashell
+kde-cli-tools        # kde-open (KIO): how KDE's launcher passes a link and a local file to a menu entry, with xdg-open under KDE (docs/develop/url-handler-evidence.md)
 mutter                # GNOME's compositor library with a standalone `mutter --headless`, and the org.gnome.Mutter.* D-Bus interfaces
 gnome-shell           # GNOME's shell (`gnome-shell --headless`), which adds the org.gnome.Shell.* D-Bus interfaces
 muffin                # Cinnamon's compositor (a Mutter fork), started standalone and headless like mutter
