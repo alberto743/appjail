@@ -62,6 +62,9 @@ lock may start the first instance from the helper; Chromium's lock is atomic, La
 leaves a pid file in its home after an unclean end can still fail to start, whatever the relay does. KDE and Cinnamon,
 a real click and the choice of default handler by the desktop were not measured; they are listed under "Not yet verified".
 
+KDE's launcher rewrites a link before it reaches the entry (it decodes `%20` and encodes `"`; GLib passes it unchanged), so the
+link an app receives is not always the one that was clicked ([measured](../../develop/url-handler-evidence.md#kdes-and-cinnamons-launchers-measured-debian-13-with-kde-frameworks-6)).
+
 An app whose own single-instance check does not work in a jail gets nothing from the relay: Joplin finds its running
 instance through an HTTP server on `localhost`, needs `network` for the name to resolve and still starts a second instance
 for about one link in four ([measured](../../develop/url-handler-evidence.md#a-real-electron-application-joplin-measured-debian)).
