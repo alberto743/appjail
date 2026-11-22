@@ -36,3 +36,4 @@ hyprland
 cinnamon              cinnamon gcr3
 muffin                muffin
 gstreamer1.0-pipewire pipewire-gstreamer
+libnss3               nss nspr

@@ -55,3 +55,4 @@ pulseaudio-utils      # pactl, parec and paplay: the Pulse clients of tests/test
 strace                # a real tracer for the devel grant's tests (tests/test_devel.py)
 gdb                   # a real debugger for the devel grant's tests
 linux-perf            # perf, a real profiler for the devel grant's tests (the `perf` package on Fedora)
+libnss3               # NSS and NSPR: libraries every Electron app links against; the probe of the URL-handler measurements (docs/develop/url-handler-evidence.md) cannot start without them
