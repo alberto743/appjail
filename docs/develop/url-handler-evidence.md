@@ -160,6 +160,25 @@ Open from this run: the real unix path limit (108 bytes) bounds the
 length of the socket directory name; a link that arrives before the app writes its own lock may start a first instance in
 the helper (Chromium's lock is atomic, Lagrange's `.pid` is not).
 
+## The desktop's own tools with appjail's entry (measured, all three guests)
+
+With the built code, not the prototype: `appjail perms probe --add-scheme appjailprobe`, `appjail desktop probe` (the entry
+says `Exec=… open probe -- %U` and `MimeType=x-scheme-handler/appjailprobe;`), `update-desktop-database`, then `xdg-mime
+default appjail-probe.desktop x-scheme-handler/appjailprobe` in a throwaway `XDG_DATA_HOME` and `XDG_CONFIG_HOME`. The
+probe ran on a headless weston (`full_wayland` granted; a menu entry is refused for `display = none`).
+
+| Step | Result |
+|---|---|
+| `xdg-mime default` | writes `x-scheme-handler/appjailprobe=appjail-probe.desktop` under `[Default Applications]` in the throwaway `mimeapps.list`; appjail itself never writes it |
+| `xdg-mime query default` before that | empty on Debian; the entry itself on Ubuntu and Fedora, where `xdg-mime` takes the only registered handler from `mimeinfo.cache` |
+| `gio open 'appjailprobe://cold/a b?x=1'`, app not running | the entry starts the app; its argument is the link, unchanged |
+| `gio open 'appjailprobe://via-gio/a b?x=1&y="q"'`, app running | `Sent 1 link to the running probe.`; the first instance logs `second-instance` with the link byte for byte; the helper exits at once |
+| `xdg-open 'appjailprobe://via-xdg-open/z'`, app running | the same (`xdg-open` ran the entry through the desktop-neutral path: no desktop environment in the guest) |
+| `~/.local/share/appjail/run/` during the run | one FIFO, `probe.link`, mode `prw-------` |
+
+Lagrange, run through `perms`, `desktop` and `open` without the desktop tools (Debian), received two links in the running
+process ("Commands sent to Lagrange process 3"). `xdg-utils` is now in the guests (`tests/vm/packages.txt`).
+
 ## Not measured
 
 - KDE Plasma and Cinnamon launchers (how they quote and what they pass for local files and URLs under `%U`), and a real
@@ -167,8 +186,6 @@ the helper (Chromium's lock is atomic, Lagrange's `.pid` is not).
 - A real Electron application (login flows, its own protocol registration); only a probe was used.
 - Profile corruption by two instances on one profile.
 - Why the Chromium namespace sandbox did not start on Ubuntu 26.04 with `userns` granted.
-- Whether `xdg-mime default` (not installed in the guest) behaves the same with appjail's own entries; the stand-in entries
-  were registered with `gio mime`.
 - Lagrange's single-instance code (not read; its behaviour was observed).
 
 ## What the evidence says

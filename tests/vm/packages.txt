@@ -40,6 +40,7 @@ librsvg2-bin          # rsvg-convert: SVG menu icons are rendered to PNG inside 
 libgtk-3-bin         # gtk-update-icon-cache: run on the user icon theme after an entry is written (tests/test_desktop.py uses a fake)
 dosfstools           # mkfs.vfat: a FAT image mounted under /run/media like a USB drive (tests/test_runner_jail.py)
 desktop-file-utils    # desktop-file-validate and update-desktop-database for the generated menu entries
+xdg-utils             # xdg-mime and xdg-open: the desktop's own choice of default handler for a link scheme (docs/develop/url-handler-evidence.md)
 libglib2.0-bin        # gio: tests/test_e2e.py opens a file through the generated menu entry with `gio launch` / `gio open`
 pipewire              # tests/test_audio.py: a private PipeWire, to check that the `audio` permission never exposes its socket
 pipewire-bin          # pw-dump: what a client can see, from the host and from the jail (tests/test_audio.py), and appjail's own check of the private graph (audiojail.py)
