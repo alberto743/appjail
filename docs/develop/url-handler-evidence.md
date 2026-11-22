@@ -128,6 +128,32 @@ bound a unix socket there; the host connected to the same path, sent `open appja
 worked on Debian, Ubuntu and Fedora. Seen from inside the jail the host peer's pid is `0` (another pid namespace) and its
 uid is the user's, so a service in a jail could tell callers apart by user and directory permissions, not by process.
 
+## A relay inside the running jail (measured, Debian)
+
+A throwaway prototype (scripts at the end, not part of `src/`): the jail's start command is wrapped so that a small Python
+relay runs as pid 2 and starts the app as its child (pid 3). The relay listens on a unix socket in a directory granted
+with `dirs = ["~/relay-NAME:rw"]` (mode 700, the socket 600). A host client connects, sends one line, and the relay runs
+`/app/AppRun LINE` inside the jail, so the app's own single-instance handover finds the running instance.
+
+| Case | Result |
+|---|---|
+| Lagrange running, two links sent through the socket | both replies `ok` in under 1 ms; each helper prints `Commands sent to Lagrange process 3` and exits; one `lagrange` process remains |
+| Electron probe running, links `appjailprobe://second/a b?x=1&y="q"` and `appjailprobe://third` | the first instance logs `second-instance` with the URL byte for byte; each helper gets `requestSingleInstanceLock -> false` and exits; `SingletonLock` stays `appjail-3` (the app is pid 3, so the first instance's lock is no longer overwritten) |
+| A link with a control character | refused by the relay (`refused`), nothing started |
+| The jail killed with SIGKILL | the socket file stays, and a client gets `ConnectionRefusedError` (not "no such file"): stale and live sockets can be told apart, and the next launch unlinks the stale file |
+| A link sent about 1.1 s after the launch began, as soon as the socket existed | delivered while Electron was still starting; Chromium's lock stayed with the first instance |
+| `gio open appjailprobe://via-gio/a b?q=1` with a stand-in entry whose `Exec` is the client (`%U`) and `xdg-mime`-style default set by `gio mime` | delivered unchanged to the running probe |
+| Seccomp of the relay and of the app | both `Seccomp: 2`, `NoNewPrivs: 1`, no capabilities: the relay's children inherit the jail's filter |
+| Socket directory | owner the user, mode 700 under the user's home; another user cannot traverse it (reasoned from the modes: the check with `sudo -u nobody` failed on the unreadable client script, not on the socket) |
+
+An unintended first run is worth keeping: the relay at first passed the app's own arguments to every helper, so the helper
+for the second link also carried the first URL; Lagrange then did not hand over (the extra argument changed its handling)
+and started a second instance that rewrote `.pid`. The helper must get `AppRun` and the new link only.
+
+Open from this run: Ubuntu 26.04 and Fedora 45 were not run with the relay; the real unix path limit (108 bytes) bounds the
+length of the socket directory name; a link that arrives before the app writes its own lock may start a first instance in
+the helper (Chromium's lock is atomic, Lagrange's `.pid` is not).
+
 ## Not measured
 
 - KDE Plasma and Cinnamon launchers (how they quote and what they pass for local files and URLs under `%U`), and a real
@@ -135,8 +161,8 @@ uid is the user's, so a service in a jail could tell callers apart by user and d
 - A real Electron application (login flows, its own protocol registration); only a probe was used.
 - Profile corruption by two instances on one profile.
 - Why the Chromium namespace sandbox did not start on Ubuntu 26.04 with `userns` granted.
-- Whether the desktop's own default-handler choice (`xdg-mime default`) behaves the same with appjail's entries; the stand-in
-  entries were registered directly with `gio mime`.
+- Whether `xdg-mime default` (not installed in the guest) behaves the same with appjail's own entries; the stand-in entries
+  were registered with `gio mime`.
 - Lagrange's single-instance code (not read; its behaviour was observed).
 
 ## What the evidence says
@@ -148,7 +174,8 @@ uid is the user's, so a service in a jail could tell callers apart by user and d
 - Handing the link to a process **inside the running jail** works for both apps, because their own handover logic then
   sees the running instance. A host process cannot join a jail without the jail's seccomp filter and Landlock domain.
 - A relay inside the jail that the host reaches through a socket in a granted directory is feasible on all three guests;
-  it cannot identify callers by pid.
+  it cannot identify callers by pid. A prototype relay that runs the app's start command with the link as its only
+  argument delivered links to the running Lagrange and Electron probe on Debian (section above).
 
 ## Scripts
 
@@ -234,3 +261,39 @@ The socket test (a pytest function run with `APPJAIL_INTEGRATION=1`, not kept in
 script=SERVER, dirs=("~/e7dir:rw",))` in a thread, where `SERVER` is a Python script that binds `/home/app/e7dir/sock`,
 accepts one connection, reads it and answers with its own pid and `SO_PEERCRED`; the test waits for the socket file on the
 host, connects, sends a line and reads the reply.
+
+The relay prototype, `relay.py` (run inside the jail as `python3 relay.py SOCKDIR /app/AppRun [ARGS]`; the app is its child):
+
+```python
+import os, socket, subprocess, sys, threading
+sockdir = sys.argv[1]; cmd = sys.argv[2:]
+path = os.path.join(sockdir, "sock")
+try: os.unlink(path)
+except OSError: pass
+srv = socket.socket(socket.AF_UNIX); srv.bind(path); os.chmod(path, 0o600); srv.listen(8)
+app = subprocess.Popen(cmd)
+def serve():
+    while True:
+        c, _ = srv.accept()
+        data = b""
+        while not data.endswith(b"\n") and len(data) < 4097:
+            b = c.recv(4097)
+            if not b: break
+            data += b
+        line = data.decode("utf-8", "replace").rstrip("\n")
+        if len(data) > 4096 or any(ord(ch) < 32 for ch in line):
+            c.sendall(b"refused\n"); c.close(); continue
+        p = subprocess.Popen([cmd[0], line])          # AppRun and the link, nothing else
+        c.sendall(b"ok\n"); c.close()
+        threading.Thread(target=p.wait, daemon=True).start()
+threading.Thread(target=serve, daemon=True).start()
+rc = app.wait()
+try: os.unlink(path)
+except OSError: pass
+sys.exit(rc)
+```
+
+The launcher is a Python script that replaces `runtimejail.runtime_args` with a wrapper putting
+`/usr/bin/python3 /home/app/relay-NAME/relay.py /home/app/relay-NAME` before the command, copies `relay.py` into
+`~/relay-NAME` and calls `runner.launch(NAME, extra_dirs=["~/relay-NAME:rw"])`. The client is five lines: connect to the
+socket, send the link and a newline, print the reply.
