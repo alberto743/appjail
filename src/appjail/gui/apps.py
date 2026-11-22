@@ -18,7 +18,7 @@ def permission_state(p, env=()):
     state = {k: getattr(p, k) for k in PERMISSION_FLAGS}
     state.update(audio_mode=p.audio_mode, display=p.display, display_size=p.display_size,
                  **{k: getattr(p, k) for k in manifest.LIMIT_KEYS}, dirs=tuple(p.dirs), dbus_filter=tuple(p.dbus_filter), dbus_own=tuple(p.dbus_own),
-                 portal_interfaces=tuple(p.portal_interfaces), env=tuple(f"{k}={v}" for k, v in env))
+                 portal_interfaces=tuple(p.portal_interfaces), schemes=tuple(p.schemes), env=tuple(f"{k}={v}" for k, v in env))
     return state
 
 

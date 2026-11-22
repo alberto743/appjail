@@ -186,3 +186,14 @@ def test_open_is_read_only_unless_asked():
     assert argv.open_argv("app", "/f/-x") == ["open", "app", "--", "/f/-x"]
     command = argv.open_argv("app", "/f/-x", True)
     assert command == ["open", "app", "--rw", "--", "/f/-x"] and parses(command).rw and parses(command).files == ["/f/-x"]
+
+
+def test_schemes_go_to_add_and_to_perms():
+    out = argv.add_argv({"source": "o/r", "schemes": ("gemini", "gopher")})
+    assert [a for i, a in enumerate(out) if a == "--scheme" or out[i - 1] == "--scheme"] == ["--scheme", "gemini", "--scheme", "gopher"]
+    parses(out)
+    old = {**STATE, "schemes": ("gemini",)}
+    new = {**STATE, "schemes": ("gopher",)}
+    out = argv.perms_argv("app", old, new)
+    assert out == ["perms", "app", "--rm-scheme", "gemini", "--add-scheme", "gopher"]
+    parses(out)

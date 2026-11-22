@@ -37,6 +37,7 @@ def add_argv(form):
     argv += _repeat("--dbus", form.get("dbus", ()))
     argv += _repeat("--dbus-own", form.get("dbus_own", ()))
     argv += _repeat("--portal", form.get("portals", ()))
+    argv += _repeat("--scheme", form.get("schemes", ()))
     argv += _repeat("--allow", form.get("allow", ()))
     if form.get("audio_mode") and form["audio_mode"] != manifest.DEFAULT_AUDIO_MODE:
         argv += ["--audio-mode", form["audio_mode"]]
@@ -80,7 +81,7 @@ def perms_argv(name, old, new):
     """`appjail perms NAME ...` for the difference between two permission states.
 
     A state is a dict: the boolean flags by name, "audio_mode", "display", "display_size", the limits "memory_max", "cpu_quota" and "tasks_max" (strings, empty for none), and the tuples "dirs", "dbus_filter", "dbus_own",
-    "portal_interfaces", "env" ("NAME=VALUE" strings). The command shows the before/after review and asks; the option that skips the question is never added here.
+    "portal_interfaces", "schemes", "env" ("NAME=VALUE" strings). The command shows the before/after review and asks; the option that skips the question is never added here.
     """
     argv = ["perms", name]
     for flag in PERMISSION_FLAGS:
@@ -99,7 +100,8 @@ def perms_argv(name, old, new):
             argv += [LIMIT_FLAGS[key], str(new.get(key, "")).strip() or "infinity"]
     for key, add, rm in (("dirs", "--add-dir", "--rm-dir"), ("dbus_filter", "--add-dbus", "--rm-dbus"),
                          ("dbus_own", "--add-dbus-own", "--rm-dbus-own"),
-                         ("portal_interfaces", "--add-portal", "--rm-portal")):
+                         ("portal_interfaces", "--add-portal", "--rm-portal"),
+                         ("schemes", "--add-scheme", "--rm-scheme")):
         before, after = tuple(old.get(key, ())), tuple(new.get(key, ()))
         removed = [v for v in before if v not in after]
         if key == "dirs":

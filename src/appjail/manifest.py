@@ -16,11 +16,13 @@ from urllib.parse import urlsplit
 
 from . import store
 from .grants import (
+    MAX_SCHEMES,
     check_dbus_name,
     check_dbus_own,
     check_dir,
     check_env_table,
     check_portal_interface,
+    check_scheme,
 )
 from .valid import (
     ManifestError,
@@ -62,7 +64,7 @@ AUDIO_MODES = ("pipewire", "pulse")
 DEFAULT_AUDIO_MODE = "pipewire"
 BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal", "devel")
 LIMIT_KEYS = ("memory_max", "cpu_quota", "tasks_max")  # strings in systemd syntax; empty when not set
-PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "memory_max", "cpu_quota", "tasks_max", "dirs"}
+PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "memory_max", "cpu_quota", "tasks_max", "dirs", "schemes"}
 
 
 @dataclass(frozen=True)
@@ -90,6 +92,7 @@ class Permissions:
     cpu_quota: str = ""  # CPUQuota= ("200%" is two CPUs)
     tasks_max: str = ""  # TasksMax=: processes and threads
     dirs: tuple = ()  # "path" (read-only) or "path:rw"; absolute or starting with "~/"
+    schemes: tuple = ()  # URL schemes the app is offered as a handler of (lower case); runs the link relay (grants.check_scheme)
 
     @property
     def pasta(self):
@@ -176,7 +179,7 @@ def _permissions(table):
     _unknown(table, PERM_KEYS, "[permissions]")
     # Only the shape is settled here (lists of strings); validate() checks every value.
     perms = {key: table[key] for key in (*BOOL_PERMS, "audio_mode", "display", "display_size", *LIMIT_KEYS) if key in table}
-    for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs"):
+    for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs", "schemes"):
         if key in table:
             perms[key] = tuple(str_list(table[key], f"permissions.{key}"))
     return Permissions(**perms)
@@ -296,6 +299,10 @@ def validate(m):
     _audio_consistency(p)
     for d in p.dirs:
         check_dir(string(d, "permissions.dirs entry"))
+    if len(p.schemes) > MAX_SCHEMES or len(set(p.schemes)) != len(p.schemes):
+        raise ManifestError(f"permissions.schemes holds at most {MAX_SCHEMES} different entries")
+    for s in p.schemes:
+        check_scheme(s)
     if not isinstance(m.env, tuple) or not all(isinstance(e, tuple) and len(e) == 2 for e in m.env):
         raise ManifestError("env must be a table")
     check_env_table(m.env)
@@ -405,6 +412,7 @@ def dumps(m):
         *(["devel = true"] if p.devel else []),
         *(f"{key} = {_quote(getattr(p, key))}" for key in LIMIT_KEYS if getattr(p, key)),
         f"dirs = {_array(p.dirs)}",
+        *([f"schemes = {_array(p.schemes)}"] if p.schemes else []),
         "",
         *(["[env]", *(f"{k} = {_quote(v)}" for k, v in sorted(m.env)), ""] if m.env else []),
     ]

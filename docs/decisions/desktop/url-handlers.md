@@ -21,9 +21,11 @@ same gap for files.
 
 **Decision.** C, opt-in for each app and each scheme.
 
-- **The opt-in** is a list in the manifest, `schemes`, set with `perms --allow-scheme S` and `--deny-scheme S` and at `add
-  --scheme S`. A scheme can be added only when the app's own menu entry declares `x-scheme-handler/S`; its grammar is
-  `[a-z][a-z0-9+.-]{0,31}`. `appjail desktop` then writes those types, and only those, into the entry, whose command is
+- **The opt-in** is a list in the manifest, `schemes`, set with `perms --add-scheme S` and `--rm-scheme S` (the names the
+  other lists use) and at `add --scheme S`; at most 16, each `[a-z][a-z0-9+.-]{0,31}`, never `file`. Whether the app's own
+  menu entry declares `x-scheme-handler/S` is checked when the entry is written, not when the scheme is granted (the tree
+  may not be extracted yet): `appjail desktop` writes the types that are both granted and declared, and says which granted
+  scheme the app does not declare. The entry's command is
   `appjail open NAME -- %U`. `inode/` and every scheme not in the list stay refused, and appjail still never makes an app
   the default for anything.
 - **The relay** runs only for an app with at least one scheme, as pid 2 of its jail; the app is its child. It listens on

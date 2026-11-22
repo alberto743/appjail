@@ -89,6 +89,8 @@ def build_parser():
                      help="let the app own this session-bus name (MPRIS player, single-instance name); repeatable")
     add.add_argument("--portal", action="append", default=[], metavar="NAME",
                      help="also allow this privileged portal interface (needs --allow portals); repeatable")
+    add.add_argument("--scheme", action="append", default=[], metavar="SCHEME",
+                     help="offer the app as a handler of this URL scheme (needs --desktop to register it); repeatable")
     add.add_argument("--allow", action="append", default=[], choices=PERMISSION_FLAGS,
                      help="grant a permission (repeatable); everything is denied unless granted")
     add.add_argument("--audio-mode", choices=manifest.AUDIO_MODES, default=manifest.DEFAULT_AUDIO_MODE,
@@ -199,6 +201,8 @@ def build_parser():
     perms.add_argument("--rm-dbus-own", action="append", default=[], metavar="NAME")
     perms.add_argument("--add-portal", action="append", default=[], metavar="NAME", help="also allow this privileged portal interface")
     perms.add_argument("--rm-portal", action="append", default=[], metavar="NAME")
+    perms.add_argument("--add-scheme", action="append", default=[], metavar="SCHEME", help="offer the app as a handler of this URL scheme")
+    perms.add_argument("--rm-scheme", action="append", default=[], metavar="SCHEME")
     perms.add_argument("--set-env", action="append", default=[], metavar="NAME=VALUE", help="set an environment variable of the app (stored in the manifest in clear text)")
     perms.add_argument("--unset-env", action="append", default=[], metavar="NAME")
     perms.add_argument("--yes", action="store_true", help="do not ask for confirmation")
