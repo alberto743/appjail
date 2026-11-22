@@ -8,10 +8,10 @@ acted on by the desktop, outside any jail; copying it into the menu would let th
 **Decision.** appjail generates the menu entry itself. From the app's file it keeps only display text (name, comment,
 categories, keywords), cleaned and capped, and adds " (appjail)" to the name so an app cannot pose as a host app. The
 command is always `appjail run NAME`, or `appjail open NAME -- %F` when file types were chosen. File types are opt-in
-and advertise-only: only types the app declares and that pass a filter can be picked (no URL handlers, no executables
-or scripts, no installers), and appjail never makes an app the default for anything. Opening a file binds that one
+and advertise-only: only types the app declares and that pass a filter can be picked (no executables or scripts, no
+installers; URL schemes only through [their own opt-in](url-handlers.md)), and appjail never makes an app the default for anything. Opening a file binds that one
 file, read-only unless the entry was created with `--rw`; choosing the file is the consent. Only entries carrying
 appjail's marker are ever replaced or deleted.
 
-**Consequences.** No URL handlers, default applications or per-type actions. An entry for an app with `display = none`
+**Consequences.** No default applications or per-type actions; URL handlers only as [decided separately](url-handlers.md). An entry for an app with `display = none`
 is refused, since it would start invisibly.

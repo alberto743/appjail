@@ -82,7 +82,7 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | **Camera** (V4L2 capture nodes, sysfs) | only capture nodes (`VIDIOC_QUERYCAP`) and their own sysfs directory | `runtimejail._camera_args` | `test_camera.py` | `--allow camera`, Camera portal | no per-camera choice |
 | **Network namespace and pasta** | private namespace with outbound only, no host loopback; DNS forwarder; required for `network` | `jail.net_wrap` | `test_jail.py`, `test_runner_jail.py` | `--allow network` | LAN reachable; allowlisting proxy deferred |
 | **Host network** | `network_host` with Landlock scope | `runner.launch` | `test_landlock.py` | `--allow network_host` | |
-| **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults, no URL handlers |
+| **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults; URL schemes only by opt-in (planned) |
 
 ## Updates
 

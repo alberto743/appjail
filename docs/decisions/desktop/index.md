@@ -16,4 +16,5 @@ the network, and the menu. How it works is explained in [Desktop access](../../u
 | [Camera: the capture nodes only](camera.md) | which devices `camera` binds, and the portal route |
 | [Network through pasta](network.md) | the private network namespace, and the LAN |
 | [Menu entries are written by appjail](menu-entries.md) | the AppImage's own `.desktop` file, file types |
+| [Links reach a running app through a relay](url-handlers.md) | `schemes`, the relay, `appjail open` for links |
 | [Icons rewritten, not decoded](icons.md) | the PNG sanitiser |

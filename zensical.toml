@@ -114,6 +114,7 @@ nav = [
       "decisions/desktop/camera.md",
       "decisions/desktop/network.md",
       "decisions/desktop/menu-entries.md",
+      "decisions/desktop/url-handlers.md",
       "decisions/desktop/icons.md",
     ] },
     { "Updates" = [

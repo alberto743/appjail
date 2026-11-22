@@ -26,8 +26,12 @@ meant to give it.
   " (appjail)" to the name so an app cannot pose as a host app. The command is always `appjail run NAME`. Only files
   carrying appjail's marker are ever replaced or deleted.
 - **File types are opt-in.** Nothing is registered unless you pick types the app declares, and only types that pass a
-  filter can be picked: no URL handlers, executables, scripts or installers, at most 32. appjail never makes an app the
+  filter can be picked: no executables, scripts or installers, at most 32. URL schemes are a separate opt-in, below. appjail never makes an app the
   default for anything; with types, the entry runs `appjail open NAME -- FILE...`.
+- **Links are a second opt-in (planned).** An app may be given a list of schemes (`schemes`), each declared by the app's own
+  entry. The entry then runs `appjail open NAME -- %U`, and a small relay inside the running jail receives each checked link
+  through a socket and starts `AppRun LINK` there, so a single-instance app finds its running instance. Decision:
+  [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
 - **Opening binds one file.** `appjail open` grants each file alone for that run, read-only unless the entry was created
   with `--rw`, with the same path checks as any grant. Choosing the file in the file manager is the consent, as in the
   portal's file chooser.
@@ -44,7 +48,7 @@ meant to give it.
 
 ## Limits
 
-- No URL handlers, default applications or per-type actions.
+- No default applications or per-type actions; URL handlers are decided but not built yet.
 - A loader bug triggered by the pixel values of a well-formed image is not removed by the rewrite.
 - An app with `display = none` gets no entry, since it would start invisibly.
 
