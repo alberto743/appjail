@@ -49,6 +49,6 @@ machine.
 - D-Bus: real MPRIS players and tray icons with process-id names.
 - Audio: a real headset and microphone, the desktop's microphone indicator; two apps at once.
 - URL handlers: a real click on a link in KDE Plasma and Cinnamon (how their launchers quote `%U` and pass a local file),
-  and a real Electron application's login callback (only a probe and Lagrange were used;
-  [evidence](../develop/url-handler-evidence.md)). `xdg-mime default`, `gio open` and `xdg-open` were measured in the guests.
+  and a login callback of a real Electron application whose single-instance check works (a probe,
+  Lagrange and Joplin, whose own check is unreliable, were used; [evidence](../develop/url-handler-evidence.md)). `xdg-mime default`, `gio open` and `xdg-open` were measured in the guests.
 - Network: IPv6 over a real internet route (tested only on a simulated network).

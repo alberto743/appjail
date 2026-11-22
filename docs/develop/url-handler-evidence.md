@@ -179,11 +179,31 @@ probe ran on a headless weston (`full_wayland` granted; a menu entry is refused 
 Lagrange, run through `perms`, `desktop` and `open` without the desktop tools (Debian), received two links in the running
 process ("Commands sent to Lagrange process 3"). `xdg-utils` is now in the guests (`tests/vm/packages.txt`).
 
+## A real Electron application: Joplin (measured, Debian)
+
+Joplin 3.7.24 (`laurent22/joplin`, the official AppImage, 212 MB, Electron; its entry declares `x-scheme-handler/joplin`)
+added with `--scheme joplin --allow userns --allow full_wayland`, on a headless weston, the entry made by `appjail desktop`,
+`xdg-mime default`, links sent with `gio open` and `xdg-open`. Its `joplin://x-callback-url/openNote?id=…` links (a note
+that does not exist, so each handled link leaves "No such note" in Joplin's log) were the test.
+
+| Grants | Result |
+|---|---|
+| none (no network) | a link opened through the entry starts Joplin with it, but **every later link starts a full second instance** (own renderer and GPU processes): Joplin's log says `IPC: [error] Could not start server: Error: getaddrinfo EAI_AGAIN localhost`. Joplin finds a running instance through an HTTP server on `localhost` (a port from 2658 up, a secret key in its profile), and without `network` the jail has no `/etc/hosts`, so `localhost` does not resolve. |
+| `network` (pasta) | the first instance served links 13 and 14 ("No such note" in its log, the helpers exited), but a cold start through the entry ended by itself a second after it started (`IPC: Sending message` with nobody to answer), and one helper in four stayed as a full instance |
+| `network_host` (the host's loopback) | the cold start stayed; links 22 and 23 reached the first instance; link 24 stayed as a second full instance |
+
+So the relay did what it is for in every row (each link started `AppRun LINK` in the running jail, in the same network and
+PID namespaces as the first instance), and Joplin's own handover decided what happened next. It needs `network`, and even
+then it loses about one link in three or four: a second instance of the same profile. This is the behaviour its users
+report upstream (a forum thread titled "URI callback opens second instance of Joplin"). The relay cannot repair an app
+whose own single-instance check is unreliable; Joplin is a poor example of one that has a check. An app that uses
+Electron's `requestSingleInstanceLock` (the probe) or Lagrange's pid file works through the relay on all guests.
+
 ## Not measured
 
 - KDE Plasma and Cinnamon launchers (how they quote and what they pass for local files and URLs under `%U`), and a real
   click in a full desktop session.
-- A real Electron application (login flows, its own protocol registration); only a probe was used.
+- A real Electron application whose single-instance check works (Joplin's is its own and unreliable, see above); a login flow.
 - Profile corruption by two instances on one profile.
 - Why the Chromium namespace sandbox did not start on Ubuntu 26.04 with `userns` granted.
 - Lagrange's single-instance code (not read; its behaviour was observed).
