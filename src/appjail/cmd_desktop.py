@@ -50,8 +50,9 @@ def show_file_types(name, console):
     console.kv("Offered", ", ".join(m + (" *" if m in registered else "") for m in offered) or "none")
     if registered and offered:
         console.kv("", "(* = registered)")
-    console.kv("Not offered", ", ".join(ignored) or "none")
     registrable, missing, linked = scheme_state(name)
+    ignored = [i for i in ignored if i not in {desktop.SCHEME_PREFIX + s for s in registrable}]
+    console.kv("Not offered", ", ".join(ignored) or "none")
     if registrable or missing or linked:
         console.kv("Links", ", ".join(s + (" *" if s in linked else "") for s in registrable) or "none")
         if missing:
@@ -97,6 +98,7 @@ def install_entry(name, console, args, yes=False):
     mimes = _select(console, declared, args, current if has_entry else None, yes)
     rw = bool(args.rw) or bool(was_rw and not args.mime and not args.mime_all)
     schemes, missing, _ = scheme_state(name, fields)
+    ignored = [i for i in ignored if i not in {desktop.SCHEME_PREFIX + s for s in schemes}]
     shown = desktop.display_fields(fields, name)
     console.kv("Menu entry", f"{shown['Name']} (appjail) {ARROW} {' '.join(desktop.launcher_argv())} {'open' if mimes or schemes else 'run'} {name}")
     console.kv("File types", ", ".join(mimes) + (" (read-write)" if rw else " (read-only)") if mimes else "none (launcher only)")

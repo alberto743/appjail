@@ -13,7 +13,7 @@ pieces depend on each other. To follow the code itself, command by command, read
 | Command line | `cli.py` (the parser and the command table) and one `cmd_<name>.py` per command or family of commands |
 | Shared install steps | `install.py` (what `add` and `update` share), `imagesrc.py` (URL and file apps), `services.py` (what `add` and `update` do to the outside world, replaceable in tests) |
 | Policy, no I/O | `grants.py` (what may be granted), `valid.py` (value checks), `manifest.py` (schema, parser, writer), `permargs.py` (permission options) |
-| Jails | `jail.py` (helper jails, `pasta`), `runtimejail.py` (the app jail), `seccomp.py`, `landlock.py`, `reopen.py`, `linger.py` |
+| Jails | `jail.py` (helper jails, `pasta`), `runtimejail.py` (the app jail), `seccomp.py`, `landlock.py`, `reopen.py`, `linger.py`, `relay.py` |
 | Running | `runner.py` (verify, prepare, launch), `wayland.py`, `dbusproxy.py`, `portal.py`, `audiomode.py`, `audiojail.py` |
 | Acquiring | `github.py`, `fetcher.py` (runs inside the download jail), `appimage.py`, `attest.py`, `snappy.py`, `tools.py` |
 | Updates and state | `updater.py`, `history.py`, `store.py` (paths, atomic writes, staging, per-app lock) |
@@ -82,7 +82,7 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | **Camera** (V4L2 capture nodes, sysfs) | only capture nodes (`VIDIOC_QUERYCAP`) and their own sysfs directory | `runtimejail._camera_args` | `test_camera.py` | `--allow camera`, Camera portal | no per-camera choice |
 | **Network namespace and pasta** | private namespace with outbound only, no host loopback; DNS forwarder; required for `network` | `jail.net_wrap` | `test_jail.py`, `test_runner_jail.py` | `--allow network` | LAN reachable; allowlisting proxy deferred |
 | **Host network** | `network_host` with Landlock scope | `runner.launch` | `test_landlock.py` | `--allow network_host` | |
-| **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults; URL schemes only by opt-in (planned) |
+| **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults; URL schemes only by opt-in, links relayed into the running jail (`relay.py`, `test_relay.py`) |
 
 ## Updates
 

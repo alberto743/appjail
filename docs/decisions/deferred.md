@@ -6,7 +6,7 @@ on the decision page linked.
 ## Open work
 
 Every open item is one row with one status. The status says what unblocks it; the table is sorted by how close each
-item is to being taken up. The URL handler work is decided and waits for the maintainer's review of its decision page; nothing else below is started without the maintainer.
+item is to being taken up. No planned code work is pending: nothing below is started without the maintainer.
 
 - **Scheduled**: the maintainer set a date or an event.
 - **Waiting**: an outside event, not under the maintainer's control.
@@ -18,7 +18,6 @@ item is to being taken up. The URL handler work is decided and waits for the mai
 | Item | Status | Waiting on | Next step, or why not now | Reasoning |
 |---|---|---|---|---|
 | Workflows on `ubuntu-latest` | Scheduled | December 2026, when GitHub's move to Ubuntu 26.04 completes (planned for 2026-11-19) | Switch the workflows from `ubuntu-26.04` to `ubuntu-latest` and check CI. `check-platforms.yml` then has no runner label to read for Ubuntu (its script skips that check), so give it another target | [workflows](project/workflows.md) |
-| URL handlers | Scheduled | the maintainer's review of the decision page | Build the opt-in `schemes`, the relay inside the jail and `appjail open` for links on a feature branch, with the GUI choice (steps in the decision page) | [decision](desktop/url-handlers.md), [evidence](../develop/url-handler-evidence.md), [Flatpak compared](project/flatpak-comparison.md) |
 | Camera portal measurement on Debian and Ubuntu | Waiting | a PipeWire release after 1.6.2 with the V4L2 fixes (`6734d69c`, `919de4c5`), packaged by Debian and Ubuntu | Re-run the measurement and let the session manager link the `vivid` test camera instead of `pw-link`. Check the release notes; nothing to do before. Done on Fedora 45 (PipeWire 1.6.11); the test skips on Debian and Ubuntu until they package a PipeWire that reads the control | [camera](desktop/camera.md), [measurements](../develop/camera-audio-evidence.md#the-v4l2-node-and-wireplumber-explained-a-test-control-of-vivid), [Fedora 45](../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14) |
 | Re-check related projects and references | Recurring | each minor release | Re-check the facts on related projects and the references cited on the concept pages | [related projects](project/related-projects.md) |
 | Reporting upstream the crashes found while measuring | Undecided | the maintainer | Muffin and Cinnamon on `wl-copy`/`wl-paste`, Hyprland 0.53.3 when a window closes | [assessment](../compositor-assessment/ASSESSMENT.md) |
@@ -49,4 +48,7 @@ machine.
   GNOME).
 - D-Bus: real MPRIS players and tray icons with process-id names.
 - Audio: a real headset and microphone, the desktop's microphone indicator; two apps at once.
+- URL handlers: a real click on a link in KDE Plasma and Cinnamon (how their launchers quote `%U` and pass a local file), the
+  desktop's own choice of default handler for a scheme with appjail's entry, and a real Electron application's login
+  callback (only a probe and Lagrange were used; [evidence](../develop/url-handler-evidence.md)).
 - Network: IPv6 over a real internet route (tested only on a simulated network).

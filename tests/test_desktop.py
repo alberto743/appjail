@@ -363,6 +363,7 @@ def test_a_granted_and_declared_scheme_is_registered_with_a_url_list(h, xdg):
     entry = desktop.entry_path("app").read_text()
     assert "MimeType=x-scheme-handler/gemini;" in entry and "gopher" not in entry and "x-scheme-handler/http" not in entry
     assert "open app -- %U" in entry and "granted but not declared" in out and "gopher" in out
+    assert "Not offered" in out and "x-scheme-handler/gemini" not in out.split("Not offered")[1].split("\n")[0]
     shown = run(["desktop", "app", "--show"]).text
     assert "Links" in shown and "gemini *" in shown
 

@@ -29,9 +29,9 @@ meant to give it.
   filter can be picked: no executables, scripts or installers, at most 32. URL schemes are a separate opt-in, below. appjail never makes an app the
   default for anything; with types, the entry runs `appjail open NAME -- FILE...`.
 - **Links are a second opt-in.** An app may be given a list of schemes (`schemes`, `--scheme` and `perms --add-scheme`); the
-  entry registers those that the app's own entry also declares, and runs `appjail open NAME -- %U`. A small relay inside
-  the running jail (planned) receives each checked link through a socket and starts `AppRun LINK` there, so a single-instance
-  app finds its running instance. Decision:
+  entry registers those that the app's own entry also declares, and runs `appjail open NAME -- %U`. When the app is running, `open`
+  writes the checked link to a FIFO that a small relay inside the jail reads, and the relay starts `AppRun LINK` there, so a
+  single-instance app finds its running instance. Files cannot be handed to a running app. Decision:
   [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
 - **Opening binds one file.** `appjail open` grants each file alone for that run, read-only unless the entry was created
   with `--rw`, with the same path checks as any grant. Choosing the file in the file manager is the consent, as in the
@@ -49,7 +49,7 @@ meant to give it.
 
 ## Limits
 
-- No default applications or per-type actions; URL handlers are decided but not built yet.
+- No default applications or per-type actions. A file opened while the app runs starts a second jail (links are relayed, files are not).
 - A loader bug triggered by the pixel values of a well-formed image is not removed by the rewrite.
 - An app with `display = none` gets no entry, since it would start invisibly.
 

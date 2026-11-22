@@ -46,6 +46,13 @@ under a small supervisor inside the jail that becomes the *subreaper* of the jai
 it rather than to process 1) and exits, with the command's exit status, only when no process of the app is left. It
 grants nothing: it only changes when the jail ends.
 
+### Apps that receive links: the relay
+
+An app granted URL `schemes` also runs under a supervisor, which reads links from a FIFO that the launch holds open and
+starts `AppRun LINK` inside the jail for each, so a single-instance app hands the link to the instance already running
+(a second jail could not: it has its own PID namespace). The FIFO is closed with the launch. Decision:
+[Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
+
 ## Connections
 
 - The [PID namespace](namespaces.md) is what makes "every process of the jail" a well-defined set.

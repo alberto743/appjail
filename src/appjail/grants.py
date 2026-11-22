@@ -81,7 +81,7 @@ def check_portal_interface(name):
 SCHEME_RE = re.compile(r"[a-z][a-z0-9+.-]{0,31}")
 SCHEMES_REFUSED = ("file",)  # a path, not a link: `appjail open` binds files itself, one at a time
 MAX_SCHEMES = 16
-MAX_LINK = 4096
+MAX_LINK_BYTES = 4000  # a line of this and a newline is written to a pipe atomically (PIPE_BUF is 4096)
 
 
 def check_scheme(name):
@@ -95,8 +95,8 @@ def check_scheme(name):
 def check_link(link, schemes):
     """A link that came from the desktop, for an app granted `schemes`: its scheme (compared in lower case) must be one of
     them, and it must be short, free of control characters and unable to read as an option. Returns it unchanged."""
-    if not isinstance(link, str) or not link or len(link) > MAX_LINK:
-        raise ManifestError(f"a link must be 1 to {MAX_LINK} characters")
+    if not isinstance(link, str) or not link or len(link.encode("utf-8", "surrogateescape")) > MAX_LINK_BYTES:
+        raise ManifestError(f"a link must be 1 to {MAX_LINK_BYTES} bytes")
     if any(ord(c) < 32 or ord(c) == 127 for c in link):
         raise ManifestError("the link contains control characters")
     scheme, colon, _ = link.partition(":")

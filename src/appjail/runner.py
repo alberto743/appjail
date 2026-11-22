@@ -27,6 +27,7 @@ from . import (
     limits,
     manifest,
     portal,
+    relay,
     runtimejail,
     seccomp,
     store,
@@ -329,13 +330,15 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         audio, audio_backend = _private_audio(stack, name, perms, env, warn)
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
+        link_fifo = stack.enter_context(relay.serving(name)) if perms.schemes else None
         pipes = _status_pipes(stack, instance, env, in_pasta)
         args = runtimejail.runtime_args(
             root=root, home=home, etc_dir=etc, perms=perms, uid=os.getuid(), host_env=env,
             command=[f"{runtimejail.APP_DIR}/AppRun", *extra_args], dbus_socket=bus,
             wayland_socket=wl_sock, audio_sockets=audio and (audio.pipewire_socket, audio.pulse_socket),
             host_audio=audio_backend == audiomode.PULSE, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
-            block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), binds=opened.args(in_pasta), user_env=m.env)
+            block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), binds=opened.args(in_pasta), user_env=m.env,
+            link_fifo=link_fifo)
         argv = [jail.find_bwrap(), *args]
         if in_pasta:
             argv = jail.net_wrap(opened.reopened(argv), required=True, lifeline=life.path, fd_files={
