@@ -160,6 +160,7 @@ nav = [
     "develop/assessing-compositors.md",
     { "Compositor assessment" = "compositor-assessment/ASSESSMENT.md" },
     "develop/camera-audio-evidence.md",
+    "develop/url-handler-evidence.md",
     "develop/writing-docs.md",
   ] },
 ]
