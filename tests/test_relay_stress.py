@@ -468,7 +468,7 @@ def test_a_flood_of_links_is_delivered_and_leaves_no_zombie_or_growth(tmp_path):
     sleepy.write_text("#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$LOG\"\nsleep 0.05\n")
     sleepy.chmod(0o755)
     proc, fifo = start(tmp_path, ["gemini"], ["/bin/sleep", "300"], helper=sleepy)
-    total = 1500
+    total = 600
     log = tmp_path / "log"
     time.sleep(1.3)
     before = rss_kb(proc.pid)
@@ -479,7 +479,7 @@ def test_a_flood_of_links_is_delivered_and_leaves_no_zombie_or_growth(tmp_path):
         if i % 25 == 0:
             peak = max(peak, len(children(proc.pid)))
     os.close(fd)
-    deadline = time.monotonic() + 90
+    deadline = time.monotonic() + 120
     while time.monotonic() < deadline:
         peak = max(peak, len(children(proc.pid)))
         if log.exists() and len(log.read_text().splitlines()) >= total:
@@ -491,20 +491,75 @@ def test_a_flood_of_links_is_delivered_and_leaves_no_zombie_or_growth(tmp_path):
     print(f"flood: {total} links, peak {peak} concurrent children, supervisor RSS grew {grew} kB")
     proc.terminate()
     proc.wait(timeout=10)
-    assert grew < 20000  # a leak per link would show here (1500 links)
+    assert grew < 20000  # a leak per link would show here
+    assert peak <= relay.HELPERS_BURST + 5  # the rate limit, not the size of the flood, bounds the helpers
+
+
+def test_helpers_that_never_exit_do_not_stop_later_links(tmp_path):
+    """A handover helper may live as long as the app (a second full instance): the limit is on starting, not on running."""
+    stayer = tmp_path / "stayer.sh"
+    stayer.write_text("#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$LOG\"\nexec sleep 300\n")
+    stayer.chmod(0o755)
+    proc, fifo = start(tmp_path, ["gemini"], ["/bin/sleep", "300"], helper=stayer)
+    time.sleep(1.3)
+    total = relay.HELPERS_BURST + 30
+    out = os.open(fifo, os.O_WRONLY)
+    os.write(out, "".join(f"gemini://x/{i}\n" for i in range(total)).encode())
+    os.close(out)
+    log = tmp_path / "log"
+    assert wait_for(lambda: log.exists() and len(log.read_text().splitlines()) == total, 30)
+    assert len(children(proc.pid)) >= total
+    proc.terminate()
+    proc.wait(timeout=10)
 
 
 # -- a relay that is gone ------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason="the launcher holds the FIFO open itself, so a link is accepted after the relay died")
-def test_a_link_for_a_dead_relay_is_not_accepted(data):
-    with relay.serving("app"):
-        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
-        proc.kill()
-        proc.wait()
-        # nothing reads the FIFO any more except the launcher's own descriptor
-        assert relay.send("app", ["gemini://x/"]) is False
+def relay_pids():
+    """The relay supervisors running now (the host sees the jail's processes): python started with the relay's FIFO path."""
+    out = []
+    for entry in os.listdir("/proc"):
+        if entry.isdigit():
+            try:
+                with open(f"/proc/{entry}/cmdline", "rb") as f:
+                    argv = f.read().split(b"\0")
+            except OSError:
+                continue
+            if argv[0] == relay.PYTHON.encode() and relay.JAIL_FIFO.encode() in argv:
+                out.append(int(entry))
+    return out
+
+
+@integration
+@pytest.mark.parametrize("linger", [False, True])
+def test_a_relay_that_dies_takes_the_launch_with_it_so_no_link_waits_for_nobody(sandbox, runtime, linger):
+    """Why a dead relay is not detected by the client: it cannot outlive the launch. The relay is the jail's main process, so
+    when it is killed the jail ends and the launcher closes and removes the FIFO; the window in which a link is accepted for
+    a dead relay is that teardown."""
+    kw = build(sandbox, runtime, schemes=("gemini",), linger=linger)
+    (kw["root"] / "AppRun").write_text(CONFINED)
+    (kw["root"] / "AppRun").chmod(0o755)
+    fd = seccomp.open_fd(kw["perms"].userns)
+    result = {}
+    try:
+        with relay.serving("app") as fifo:
+            argv = [jail.find_bwrap(), *runtimejail.runtime_args(**kw, seccomp_fd=fd, link_fifo=fifo)]
+            thread = threading.Thread(target=lambda: result.update(proc=jail.supervise(argv, timeout=60, pass_fds=(fd,))))
+            thread.start()
+            assert wait_for(lambda: (kw["home"] / "started").exists(), 20)
+            pids = relay_pids()
+            assert len(pids) == 1
+            os.kill(pids[0], signal.SIGKILL)
+            thread.join(30)
+            assert not thread.is_alive(), "the jail went on without its relay"
+            assert not relay_pids()
+    finally:
+        (kw["home"] / "stop").write_text("")
+        thread.join(30)
+        os.close(fd)
+    assert not relay.fifo_path("app").exists()
+    assert relay.send("app", ["gemini://x/"]) is False
 
 
 # -- in a real jail, with `linger` and the jail's confinement -------------------------------------

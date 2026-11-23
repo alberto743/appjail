@@ -27,13 +27,15 @@ PYTHON = "/usr/bin/python3"
 JAIL_FIFO = "/run/appjail-link"
 JAIL_APPRUN = "/app/AppRun"
 LINE_MAX = grants.MAX_LINK_BYTES + 1  # the link and its newline; PIPE_BUF is 4096 on Linux
+HELPERS_BURST = 50  # helpers the relay starts at once, from idle
+HELPERS_PER_SECOND = 20  # and, once those are used, how many more a second
 
-RELAY = '''\
+RELAY = ('''\
 import os, signal, subprocess, sys, threading, time
 
 fifo, helper, schemes = sys.argv[1], sys.argv[2], sys.argv[3].split(",")
 cmd = sys.argv[4:]
-MAX, SETTLE = @MAX@, 1.0
+MAX, SETTLE, RATE, BURST = @MAX@, 1.0, @RATE@, @BURST@
 fd = os.open(fifo, os.O_RDWR)
 app = subprocess.Popen(cmd)
 born = time.monotonic()
@@ -44,6 +46,20 @@ def good(link):
     scheme, colon, _ = link.partition(":")
     return (colon and 0 < len(link.encode("utf-8", "replace")) <= MAX and scheme.lower() in schemes
             and not any(ord(c) < 32 or ord(c) == 127 for c in link))
+
+tokens, stamp = float(BURST), time.monotonic()
+
+def take():
+    """Wait for permission to start one more helper: at most BURST at once, then RATE a second. While it waits the relay reads
+    nothing, so the pipe fills and the sender is told the queue is full, instead of the jail filling with processes."""
+    global tokens, stamp
+    while True:
+        now = time.monotonic()
+        tokens, stamp = min(float(BURST), tokens + (now - stamp) * RATE), now
+        if tokens >= 1:
+            tokens -= 1
+            return
+        time.sleep((1 - tokens) / RATE)
 
 def deliver(link):
     """Start the app's handover for one link. A limit of the jail (tasks_max, a full process table) can refuse the fork: wait
@@ -75,6 +91,7 @@ def serve():
                 print("appjail: a link was refused", file=sys.stderr)
                 continue
             time.sleep(max(0.0, born + SETTLE - time.monotonic()))
+            take()
             deliver(link)
         if len(buf) > MAX:
             buf = b""
@@ -83,6 +100,7 @@ threading.Thread(target=serve, daemon=True).start()
 code = app.wait()
 sys.exit(code if code >= 0 else 128 - code)
 '''.replace("@MAX@", str(grants.MAX_LINK_BYTES))
+         .replace("@RATE@", str(HELPERS_PER_SECOND)).replace("@BURST@", str(HELPERS_BURST)))
 
 
 def wrap(command, schemes):

@@ -77,10 +77,21 @@ for about one link in four ([measured](../../develop/url-handler-evidence.md#a-r
 
 A link that is not valid text (a lone surrogate, which argv cannot hold but JSON can) is refused like any bad link.
 
-Two weaknesses are known and open ([deferred](../deferred.md)): the launch holds the FIFO open itself, so a link sent after
-the relay or the app died is accepted and only waits in the pipe (a full queue is reported after about 64 kB); and the
-relay starts a helper for every good link with no limit (1500 links in a flood made 136 at once). When a limit of the jail (`tasks_max`) refuses the fork, the relay waits for running helpers and retries for
-about 15 seconds, so a flood slows delivery down and does not end it.
+**A relay that died.** A client cannot tell that the relay is gone, because the launch holds the FIFO open itself and a
+write succeeds while it lives. Checking from the client was considered (look for a second process that has the FIFO open)
+and rejected: while the app starts, the relay has not opened the FIFO yet and links are meant to wait in the pipe, so a
+client would start a second instance exactly then. It is also not needed: the relay is the jail's main process, so when it
+dies the jail ends, the launch closes and removes the FIFO and the next client sees no launch (a test kills the relay in a
+real jail, with and without `linger`). A link written in that teardown, a few milliseconds, is lost without a message, like
+a link to an app that crashes just after it took the link.
+
+**A flood of links.** The relay starts a helper for each good link, at most 50 at once from idle and then 20 a second
+(`HELPERS_BURST`, `HELPERS_PER_SECOND` in `relay.py`). While it waits for permission it reads nothing, so the pipe fills and
+the sender is told the queue is full. The limit is on starting, not on running: a helper may live as long as the app (Joplin's
+is a second full instance), so a pool of workers that waits for helpers to exit would stop for good after a few such links.
+Without it, 1500 links in a flood made 136 helpers at once; with it 600 links peak at 52. When a limit of the jail
+(`tasks_max`) refuses the fork, the relay waits for running helpers and retries for about 15 seconds, so a flood slows
+delivery down and does not end it.
 
 **Revisit when** the desktop portals offer a way to deliver a link to a sandboxed app that works for AppImages, or an app
 needs a link delivered by a different command than `AppRun LINK`.
