@@ -140,8 +140,8 @@ def serving(name):
 
 
 def send(name, links):
-    """Write each link to the running app's FIFO. False when no launch of the app is running; RunError when it is but
-    cannot take the link."""
+    """Write each link to the running app's FIFO. False when no launch of the app is running (or it ended before the first
+    link); RunError when it is but cannot take the link."""
     path = fifo_path(name)
     try:
         fd = os.open(path, os.O_WRONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -155,7 +155,7 @@ def send(name, links):
         info = os.fstat(fd)
         if not stat.S_ISFIFO(info.st_mode) or info.st_uid != os.getuid():
             raise RunError(f"{path} is not the link queue of {name}")
-        for link in links:
+        for sent, link in enumerate(links):
             data = link.encode("utf-8", "surrogateescape") + b"\n"
             if len(data) > LINE_MAX:
                 raise RunError("the link is too long")
@@ -163,6 +163,10 @@ def send(name, links):
                 os.write(fd, data)
             except BlockingIOError:
                 raise RunError(f"{name} is not taking links (its queue is full)") from None
+            except BrokenPipeError:  # the launch ended between the open and the write: nothing reads any more
+                if not sent:
+                    return False  # nothing was delivered, so the caller can start the app with the links
+                raise RunError(f"{name} ended before it took every link") from None
     finally:
         os.close(fd)
     return True
