@@ -97,6 +97,8 @@ appjail remove lagrange          # delete the app and its private home
   containment is what limits it.
 - **A grant widens what a compromised app can do.** An app with `network` reaches your LAN; a granted D-Bus name of an
   unknown service reaches everything its owner serves.
+- **Links reach an app only through a relay you opt into.** There is no reply from it, so a link the app ignores is not
+  reported, and a file cannot be handed to an app that is already running.
 - Releases are resolved on GitHub only; x86-64 only.
 
 The complete list is on each mechanism's page; see [The problem](https://alberto743.github.io/appjail/understand/problem/).
