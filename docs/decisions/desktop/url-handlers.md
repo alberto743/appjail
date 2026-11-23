@@ -39,7 +39,8 @@ same gap for files.
   directory, so the app never sees anything it could swap, and the host never follows a path the app controls. A client can
   open the FIFO for writing only while a launch holds it, so it tells a running app from a leftover node (a FIFO nobody
   reads is replaced by the next launch); a link written while the app starts waits in the pipe. A second launch of the
-  same app, while one holds the FIFO, runs without a relay.
+  same app, while one holds the FIFO, runs without a relay. The check and the creation happen under an exclusive lock on the
+  run directory, so two launches started together cannot each replace the other's new FIFO.
 - **The client** is `appjail open`. Given only links, it writes them to the FIFO when a launch holds it and says so; when
   none does, it starts the app with the links as its arguments after `--`. Given files, it starts the app as before: a
   file is bound into a jail when the jail starts, so a running app cannot be given one, and the gap for files stays.
@@ -48,6 +49,9 @@ same gap for files.
 - **Checked twice.** The host checks the link against the app's list (scheme compared in lower case), the length in bytes,
   the control characters and a leading `-`; the supervisor checks the scheme, the length and the control characters again,
   since the app can also write to the FIFO (through its own mount of it).
+
+With `linger` the relay is the outer supervisor and `linger` the inner one, so `linger` leaves its ancestors out when it
+looks for processes still running; counting the relay would keep the jail alive for ever (found by a combination test).
 
 A first prototype used a socket in a directory bound into the jail and was changed: the app could have replaced the socket
 by a symbolic link that the host client would then follow. Measured with the prototype, on Debian, Ubuntu and Fedora: the running Electron probe received each link byte for byte, no second
@@ -68,6 +72,10 @@ link an app receives is not always the one that was clicked ([measured](../../de
 An app whose own single-instance check does not work in a jail gets nothing from the relay: Joplin finds its running
 instance through an HTTP server on `localhost`, needs `network` for the name to resolve and still starts a second instance
 for about one link in four ([measured](../../develop/url-handler-evidence.md#a-real-electron-application-joplin-measured-debian)).
+
+Two weaknesses are known and open ([deferred](../deferred.md)): the launch holds the FIFO open itself, so a link sent after
+the relay or the app died is accepted and only waits in the pipe (a full queue is reported after about 64 kB); and the
+relay starts a helper for every good link with no limit (1500 links in a flood made 136 at once).
 
 **Revisit when** the desktop portals offer a way to deliver a link to a sandboxed app that works for AppImages, or an app
 needs a link delivered by a different command than `AppRun LINK`.

@@ -42,6 +42,11 @@ def helped(pid, procs):
 ctypes.CDLL(None).prctl(36, 1, 0, 0, 0)  # PR_SET_CHILD_SUBREAPER
 me = os.getpid()
 helpers = {p for p, parent in live().items() if parent == me}
+ancestors = set()  # the supervisors that run this one (the link relay): they wait for it, so they are never work left
+pid = os.getppid()
+while pid > 1 and (s := stat(pid)):
+    ancestors.add(pid)
+    pid = int(s[1])
 cmd = sys.argv[1:]
 child = os.fork()
 if child == 0:
@@ -67,7 +72,7 @@ while True:
     except ChildProcessError:
         pass
     procs = live()
-    if not [p for p in procs if p not in (1, me) and not helped(p, procs)]:
+    if not [p for p in procs if p not in (1, me) and p not in ancestors and not helped(p, procs)]:
         break
     time.sleep(0.2)
 os._exit(code if code is not None else 0)
