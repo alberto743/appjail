@@ -223,11 +223,30 @@ report upstream (a forum thread titled "URI callback opens second instance of Jo
 whose own single-instance check is unreliable; Joplin is a poor example of one that has a check. An app that uses
 Electron's `requestSingleInstanceLock` (the probe) or Lagrange's pid file works through the relay on all guests.
 
+## A real Electron application with a working check: Obsidian (measured, Debian)
+
+Obsidian 1.15.1 (`obsidianmd/obsidian-releases`, the official AppImage, 132 MiB, Electron; its entry declares
+`x-scheme-handler/obsidian`; the hash matched the digest GitHub gives) added with `--scheme obsidian --allow userns --allow
+full_wayland`, on a headless weston, the entry made by `appjail desktop`, `xdg-mime default`, links sent with `gio open`.
+Obsidian uses Chromium's lock (`SingletonLock`, `SingletonSocket`) and prints each link it handles to its standard output,
+so the first instance's own output shows what reached it. The vault was a directory with six notes in the private home,
+listed in Obsidian's `obsidian.json`; links named it (`obsidian://open?vault=vault&file=noteN`).
+
+| Case | Result |
+|---|---|
+| a cold start through the entry (`gio open`) | one instance, `SingletonLock -> appjail-3` |
+| five more links, 12 s apart, through the relay | the first instance printed `Received callback URL` and `Processed URI` for each; it stayed the only main process (the helpers exited at once); the lock stayed `appjail-3`; no `process_singleton` line in its output |
+| the same with `appjail run obsidian -- LINK` (a second jail, no relay) while it runs | a second full instance that stayed running; `SingletonLock` rewritten to `appjail-2`; the first instance's count of received links did not change |
+| links that named a vault that does not exist | the first instance did not answer the second launch in time (a modal error), and Chromium **killed it and took over**: the jail ended, and the next link started a new instance. Not the relay's doing; a link to a missing vault is the app's own trouble |
+
+So with an app whose own check works, the relay does what a second jail cannot: the link reaches the instance the user
+already has, and a second instance on one profile does not start. Obsidian was tried on Debian only (one 132 MiB download).
+
 ## Not measured
 
 - A click in Dolphin, Plasma, Nemo or the Cinnamon menu (a full desktop session); KDE's default-handler configuration
   beyond `mimeapps.list`; the KDE launcher on Ubuntu and Fedora.
-- A real Electron application whose single-instance check works (Joplin's is its own and unreliable, see above); a login flow.
+- A real login flow with a real service (Obsidian's links open notes; Joplin's check is unreliable); Obsidian on Ubuntu and Fedora.
 - Profile corruption by two instances on one profile.
 - Why the Chromium namespace sandbox did not start on Ubuntu 26.04 with `userns` granted.
 - Lagrange's single-instance code (not read; its behaviour was observed).
