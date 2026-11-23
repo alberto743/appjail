@@ -43,14 +43,17 @@ launcher starts the real program in the background and exits would be killed the
 Some launchers start the real app as a detached child and exit at once (VSCodium's does). Under the default rule the
 jail, and the app with it, would end immediately. The `linger` permission changes the rule for one app: the command runs
 under a small supervisor inside the jail that becomes the *subreaper* of the jail (detached processes are re-parented to
-it rather than to process 1) and exits, with the command's exit status, only when no process of the app is left. It
+it rather than to process 1) and exits, with the command's exit status, only when no process of the app is left. What
+was already running when it started (the link relay below, the script that starts a private Xwayland, and their
+helpers) is not the app's, so it is not waited for. It
 grants nothing: it only changes when the jail ends.
 
 ### Apps that receive links: the relay
 
 An app granted URL `schemes` also runs under a supervisor, which reads links from a FIFO that the launch holds open and
 starts `AppRun LINK` inside the jail for each, so a single-instance app hands the link to the instance already running
-(a second jail could not: it has its own PID namespace). The FIFO is closed with the launch. Decision:
+(a second jail could not: it has its own PID namespace). The FIFO is closed with the launch. With `linger` the relay is the
+outer supervisor and stays until `linger` ends. Decision:
 [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
 
 ## Connections

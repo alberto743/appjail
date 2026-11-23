@@ -95,7 +95,13 @@ def check_scheme(name):
 def check_link(link, schemes):
     """A link that came from the desktop, for an app granted `schemes`: its scheme (compared in lower case) must be one of
     them, and it must be short, free of control characters and unable to read as an option. Returns it unchanged."""
-    if not isinstance(link, str) or not link or len(link.encode("utf-8", "surrogateescape")) > MAX_LINK_BYTES:
+    if not isinstance(link, str) or not link:
+        raise ManifestError(f"a link must be 1 to {MAX_LINK_BYTES} bytes")
+    try:  # what argv gives for bytes that are not UTF-8 (U+DC80..U+DCFF) is kept; any other lone surrogate has no bytes
+        size = len(link.encode("utf-8", "surrogateescape"))
+    except UnicodeEncodeError:
+        raise ManifestError("the link is not valid text") from None
+    if size > MAX_LINK_BYTES:
         raise ManifestError(f"a link must be 1 to {MAX_LINK_BYTES} bytes")
     if any(ord(c) < 32 or ord(c) == 127 for c in link):
         raise ManifestError("the link contains control characters")

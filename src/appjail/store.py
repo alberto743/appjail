@@ -137,7 +137,11 @@ def make_private(path):
             break
         missing.append(d)
     for d in reversed(missing):
-        d.mkdir(mode=0o700)
+        try:
+            d.mkdir(mode=0o700)
+        except FileExistsError:  # another launch made it between the check and here
+            if not d.is_dir():
+                raise
 
 
 def new_staging_dir(prefix=""):

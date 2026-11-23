@@ -16,6 +16,7 @@ that was killed has no reader and is replaced. A line is at most LINE_MAX bytes,
 
 import contextlib
 import errno
+import fcntl
 import os
 import stat
 
@@ -94,29 +95,42 @@ def _reader_alive(path):
     return True
 
 
+def _acquire(path):
+    """The open FIFO of a new launch (read-write: a launch is its own reader), or None when another launch holds one. Setup
+    runs under a lock on the directory, so two launches starting together cannot replace each other's FIFO between the
+    `mkfifo` and the open."""
+    store.make_private(path.parent)
+    lock = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        for _ in range(2):
+            alive = _reader_alive(path)
+            if alive:
+                return None
+            if alive is False:
+                with contextlib.suppress(FileNotFoundError):
+                    os.unlink(path)
+            try:
+                os.mkfifo(path, 0o600)
+                break
+            except FileExistsError:
+                continue
+        else:
+            return None
+        return os.open(path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
+    finally:
+        os.close(lock)
+
+
 @contextlib.contextmanager
 def serving(name):
     """Create the app's link FIFO and hold it open until the launch ends; yields its path, or None when another launch of
     the app already holds one (that launch's relay serves the links). A FIFO nobody reads, left by a killed launcher, is replaced."""
     path = fifo_path(name)
-    store.make_private(path.parent)
-    for _ in range(2):
-        alive = _reader_alive(path)
-        if alive:
-            yield None
-            return
-        if alive is False:
-            with contextlib.suppress(FileNotFoundError):
-                os.unlink(path)
-        try:
-            os.mkfifo(path, 0o600)
-            break
-        except FileExistsError:
-            continue
-    else:
+    fd = _acquire(path)
+    if fd is None:
         yield None
         return
-    fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
         yield path
     finally:
@@ -126,8 +140,8 @@ def serving(name):
 
 
 def send(name, links):
-    """Write each link to the running app's FIFO. False when no launch of the app is running; RunError when it is but
-    cannot take the link."""
+    """Write each link to the running app's FIFO. False when no launch of the app is running (or it ended before the first
+    link); RunError when it is but cannot take the link."""
     path = fifo_path(name)
     try:
         fd = os.open(path, os.O_WRONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -141,14 +155,21 @@ def send(name, links):
         info = os.fstat(fd)
         if not stat.S_ISFIFO(info.st_mode) or info.st_uid != os.getuid():
             raise RunError(f"{path} is not the link queue of {name}")
-        for link in links:
-            data = link.encode("utf-8", "surrogateescape") + b"\n"
+        for sent, link in enumerate(links):
+            try:
+                data = link.encode("utf-8", "surrogateescape") + b"\n"
+            except UnicodeEncodeError:
+                raise RunError("the link is not valid text") from None
             if len(data) > LINE_MAX:
                 raise RunError("the link is too long")
             try:
                 os.write(fd, data)
             except BlockingIOError:
                 raise RunError(f"{name} is not taking links (its queue is full)") from None
+            except BrokenPipeError:  # the launch ended between the open and the write: nothing reads any more
+                if not sent:
+                    return False  # nothing was delivered, so the caller can start the app with the links
+                raise RunError(f"{name} ended before it took every link") from None
     finally:
         os.close(fd)
     return True
