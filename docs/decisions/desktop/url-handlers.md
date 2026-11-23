@@ -79,7 +79,8 @@ A link that is not valid text (a lone surrogate, which argv cannot hold but JSON
 
 Two weaknesses are known and open ([deferred](../deferred.md)): the launch holds the FIFO open itself, so a link sent after
 the relay or the app died is accepted and only waits in the pipe (a full queue is reported after about 64 kB); and the
-relay starts a helper for every good link with no limit (1500 links in a flood made 136 at once).
+relay starts a helper for every good link with no limit (1500 links in a flood made 136 at once). When a limit of the jail (`tasks_max`) refuses the fork, the relay waits for running helpers and retries for
+about 15 seconds, so a flood slows delivery down and does not end it.
 
 **Revisit when** the desktop portals offer a way to deliver a link to a sandboxed app that works for AppImages, or an app
 needs a link delivered by a different command than `AppRun LINK`.

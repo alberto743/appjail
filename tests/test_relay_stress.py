@@ -7,6 +7,7 @@ test_relay.py."""
 
 import argparse
 import ast
+import json
 import os
 import random
 import select
@@ -20,16 +21,27 @@ from pathlib import Path
 
 import pytest
 
-from appjail import cmd_open, grants, jail, relay, runner, runtimejail, seccomp, store
+from appjail import (
+    cmd_open,
+    grants,
+    jail,
+    relay,
+    runner,
+    runtimejail,
+    seccomp,
+    store,
+)
 from appjail.errors import RunError
 from appjail.manifest import ManifestError
 
 from .helpers import (
+    COMPOSITOR,
     Extractor,
     build,
     headless_weston,
     integration,
     needs_pasta,
+    needs_proxy,
     wait_for,
 )
 
@@ -737,3 +749,217 @@ def test_linger_still_waits_for_a_detached_child_under_the_relay(sandbox, runtim
         assert not thread.is_alive()
     assert result.get("code") == 0, result
     assert (home / "done").exists()  # the jail lasted until the detached child was done
+
+
+# -- the relay with the D-Bus proxy, resource limits and the real portals ----------------------------
+
+HERE = Path(__file__).parent / "portal"
+
+
+def drive(home, script, links, launch_kw, before_stop=None, batches=2):
+    """Run the app in a launch, send it `links` in `batches`, wait for each to be logged, then stop it; returns the result
+    (the exit status or the error) of the launch."""
+    thread, result = run_launch(extract=AppRunTree(script), **launch_kw)
+    try:
+        assert wait_for(lambda: (home / "started").exists() or "error" in result, 60), "the app never started"
+        assert "error" not in result, result.get("error")
+        step = max(1, len(links) // batches)
+        for i in range(0, len(links), step):
+            assert relay.send("app", links[i:i + step]) is True
+        log = home / "links.log"
+        assert wait_for(lambda: log.exists() and len(log.read_text().splitlines()) >= len(links), 60), \
+            log.read_text() if log.exists() else "no links delivered"
+        if before_stop:
+            before_stop()
+    finally:
+        (home / "stop").write_text("")
+        thread.join(90)
+    assert not thread.is_alive(), "the jail did not end after the app did"
+    return result
+
+
+def logged(home):
+    return [line.split(" | ", 1) for line in (home / "links.log").read_text().splitlines()]
+
+
+# The same app as CONFINED, whose confinement line also records the bus address it was given.
+WITH_BUS = CONFINED.replace("tr '\\n\\t' '  '; }", "tr '\\n\\t' '  '; echo \"bus=$DBUS_SESSION_BUS_ADDRESS\"; }")
+
+
+@pytest.fixture
+def session_bus(runtime):
+    daemon = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address=1", f"--address=unix:path={runtime}/bus"],
+                              stdout=subprocess.PIPE, text=True, env={"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(runtime)})
+    daemon.stdout.readline()
+    yield runtime / "bus"
+    daemon.terminate()
+    daemon.wait()
+
+
+@integration
+@needs_proxy
+@pytest.mark.parametrize("linger", [False, True])
+def test_links_reach_an_app_behind_the_filtered_bus_and_the_helper_gets_the_same_bus(sandbox, runtime, session_bus, linger):
+    from .helpers import install
+    install(sandbox, schemes=("gemini",), display="none", dbus_filter=("org.example.Granted",), linger=linger)
+    home = store.home_path("app")
+    env = {"XDG_RUNTIME_DIR": str(runtime), "LANG": "C.UTF-8", "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session_bus}"}
+    assert WITH_BUS != CONFINED
+    links = [f"gemini://x/{i}" for i in range(4)]
+    result = drive(home, WITH_BUS, links, {"host_env": env})
+    assert result.get("code") == 0, result
+    main = (home / "started").read_text().split(" | ")[1].strip()
+    assert f"bus=unix:path=/run/user/{os.getuid()}/bus" in main  # the proxy's socket, not the host's bus
+    assert {conf.strip() for _, conf in logged(home)} == {main}  # each helper has the same bus, filter and confinement
+    assert sorted(link for link, _ in logged(home)) == links
+    assert [p.name for p in runtime.iterdir() if p.name.startswith("appjail-")] == []  # the proxy's directory is gone
+    assert not relay.fifo_path("app").exists()
+
+
+def user_scope_properties(description):
+    """MemoryMax, TasksMax and CPUQuotaPerSecUSec of the running user scope with this description."""
+    units = subprocess.run(["systemctl", "--user", "list-units", "--type=scope", "--no-legend", "--plain", "--no-pager"],
+                           capture_output=True, text=True, timeout=30).stdout
+    unit = next((line.split()[0] for line in units.splitlines() if description in line), None)
+    if unit is None:
+        return None
+    shown = subprocess.run(["systemctl", "--user", "show", unit, "-p", "MemoryMax", "-p", "TasksMax", "-p", "CPUQuotaPerSecUSec"],
+                           capture_output=True, text=True, timeout=30).stdout
+    return dict(line.split("=", 1) for line in shown.splitlines() if "=" in line)
+
+
+needs_user_manager = pytest.mark.skipif(
+    not (shutil.which("systemd-run") and os.path.isdir(f"/run/user/{os.getuid()}/systemd")),
+    reason="needs systemd-run and a systemd user session (log in through ssh or a desktop)")
+
+
+@integration
+@needs_user_manager
+def test_links_reach_an_app_in_a_scope_with_resource_limits(sandbox):
+    from .helpers import install
+    install(sandbox, schemes=("gemini",), display="none", memory_max="512M", tasks_max="300", cpu_quota="300%")
+    home = store.home_path("app")
+    env = {"XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}", "LANG": "C.UTF-8"}
+    seen = {}
+    links = [f"gemini://x/{i}" for i in range(4)]
+    result = drive(home, CONFINED, links, {"host_env": env}, before_stop=lambda: seen.update(user_scope_properties("appjail app") or {}))
+    assert result.get("code") == 0, result
+    assert seen.get("MemoryMax") == str(512 * 1024 * 1024) and seen.get("TasksMax") == "300", seen
+    assert seen.get("CPUQuotaPerSecUSec") == "3s", seen
+    assert sorted(link for link, _ in logged(home)) == links
+
+
+# The single-instance app in python, which waits without forking (a shell loop would need a task for every `sleep`, and
+# under the task limit that fork can fail and end the app). Each helper holds its task for a second, so a flood runs many.
+SLOW_HELPER = """#!/usr/bin/python3
+import os, sys, time
+if os.path.exists("/tmp/running"):
+    with open("/home/app/links.log", "a") as f:
+        f.write(f"{sys.argv[1]} | helper\\n")
+    time.sleep(1)
+    sys.exit(0)
+open("/tmp/running", "w").close()
+open("/home/app/started", "w").write("main | app\\n")
+while not os.path.exists("/home/app/stop"):
+    time.sleep(0.1)
+"""
+
+
+@integration
+@needs_user_manager
+def test_the_relay_survives_a_flood_that_exhausts_the_task_limit(sandbox):
+    """With tasks_max the helpers' fork can fail: the relay must go on delivering once the flood is over."""
+    from .helpers import install
+    install(sandbox, schemes=("gemini",), display="none", tasks_max="40")
+    home = store.home_path("app")
+    env = {"XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}", "LANG": "C.UTF-8"}
+
+    def flood_then_one_more():
+        for batch in range(6):
+            relay.send("app", [f"gemini://flood/{batch}/{i}" for i in range(20)])
+        time.sleep(8)  # the helpers that could start have finished
+        assert relay.send("app", ["gemini://after/the/flood"]) is True
+        assert wait_for(lambda: any(link == "gemini://after/the/flood" for link, _ in logged(home)), 30), \
+            "the relay stopped delivering links after the task limit was hit"
+
+    result = drive(home, SLOW_HELPER, ["gemini://first/one"], {"host_env": env}, before_stop=flood_then_one_more, batches=1)
+    assert result.get("code") == 0, result
+
+
+needs_portal = pytest.mark.skipif(
+    not (Path("/usr/libexec/xdg-desktop-portal").exists() and Path("/usr/libexec/xdg-document-portal").exists()
+         and shutil.which("fusermount3") and os.access("/dev/fuse", os.R_OK | os.W_OK)),
+    reason="needs xdg-desktop-portal, its document portal and FUSE (run provision.sh)")
+
+
+@pytest.fixture
+def portal_stack(sandbox, runtime):
+    """A private session bus with the real xdg-desktop-portal and document portal and a fake file chooser."""
+    share = sandbox / "share"
+    (share / "xdg-desktop-portal" / "portals").mkdir(parents=True)
+    (share / "xdg-desktop-portal" / "portals" / "fake.portal").write_text(
+        "[portal]\nDBusName=org.freedesktop.impl.portal.desktop.fake\n"
+        "Interfaces=org.freedesktop.impl.portal.FileChooser;org.freedesktop.impl.portal.Access\nUseIn=fake\n")
+    cfg = sandbox / "cfg"
+    (cfg / "xdg-desktop-portal").mkdir(parents=True)
+    (cfg / "xdg-desktop-portal" / "portals.conf").write_text("[preferred]\ndefault=fake\n")
+    chosen = sandbox / "chosen.txt"
+    chosen.write_text("hello from the host")
+    log = sandbox / "backend.log"
+    env = {"PATH": "/usr/bin:/bin", "XDG_RUNTIME_DIR": str(runtime), "XDG_DATA_DIRS": f"{share}:/usr/share",
+           "XDG_CONFIG_HOME": str(cfg), "XDG_CURRENT_DESKTOP": "fake", "HOME": str(sandbox), "XDG_DATA_HOME": str(sandbox / "data")}
+    daemon = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address=1", f"--address=unix:path={runtime}/bus"],
+                              stdout=subprocess.PIPE, text=True, env=env)
+    daemon.stdout.readline()
+    env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={runtime}/bus"
+    backend = subprocess.Popen([sys.executable, str(HERE / "fake_backend.py"), str(log), str(chosen)], stdout=subprocess.PIPE, text=True, env=env)
+    assert backend.stdout.readline().strip() == "ready"
+    yield env, log
+    backend.terminate()
+    backend.wait()
+    daemon.terminate()
+    daemon.wait()
+    subprocess.run(["fusermount3", "-u", "-z", str(runtime / "doc")], capture_output=True)
+
+
+class PortalTree(AppRunTree):
+    """The single-instance app of CONFINED, whose first instance first asks the real file chooser portal for a file."""
+
+    def __call__(self, image, dest, fallback=False):
+        result = super().__call__(image, dest, fallback)
+        (Path(dest) / "client.py").write_text((HERE / "client.py").read_text())
+        return result
+
+
+PORTAL_APP = CONFINED.replace("touch /tmp/running\n", "touch /tmp/running\n/usr/bin/python3 /app/client.py > /home/app/portal.json 2>/home/app/portal.err\n")
+
+
+@integration
+@needs_proxy
+@needs_portal
+def test_links_reach_an_app_that_uses_the_real_file_chooser_portal(sandbox, runtime, portal_stack):
+    from .helpers import install
+    env, backend_log = portal_stack
+    install(sandbox, schemes=("gemini",), portals=True)
+    home = store.home_path("app")
+    links = [f"gemini://x/{i}" for i in range(4)]
+    thread, result = run_launch(host_env=env | {"WAYLAND_DISPLAY": "wayland-test"}, extract=PortalTree(PORTAL_APP), **COMPOSITOR)
+    try:
+        assert wait_for(lambda: (home / "started").exists() or "error" in result, 60), result
+        assert "error" not in result, result.get("error")
+        assert relay.send("app", links) is True
+        log = home / "links.log"
+        assert wait_for(lambda: log.exists() and len(log.read_text().splitlines()) == 4, 60)
+    finally:
+        (home / "stop").write_text("")
+        thread.join(90)
+    assert not thread.is_alive()
+    assert result.get("code") == 0, result
+    portal_out = json.loads((home / "portal.json").read_text().strip().splitlines()[-1])
+    assert portal_out["response"] == 0 and portal_out["content"] == "hello from the host", (portal_out, (home / "portal.err").read_text())
+    assert backend_log.read_text().split() == ["app.appjail.app"]  # the portal knew the app, from appjail's identity only
+    main = (home / "started").read_text().split(" | ")[1].strip()
+    assert "NoNewPrivs: 1" in main and "Seccomp: 2" in main
+    assert {conf.strip() for _, conf in logged(home)} == {main}
+    assert sorted(link for link, _ in logged(home)) == links
+    assert [p.name for p in runtime.iterdir() if p.name.startswith("appjail-")] == []

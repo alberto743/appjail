@@ -45,6 +45,22 @@ def good(link):
     return (colon and 0 < len(link.encode("utf-8", "replace")) <= MAX and scheme.lower() in schemes
             and not any(ord(c) < 32 or ord(c) == 127 for c in link))
 
+def deliver(link):
+    """Start the app's handover for one link. A limit of the jail (tasks_max, a full process table) can refuse the fork: wait
+    for the helpers that run to finish and try again, for a while, instead of ending the relay."""
+    for _ in range(60):
+        try:
+            p = subprocess.Popen([helper, link], stdin=subprocess.DEVNULL)
+        except OSError:
+            time.sleep(0.25)
+            continue
+        try:
+            threading.Thread(target=p.wait, daemon=True).start()
+        except RuntimeError:  # no task left for a thread: reap it here, which also holds the next link back
+            p.wait()
+        return
+    print("appjail: a link could not be delivered: no process could be started", file=sys.stderr)
+
 def serve():
     buf = b""
     while True:
@@ -59,8 +75,7 @@ def serve():
                 print("appjail: a link was refused", file=sys.stderr)
                 continue
             time.sleep(max(0.0, born + SETTLE - time.monotonic()))
-            p = subprocess.Popen([helper, link], stdin=subprocess.DEVNULL)
-            threading.Thread(target=p.wait, daemon=True).start()
+            deliver(link)
         if len(buf) > MAX:
             buf = b""
 
