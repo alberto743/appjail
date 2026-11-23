@@ -156,7 +156,10 @@ def send(name, links):
         if not stat.S_ISFIFO(info.st_mode) or info.st_uid != os.getuid():
             raise RunError(f"{path} is not the link queue of {name}")
         for sent, link in enumerate(links):
-            data = link.encode("utf-8", "surrogateescape") + b"\n"
+            try:
+                data = link.encode("utf-8", "surrogateescape") + b"\n"
+            except UnicodeEncodeError:
+                raise RunError("the link is not valid text") from None
             if len(data) > LINE_MAX:
                 raise RunError("the link is too long")
             try:

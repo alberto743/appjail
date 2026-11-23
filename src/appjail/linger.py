@@ -6,8 +6,8 @@
 Some launchers start the real app as a detached child and exit at once (VS Code's CLI does). The jail ends with its main
 command, so the app would die with it. With `linger` the command runs under a small supervisor, written in Python and
 run inside the jail by the system interpreter: it becomes the subreaper of the jail, so detached descendants report to
-it, and it exits, with the command's status, only when nothing but pid 1 and its own starting helpers (a private
-Xwayland) and their children is left.
+it, and it exits, with the command's status, only when nothing but pid 1 and what was already running when it started
+(the supervisors around it, a private Xwayland and its window manager) and their children is left.
 """
 
 import os
@@ -33,7 +33,7 @@ def live():
     return out
 
 def helped(pid, procs):
-    while pid in procs:
+    while pid in procs and pid != me:  # up to this supervisor: what hangs below it is the app's
         if pid in helpers:
             return True
         pid = procs[pid]
@@ -41,12 +41,8 @@ def helped(pid, procs):
 
 ctypes.CDLL(None).prctl(36, 1, 0, 0, 0)  # PR_SET_CHILD_SUBREAPER
 me = os.getpid()
-helpers = {p for p, parent in live().items() if parent == me}
-ancestors = set()  # the supervisors that run this one (the link relay): they wait for it, so they are never work left
-pid = os.getppid()
-while pid > 1 and (s := stat(pid)):
-    ancestors.add(pid)
-    pid = int(s[1])
+helpers = {p for p in live() if p not in (1, me)}  # what runs before the command starts is not the app's: the supervisors
+# around this one (the link relay, the script that starts Xwayland) and the helpers they started, Xwayland and its window manager
 cmd = sys.argv[1:]
 child = os.fork()
 if child == 0:
@@ -72,7 +68,7 @@ while True:
     except ChildProcessError:
         pass
     procs = live()
-    if not [p for p in procs if p not in (1, me) and p not in ancestors and not helped(p, procs)]:
+    if not [p for p in procs if p not in (1, me) and not helped(p, procs)]:
         break
     time.sleep(0.2)
 os._exit(code if code is not None else 0)

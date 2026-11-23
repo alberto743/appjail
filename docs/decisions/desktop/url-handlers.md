@@ -50,8 +50,10 @@ same gap for files.
   the control characters and a leading `-`; the supervisor checks the scheme, the length and the control characters again,
   since the app can also write to the FIFO (through its own mount of it).
 
-With `linger` the relay is the outer supervisor and `linger` the inner one, so `linger` leaves its ancestors out when it
-looks for processes still running; counting the relay would keep the jail alive for ever (found by a combination test).
+With `linger` the relay is the outer supervisor and `linger` the inner one, so `linger` counts as infrastructure everything
+that was running when it started (the relay, the script that starts a private Xwayland and what they started) when it
+looks for processes still running; counting the relay, or an Xwayland that is no longer its child, would keep the jail
+alive for ever (both found by combination tests). `linger` still waits for what the app leaves behind.
 
 A first prototype used a socket in a directory bound into the jail and was changed: the app could have replaced the socket
 by a symbolic link that the host client would then follow. Measured with the prototype, on Debian, Ubuntu and Fedora: the running Electron probe received each link byte for byte, no second
@@ -72,6 +74,8 @@ link an app receives is not always the one that was clicked ([measured](../../de
 An app whose own single-instance check does not work in a jail gets nothing from the relay: Joplin finds its running
 instance through an HTTP server on `localhost`, needs `network` for the name to resolve and still starts a second instance
 for about one link in four ([measured](../../develop/url-handler-evidence.md#a-real-electron-application-joplin-measured-debian)).
+
+A link that is not valid text (a lone surrogate, which argv cannot hold but JSON can) is refused like any bad link.
 
 Two weaknesses are known and open ([deferred](../deferred.md)): the launch holds the FIFO open itself, so a link sent after
 the relay or the app died is accepted and only waits in the pipe (a full queue is reported after about 64 kB); and the

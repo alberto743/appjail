@@ -43,8 +43,9 @@ launcher starts the real program in the background and exits would be killed the
 Some launchers start the real app as a detached child and exit at once (VSCodium's does). Under the default rule the
 jail, and the app with it, would end immediately. The `linger` permission changes the rule for one app: the command runs
 under a small supervisor inside the jail that becomes the *subreaper* of the jail (detached processes are re-parented to
-it rather than to process 1) and exits, with the command's exit status, only when no process of the app is left. The
-supervisors that run it (the link relay below) wait for it, so they are not counted as processes of the app. It
+it rather than to process 1) and exits, with the command's exit status, only when no process of the app is left. What
+was already running when it started (the link relay below, the script that starts a private Xwayland, and their
+helpers) is not the app's, so it is not waited for. It
 grants nothing: it only changes when the jail ends.
 
 ### Apps that receive links: the relay

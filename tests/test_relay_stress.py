@@ -5,23 +5,33 @@
 a killed launcher, racing launches, and the relay combined with `linger` in a real jail. The basic behaviour is in
 test_relay.py."""
 
+import argparse
 import ast
 import os
 import random
 import select
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
-from appjail import grants, jail, relay, runtimejail, seccomp
+from appjail import cmd_open, grants, jail, relay, runner, runtimejail, seccomp, store
 from appjail.errors import RunError
 from appjail.manifest import ManifestError
 
-from .helpers import build, integration, wait_for
+from .helpers import (
+    Extractor,
+    build,
+    headless_weston,
+    integration,
+    needs_pasta,
+    wait_for,
+)
 
 
 @pytest.fixture
@@ -68,7 +78,7 @@ def corpus(rng):
            "Kermit:x", "geminí:x", "İ:x", "gemini://x\n", "gemini://x\r", "gemini://x\x00", "gemini://x\x7f",
            "gemini://x\x1b[31m", "gemini://x\x85", "gemini:// x", "a+b.c-d:x", "A+B.C-D:x", " gemini://x", "-gemini://x",
            "gemini://" + "a" * 3991, "gemini://" + "a" * 3992, "gemini://" + "é" * 1995, "gemini://" + "é" * 1996,
-           "gemini://\udcff", "file:///etc/passwd", "javascript:alert(1)"]
+           "gemini://\udcff", "gemini://\ud800", "gemini://\udbff\udc00", "gemini://\udc7f", "gemini://\udd00", "file:///etc/passwd", "javascript:alert(1)"]
     alphabet = list("gemini:/ab-+.%\"'&?# \t\n\x00\x1f\x7f") + ["é", "K", "İ", "\U0001f600", " ", "\x85", "\udcff"]
     for _ in range(4000):
         head = rng.choice(["gemini:", "GEMINI:", "joplin:", "-", "", "x:", "Joplin:", "a+b.c-d:"])
@@ -528,3 +538,202 @@ def test_links_reach_the_app_with_the_jails_confinement_also_under_linger(sandbo
     assert "NoNewPrivs: 1" in main and "Seccomp: 2" in main
     for line in (kw["home"] / "links.log").read_text().splitlines():
         assert line.split(" | ")[1].strip() == main  # a helper has the same confinement as the app
+
+
+# -- text that has no bytes -------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("code", [0xD800, 0xDBFF, 0xDC7F, 0xDD00], ids=lambda c: f"U+{c:04X}")
+def test_a_lone_surrogate_is_refused_not_a_traceback(data, code):
+    """argv never holds one (undecodable bytes become U+DC80..U+DCFF), but JSON text can: it has no UTF-8 form."""
+    link = "gemini://x/" + chr(code)
+    with pytest.raises(ManifestError, match="not valid text"):
+        grants.check_link(link, ("gemini",))
+    with relay.serving("app"), pytest.raises(RunError, match="not valid text"):
+        relay.send("app", [link])
+
+
+def test_the_bytes_of_an_argument_that_is_not_utf8_round_trip(data):
+    link = os.fsdecode(b"gemini://x/\xff\xfe")  # what argv holds for these bytes: U+DCFF U+DCFE
+    assert grants.check_link(link, ("gemini",)) == link
+    with relay.serving("app") as path:
+        rd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+        assert relay.send("app", [link]) is True
+        assert os.read(rd, 100) == b"gemini://x/\xff\xfe\n"
+        os.close(rd)
+
+
+# -- the relay with every other wrapper and grant, through `runner.launch` --------------------------
+#
+# The same path as `appjail run`: the order the wrappers are applied in (linger, relay, Xwayland), the file descriptors
+# pasta closes, the grants bound next to the FIFO, the private audio graph.
+
+
+LAUNCH = runner.launch  # the real one, whatever a test puts in its place
+
+
+class AppRunTree(Extractor):
+    """A tree whose AppRun is `script`."""
+
+    def __init__(self, script):
+        super().__init__()
+        self.script = script
+
+    def __call__(self, image, dest, fallback=False):
+        result = super().__call__(image, dest, fallback)
+        (Path(dest) / "AppRun").write_text(self.script)
+        (Path(dest) / "AppRun").chmod(0o755)
+        return result
+
+
+def run_launch(**kw):
+    """runner.launch in a thread; returns (thread, result), the exit status or the exception ending up in result."""
+    result = {}
+
+    def target():
+        try:
+            result["code"] = LAUNCH("app", say=lambda *_: None, warn=lambda *_: None, **kw)
+        except BaseException as e:  # noqa: BLE001  (reported by the test)
+            result["error"] = e
+
+    thread = threading.Thread(target=target)
+    thread.start()
+    return thread, result
+
+
+def have(*tools):
+    return pytest.mark.skipif(not all(shutil.which(t) for t in tools), reason=f"needs {', '.join(tools)} (tests/vm/packages.txt)")
+
+
+XWAYLAND = have("weston", "Xwayland")
+
+COMBINATIONS = {
+    "plain": ({}, ()),
+    "linger": ({"linger": True}, ()),
+    "pasta": ({"network": True}, (needs_pasta,)),
+    "linger+pasta": ({"linger": True, "network": True}, (needs_pasta,)),
+    "private-audio": ({"audio": True}, (have("pipewire"),)),
+    "linger+private-audio": ({"linger": True, "audio": True}, (have("pipewire"),)),
+    # the headless weston has no wp_security_context_v1, so these apps are granted the compositor's own socket
+    "xwayland": ({"display": "xwayland", "full_wayland": True}, (XWAYLAND,)),
+    "linger+xwayland": ({"linger": True, "display": "xwayland", "full_wayland": True}, (XWAYLAND,)),
+    "linger+xwayland+pasta+audio": ({"linger": True, "display": "xwayland", "full_wayland": True, "network": True, "audio": True},
+                                    (XWAYLAND, needs_pasta, have("pipewire"))),
+}
+
+
+@integration
+@pytest.mark.parametrize("perms,marks", [pytest.param(p, m, id=i, marks=list(m)) for i, (p, m) in COMBINATIONS.items()])
+def test_links_reach_the_running_app_in_every_combination(sandbox, runtime, tmp_path, monkeypatch, perms, marks):
+    import contextlib
+
+    from .helpers import install
+    perms = {"display": "none", **perms}
+    install(sandbox, schemes=("gemini",), **perms)
+    home = store.home_path("app")
+    fake = sandbox / "fakehome"
+    (fake / "docs").mkdir(parents=True)
+    (fake / "doc.txt").write_text("granted")
+    monkeypatch.setattr(Path, "home", lambda: fake)
+    with contextlib.ExitStack() as stack:
+        env = {"XDG_RUNTIME_DIR": str(runtime), "LANG": "C.UTF-8", "WAYLAND_DISPLAY": "wayland-test"}
+        extra = {"extra_files": (f"{fake}/doc.txt:ro",)}
+        if perms["display"] != "none":
+            rt = stack.enter_context(headless_weston(tmp_path, "appjail-rl"))
+            env = {"XDG_RUNTIME_DIR": str(rt), "LANG": "C.UTF-8", "WAYLAND_DISPLAY": "appjail-rl"}
+        thread, result = run_launch(host_env=env, extract=AppRunTree(CONFINED), **extra)
+        try:
+            assert wait_for(lambda: (home / "started").exists() or "error" in result, 40), "the app never started"
+            assert "error" not in result, result.get("error")
+            links = [f"gemini://x/{i}" for i in range(4)]
+            assert relay.send("app", links[:2]) is True
+            assert relay.send("app", links[2:]) is True
+            log = home / "links.log"
+            assert wait_for(lambda: log.exists() and len(log.read_text().splitlines()) == 4, 40), log.read_text() if log.exists() else "no log"
+        finally:
+            (home / "stop").write_text("")
+            thread.join(60)
+        assert not thread.is_alive(), "the jail did not end after the app did"
+    assert result.get("code") == 0, result
+    main = (home / "started").read_text().split(" | ")[1].strip()
+    assert "NoNewPrivs: 1" in main and "Seccomp: 2" in main
+    got = sorted(line.split(" | ")[0] for line in (home / "links.log").read_text().splitlines())
+    assert got == links
+    assert {line.split(" | ")[1].strip() for line in (home / "links.log").read_text().splitlines()} == {main}
+    assert not relay.fifo_path("app").exists()
+
+
+# The tree is extracted once and reused, so one script serves both phases: it only records its arguments until the test
+# creates /home/app/serve, then behaves as the single-instance app of CONFINED.
+ONCE = """#!/bin/sh
+if [ ! -e /home/app/serve ]; then
+  echo "$@" > /home/app/args
+  exit 0
+fi
+""" + CONFINED.split("\n", 1)[1]
+
+
+class Console:
+    def __init__(self):
+        self.lines = []
+
+    def out(self, text):
+        self.lines.append(text)
+
+    warn = out
+
+
+@integration
+def test_appjail_open_sends_to_a_running_app_and_starts_one_otherwise(sandbox, runtime, monkeypatch):
+    from .helpers import install
+    install(sandbox, schemes=("gemini",), display="none")
+    home = store.home_path("app")
+    env = {"XDG_RUNTIME_DIR": str(runtime), "LANG": "C.UTF-8", "WAYLAND_DISPLAY": "wayland-test"}
+    monkeypatch.setattr(runner, "launch", lambda name, args, **kw: LAUNCH(
+        name, args, host_env=env, extract=AppRunTree(ONCE), **kw))
+    ns = argparse.Namespace(app="app", rw=False)
+    console = Console()
+    # no launch running: the app is started with the link as its argument
+    assert cmd_open.cmd_open(ns, ["GEMINI://x/first"], console) == 0
+    assert (home / "args").read_text().strip() == "GEMINI://x/first"
+    # a launch running: the link goes through the FIFO and no second app starts
+    (home / "serve").write_text("")
+    thread, result = run_launch(host_env=env, extract=AppRunTree(ONCE))
+    try:
+        assert wait_for(lambda: (home / "started").exists() or "error" in result, 40)
+        assert cmd_open.cmd_open(ns, ["gemini://x/second"], console) == 0
+        assert any("Sent 1 link" in line for line in console.lines)
+        log = home / "links.log"
+        assert wait_for(lambda: log.exists() and len(log.read_text().splitlines()) == 1, 30)
+        assert log.read_text().startswith("gemini://x/second | ")
+    finally:
+        (home / "stop").write_text("")
+        thread.join(60)
+    assert result.get("code") == 0, result
+
+
+DETACH = """#!/bin/sh
+( sleep 3; touch /home/app/done ) &
+exit 0
+"""
+
+
+@integration
+@pytest.mark.parametrize("display", ["none", pytest.param("xwayland", marks=XWAYLAND)])
+def test_linger_still_waits_for_a_detached_child_under_the_relay(sandbox, runtime, tmp_path, display):
+    """Counting everything that ran before `linger` as infrastructure must not hide what the app leaves behind."""
+    import contextlib
+
+    from .helpers import install
+    install(sandbox, schemes=("gemini",), linger=True, display=display, **({"full_wayland": True} if display != "none" else {}))
+    home = store.home_path("app")
+    env = {"XDG_RUNTIME_DIR": str(runtime), "LANG": "C.UTF-8", "WAYLAND_DISPLAY": "wayland-test"}
+    with contextlib.ExitStack() as stack:
+        if display != "none":
+            rt = stack.enter_context(headless_weston(tmp_path, "appjail-rl"))
+            env = {"XDG_RUNTIME_DIR": str(rt), "LANG": "C.UTF-8", "WAYLAND_DISPLAY": "appjail-rl"}
+        thread, result = run_launch(host_env=env, extract=AppRunTree(DETACH))
+        thread.join(90)
+        assert not thread.is_alive()
+    assert result.get("code") == 0, result
+    assert (home / "done").exists()  # the jail lasted until the detached child was done
