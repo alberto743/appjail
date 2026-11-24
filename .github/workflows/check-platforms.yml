@@ -1,6 +1,6 @@
 name: Check supported systems
 
-# Once a month (and by hand): compare the systems the project targets (the guests of tests/vm/guest.sh, the runner label)
+# Once a month (and by hand): compare the systems the project targets (the guests of tests/vm/guest.sh)
 # with endoflife.date and open an issue for each new Debian stable, Ubuntu LTS or Fedora release. It only reports.
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read

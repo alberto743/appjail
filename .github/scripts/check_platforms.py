@@ -3,8 +3,8 @@
 
 """Open an issue when a supported system has a newer release (run by check-platforms.yml, monthly).
 
-Compares what the project targets (Debian and Fedora from the guest images of tests/vm/guest.sh, Ubuntu from the runner
-label of the workflows) with endoflife.date (https://endoflife.date/docs/api/v1/): the current Debian stable, the newest
+Compares what the project targets (Debian, Ubuntu and Fedora from the guest images of tests/vm/guest.sh; the workflows run
+on `ubuntu-latest`, which names no release) with endoflife.date (https://endoflife.date/docs/api/v1/): the current Debian stable, the newest
 Ubuntu LTS and the newest Fedora. It only reports: moving to a new release is a decision (support matrix, CI, docs). The API answer is parsed as
 JSON and never executed; text that reaches an issue is reduced to a safe alphabet. Stdlib only; `gh` comes from the runner.
 """
@@ -52,15 +52,15 @@ def current_fedora(releases, today):
     return newest([r for r in released(releases, today) if not r.get("isEol")])
 
 
-def targets(guest_sh, workflows):
+def targets(guest_sh):
     """What the project uses: {'debian': '13', 'ubuntu': '26.04', 'fedora': '45'}; a missing one is left out."""
     out = {}
     m = re.search(r"debian-(\d+)-genericcloud", guest_sh)
     if m:
         out["debian"] = m.group(1)
-    labels = [m2.group(1) for text in workflows for m2 in re.finditer(r"runs-on:\s*ubuntu-(\d+\.\d+)", text)]
-    if labels:  # the runner label is what moves; after the switch to ubuntu-latest there is none
-        out["ubuntu"] = max(labels, key=key)
+    m = re.search(r"^#\s*ubuntu:\s*Ubuntu (\d+\.\d+) \(", guest_sh, re.M)  # the guest's header comment
+    if m:
+        out["ubuntu"] = m.group(1)
     m = re.search(r"/fedora/linux/releases/(\d+)/", guest_sh)
     if m:
         out["fedora"] = m.group(1)
@@ -79,7 +79,7 @@ def findings(target, latest):
         text = (f"endoflife.date lists {label} {name} (released {clean(rel.get('releaseDate'))}); "
                 f"the project targets {clean(have)}.\n\n"
                 "Moving is a decision, not automatic. If you take it: the guest image in `tests/vm/guest.sh`, the runner "
-                "label and the supported systems in `docs/`, `README.md`, `SECURITY.md` and `CLAUDE.md`, then the suite "
+                "image (`ubuntu-latest` moves on its own; pin `ubuntu-NN.04` until the project is ready) and the supported systems in `docs/`, `README.md`, `SECURITY.md` and `CLAUDE.md`, then the suite "
                 "on every guest.\n"
                 "Close this issue to decline; it is not opened again for the same release.")
         out.append((title, text))
@@ -102,8 +102,7 @@ def gh(*cmd):
 def main():
     today = datetime.date.today().isoformat()
     root = Path(__file__).resolve().parents[2]
-    workflows = [p.read_text() for p in (root / ".github/workflows").glob("*.yml")]
-    target = targets((root / "tests/vm/guest.sh").read_text(), workflows)
+    target = targets((root / "tests/vm/guest.sh").read_text())
     latest = {"debian": current_debian(fetch("debian"), today), "ubuntu": current_ubuntu_lts(fetch("ubuntu"), today),
               "fedora": current_fedora(fetch("fedora"), today)}
     print("targets:", target)

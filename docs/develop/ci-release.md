@@ -1,6 +1,6 @@
 # CI and releases
 
-All workflows are in `.github/workflows/`, run on GitHub's `ubuntu-26.04` runners, pin every action to a full commit
+All workflows are in `.github/workflows/`, run on GitHub's `ubuntu-latest` runners (Ubuntu 26.04 since November 2026), pin every action to a full commit
 hash with the version as a comment, and keep `permissions: contents: read` unless a job needs more. CI runs on Ubuntu
 only; Debian and Fedora are verified in their guests before a push ([testing](testing.md)).
 
@@ -13,7 +13,7 @@ only; Debian and Fedora are verified in their guests before a push ([testing](te
 | `ci-gate.yml` | called by the release workflows | succeeds only if `ci.yml` passed on that commit on `main` |
 | `release.yml` | a `vX.Y.Z` tag, after the gate | builds once (`build-dist.yml`: the pinned tooling, `--no-isolation`, an sdist named after the tag, `twine check`), creates the GitHub release with the sdist and the notes; `contents: write` in that job only |
 | `pypi.yml` | a `vX.Y.Z` tag, after the gate | builds the same way and publishes with PyPI trusted publishing (no stored token) |
-| `check-platforms.yml` | monthly and by hand | `.github/scripts/check_platforms.py` compares the targeted Debian, Ubuntu LTS and Fedora (Debian and Fedora from `tests/vm/guest.sh`, Ubuntu from the runner label) with endoflife.date and opens an issue for a newer release; it only reports, and a closed issue is not opened again |
+| `check-platforms.yml` | monthly and by hand | `.github/scripts/check_platforms.py` compares the targeted Debian, Ubuntu LTS and Fedora (each from `tests/vm/guest.sh`; the runner label names no release) with endoflife.date and opens an issue for a newer release; it only reports, and a closed issue is not opened again |
 | `bump-tools.yml` | weekly and by hand | `.github/scripts/bump_tools.py` opens a pull request for each new stable release of `cli/cli` and `mhx/dwarfs`, moving the pins in `tools.py` (size and hash measured on the runner and checked against GitHub's digest; the download is never run or unpacked). When the pull request is refused it deletes the branch it pushed and fails, so the next run tries again |
 
 ## Making a release

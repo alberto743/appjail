@@ -39,10 +39,9 @@ def test_selection_ignores_unreleased_and_picks_the_right_release():
 
 def test_targets_come_from_the_tracked_files():
     guest = (ROOT / "tests/vm/guest.sh").read_text()
-    wf = [p.read_text() for p in (ROOT / ".github/workflows").glob("*.yml")]
-    t = cp.targets(guest, wf)
-    assert {"debian", "fedora"} <= set(t)
-    assert "ubuntu" not in t or t["ubuntu"].count(".") == 1  # no runner label after the move to ubuntu-latest
+    t = cp.targets(guest)
+    assert {"debian", "ubuntu", "fedora"} <= set(t)
+    assert t["ubuntu"].count(".") == 1  # the guest's release, as the workflows run on ubuntu-latest
 
 
 def test_no_finding_when_current_and_one_when_newer():

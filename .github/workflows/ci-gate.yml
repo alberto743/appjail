@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   gate:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
       actions: read

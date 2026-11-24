@@ -27,7 +27,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write  # create the release; only this job
