@@ -100,6 +100,7 @@ nav = [
       "decisions/isolation/debugging.md",
       "decisions/isolation/resource-limits.md",
       "decisions/isolation/app-lock.md",
+      "decisions/isolation/host-view.md",
     ] },
     { "Desktop access" = [
       "decisions/desktop/index.md",
@@ -164,6 +165,7 @@ nav = [
     "develop/camera-audio-evidence.md",
     "develop/url-handler-evidence.md",
     "develop/a11y-evidence.md",
+    "develop/host-view-evidence.md",
     "develop/writing-docs.md",
   ] },
 ]

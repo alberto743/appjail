@@ -127,7 +127,8 @@ writes to the guest's own `~/.local/share/appjail` and `~/.config/appjail`.
   and option documented) and against the policy lists ([policy lists](../reference/policy.md)).
 - **Measurements that are not tests:** `tests/a11y/` holds the scripts behind the [accessibility-bus evidence](a11y-evidence.md)
   (a GTK 3 and a Qt 6 window, a stand-in screen reader, a hostile client, the proxy in its own jail). They are run by hand
-  in the Debian guest and pytest does not collect them; the two lint tests do check them.
+  in the Debian guest and pytest does not collect them; the lint test does check them. `tests/hostview/` is the same for the
+  [host-view evidence](host-view-evidence.md): real apps traced in appjail's jail with four variants of the system view.
 - What is not verified yet is listed in [Deferred and planned work](../decisions/deferred.md#not-yet-verified).
 
 ## Test conventions
