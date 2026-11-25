@@ -34,7 +34,8 @@ Flatpak remains the mature route.
 
 - **The host's system is hidden.** A runtime is mounted at `/usr`; the host's own files are reachable only through
   `host-os`, `host-etc` or `host`. appjail binds the host's `/usr`, `/lib*` and part of `/etc` read-only: an app can
-  list the installed software, every host library is part of what it can reach, and its behaviour depends on the host.
+  list the installed software, every host library is part of what it can reach, and its behaviour depends on the host. Narrowing
+  it was studied and not adopted ([the decision](../isolation/host-view.md)).
 - **Signed transport and central builds.** OSTree commits are GPG-signed per remote, and Flathub builds most apps from a
   public manifest on its own infrastructure. appjail runs the publisher's binary; GPG is a deferred tier and nothing is
   rebuilt.
@@ -70,7 +71,7 @@ the Wayland check, refused credential paths, a network without the host's loopba
 sound, and AppImages run as published.
 
 **Consequences.** The gaps that fit appjail's scope are open items in [deferred work](../deferred.md): the
-accessibility bus, resource limits, a narrower view of the host's system, file-type handlers and a debugging opt-in.
+accessibility bus, resource limits, file-type handlers and a debugging opt-in (a narrower view of the host's system was studied and not adopted).
 Runtimes, repositories, system-wide installs and raw device access are not planned. Re-check this page with the
 [related projects](related-projects.md) at each minor release.
 

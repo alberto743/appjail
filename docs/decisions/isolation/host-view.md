@@ -1,6 +1,6 @@
 # Narrowing the host's system view
 
-*Decision on [isolation](index.md). Status: studied, not built; nothing is decided. The maintainer chooses.*
+*Decision on [isolation](index.md). Decided in November 2026 by the maintainer, after the study below: the host's view is kept, and what it shows is documented. An opt-in per-app list stays a deferred option.*
 
 **Context.** The jail binds the host's `/usr`, `/bin`, `/sbin` and `/lib*` read-only ([bubblewrap](bubblewrap.md)), so an
 app can run any program of the host and list what is installed, and its behaviour depends on the host; Flatpak mounts a
@@ -42,10 +42,13 @@ Debian 13 guest, in four variants of the view, three rounds each:
 - *An opt-in strict grant on top of C.* The cheapest honest form of A2: off by default, the user turns it on for one app and
   accepts that features may stop. Unlike A, a breakage would be the user's choice, shown by `perms`.
 
-**Recommendation.** Keep variant C for now: the measurements do not show a narrowing that is both safe by default and
-cheap, and what it hides (programs, not packages or library versions) is a small part of what the host's view gives away.
-If the maintainer wants to go on, build the opt-in variant (A2 with a recorded list), after a trial with the interactive
-paths and the Electron apps that this study could not run. That decision is not taken here.
+**Decision.** Keep variant C. The measurements do not show a narrowing that is both safe by default and cheap, and what it
+hides (programs, not package names or library versions) is a small part of what the host's view gives away. What the view
+shows is now written down where a reader looks for it: [the filesystem view](../../understand/isolation/filesystem.md#the-hosts-system-directories),
+[the problem](../../understand/problem.md#what-appjail-does-not-do), the README's limits and SECURITY.md's out-of-scope list.
+If it is wanted later, the form to build is the opt-in per-app list (A2), after a trial of the interactive paths and the
+Electron apps that this study could not run.
 
-**Consequences.** The row in [deferred work](../deferred.md) stays *Undecided*, with this page and the evidence linked. No
-code changes. The measurement scripts (`tests/hostview/`) stay, so the matrix can be rerun on other systems and apps.
+**Consequences.** No code changes. The row in [deferred work](../deferred.md) becomes a deferred feature, the opt-in list, with
+its condition. The measurement scripts (`tests/hostview/`) stay, so the matrix can be rerun on other systems and apps, and
+the page of the filesystem view states the limit.

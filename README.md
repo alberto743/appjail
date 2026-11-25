@@ -95,6 +95,8 @@ appjail remove lagrange          # delete the app and its private home
   privileged interfaces, unless you accept that per app; on KDE Plasma and Cinnamon 6.8 that is every app for now.
 - **Evidence proves "unchanged", not "safe".** A publisher who ships malware from the start passes every check;
   containment is what limits it.
+- **An app sees your system's programs and libraries.** The host's `/usr` and `/lib*` are bound read-only: an app can list
+  the installed software and library versions and run any program there, inside its jail. There is no runtime to hide them.
 - **A grant widens what a compromised app can do.** An app with `network` reaches your LAN; a granted D-Bus name of an
   unknown service reaches everything its owner serves.
 - **Links reach an app only through a relay you opt into.** There is no reply from it, so a link the app ignores is not

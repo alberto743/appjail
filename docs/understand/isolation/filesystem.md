@@ -10,7 +10,7 @@ be writable.
 
 | Path in the jail | What it is | Access |
 |---|---|---|
-| `/usr`, `/bin`, `/sbin`, `/lib`, `/lib32`, `/lib64` | the host's system directories, so the app's libraries can find what they need | read-only |
+| `/usr`, `/bin`, `/sbin`, `/lib`, `/lib32`, `/lib64` | the host's system directories, so the app's libraries and helper programs can be found ([below](#the-hosts-system-directories)) | read-only |
 | `/etc` | only fonts, the dynamic linker's cache and configuration, the local time, `alternatives`; with `network`, the files that name resolution and TLS need (`hosts`, `nsswitch.conf`, `resolv.conf`, `ssl`, CA certificates); with `gpu`, the Vulkan and GLVND configuration; a generated `passwd` and `group` | read-only |
 | `/app` | the extracted AppImage | read-only |
 | `/home/app` | the app's private home, kept between runs in `~/.local/share/appjail/apps/NAME/home` | read-write |
@@ -77,6 +77,29 @@ by the desktop outside any jail. Read-only grants of these stay possible.
 
 There is no override for these. The way around a refusal is always a narrower grant.
 
+### The host's system directories
+
+`/usr`, `/bin`, `/sbin` and `/lib*` are the host's own, bound read-only. Apps are built for many systems and find their
+libraries, loader, keyboard layouts, fonts, locales and helper programs there; appjail has no runtime of its own to put in
+their place. What follows from it, measured in the Debian guest
+([the evidence](../../develop/host-view-evidence.md)):
+
+- **An app can run any program of the host in those directories**, for example `ln`, `bash`, `perl` or `strace`, as the
+  jail's user, with the jail's namespaces, no network unless granted, no new privileges and the system-call filter. Real
+  AppImages do: their start-up scripts call `ln`, `bash`, `dirname`, `readlink`, `basename` and `env`, and htop starts
+  `strace` for one of its screens.
+- **An app can list what is installed**: the programs (about a thousand in `/usr/bin` of a desktop system), the menu
+  entries in `/usr/share/applications`, the package names in `/usr/share/doc`, every library file with its version, and the
+  distribution and release (`/usr/lib/os-release`). It cannot read your files, your `/etc` beyond the entries above, or
+  other users' data.
+- **Its behaviour depends on the host**: a different system has different libraries and programs.
+
+appjail keeps this view. Narrowing it was tried with four variants and traced runs of four real apps, and no variant was both
+safe to make the default and cheap: a fixed short list of programs breaks Galculator and ImageMagick, a per-app list works
+only for what was recorded, and a view of traced files alone needs a thousand mounts per app and still failed one app.
+Hiding programs would also not hide the package names or library versions, which the apps need. See
+[Narrowing the host's system view](../../decisions/isolation/host-view.md).
+
 ### Grants are bound by descriptor
 
 A check made on a path and a bind made later on the same path are two lookups, and between them a symbolic link can be
@@ -106,11 +129,13 @@ reused by another file.
 - Decision: [Extract, never mount](../../decisions/isolation/extraction.md).
 - Decision: [Paths that are never granted](../../decisions/isolation/refused-paths.md).
 - Decision: [Grants bound by descriptor](../../decisions/isolation/grants-by-descriptor.md).
+- Decision: [Narrowing the host's system view](../../decisions/isolation/host-view.md).
 
 ## Limits
 
 - What you grant, the app can read, and with `:rw` change or delete.
-- The system directories are readable. They hold no secrets of yours, but they reveal what software is installed.
+- The system directories are readable and their programs can be run by the app: they hold no secrets of yours, but they
+  reveal what software is installed, with its versions ([above](#the-hosts-system-directories)).
 - A file granted read-write with `--file` cannot be replaced, only rewritten in place: apps that save by writing a new
   file and renaming it over the old one fail on such a file. Grant its folder, or use the portal file chooser.
 - A folder whose path contains `:` cannot be granted (the character separates the mode).
