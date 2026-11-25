@@ -57,3 +57,6 @@ strace                # a real tracer for the devel grant's tests (tests/test_de
 gdb                   # a real debugger for the devel grant's tests
 linux-perf            # perf, a real profiler for the devel grant's tests (the `perf` package on Fedora)
 libnss3               # NSS and NSPR: libraries every Electron app links against; the probe of the URL-handler measurements (docs/develop/url-handler-evidence.md) cannot start without them
+gir1.2-gtk-3.0        # a real GTK 3 toolkit client (python3-gi): its AT-SPI bridge is what docs/develop/a11y-evidence.md measures through the proxy
+gir1.2-atspi-2.0      # the assistive-technology side (libatspi): the stand-in for a screen reader in docs/develop/a11y-evidence.md
+python3-pyqt6         # a real Qt 6 toolkit client: its accessibility bridge asks the same org.a11y.Bus question (docs/develop/a11y-evidence.md)

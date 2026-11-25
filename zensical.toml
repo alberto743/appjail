@@ -108,6 +108,7 @@ nav = [
       "decisions/desktop/xwayland-rootful.md",
       "decisions/desktop/dbus-refused.md",
       "decisions/desktop/dbus-connection.md",
+      "decisions/desktop/a11y-bus.md",
       "decisions/desktop/portal-identity.md",
       "decisions/desktop/audio-graph.md",
       "decisions/desktop/pulseaudio.md",
@@ -162,6 +163,7 @@ nav = [
     { "Compositor assessment" = "compositor-assessment/ASSESSMENT.md" },
     "develop/camera-audio-evidence.md",
     "develop/url-handler-evidence.md",
+    "develop/a11y-evidence.md",
     "develop/writing-docs.md",
   ] },
 ]
