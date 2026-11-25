@@ -18,3 +18,4 @@ Decisions about the jail an app runs in. How it works is explained in
 | [Debuggers need the `devel` permission](debugging.md) | `ptrace` and one `personality` value for tracers and debuggers; `perf` stays refused |
 | [Memory, CPU and process limits come from a systemd scope](resource-limits.md) | the `memory_max`, `cpu_quota` and `tasks_max` permissions |
 | [No change under a running app](app-lock.md) | the per-app locks; `remove` and `reset` refuse while the app runs |
+| [Narrowing the host's system view](host-view.md) | studied, not built: what narrowing `/usr` breaks and hides |
