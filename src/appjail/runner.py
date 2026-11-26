@@ -325,7 +325,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         perms, opened, extra_args = _open_grants(stack, m.permissions, extra_dirs, extra_files, extra_args, say)
         if raw:
             perms = replace(perms, raw_terminal=True)  # for this run: the app also gets TERM, as with the permission
-        limits.check(perms, env)
+        limits.check(perms, env, name=name)
         if perms.network_host and not scoped:
             raise RunError(landlock.NEEDED_FOR_NETWORK_HOST)
         wl_sock = stack.enter_context(restricted(env, app_id=name)) if perms.windowed else None

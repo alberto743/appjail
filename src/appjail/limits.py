@@ -34,14 +34,14 @@ def properties(perms):
     return [*props, "OOMPolicy=kill"]
 
 
-def _prefix(perms, env, description):
+def _prefix(perms, env, description, name="APP"):
     """The command that starts a command in the scope. systemd-run needs XDG_RUNTIME_DIR to reach the user manager, and
     the app's own start has a minimal environment, so it is given through env(1); the jail clears it again."""
     runtime = env.get("XDG_RUNTIME_DIR")
     tool, env_tool = shutil.which(SYSTEMD_RUN), shutil.which("env")
     if not runtime or not tool or not env_tool:
         raise RunError("resource limits (memory_max, cpu_quota, tasks_max) need systemd-run and a systemd user session "
-                       "(XDG_RUNTIME_DIR); log in through a session, or remove the limits with `appjail perms APP "
+                       f"(XDG_RUNTIME_DIR); log in through a session, or remove the limits with `appjail perms {name} "
                        "--memory-max infinity` (and --cpu-quota, --tasks-max)")
     return [env_tool, f"XDG_RUNTIME_DIR={runtime}", tool, "--user", "--scope", "--quiet", "--collect",
             f"--description={description}", *(arg for prop in properties(perms) for arg in ("-p", prop)), "--"]
@@ -49,14 +49,14 @@ def _prefix(perms, env, description):
 
 def wrap(argv, perms, name, env):
     """argv run in a scope that carries the app's limits."""
-    return [*_prefix(perms, env, f"appjail {name}"), *argv]
+    return [*_prefix(perms, env, f"appjail {name}", name), *argv]
 
 
-def check(perms, env, run=subprocess.run):
+def check(perms, env, run=subprocess.run, name="APP"):
     """Raise RunError unless a scope with these limits can be started now (checked before anything else is set up)."""
     if not active(perms):
         return
-    argv = [*_prefix(perms, env, "appjail check"), "true"]
+    argv = [*_prefix(perms, env, "appjail check", name), "true"]
     try:
         done = run(argv, capture_output=True, text=True, timeout=CHECK_SECONDS, check=False)
     except (OSError, subprocess.TimeoutExpired) as e:
@@ -64,5 +64,5 @@ def check(perms, env, run=subprocess.run):
     if done.returncode != 0:
         lines = (done.stderr or "").strip().splitlines()
         raise RunError("the resource limits could not be applied (systemd refused the scope"
-                       + (f": {lines[-1][:200]}" if lines else "") + "); remove them with `appjail perms APP --memory-max "
+                       + (f": {lines[-1][:200]}" if lines else "") + f"); remove them with `appjail perms {name} --memory-max "
                        "infinity` (and --cpu-quota, --tasks-max) or run from a login session")

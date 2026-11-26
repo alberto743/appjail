@@ -78,7 +78,7 @@ def deliver(link):
     print("appjail: a link could not be delivered: no process could be started", file=sys.stderr)
 
 def serve():
-    buf = b""
+    buf, rest_of_long = b"", False
     while True:
         data = os.read(fd, 65536)
         if not data:
@@ -86,6 +86,9 @@ def serve():
         buf += data
         while b"\\n" in buf:
             line, _, buf = buf.partition(b"\\n")
+            if rest_of_long:  # the end of a line already refused as too long, not a link of its own
+                rest_of_long = False
+                continue
             link = line.decode("utf-8", "replace")
             if len(line) > MAX or not good(link):
                 print("appjail: a link was refused", file=sys.stderr)
@@ -94,7 +97,9 @@ def serve():
             take()
             deliver(link)
         if len(buf) > MAX:
-            buf = b""
+            if not rest_of_long:
+                print("appjail: a link was refused", file=sys.stderr)
+            buf, rest_of_long = b"", True
 
 threading.Thread(target=serve, daemon=True).start()
 code = app.wait()

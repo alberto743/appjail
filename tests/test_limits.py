@@ -191,7 +191,7 @@ def extract(image, dest, fallback=False):
 
 def test_launch_wraps_the_whole_start_and_leaves_an_app_without_limits_alone(sandbox, runtime, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
-    monkeypatch.setattr(limits, "check", lambda perms, env: None)
+    monkeypatch.setattr(limits, "check", lambda perms, env, name: None)
     seen = []
     env = {"XDG_RUNTIME_DIR": str(runtime), "WAYLAND_DISPLAY": "wayland-test"}
     install(sandbox)
