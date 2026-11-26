@@ -108,8 +108,8 @@ An app runs with a cleared environment, so a variable your shell sets does not r
 (an Electron launcher that picks Wayland only when asked, for example). Set it in the manifest:
 
 ```sh
-appjail perms NAME --set-env CLAUDE_USE_WAYLAND=1
-appjail perms NAME --unset-env CLAUDE_USE_WAYLAND
+appjail perms NAME --set-env MYAPP_USE_WAYLAND=1
+appjail perms NAME --unset-env MYAPP_USE_WAYLAND
 ```
 
 It is not a permission and grants nothing, and it survives `update` and `reset`. The manifest is plain text kept in git,

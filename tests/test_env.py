@@ -80,9 +80,9 @@ def test_hand_edited_manifest_is_checked_and_env_must_be_a_table():
 
 def test_user_env_reaches_the_jail(sandbox, runtime):
     kw = build(sandbox, runtime)
-    env = setenv(runtimejail.runtime_args(**kw, user_env=(("CLAUDE_USE_WAYLAND", "1"),)))
-    assert env["CLAUDE_USE_WAYLAND"] == "1" and env["HOME"] == runtimejail.APP_HOME
-    assert "CLAUDE_USE_WAYLAND" not in setenv(runtimejail.runtime_args(**kw))
+    env = setenv(runtimejail.runtime_args(**kw, user_env=(("MYAPP_USE_WAYLAND", "1"),)))
+    assert env["MYAPP_USE_WAYLAND"] == "1" and env["HOME"] == runtimejail.APP_HOME
+    assert "MYAPP_USE_WAYLAND" not in setenv(runtimejail.runtime_args(**kw))
 
 
 @pytest.mark.parametrize("display", sorted(manifest.DISPLAYS))
@@ -110,12 +110,12 @@ def saved():
 
 def test_perms_set_and_unset_env(h):
     h.add()
-    c = perms("--set-env", "CLAUDE_USE_WAYLAND=1", "--set-env", "B=2")
-    assert saved().env == (("B", "2"), ("CLAUDE_USE_WAYLAND", "1"))
+    c = perms("--set-env", "MYAPP_USE_WAYLAND=1", "--set-env", "B=2")
+    assert saved().env == (("B", "2"), ("MYAPP_USE_WAYLAND", "1"))
     assert "plain text" in c.text and "+ B=2" in c.text
     c = perms("--unset-env", "B")
-    assert saved().env == (("CLAUDE_USE_WAYLAND", "1"),)
-    assert "CLAUDE_USE_WAYLAND=1" in perms().text
+    assert saved().env == (("MYAPP_USE_WAYLAND", "1"),)
+    assert "MYAPP_USE_WAYLAND=1" in perms().text
 
 
 def test_perms_refuses_bad_env(h):

@@ -49,7 +49,7 @@ and passwords out of it.
 
 ```toml
 [env]
-CLAUDE_USE_WAYLAND = "1"
+MYAPP_USE_WAYLAND = "1"
 ```
 
 ## Examples

@@ -3,9 +3,9 @@
 *Decision on [isolation](index.md).*
 
 **Context.** The jail's environment is cleared and rebuilt from a fixed list, so nothing of the host's reaches an app.
-Some apps need a variable to start: an unofficial Claude Desktop package uses X11 by default and fails under
-`display = "wayland"` (no `DISPLAY`) unless `CLAUDE_USE_WAYLAND=1` is set. The only way was a file in the app's private
-home, which `reset` deletes and `perms` does not show.
+Some apps need a variable to start: an unofficial package of an Electron app uses X11 by default and fails under
+`display = "wayland"` (no `DISPLAY`) unless a variable of its own asks for Wayland. The only way was a file in the app's
+private home, which `reset` deletes and `perms` does not show.
 
 **Options.** A file in the private home, documented; a fix in each launcher; an `[env]` table in the manifest; an
 `env` permission.

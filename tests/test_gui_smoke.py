@@ -373,15 +373,15 @@ def test_permissions_editor_edits_the_environment_and_the_other_lists(window, mo
         assert env.values(flush=False) == ("A=1", "B=x=y")
         env.box.selection_set(0)
         env.remove()  # A=1 goes
-        env.var.set("CLAUDE_USE_WAYLAND=1")  # text left in the entry counts
+        env.var.set("MYAPP_USE_WAYLAND=1")  # text left in the entry counts
         ed["D-Bus names (talk)"].var.set("org.c.D")
         bt["Review changes…"].invoke()
 
     got = _open_permissions(window, monkeypatch, act)
-    assert got["env"] == ("B=x=y", "CLAUDE_USE_WAYLAND=1") and got["dbus_filter"] == ("org.a.B", "org.c.D")
+    assert got["env"] == ("B=x=y", "MYAPP_USE_WAYLAND=1") and got["dbus_filter"] == ("org.a.B", "org.c.D")
     command = app.argv.perms_argv("app", PERMS_STATE, got)
     assert command[:2] == ["perms", "app"] and "--yes" not in command
-    assert command[command.index("--unset-env") + 1] == "A" and "CLAUDE_USE_WAYLAND=1" in command
+    assert command[command.index("--unset-env") + 1] == "A" and "MYAPP_USE_WAYLAND=1" in command
 
 
 def test_permissions_editor_shows_the_granted_portals_and_builds_the_changes(window, monkeypatch):
