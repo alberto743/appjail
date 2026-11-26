@@ -8,8 +8,8 @@ appjail-gui --desktop           # add appjail to your application menu (--remove
 
 The window has four tabs: **Apps** (run, run with extra access for one run, open a file, update, permissions and
 environment variables, portals, history, menu entry and file types, reset the app's private home, remove), **Add** (from
-GitHub, a URL or a file, with every permission option, the memory, CPU and process limits included; options that do not apply to the chosen source are greyed out),
-**Search** (results from the catalogs, and "Add this app…" to copy a hit into the Add form), and **Tools** (helpers,
+GitHub, a URL or a file, with every permission option and limit; options that do not apply to the chosen source are
+greyed out), **Search** (results from the catalogs, and "Add this app…" to copy a hit into the Add form), and **Tools** (helpers,
 version, the history of all apps).
 
 It runs the same commands as the terminal and shows their output in one pane. Every question a command asks appears as
@@ -22,8 +22,9 @@ file bound alone into the jail and read-only unless you tick the box. Following 
 loopback, refused by default) is a check box on the Add tab (URL sources), in the update dialog and under Catalogs, each
 with its warning; the asset pattern of a GitHub app is a field of the update dialog, and the appjail-db commit a field
 under Catalogs.
-Their output is shown in the pane with the control sequences removed, so the `raw_terminal` check box (your terminal as it
-is, for `appjail run` in a terminal) has no effect on the output of a run started from the window.
+
+An app started from the window has no terminal: its output is shown in the pane with the control sequences removed, so
+`raw_terminal` (your terminal as it is, for `appjail run` in a terminal) changes nothing there.
 
 The privileged portals are one check box each, with what the portal lets the app do beside it, in the **Add** tab and in
 the permissions editor (they need the `portals` permission). Checking one builds the same `--portal`, `--add-portal` or

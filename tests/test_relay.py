@@ -108,6 +108,22 @@ def test_the_supervisor_runs_the_helper_for_each_good_link_and_drops_the_rest(tm
     assert proc.stderr.read().count(b"refused") == 4
 
 
+def test_the_end_of_a_line_too_long_to_hold_is_not_read_as_a_link(tmp_path):
+    proc, fifo = start(tmp_path, ["gemini"], ["/bin/sleep", "30"])
+    fd = os.open(fifo, os.O_WRONLY)
+    os.write(fd, b"x" * 5000)  # no newline: the relay drops what it holds
+    time.sleep(0.5)
+    os.write(fd, b"gemini://x/end-of-the-long-line\ngemini://x/next\n")
+    os.close(fd)
+    log = tmp_path / "log"
+    assert wait_for(lambda: log.exists() and log.read_text(), 10)
+    time.sleep(0.5)
+    assert log.read_text().splitlines() == ["gemini://x/next"]
+    proc.terminate()
+    proc.wait(timeout=10)
+    assert proc.stderr.read().count(b"refused") == 1
+
+
 def test_the_supervisor_passes_the_exit_status_and_forwards_the_stop_signal(tmp_path):
     proc, _ = start(tmp_path, ["gemini"], ["/bin/sh", "-c", "exit 7"])
     assert proc.wait(timeout=10) == 7

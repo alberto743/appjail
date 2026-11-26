@@ -18,7 +18,7 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `camera` | off | every V4L2 video-capture node present at start, and for each its own `/sys` entry | | yes |
 | `portals` | off | the safe set of desktop portals through the filtering D-Bus proxy, and the document portal | `xdg-dbus-proxy`, xdg-desktop-portal | yes |
 | `userns` | off | nested user namespaces and the mount API inside the jail ([namespaces](../understand/isolation/namespaces.md#nested-user-namespaces)) | | yes |
-| `linger` | off | nothing; the jail lasts until every process in it has exited ([process lifetime](../understand/isolation/lifetime.md)) | | no |
+| `linger` | off | nothing; the jail lasts until every process in it has exited ([process lifetime](../understand/isolation/lifetime.md)) | `/usr/bin/python3`; refused without it | no |
 | `full_wayland` | off | running although the app's Wayland socket lists privileged interfaces, or interfaces appjail does not know | | yes |
 | `devel` | off | debuggers and tracers: `ptrace` and the one `personality` value `ADDR_NO_RANDOMIZE` are allowed in the jail; `perf_event_open` stays refused ([seccomp](../understand/isolation/seccomp.md), [debugging](../decisions/isolation/debugging.md)) | | yes |
 | `raw_terminal` | off | your terminal as it is: without it, when the app's output goes to a terminal, appjail gives the app no input and cleans its output of control sequences ([untrusted text](../understand/acquisition/untrusted-text.md#limits)). With it, the app sees your terminal and a validated `TERM` | | yes |
@@ -35,6 +35,10 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `tasks_max` | a number or a percentage (`512`, `20%`); not set = no limit | not set | `--tasks-max` |
 | `audio_mode` | `pipewire` (a private audio graph per app), `pulse` (the host's Pulse socket, which always includes capture) | `pipewire` | `--audio-mode` |
 
+The limits need `systemd-run` and a systemd user session; an app with a limit that cannot be applied is refused
+([resource limits](../understand/isolation/resource-limits.md)). `perms --memory-max infinity` (and the same for the
+others) removes one.
+
 ## Lists
 
 | Key | Entries | Add / remove | Install option |
@@ -43,7 +47,7 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `dbus_filter` | session-bus names the app may talk to; a trailing `.*` covers the names below | `--add-dbus`, `--rm-dbus` | `--dbus` |
 | `dbus_own` | session-bus names the app may own | `--add-dbus-own`, `--rm-dbus-own` | `--dbus-own` |
 | `portal_interfaces` | opt-in portal interfaces, with `portals` | `--add-portal`, `--rm-portal` | `--portal` |
-| `schemes` | URL schemes the app is offered as a handler of, and the relay that delivers links to it while it runs (at most 16, lower case, never `file`) | `--add-scheme`, `--rm-scheme` | `--scheme` |
+| `schemes` | URL schemes the app is offered as a handler of, and the relay that delivers links to it while it runs (at most 16, lower case, never `file`; needs `/usr/bin/python3`) | `--add-scheme`, `--rm-scheme` | `--scheme` |
 
 Directory entries are checked against the [paths that can never be granted](../guide/files.md#what-cannot-be-granted)
 when they are given and again, on the folder really opened, at every start.
@@ -54,6 +58,7 @@ when they are given and again, on the folder really opened, at every start.
 |---|---|
 | `--dir PATH[:ro\|:rw]` | a folder for this run only |
 | `--file PATH[:ro\|:rw]` | one regular file for this run only; its path in the jail is added to the app's arguments |
+| `--raw` | your terminal as it is for this run only, as `raw_terminal` gives it for every run |
 
 ## Always, whatever the manifest says
 

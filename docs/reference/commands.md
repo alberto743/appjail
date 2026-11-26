@@ -71,17 +71,19 @@ close it first. Document-portal grants are kept (`appjail portals APP` lists and
 
 ### `open`
 
-`appjail open APP [--rw] -- FILE_OR_LINK...`: open files with an app, each bound alone into its jail, read-only unless `--rw`.
-A file may be a path or a `file:` URL. A link of a scheme granted with `--scheme` is passed to the app as one argument,
-after the checks of [Links reach a running app through a relay](../decisions/desktop/url-handlers.md); any other scheme is
-refused. This is what a menu entry with file types or schemes runs. Nothing named means a plain start.
+`appjail open APP [--rw] -- FILE_OR_LINK...`: open files and links with an app. Each file (a path or a `file:` URL) is
+bound alone into the jail, read-only unless `--rw`. A link must be of a scheme granted with `--scheme`, after the checks
+of [Links reach a running app through a relay](../decisions/desktop/url-handlers.md); any other scheme is refused. A new
+jail gets the links as arguments; when only links are named and the app is already running, they go to its relay
+instead. This is what a menu entry with file types or schemes runs. Nothing named means a plain start.
 
 ## Inspecting and changing
 
 ### `list`
 
 `appjail list [-l|--long] [--table] [--json]`: the installed apps with version, source, evidence tier, channel and any update
-seen. `-l` adds what each app is granted; `--json` prints one JSON document, permissions included. Each app is printed as its name followed by one bullet per field (and, with `-l`, per grant), so a long value wraps under its text; `--table` prints one aligned table row per app instead.
+seen, each app as its name and one bullet per field. `-l` adds what each app is granted; `--table` prints one aligned
+row per app instead; `--json` prints one JSON document, permissions included.
 
 ### `perms`
 

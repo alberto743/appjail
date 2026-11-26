@@ -49,7 +49,10 @@ meant to give it.
 
 ## Limits
 
-- No default applications or per-type actions. A file opened while the app runs starts a second jail (links are relayed, files are not).
+- No default applications or per-type actions. A file opened while the app runs starts a second jail (links are relayed,
+  files are not).
+- The relay is a Python script run by the host's `/usr/bin/python3` inside the jail; without it, an app with `schemes`
+  is refused.
 - A loader bug triggered by the pixel values of a well-formed image is not removed by the rewrite.
 - An app with `display = none` gets no entry, since it would start invisibly.
 

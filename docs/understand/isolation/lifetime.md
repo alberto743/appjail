@@ -71,6 +71,8 @@ outer supervisor and stays until `linger` ends. Decision:
   runtime directory is emptied.
 - With `linger`, an app that leaves a process behind (a crash reporter, a background service of its own) keeps
   `appjail run` from returning until that process exits. Ctrl-C still ends everything.
+- The supervisors of `linger` and of the [link relay](../desktop/menu-entries.md) are Python scripts run by the host's
+  `/usr/bin/python3` inside the jail; without it, an app with either is refused.
 - An update of a running app downloads and checks the new version, then fails before replacing anything; a candidate
   in quarantine stays pending, and `update` installs it once the app is closed.
 - Extracting a large app can hold the exclusive lock for longer than a minute, so a command started meanwhile on the

@@ -31,8 +31,8 @@ AppImages do the same. appjail is built around the opposite assumptions:
   runs no install scripts and does not update itself.
 - **You name the source.** A GitHub `owner/repo`, an AppImage URL or a file; nothing the software says can change it.
 - **Downloads and extraction are jailed**, each step with only the access it needs.
-- **Nothing is granted by default.** An app starts with a private home and a window; sound, GPU, network, folders,
-  D-Bus names and portals are permissions you grant and can read back.
+- **Nothing is granted by default.** An app starts with a private home and a window; sound, microphone, GPU, camera,
+  network, folders, D-Bus names and portals are permissions you grant and can read back.
 - **Updates are reviewed.** A new release waits in quarantine (7 days by default), is shown as a difference, and is
   blocked if its evidence gets weaker or the repository changes owner.
 
