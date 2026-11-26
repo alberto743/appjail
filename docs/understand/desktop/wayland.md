@@ -50,11 +50,11 @@ they have.
   a privileged interface, or one appjail has not classified, the app is refused, with the names of the interfaces and
   what they would allow. The permission `full_wayland` accepts that risk for one app: it then runs, with a warning.
 - **Two tables.** `wayland.py` holds the privileged interfaces by kind and, for every allowed interface, the reason
-  (`RATIONALE`): it acts only on the app's own windows or buffers, on input while it has the focus, behind a token another
-  client handed over, or it only describes the hardware. Anything in neither table is *unknown* and treated as
+  (`RATIONALE`): it acts only on the app's own windows or buffers, on input while it has the focus, behind a token
+  another client handed over, or it only describes the hardware. Anything in neither table is *unknown* and treated as
   privileged. An interface is judged by what it gives the app, not by whether refusing it would refuse a common desktop
-  ([the three questions](../../decisions/desktop/wayland-allowlist.md)). A few are allowed as *accepted limits*, with the
-  cost written down: idle notification and inhibition, the colour profile and EDID of the outputs (a hardware
+  ([the three questions](../../decisions/desktop/wayland-allowlist.md)). A few are allowed as *accepted limits*, with
+  the cost written down: idle notification and inhibition, the colour profile and EDID of the outputs (a hardware
   fingerprint), on GNOME the unprivileged GPU render-node descriptor that `wp_drm_lease_device_v1` sends, and
   `gtk_shell1`, through which an app can take the keyboard focus (see Limits).
 - **Apps without a window** (`display = none`) get no socket, no display variables, and no check; they also run
@@ -92,12 +92,12 @@ Ordinary copy and paste works everywhere: it uses the core clipboard, which need
   with no token, and then receives the keys typed there. The window changes visibly, but it is a real exposure of what
   you type while the app runs ([measured](../../compositor-assessment/ASSESSMENT.md), [accepted
   limit](../../decisions/desktop/wayland-allowlist.md)).
-- The registry is read once, when the app starts. A global the compositor adds later (a plugin, a restart of the shell) is
-  not seen.
+- The registry is read once, when the app starts. A global the compositor adds later (a plugin, a restart of the shell)
+  is not seen.
 - The measurements are of headless compositors, not of complete desktop sessions. A compositor update that adds an
   interface refuses apps until it is classified; the message names it, and a report is welcome.
-- Muffin, and so Cinnamon, crashes when some ordinary clients use the clipboard; any app with a window can end a Cinnamon
-  Wayland session, and appjail cannot prevent it.
+- Muffin, and so Cinnamon, crashes when some ordinary clients use the clipboard; any app with a window can end a
+  Cinnamon Wayland session, and appjail cannot prevent it.
 
 ## References
 

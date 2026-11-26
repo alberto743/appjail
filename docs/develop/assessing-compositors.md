@@ -8,10 +8,10 @@ the same way. The results and the decisions taken from them are in
 
 ## The question
 
-Can an app with default permissions capture the screen, read or inject input, read another app's clipboard, take over the
-desktop or run commands outside its jail, through what the desktop offers it? A desktop offers two things: the Wayland
-socket the app gets, and the names on the session bus a user may grant. Both are measured. Advertised is not usable:
-every capability is tried with a real client, and every claim in ASSESSMENT.md points at a saved result.
+Can an app with default permissions capture the screen, read or inject input, read another app's clipboard, take over
+the desktop or run commands outside its jail, through what the desktop offers it? A desktop offers two things: the
+Wayland socket the app gets, and the names on the session bus a user may grant. Both are measured. Advertised is not
+usable: every capability is tried with a real client, and every claim in ASSESSMENT.md points at a saved result.
 
 ## Where
 
@@ -36,8 +36,8 @@ not measured there, and the rule decides it from its registry at run time.
 
 ## Adding a compositor
 
-1. **Package.** Add it to `tests/vm/packages-compositors.txt` with a comment (what it is, how it starts), plus whatever it
-   needs to start (Muffin needs `cinnamon-settings-daemon` for its GSettings schemas). Provision every guest.
+1. **Package.** Add it to `tests/vm/packages-compositors.txt` with a comment (what it is, how it starts), plus whatever
+   it needs to start (Muffin needs `cinnamon-settings-daemon` for its GSettings schemas). Provision every guest.
 2. **Start it headless.** Add an entry to `probe.COMPOSITORS`: packages, command line, environment. Use its headless
    backend if it has one (`--headless`, `--virtual`, `WLR_BACKENDS=headless`, `AQ_BACKENDS=headless`). If it has none,
    run it nested as a window of a private Xvfb (`probe.XVFB`, as Muffin and Cinnamon do); weston is also measured as a
@@ -60,17 +60,17 @@ not measured there, and the rule decides it from its registry at run time.
    a tool (like `mutter_dbus.py`, `cinnamon_dbus.py`): a GTK 4 window of another client with a red background that logs
    the keys it receives (`mutter_dbus.py window`) is the victim; a capture must hold its red pixels and be the size of
    the whole screen; a command must leave a file. Run it three times per distribution.
-7. **Check the connection, not just the name.** Run `shared_connection.py` with the compositor added to `PRIVILEGED_CALL`
-   (its refused name and its privileged call). With `--talk`, a name appjail allows on the same connection reaches
-   everything that connection serves; every row's `appjail` outcome must be "refused at launch" or "confined" with the
-   privileged call blocked. A name the compositor owns that apps need (a service of its own) goes in `dbusproxy.CONFINED`
-   with its specified interfaces and path, and in `SERVICE_CALL` with a harmless call of its own.
+7. **Check the connection, not just the name.** Run `shared_connection.py` with the compositor added to
+   `PRIVILEGED_CALL` (its refused name and its privileged call). With `--talk`, a name appjail allows on the same
+   connection reaches everything that connection serves; every row's `appjail` outcome must be "refused at launch" or
+   "confined" with the privileged call blocked. A name the compositor owns that apps need (a service of its own) goes in
+   `dbusproxy.CONFINED` with its specified interfaces and path, and in `SERVICE_CALL` with a harmless call of its own.
 8. **Rule and clipboard.** `rule_a.py --only NAME` and `clipboard.py --only NAME`. `clipboard.py` needs a keyboard on
    the headless seat: a persistent `wtype` where the virtual-keyboard protocol exists, Mutter's RemoteDesktop for Mutter
    and GNOME Shell, a nested run otherwise.
-9. **Save.** Merge the new compositor's entry into each existing results file (inside the guest, so the host runs nothing)
-   rather than rerunning everything: the survey's `appjail_policy_*` fields record the policy as it was when it ran. Copy
-   the files back, run `report.py --write` in a guest, add the new `generated` blocks to ASSESSMENT.md and to
+9. **Save.** Merge the new compositor's entry into each existing results file (inside the guest, so the host runs
+   nothing) rather than rerunning everything: the survey's `appjail_policy_*` fields record the policy as it was when it
+   ran. Copy the files back, run `report.py --write` in a guest, add the new `generated` blocks to ASSESSMENT.md and to
    `tests/test_assessment.py`.
 10. **Decide and document.** Change `wayland.PRIVILEGED` or `RATIONALE`, `grants.DBUS_BLOCKED` and `tests/test_dbus.py`
     as the results require; update ASSESSMENT.md (what the table shows, decision D, the limits), the decision pages
@@ -90,30 +90,31 @@ not measured there, and the rule decides it from its registry at run time.
   inherits its environment, `QT_QPA_PLATFORM=offscreen` included: start Plasma's shell beside KWin, not through it.
 * **Shells take their bus names after the socket appears.** Wait a few seconds after `wait_for_display` before listing
   them.
-* **GNOME Shell starts in its overview**, which takes the first click and keys: press Escape, wait, and retry the typing.
-  **Mutter focuses a new window at the first key after a click** and does not deliver that key: send a Shift first.
+* **GNOME Shell starts in its overview**, which takes the first click and keys: press Escape, wait, and retry the
+  typing. **Mutter focuses a new window at the first key after a click** and does not deliver that key: send a Shift
+  first.
 * **Read the answer, not only the reply.** GNOME Shell's `Eval` returns `(false, "")` outside its unsafe mode: the call
   went through, the script did not run. `report.py` counts that as refused.
-* **Measure against the compositor's own idea of the screen.** Nested in Xvfb, Cinnamon's output is 800x600 on a 1024x768
-  Xvfb screen; compare a capture with the shell's stage size.
+* **Measure against the compositor's own idea of the screen.** Nested in Xvfb, Cinnamon's output is 800x600 on a
+  1024x768 Xvfb screen; compare a capture with the shell's stage size.
 * **A test device can be the bug.** WirePlumber never showed the `vivid` camera because PipeWire misreads one of vivid's
   test controls ([Camera: the capture nodes only](../decisions/desktop/camera.md)); check the device before blaming the
   code under test.
 * **Names are case-sensitive.** `org.Cinnamon` (the shell) and `org.cinnamon.Muffin` (the compositor) are different
   families; a blocklist entry covers only its own spelling.
-* **The bus filter works on names; the risk is per connection.** One process owns many names on one connection, and a call
-  to any of them reaches all of its objects (`shared_connection.py`).
-* **A new version can rename a name or add a global.** Cinnamon 6.8 answers screenshots as `org.cinnamon.Screenshot`, not
-  `org.gnome.Shell.Screenshot`, so a tool that calls the old name measures nothing; `cinnamon_dbus.py` takes the name the
-  shell owns. A global the lists do not know refuses the compositor: classify it from the protocol's own XML, and say in
-  ASSESSMENT.md when one could not be read.
+* **The bus filter works on names; the risk is per connection.** One process owns many names on one connection, and a
+  call to any of them reaches all of its objects (`shared_connection.py`).
+* **A new version can rename a name or add a global.** Cinnamon 6.8 answers screenshots as `org.cinnamon.Screenshot`,
+  not `org.gnome.Shell.Screenshot`, so a tool that calls the old name measures nothing; `cinnamon_dbus.py` takes the
+  name the shell owns. A global the lists do not know refuses the compositor: classify it from the protocol's own XML,
+  and say in ASSESSMENT.md when one could not be read.
 * **Rerun the rule after changing the lists.** `rule-a-*.json` records the verdicts of the lists as they were; after
   `wayland.PRIVILEGED` or `RATIONALE` change, run `rule_a.py` again for every distribution, or
   `tests/test_wayland.py` fails against the old verdict.
 
 ## What this does not cover
 
-Headless or nested compositors in virtual machines, with default configuration: no logged-in desktop, no session manager,
-no extensions, no portal backends or consent dialogs, no clipboard managers. A real session can add bus names and
-services (GNOME Shell may own `org.freedesktop.Notifications` there; the headless one did not). Those checks are manual,
-on a real machine, and are listed as such in ASSESSMENT.md and CLAUDE.md.
+Headless or nested compositors in virtual machines, with default configuration: no logged-in desktop, no session
+manager, no extensions, no portal backends or consent dialogs, no clipboard managers. A real session can add bus names
+and services (GNOME Shell may own `org.freedesktop.Notifications` there; the headless one did not). Those checks are
+manual, on a real machine, and are listed as such in ASSESSMENT.md and CLAUDE.md.

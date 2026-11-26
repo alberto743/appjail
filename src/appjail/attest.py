@@ -22,6 +22,7 @@ from .textsafe import clean
 
 ISSUER = "https://token.actions.githubusercontent.com"
 TIMEOUT = 180
+MAX_OUTPUT = 4 * 1024 * 1024  # gh prints one JSON document with every bundle it verified: it is parsed whole
 
 
 class AttestError(Exception):
@@ -81,7 +82,7 @@ def verify(subject, full_name, bundles, owner_id=None, run=jail.run):
         cmd = ["/gh", "attestation", "verify", "/subject", "--repo", full_name, "--bundle", "/bundle.jsonl",
                "--format", "json"]
         try:
-            proc = run(_args(gh, subject, bundle_file, scratch) + cmd, timeout=TIMEOUT)
+            proc = run(_args(gh, subject, bundle_file, scratch) + cmd, timeout=TIMEOUT, keep=MAX_OUTPUT)
         except JailError as e:
             raise AttestError(str(e)) from e
         if proc.returncode != 0:

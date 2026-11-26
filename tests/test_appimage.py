@@ -3,6 +3,7 @@
 
 import os
 import shutil
+import stat
 import struct
 import subprocess
 from unittest import mock
@@ -157,6 +158,18 @@ def test_remove_tree_handles_readonly_dirs(tree):
     d.chmod(0o555)
     store.remove_tree(tree)
     assert not tree.exists()
+
+
+def test_remove_tree_of_a_symlink_removes_the_link_and_leaves_its_target_alone(tmp_path):
+    target = tmp_path / "target"
+    (target / "sub").mkdir(parents=True)
+    (target / "sub").chmod(0o555)
+    link = tmp_path / "link"
+    link.symlink_to(target)
+    store.remove_tree(link, strict=True)
+    assert not os.path.lexists(link)
+    assert (target / "sub").is_dir() and stat.S_IMODE((target / "sub").stat().st_mode) == 0o555
+    (target / "sub").chmod(0o755)
 
 
 def test_remove_tree_handles_unreadable_dirs(tree):

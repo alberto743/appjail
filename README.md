@@ -95,16 +95,18 @@ appjail remove lagrange          # delete the app and its private home
   privileged interfaces, unless you accept that per app; on KDE Plasma and Cinnamon 6.8 that is every app for now.
 - **Evidence proves "unchanged", not "safe".** A publisher who ships malware from the start passes every check;
   containment is what limits it.
-- **An app sees your system's programs and libraries.** The host's `/usr` and `/lib*` are bound read-only: an app can list
-  the installed software and library versions and run any program there, inside its jail. There is no runtime to hide them.
+- **An app sees your system's programs and libraries.** The host's `/usr` and `/lib*` are bound read-only: an app can
+  list the installed software and library versions and run any program there, inside its jail. There is no runtime to
+  hide them.
 - **A grant widens what a compromised app can do.** An app with `network` reaches your LAN; a granted D-Bus name of an
   unknown service reaches everything its owner serves.
 - **Links reach an app only through a relay you opt into.** There is no reply from it, so a link the app ignores is not
   reported, and a file cannot be handed to an app that is already running.
 - Releases are resolved on GitHub only; x86-64 only.
 
-The complete list is on each mechanism's page; see [The problem](https://alberto743.github.io/appjail/understand/problem/).
-To report a vulnerability, see [SECURITY.md](https://github.com/alberto743/appjail/blob/main/SECURITY.md).
+The complete list is on each mechanism's page; see
+[The problem](https://alberto743.github.io/appjail/understand/problem/). To report a vulnerability, see
+[SECURITY.md](https://github.com/alberto743/appjail/blob/main/SECURITY.md).
 
 ## License
 

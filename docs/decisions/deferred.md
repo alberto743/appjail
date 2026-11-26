@@ -46,7 +46,7 @@ machine.
 - D-Bus: real MPRIS players and tray icons with process-id names.
 - Audio: a real headset and microphone, the desktop's microphone indicator; two apps at once.
 - URL handlers: a real click on a link in Plasma (Dolphin) or Cinnamon (Nemo, the menu) in a full session, and a login
-  flow with a real service (Obsidian's links open notes). The launchers of KDE and Cinnamon, `xdg-mime default`, `gio
-  open`, `xdg-open` and a real Electron application (Obsidian; Joplin's own check is unreliable) were measured in the guests
-  ([evidence](../develop/url-handler-evidence.md)).
+  flow with a real service (Obsidian's links open notes). The launchers of KDE and Cinnamon, `xdg-mime default`,
+  `gio open`, `xdg-open` and a real Electron application (Obsidian; Joplin's own check is unreliable) were measured in
+  the guests ([evidence](../develop/url-handler-evidence.md)).
 - Network: IPv6 over a real internet route (tested only on a simulated network).

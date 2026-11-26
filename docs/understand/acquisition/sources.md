@@ -1,6 +1,7 @@
 # Sources and the resolver
 
-*Part of [Acquisition](index.md). Previous: [the AppImage format](appimage.md). Next: [hashes and evidence tiers](evidence.md).*
+*Part of [Acquisition](index.md). Previous: [the AppImage format](appimage.md). Next:
+[hashes and evidence tiers](evidence.md).*
 
 ## What it is
 
@@ -44,8 +45,8 @@ from a repository whose owner id changed is blocked: the name now belongs to som
   `x86_64` or `amd64` win over names that say nothing. If several remain, you choose; if none, the install stops.
 - appjail derives a pattern from the chosen file name, replacing the version with `*`, and records it as
   `asset_pattern`, so later updates pick the same file.
-- GitHub's per-asset **digest** (a SHA-256 computed by GitHub when the file was uploaded) is read and, when there is one,
-  the presence of a build attestation is looked up by it. Both are shown before you are asked to download; an asset
+- GitHub's per-asset **digest** (a SHA-256 computed by GitHub when the file was uploaded) is read and, when there is
+  one, the presence of a build attestation is looked up by it. Both are shown before you are asked to download; an asset
   without a digest gets a warning that it can reach tier 4 at most, unless an attestation verifies after the download.
 
 ### Talking to GitHub
@@ -88,9 +89,11 @@ installed. Nothing identifies the publisher in either case, which the [evidence 
   [Release assets](https://docs.github.com/en/rest/releases/assets),
   [Repositories](https://docs.github.com/en/rest/repos/repos),
   [Rate limits](https://docs.github.com/en/rest/rate-limit/rate-limit).
-- GitHub Changelog, [Releases now expose digests for release assets](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/),
+- GitHub Changelog,
+  [Releases now expose digests for release assets](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/),
   June 2025.
-- AppImage documentation, [Making AppImages updateable](https://docs.appimage.org/packaging-guide/optional/updates.html):
-  the embedded update information appjail ignores.
+- AppImage documentation,
+  [Making AppImages updateable](https://docs.appimage.org/packaging-guide/optional/updates.html): the embedded update
+  information appjail ignores.
 - MITRE, [CWE-1007: Insufficient Visual Distinction of Homoglyphs](https://cwe.mitre.org/data/definitions/1007.html):
   lookalike names.

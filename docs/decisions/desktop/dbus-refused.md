@@ -20,15 +20,15 @@ between an app and the screen and keyboard. Measured on headless desktops (Debia
 - the settings database (`dconf`) can set custom keyboard shortcuts, which run commands; GVfs reaches mounts and host
   locations outside the jail's grants; the accessibility bus monitors the keyboard.
 
-**Decision.** These names are refused when typed and when a manifest is loaded, with any wildcard that would cover
-them: the bus itself, systemd, Flatpak, the portals' own names (portals have their own permission), GNOME Shell and
-the session manager, Mutter, Muffin, Cinnamon, KWin, Plasma's shell and klipper, KDE's launchers, global shortcuts and
+**Decision.** These names are refused when typed and when a manifest is loaded, with any wildcard that would cover them:
+the bus itself, systemd, Flatpak, the portals' own names (portals have their own permission), GNOME Shell and the
+session manager, Mutter, Muffin, Cinnamon, KWin, Plasma's shell and klipper, KDE's launchers, global shortcuts and
 keyboard state, the screensaver, `dconf`, GVfs and accessibility (the accessibility bus is reached only through the
-`accessibility` permission and its own proxy: [An opt-in accessibility bus](a11y-bus.md)). Wildcards with fewer than three name parts are
-refused. Names in desktop namespaces (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`, ...) cannot be
-*owned*, so an app cannot impersonate the notification daemon or the secret service; status-notifier names are the
-exception. Names that give access to stored secrets are allowed with a warning. `org.freedesktop.FileManager1` is
-not refused: it is needed to browse files when portals are used.
+`accessibility` permission and its own proxy: [An opt-in accessibility bus](a11y-bus.md)). Wildcards with fewer than
+three name parts are refused. Names in desktop namespaces (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`,
+...) cannot be *owned*, so an app cannot impersonate the notification daemon or the secret service; status-notifier
+names are the exception. Names that give access to stored secrets are allowed with a warning.
+`org.freedesktop.FileManager1` is not refused: it is needed to browse files when portals are used.
 
 **Consequences.** Refusing by name protects only if every name of the privileged process is refused; see
 [One granted name reaches its whole connection](dbus-connection.md). Not measured: the daemons of complete GNOME,

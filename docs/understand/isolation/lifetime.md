@@ -52,8 +52,8 @@ grants nothing: it only changes when the jail ends.
 
 An app granted URL `schemes` also runs under a supervisor, which reads links from a FIFO that the launch holds open and
 starts `AppRun LINK` inside the jail for each, so a single-instance app hands the link to the instance already running
-(a second jail could not: it has its own PID namespace). The FIFO is closed with the launch. With `linger` the relay is the
-outer supervisor and stays until `linger` ends. Decision:
+(a second jail could not: it has its own PID namespace). The FIFO is closed with the launch. With `linger` the relay is
+the outer supervisor and stays until `linger` ends. Decision:
 [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
 
 ## Connections

@@ -68,8 +68,9 @@ enters the domain, and replaces itself with `bwrap`. It is a separate process ra
 
 ## References
 
-- Linux kernel documentation, [Landlock: unprivileged access control](https://docs.kernel.org/userspace-api/landlock.html);
-  manual page [landlock(7)](https://man7.org/linux/man-pages/man7/landlock.7.html); project site
+- Linux kernel documentation,
+  [Landlock: unprivileged access control](https://docs.kernel.org/userspace-api/landlock.html); manual page
+  [landlock(7)](https://man7.org/linux/man-pages/man7/landlock.7.html); project site
   [landlock.io](https://landlock.io/).
 - Linux kernel documentation, [No New Privileges Flag](https://docs.kernel.org/userspace-api/no_new_privs.html).
 - Linux manual page [unix(7)](https://man7.org/linux/man-pages/man7/unix.7.html), section "Abstract sockets".

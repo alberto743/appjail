@@ -24,7 +24,8 @@ pieces depend on each other. To follow the code itself, command by command, read
 
 ## Acquisition
 
-Explained in [Acquisition](../understand/acquisition/index.md); decisions in [Acquisition](../decisions/acquisition/index.md).
+Explained in [Acquisition](../understand/acquisition/index.md); decisions in
+[Acquisition](../decisions/acquisition/index.md).
 
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
@@ -61,10 +62,14 @@ Explained in [Isolation](../understand/isolation/index.md); decisions in [Isolat
 | **Abstract unix sockets** | belong to the network namespace, not the filesystem; the X server's `@/tmp/.X11-unix/X0` | `landlock.py`, `jail.net_wrap` | `test_landlock.py` | | why `network_host` needs Landlock |
 | **Integrity at launch** | image hash, tree marker and tree digest checked; manifest compared to its last history commit | `runner.prepare`, `history.modified` | tamper tests | warnings | |
 | **Process lifetime** | own session; signals forwarded to the group; lifeline FIFO behind pasta; `linger` supervisor (subreaper) | `runner._wait_group`, `jail.Lifeline`, `linger.py` | `test_runner.py` | `--allow linger` | waiting always rejected |
+| **An app's terminal output** | on a terminal: no input, output read through a pipe and cleaned of control sequences | `termfilter.py`, `textsafe.clean_output` | `test_terminal_filter.py`, `test_raw_terminal.py` | `--allow raw_terminal`, `run --raw` | pty proxy deferred |
+| **Debuggers** (`ptrace`, `personality`) | `devel` lifts `ptrace` and allows `ADDR_NO_RANDOMIZE`; `perf_event_open` stays refused | `seccomp.DEVEL`, `seccomp.DEVEL_PERSONALITIES` | `test_devel.py`, `test_seccomp.py` | `--allow devel` | no `perf` |
+| **Resource limits** (cgroup v2 through systemd) | the launch runs in a `systemd-run --user --scope` with `MemoryMax`, `CPUQuota`, `TasksMax`; refused when the scope cannot start | `limits.py` | `test_limits.py` | `--memory-max`, `--cpu-quota`, `--tasks-max` | needs a systemd user session |
 
 ## Desktop access
 
-Explained in [Desktop access](../understand/desktop/index.md); decisions in [Desktop access](../decisions/desktop/index.md).
+Explained in [Desktop access](../understand/desktop/index.md); decisions in
+[Desktop access](../decisions/desktop/index.md).
 
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
@@ -76,13 +81,14 @@ Explained in [Desktop access](../understand/desktop/index.md); decisions in [Des
 | **Private Xwayland** (rootless, rootful + openbox) | Xwayland started inside the jail as a client of the app's Wayland socket | `runtimejail.xwayland_command` | `test_xwayland_e2e.py` | `display = xwayland|xwayland-rootful` | mutter only manages its own Xwayland |
 | **D-Bus** (session bus, names, unique names, objects, interfaces, activation) | no bus by default | `dbusproxy.py` | `test_dbus.py` | `--dbus`, `--add-dbus` | |
 | **Filtering D-Bus proxy** (`xdg-dbus-proxy`) | proxy in its own jail; `--filter`; confined known services (`--call`/`--broadcast`), others `--talk` + owner check at launch; refused names; unownable namespaces | `dbusproxy.py`, `grants.py` | `test_dbus.py`, `shared_connection.py` | `--dbus-own` | one name reaches its whole connection; owner changes after launch |
+| **Accessibility bus** (AT-SPI) | a second `xdg-dbus-proxy` in its own jail with Flatpak's rules; found through `AT_SPI_BUS_ADDRESS` | `dbusproxy.A11yProxy`, `dbusproxy.A11Y_RULES` | `test_a11y.py`, `tests/a11y/` | `--allow accessibility` | refused without the bus |
 | **XDG desktop portals** (frontend, backends, permission store, document portal) | `.flatpak-info` identity written by appjail into the proxy's jail; app id `app.appjail.<name>`; safe set + opt-in interfaces; document portal per-app view; revocation | `portal.py`, `cmd_portals.py` | `test_portal.py`, `tests/portal/` | `--allow portals`, `--portal`, `portals APP` | Flatpak identity as compatibility shim; GNOME/KDE backends untested |
 | **Audio servers** (PipeWire, WirePlumber, pipewire-pulse, PulseAudio protocol and its module loading) | private graph per app with pulse-tunnel nodes; module loading off; host PipeWire socket never bound; PulseAudio socket never bound | `audiojail.py`, `audiomode.py` | `test_private_audio.py`, `test_audio*.py`, `test_pulseaudio.py` | `audio`, `mic`, `audio_mode` | Pulse filter proxy rejected; device-change limits |
 | **GPU** (DRM card and render nodes, NVIDIA nodes, Vulkan/GLVND data) | bound only with `gpu` | `runtimejail._gpu_args` | `test_runner_jail.py` | `--allow gpu` | off by default (driver attack surface) |
 | **Camera** (V4L2 capture nodes, sysfs) | only capture nodes (`VIDIOC_QUERYCAP`) and their own sysfs directory | `runtimejail._camera_args` | `test_camera.py` | `--allow camera`, Camera portal | no per-camera choice |
 | **Network namespace and pasta** | private namespace with outbound only, no host loopback; DNS forwarder; required for `network` | `jail.net_wrap` | `test_jail.py`, `test_runner_jail.py` | `--allow network` | LAN reachable; allowlisting proxy deferred |
 | **Host network** | `network_host` with Landlock scope | `runner.launch` | `test_landlock.py` | `--allow network_host` | |
-| **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults; URL schemes only by opt-in, links relayed into the running jail (`relay.py`, `test_relay.py`) |
+| **Desktop integration** (Desktop Entry spec, icon theme, MIME types) | entry generated, never copied; icon canonicalised; types opt-in; `open` binds single files | `desktop.py`, `pngclean.py`, `cmd_desktop.py`, `cmd_open.py` | `test_desktop.py`, `test_pngclean.py`, `test_open.py` | `desktop`, `open`, `--desktop` | no defaults; URL schemes only by opt-in, links relayed into the running jail (`relay.py`, `test_relay.py`, `test_relay_stress.py`) |
 
 ## Updates
 
@@ -123,8 +129,8 @@ Decisions in [Project](../decisions/project/index.md).
 - **Provenance chain**: source (P3) → resolver → owner id → asset digest / attestation → hash pin → tier → quarantine →
   diff review → history. A weakening anywhere is a *block*, not a warning.
 - **Two kinds of jail share one builder**: helper jails (`jail.common_args`) and the app jail (`runtimejail`) share the
-  seccomp filter, `--disable-userns` and the read-only system; the app jail adds grants. The `--appimage-extract` fallback
-  is why the extraction jail must be as tight as the app jail.
+  seccomp filter, `--disable-userns` and the read-only system; the app jail adds grants. The `--appimage-extract`
+  fallback is why the extraction jail must be as tight as the app jail.
 - **`network`** = network namespace + pasta + DNS forwarder + seccomp filter as a file + `reopen.py` for grants + FIFOs
   for the portal's pipes + uid restore + lifeline FIFO for SIGKILL. pasta closing inherited descriptors is why the
   filter, the grants and the portal pipes are reopened inside its namespace; pasta running its command as root of a
@@ -148,4 +154,5 @@ Decisions in [Project](../decisions/project/index.md).
   bind mounts do not stop `connect()` to sockets; the same reasoning as abstract sockets.
 - **Desktop entry**: the AppImage's own `.desktop` would run outside the jail → generated entry → `open` binds one file
   → choosing the file is the consent, like the portal file chooser.
-- **Catalog** is untrusted data feeding only `search`; installing is always an explicit `add`, which does its own review.
+- **Catalog** is untrusted data feeding only `search`; installing is always an explicit `add`, which does its own
+  review.

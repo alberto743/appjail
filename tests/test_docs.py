@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: MPL-2.0
 
 """The documentation stays in step with the code: every command and option is in the command reference, every page is
-in the site's navigation, every concept page has the standard headings, and the policy lists are current."""
+in the site's navigation, every concept page has the standard headings, the policy lists are current, and prose is
+wrapped at 120 columns."""
 
 import argparse
 import re
@@ -75,3 +76,35 @@ def test_concept_pages_have_the_standard_headings_and_references(page):
     assert [h for h in headings if h in HEADINGS] == list(HEADINGS)
     references = text.split("\n## References", 1)[1]
     assert "](https://" in references
+
+
+WIDTH = 120
+PROSE_FILES = sorted([*(ROOT / "docs").rglob("*.md"), *(ROOT / name for name in (
+    "README.md", "SECURITY.md", "CONTRIBUTING.md", "CONTRIBUTORS.md", "DESIGN.md", "DECISIONS.md"))])
+LINK = re.compile(r"!?\[[^\]]*(?:\[[^\]]*\][^\]]*)*\]\([^)\s]*\)")
+
+
+def long_prose_lines(text):
+    """Prose lines over WIDTH: not in a code block, a table, an HTML block or a generated section, and not one link or
+    word that cannot be broken (docs/develop/writing-docs.md#line-length)."""
+    fence = html = generated = False
+    for number, line in enumerate(text.split("\n"), 1):
+        stripped = line.strip()
+        if stripped.startswith(("```", "~~~")):
+            fence = not fence
+            continue
+        if stripped.startswith("<!-- generated"):
+            generated = True
+        elif stripped.startswith("<!-- /generated"):
+            generated = False
+        html = (html or stripped.startswith("<")) and bool(stripped)
+        if fence or html or generated or stripped.startswith("|") or len(line) <= WIDTH:
+            continue
+        unbreakable = LINK.sub("L", stripped.lstrip("-*+> (")).rstrip(").,;:")
+        if " " in unbreakable:
+            yield number
+
+
+@pytest.mark.parametrize("page", PROSE_FILES, ids=lambda p: str(p.relative_to(ROOT)))
+def test_prose_is_wrapped_at_120_columns(page):
+    assert list(long_prose_lines(page.read_text(encoding="utf-8"))) == []

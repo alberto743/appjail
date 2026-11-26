@@ -26,10 +26,10 @@ Giving a jailed app that server would give it every other X11 app.
   as a client of the app's own Wayland socket (`-nolisten tcp`, the display number reported through a pipe), sets
   `DISPLAY` and starts the app. The app's environment selects X11 for its toolkits and has no `WAYLAND_DISPLAY`. The
   server lives and dies with the jail, and no other app can reach it.
-- **Rootful for GNOME.** Mutter manages the windows only of the Xwayland it starts itself, so a private rootless server's
-  windows are never shown there. `display = xwayland-rootful` starts Xwayland with one window of its own, of the size
-  `display_size` (default 1280x800), and runs `openbox` inside the jail for stacking, focus, decorations and the cursor.
-  The mode is chosen by you, never automatically.
+- **Rootful for GNOME.** Mutter manages the windows only of the Xwayland it starts itself, so a private rootless
+  server's windows are never shown there. `display = xwayland-rootful` starts Xwayland with one window of its own, of
+  the size `display_size` (default 1280x800), and runs `openbox` inside the jail for stacking, focus, decorations and
+  the cursor. The mode is chosen by you, never automatically.
 - **The same Wayland rule.** Xwayland connects to the app's Wayland socket, so the [registry rule](wayland.md) applies
   to X11-only apps as it does to native ones.
 

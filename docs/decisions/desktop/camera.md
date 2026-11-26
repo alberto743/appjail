@@ -24,8 +24,8 @@ has no such control, so a real camera through the portal remains a manual check.
 regular files. Apps that enumerate `/dev` by file type (Webcamoid's V4L2 plugin) find no camera, though opening by path
 works. Rejected: binding the host's `/dev` whole (every device, including input and sound nodes, becomes visible; the
 narrow bind is the point of this decision) and masking everything else in it (a deny list that new devices escape). The
-Camera portal is no substitute: it hands a PipeWire connection to apps that ask for it, and these apps do not. The cure is
-in the app, which should open or `stat` the nodes instead of trusting the listing.
+Camera portal is no substitute: it hands a PipeWire connection to apps that ask for it, and these apps do not. The cure
+is in the app, which should open or `stat` the nodes instead of trusting the listing.
 
 The Camera portal path is tested with `vivid`'s V4L2 node (a virtual camera) where the PipeWire can read the test
 camera's controls (Fedora 45, PipeWire 1.6.11): the session manager links it and an app in its jail receives a frame

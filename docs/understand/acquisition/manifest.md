@@ -66,5 +66,5 @@ You may edit a manifest by hand; the next command reads it with the same checks,
 
 ## References
 
-- [TOML v1.0.0](https://toml.io/en/v1.0.0) specification; Python's [tomllib](https://docs.python.org/3/library/tomllib.html),
-  the standard-library parser appjail uses.
+- [TOML v1.0.0](https://toml.io/en/v1.0.0) specification; Python's
+  [tomllib](https://docs.python.org/3/library/tomllib.html), the standard-library parser appjail uses.

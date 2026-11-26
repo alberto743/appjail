@@ -41,8 +41,9 @@ they prefer not to be.
   outside appjail's confined services reaching the other objects of a process that took it over after the app started is
   a documented limit; reaching another process's objects, a confined service's other objects, or a refused name's owner
   that owned it at launch is in scope.
-- The host's `/usr`, `/bin`, `/sbin` and `/lib*` being readable, and their programs runnable, inside the jail: a documented
-  limit ([the filesystem view](https://alberto743.github.io/appjail/understand/isolation/filesystem/#the-hosts-system-directories)).
+- The host's `/usr`, `/bin`, `/sbin` and `/lib*` being readable, and their programs runnable, inside the jail: a
+  documented limit
+  ([the filesystem view](https://alberto743.github.io/appjail/understand/isolation/filesystem/#the-hosts-system-directories)).
   Reaching a file of the host outside them is in scope.
 - What a granted permission allows, and what a tier means: tiers 3 to 5 prove "unchanged", not "safe".
 - Flaws in the installed apps, or in bubblewrap, the kernel, pasta, `gh` or DwarFS themselves. Report those upstream; if

@@ -265,15 +265,14 @@ def start_quarantine(run, stage, staged, digest, info, expected):
 
 def install_pending(run, pending, expected):
     """The quarantine is over and the server still serves the waiting candidate: install the file kept on disk."""
-    image = updater.pending_image(run.name)
-    if store.sha256_file(image) != pending["sha256"]:
-        updater.clear_pending(run.name)
-        raise Abort("the stored candidate does not match its recorded hash; it was dropped, run update again")
-    if not run.console.confirm(f"Install {pending['tag']} (kept since {pending['first_seen']})?"):
-        return "declined"
     with store.staging() as stage:
         staged = stage / "download.AppImage"
-        shutil.copyfile(image, staged)
+        shutil.copyfile(updater.pending_image(run.name), staged)
+        if store.sha256_file(staged) != pending["sha256"]:  # the copy that is installed is the one checked
+            updater.clear_pending(run.name)
+            raise Abort("the stored candidate does not match its recorded hash; it was dropped, run update again")
+        if not run.console.confirm(f"Install {pending['tag']} (kept since {pending['first_seen']})?"):
+            return "declined"
         info = {"etag": pending.get("etag"), "last_modified": pending.get("last_modified")}
         return conclude(run, stage, staged, pending["sha256"], info, expected, ask=False)
 

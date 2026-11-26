@@ -1,6 +1,7 @@
 # Hashes and evidence tiers
 
-*Part of [Acquisition](index.md). Previous: [sources and the resolver](sources.md). Next: [build attestations](attestations.md).*
+*Part of [Acquisition](index.md). Previous: [sources and the resolver](sources.md). Next:
+[build attestations](attestations.md).*
 
 ## What it is
 
@@ -73,7 +74,8 @@ How the pin is used afterwards:
 ## References
 
 - NIST, [FIPS 180-4, Secure Hash Standard](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) (SHA-256).
-- GitHub Changelog, [Releases now expose digests for release assets](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/),
+- GitHub Changelog,
+  [Releases now expose digests for release assets](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/),
   June 2025.
 - Wikipedia, [Trust on first use](https://en.wikipedia.org/wiki/Trust_on_first_use).
 - SLSA, [Supply chain threats](https://slsa.dev/spec/v1.0/threats-overview): where in the chain each kind of evidence

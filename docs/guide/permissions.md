@@ -42,8 +42,9 @@ appjail run NAME --raw -- ...                # a debugger that asks questions al
 With it the app can trace its own processes, and run them at fixed addresses (`gdb` asks for that). It cannot reach
 processes outside its jail, and the filter still applies to whatever it traces. What a debugger can attach to depends on
 your system: with `kernel.yama.ptrace_scope` at 1 (Ubuntu) it can attach only to its own descendants, so `strace CMD`
-and `gdb PROG` work and `strace -p PID` on an unrelated process does not. `perf` is not supported: it needs a sysctl
-the jail cannot change and the host's `/sys`. Revoke it when you are done (`--deny devel`). See [debugging](../decisions/isolation/debugging.md).
+and `gdb PROG` work and `strace -p PID` on an unrelated process does not. `perf` is not supported: it needs a sysctl the
+jail cannot change and the host's `/sys`. Revoke it when you are done (`--deny devel`). See
+[debugging](../decisions/isolation/debugging.md).
 
 ## Limiting memory, CPU and processes
 
@@ -64,9 +65,9 @@ limits](../understand/isolation/resource-limits.md).
 ## Apps that run in a terminal
 
 When an app's output goes to your terminal, appjail gives the app no input and removes the control sequences from what
-it prints: some of them set your clipboard or window title, rewrite the screen or make the terminal type into your input.
-A command-line tool that only prints keeps working (without colours, and its output may come late). A tool that asks
-questions, or a full-screen program such as `htop`, needs your terminal as it is:
+it prints: some of them set your clipboard or window title, rewrite the screen or make the terminal type into your
+input. A command-line tool that only prints keeps working (without colours, and its output may come late). A tool that
+asks questions, or a full-screen program such as `htop`, needs your terminal as it is:
 
 ```sh
 appjail run htop --raw                       # this run only
@@ -142,6 +143,10 @@ Start with nothing and add what the app visibly lacks:
 | an Electron or Chromium app fails setting up its sandbox | `--allow userns` |
 | it exits at once with status 0 and no window | `--allow linger` |
 | a command-line tool that needs no window | `--display none` |
+| a terminal program does not draw, or asks a question and gets no answer | `run APP --raw`, or `--allow raw_terminal` |
+| `strace` or `gdb` fails with `Operation not permitted` | `--allow devel` |
+| it uses too much memory or CPU | `--memory-max`, `--cpu-quota`, `--tasks-max` |
+| links of its own scheme (`gemini://`, `obsidian://`) do not open it | `--add-scheme`, then `appjail desktop APP` ([links](menu-entry.md#opening-links)) |
 | a screen reader, magnifier or on-screen keyboard does not see the app | `--allow accessibility` |
 | no notifications, tray icon or media keys | [D-Bus and portals](dbus.md) |
 | a light theme on a dark desktop, a different cursor or missing fonts | [Appearance](appearance.md) |

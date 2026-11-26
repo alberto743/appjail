@@ -54,7 +54,9 @@ than x86-64 appjail refuses to start an app at all rather than run it unfiltered
 
 - [bubblewrap](bubblewrap.md) loads the filter; appjail passes it as an in-memory file, or, behind `pasta`, which closes
   inherited descriptors, as a private temporary file opened inside the network namespace.
-- The `userns` permission removes exactly the namespace rows of the table; everything else stays. The `devel` permission removes the `ptrace` row and adds one `personality` value, and nothing else: `perf_event_open` stays refused, because it cannot work in the jail ([debugging](../../decisions/isolation/debugging.md)).
+- The `userns` permission removes exactly the namespace rows of the table; everything else stays. The `devel` permission
+  removes the `ptrace` row and adds one `personality` value, and nothing else: `perf_event_open` stays refused, because
+  it cannot work in the jail ([debugging](../../decisions/isolation/debugging.md)).
 - [Landlock](landlock.md) is the other kernel restriction appjail adds: seccomp filters *calls*, Landlock filters
   *access to objects*.
 - Decision: [A seccomp deny list](../../decisions/isolation/seccomp.md).
@@ -78,5 +80,6 @@ than x86-64 appjail refuses to start an app at all rather than run it unfiltered
   [io_uring_setup(2)](https://man7.org/linux/man-pages/man2/io_uring_setup.2.html).
 - Flatpak, [the seccomp rules applied to apps](https://github.com/flatpak/flatpak/blob/main/common/flatpak-run.c)
   (function `setup_seccomp`).
-- Google Security Blog, [Learnings from kCTF VRP's 42 Linux kernel exploits submissions](https://security.googleblog.com/2023/06/learnings-from-kctf-vrps-42-linux.html),
+- Google Security Blog,
+  [Learnings from kCTF VRP's 42 Linux kernel exploits submissions](https://security.googleblog.com/2023/06/learnings-from-kctf-vrps-42-linux.html),
   2023: 60% of the submissions exploited `io_uring`.

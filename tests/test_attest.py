@@ -161,8 +161,9 @@ def fake_gh(sandbox, monkeypatch):
 def runner_returning(rc=0, out="[]", err=""):
     calls = []
 
-    def run(args, timeout=None, watch=None):
+    def run(args, timeout=None, watch=None, keep=None):
         calls.append(args)
+        run.keep = keep
         return subprocess.CompletedProcess(args, rc, out, err)
     run.calls = calls
     return run
@@ -179,6 +180,15 @@ def test_verify_runs_gh_in_the_jail_with_the_bundles_and_cleans_up(fake_gh, tmp_
     assert args[args.index("--repo") + 1] == "o/App" and "--unshare-all" in args
     assert "GITHUB_TOKEN" not in args and not any("secret" in str(a) for a in args)
     assert list(store.staging_root().iterdir()) == []
+
+
+def test_verify_reads_the_whole_output_of_gh(fake_gh, tmp_path):
+    """gh prints one JSON document for every bundle; a jail keeps only the ends of a long output unless asked."""
+    subject = tmp_path / "f"
+    subject.write_bytes(b"x")
+    run = runner_returning(out=json.dumps([result()]))
+    assert attest.verify(subject, "o/App", [BUNDLE], 42, run=run).repo == "https://github.com/o/App"
+    assert run.keep >= attest.MAX_OUTPUT > 2 * jail.OUTPUT_KEEP
 
 
 @pytest.mark.parametrize("rc,out,err,match", [

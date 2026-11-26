@@ -7,10 +7,10 @@ crafted image is a known way to attack image loaders. A security review suggeste
 
 **Options.** Re-encode in a jail with an image tool; rewrite the file's structure without decoding it.
 
-**Decision.** appjail rewrites each PNG icon with its own standard-library code (`pngclean.py`): every chunk and checksum
-is checked, the image data is inflated to exactly the size its header promises (with a hard limit), and a new file is
-written with only the essential chunks (`IHDR`, `PLTE`, `tRNS`, `IDAT`, `IEND`). No pixel is interpreted. A file that
-does not fit is refused, not repaired. An SVG icon is first rendered to PNG by `rsvg-convert` in a jail with no
+**Decision.** appjail rewrites each PNG icon with its own standard-library code (`pngclean.py`): every chunk and
+checksum is checked, the image data is inflated to exactly the size its header promises (with a hard limit), and a new
+file is written with only the essential chunks (`IHDR`, `PLTE`, `tRNS`, `IDAT`, `IEND`). No pixel is interpreted. A file
+that does not fit is refused, not repaired. An SVG icon is first rendered to PNG by `rsvg-convert` in a jail with no
 network, and the result goes through the same rewrite; the host never decodes the SVG.
 
 **Why not a jail for PNG.** It would need an image tool that is not a dependency, and that tool would itself decode the

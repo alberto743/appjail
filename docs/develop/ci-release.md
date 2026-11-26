@@ -1,8 +1,9 @@
 # CI and releases
 
-All workflows are in `.github/workflows/`, run on GitHub's `ubuntu-latest` runners (Ubuntu 26.04 since November 2026), pin every action to a full commit
-hash with the version as a comment, and keep `permissions: contents: read` unless a job needs more. CI runs on Ubuntu
-only; Debian and Fedora are verified in their guests before a push ([testing](testing.md)).
+All workflows are in `.github/workflows/`, run on GitHub's `ubuntu-latest` runners (Ubuntu 26.04 since November 2026),
+pin every action to a full commit hash with the version as a comment, and keep `permissions: contents: read` unless a
+job needs more. CI runs on Ubuntu only; Debian and Fedora are verified in their guests before a push
+([testing](testing.md)).
 
 | Workflow | When | What |
 |---|---|---|
@@ -25,10 +26,11 @@ only; Debian and Fedora are verified in their guests before a push ([testing](te
 
 The build tools are pinned by version and hash in `.github/requirements-build.txt`, the documentation tools in
 `.github/requirements-docs.txt`; both are installed with `--require-hashes --only-binary=:all:`. Release notes are made
-by `.github/scripts/release_notes.py` from the commits since the previous tag, grouped by the files they touch (Security,
-Interface, Logic, Documentation, Tests, Other); merge commits are not listed, and commits that came through a pull request
-are left to GitHub's generated notes, categorised by `.github/release.yml`. The scripts are tested offline
-(`tests/test_release_notes.py`, `tests/test_bump_tools.py`, `tests/test_check_platforms.py`, `tests/test_commit_hygiene.py`).
+by `.github/scripts/release_notes.py` from the commits since the previous tag, grouped by the files they touch
+(Security, Interface, Logic, Documentation, Tests, Other); merge commits are not listed, and commits that came through a
+pull request are left to GitHub's generated notes, categorised by `.github/release.yml`. The scripts are tested offline
+(`tests/test_release_notes.py`, `tests/test_bump_tools.py`, `tests/test_check_platforms.py`,
+`tests/test_commit_hygiene.py`).
 
 ## Pull requests from automation
 

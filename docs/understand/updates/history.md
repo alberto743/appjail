@@ -5,7 +5,8 @@
 ## What it is
 
 Two mechanisms keep an update from leaving an app half-replaced or changed without a trace: an **atomic swap** of the
-installed version, with rollback when a step fails, and a **history** of every manifest change in a local git repository.
+installed version, with rollback when a step fails, and a **history** of every manifest change in a local git
+repository.
 
 ## Why it matters
 

@@ -34,10 +34,10 @@ load the kernel's `vivid` virtual camera with `sudo modprobe` inside the guest a
 
 Debian and Ubuntu are fetched through names that do not change (`trixie/latest`, `resolute/current`). Fedora publishes
 none: the image and its `CHECKSUM` file are named after the build (`45-1.4` in `guest.sh`), so that pin is bumped by
-hand. Do it when `create.sh` fails to download a new guest (the mirror drops old builds), or when you want a newer build:
-read the current build number in the release's `Cloud/x86_64/images/` directory, change the image and checksum names in
-`guest.sh`, and rebuild with `create.sh --force`. A new Fedora release, as opposed to a new build, is reported by the
-monthly `check-platforms.yml` ([CI and release](ci-release.md)).
+hand. Do it when `create.sh` fails to download a new guest (the mirror drops old builds), or when you want a newer
+build: read the current build number in the release's `Cloud/x86_64/images/` directory, change the image and checksum
+names in `guest.sh`, and rebuild with `create.sh --force`. A new Fedora release, as opposed to a new build, is reported
+by the monthly `check-platforms.yml` ([CI and release](ci-release.md)).
 
 ## The scripts (`tests/vm/`, all honour `GUEST`)
 
@@ -125,10 +125,11 @@ writes to the guest's own `~/.local/share/appjail` and `~/.config/appjail`.
 - **Policy:** the compositor registries measured on real compositors are replayed against the Wayland rule; the
   seccomp table is checked against the kernel's header; the documentation is checked against the parser (every command
   and option documented) and against the policy lists ([policy lists](../reference/policy.md)).
-- **Measurements that are not tests:** `tests/a11y/` holds the scripts behind the [accessibility-bus evidence](a11y-evidence.md)
-  (a GTK 3 and a Qt 6 window, a stand-in screen reader, a hostile client, the proxy in its own jail). They are run by hand
-  in the Debian guest and pytest does not collect them; the lint test does check them. `tests/hostview/` is the same for the
-  [host-view evidence](host-view-evidence.md): real apps traced in appjail's jail with four variants of the system view.
+- **Measurements that are not tests:** `tests/a11y/` holds the scripts behind the
+  [accessibility-bus evidence](a11y-evidence.md) (a GTK 3 and a Qt 6 window, a stand-in screen reader, a hostile client,
+  the proxy in its own jail). They are run by hand in the Debian guest and pytest does not collect them; the lint test
+  does check them. `tests/hostview/` is the same for the [host-view evidence](host-view-evidence.md): real apps traced
+  in appjail's jail with four variants of the system view.
 - What is not verified yet is listed in [Deferred and planned work](../decisions/deferred.md#not-yet-verified).
 
 ## Test conventions
@@ -143,8 +144,8 @@ fixtures and the `Services` seam: [Reading the source](source-tour.md#testing-a-
 ## Known behaviour on the CI runner
 
 - On the runner's Xwayland 24.1, a bare Xwayland crashes on ImageMagick's `display` under headless weston, with no jail
-  involved; the X11 end-to-end test skips on that signature (the "Caught signal 11" message, or the client's "X connection
-  to :0 broken" when the message does not reach standard error). Re-check when the runner's Xwayland changes.
+  involved; the X11 end-to-end test skips on that signature (the "Caught signal 11" message, or the client's "X
+  connection to :0 broken" when the message does not reach standard error). Re-check when the runner's Xwayland changes.
 - `e2e.yml` has shown two intermittent failures whose cause was not found: the GUI test hitting its 60 s limit, and a
   read timeout downloading a pinned tool. Rerun once before investigating.
 - A test that fails only on CI is often a fixture assumption (the runner's uid is 1001, the guest's 1000): find the

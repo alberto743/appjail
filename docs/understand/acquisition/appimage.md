@@ -64,4 +64,5 @@ appjail treats the file as data:
   [FUSE](https://docs.appimage.org/user-guide/troubleshooting/fuse.html).
 - Linux manual page [elf(5)](https://man7.org/linux/man-pages/man5/elf.5.html): the header fields used to find the end
   of the runtime.
-- [squashfs-tools](https://github.com/plougher/squashfs-tools) (`unsquashfs`) and [DwarFS](https://github.com/mhx/dwarfs).
+- [squashfs-tools](https://github.com/plougher/squashfs-tools) (`unsquashfs`) and
+  [DwarFS](https://github.com/mhx/dwarfs).

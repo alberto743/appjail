@@ -81,9 +81,9 @@ instead. This is what a menu entry with file types or schemes runs. Nothing name
 
 ### `list`
 
-`appjail list [-l|--long] [--table] [--json]`: the installed apps with version, source, evidence tier, channel and any update
-seen, each app as its name and one bullet per field. `-l` adds what each app is granted; `--table` prints one aligned
-row per app instead; `--json` prints one JSON document, permissions included.
+`appjail list [-l|--long] [--table] [--json]`: the installed apps with version, source, evidence tier, channel and any
+update seen, each app as its name and one bullet per field. `-l` adds what each app is granted; `--table` prints one
+aligned row per app instead; `--json` prints one JSON document, permissions included.
 
 ### `perms`
 
@@ -184,4 +184,5 @@ installed while the app runs: that app is reported as failed, and a candidate in
 ## Exit status
 
 0 on success, 1 on an error, a refusal or a cancelled confirmation (and for `update`, when any app was blocked, failed
-or not checked), 2 for a usage error, 130 after Ctrl-C.
+or not checked), 2 for a usage error, 130 after Ctrl-C. Once an app has started, `run` and `open` return the app's own
+status.
