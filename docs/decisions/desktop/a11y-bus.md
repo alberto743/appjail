@@ -5,7 +5,8 @@
 **Context.** `org.freedesktop.a11y` and the accessibility bus are refused ([D-Bus names that are always refused](dbus-refused.md)),
 so a jailed app is invisible to a screen reader, a magnifier that follows the focus, an on-screen keyboard, switch or voice
 control and UI automation. Flatpak gives its apps the accessibility bus through a second `xdg-dbus-proxy`. The
-[measurements](../../develop/a11y-evidence.md) (Debian 13, a GTK 3 and a Qt 6 window, a stand-in screen reader) found:
+[measurements](../../develop/a11y-evidence.md) (Debian 13, then Ubuntu 26.04 and Fedora 45 with the same result; a GTK 3
+and a Qt 6 window, a stand-in screen reader) found:
 
 - The accessibility bus has no policy: whoever reaches its socket can list every app and read its controls, register as
   the keyboard listener, send key events and monitor every message. Binding the socket, or letting the session-bus proxy
@@ -52,6 +53,6 @@ jail: registration passes, a key listener, an event registration, the desktop's 
 **Consequences.** One more proxy process per running app that has the permission. The behaviour is on
 [D-Bus and the filtering proxy](../../understand/desktop/dbus.md#the-accessibility-bus) and the permission in the
 [reference](../../reference/permissions.md); the accessibility names stay refused as D-Bus names, and the refusal
-message points to the permission. Not measured yet: Chromium, Electron, GTK 4 and X11 apps, Ubuntu and Fedora, `dbus-broker`, and a real
+message points to the permission. Not measured yet: Chromium, Electron, GTK 4 and X11 apps, and a real
 Orca with a real keyboard ([what is not known](../../develop/a11y-evidence.md#what-is-not-known)). A trial with Orca on a
 real desktop is a manual check.

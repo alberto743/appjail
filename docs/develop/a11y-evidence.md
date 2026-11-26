@@ -5,7 +5,7 @@ and the decision drawn from these measurements, built as the `accessibility` per
 [An opt-in accessibility bus](../decisions/desktop/a11y-bus.md). Written
 in November 2026 from experiments in the Debian 13 guest only. "Measured" means a script ran in the guest (they are in
 `tests/a11y/`); "read" means source code or documentation only; "not done" means neither. Nothing here was run on the
-maintainer's own machine, and Ubuntu and Fedora were not measured.
+maintainer's own machine. The same scripts were then run on Ubuntu 26.04 and Fedora 45 ([below](#ubuntu-and-fedora)).
 
 The question: `org.freedesktop.a11y` and the accessibility bus are refused, so a screen reader cannot see a jailed app.
 Flatpak lets its apps reach the accessibility bus through a second filtering proxy. Could appjail do the same, and what
@@ -130,6 +130,22 @@ GTK 3 apps also open a socket of their own under `$XDG_RUNTIME_DIR/at-spi2-*/soc
 them directly. In the jail that directory does not exist on the host, and the stand-in printed "Unable to open bus
 connection" and then read the tree through the bus. The tree was complete, so nothing needs binding for it.
 
+## Ubuntu and Fedora
+
+`tests/a11y/run.sh` was run unchanged on the Ubuntu 26.04 and Fedora 45 guests, after the permission was built:
+
+| | Ubuntu 26.04 | Fedora 45 |
+|---|---|---|
+| AT-SPI, `xdg-dbus-proxy`, bubblewrap | 2.60.4, 0.1.7, 0.11.1 | 2.62.2, 0.1.9, 0.13.1 |
+| GTK 3, PyQt6 | 3.24.52, 6.10.2 | 3.24.52, 6.11.0 |
+| the accessibility bus daemon | `dbus-daemon` | `dbus-broker` (the session bus too) |
+
+Every section gave the same result as on Debian: both windows complete in the stand-in's tree, with their events; behind the
+proxy the same calls answered and the same ones refused, and the fake key reached the stand-in's listener twice; on the raw
+bus every attempt succeeded; only `Socket.Embed` was needed; and the toolkits registered with `IsEnabled` false. One
+difference, on the raw bus only: `dbus-broker` refuses an `eavesdrop` match (`MatchRuleInvalid`) but accepts
+`BecomeMonitor`, so the bus can still be monitored whole there.
+
 ## What is not known
 
 - **Real assistive technology.** No Orca, no magnifier, no on-screen keyboard; the stand-in uses the library they use.
@@ -138,7 +154,6 @@ connection" and then read the tree through the bus. The tree was complete, so no
 - **Other toolkits.** GTK 4, Chromium and Electron (which find the bus themselves; Electron's AppImages are the main
   candidates) were not tried, and neither were an X11 or Xwayland app, which may find the bus through the X root window
   property `AT_SPI_BUS` before the environment.
-- **Other distributions.** Ubuntu 26.04 and Fedora 45, and a session using `dbus-broker`.
 - **A keyboard.** The compositor had no seat; key events from real hardware were not exercised.
 - **Name rules.** Flatpak also adds per-app name rules (`flatpak_context_add_bus_filters`, and
   `<app>.Sandboxed.*` for sub-sandboxes). Apps that own a name on this bus were not tried.
