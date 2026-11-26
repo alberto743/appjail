@@ -83,7 +83,7 @@ unless it still hashes the same when the quarantine ends.
 ## 6. Nothing is granted by default
 
 **Rule.** A new app gets a private home, a read-only view of the system and a window. Sound, microphone, GPU, camera,
-network, folders, D-Bus names and portals are permissions you grant one by one, and can read back and take back.
+network, folders, D-Bus names, portals and the accessibility bus are permissions you grant one by one, and can read back and take back.
 
 **Answers.** A sandbox that starts permissive is mostly a sandbox in name: tools that share audio, the session bus,
 the network and the display sockets by default leave an app most of what it could do unconfined. A missing grant

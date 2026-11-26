@@ -1,6 +1,6 @@
 # An opt-in accessibility bus
 
-*Decision on [desktop access](index.md). Status: studied and proposed, not built: the maintainer has not decided.*
+*Decision on [desktop access](index.md). Decided in November 2026 by the maintainer after the study below, and built as the `accessibility` permission.*
 
 **Context.** `org.freedesktop.a11y` and the accessibility bus are refused ([D-Bus names that are always refused](dbus-refused.md)),
 so a jailed app is invisible to a screen reader, a magnifier that follows the focus, an on-screen keyboard, switch or voice
@@ -19,7 +19,7 @@ control and UI automation. Flatpak gives its apps the accessibility bus through 
   It cannot read keys, type into another window, or see other apps.
 - The toolkits register on the bus even when no assistive tool is running.
 
-**Proposal.** A permission, off by default (principle 6), for example `accessibility = true`:
+**Decision.** A permission, off by default (principle 6): `accessibility = true`, granted with `--allow accessibility`:
 
 1. `run` reads the accessibility bus address, starts a second `xdg-dbus-proxy` on it in a jail of its own, with Flatpak's rules
    (registration, the registry's two broadcasts, and the four device-event calls), and gives the app only its socket, as
@@ -42,15 +42,16 @@ control and UI automation. Flatpak gives its apps the accessibility bus through 
   have to be given that bus too.
 - *Fewer rules than Flatpak.* Registration alone (`Socket.Embed`) was enough for both windows to appear, and removing
   `NotifyListeners*` would remove the fake-key path. It would likely also remove the keys a screen reader receives from the
-  app (not measured: no keyboard). Worth testing with a real Orca before choosing it; the proposal keeps Flatpak's set, which
-  is what real assistive tools have been used with.
+  app (not measured: no keyboard). Worth testing with a real Orca before choosing it; the permission keeps Flatpak's set, which
+  is what real assistive tools have been used with. `tests/test_a11y.py` checks the rules against a real proxy and a real
+jail: registration passes, a key listener, an event registration, the desktop's children and monitoring are refused.
 - *Enable it only when a screen reader runs* (`org.a11y.Status` `IsEnabled`). An app started before the reader would never
-  register and would need restarting; Flatpak always provides the bus. The proposal grants it whenever the permission is
+  register and would need restarting; Flatpak always provides the bus. The permission gives it whenever it is
   set.
 
-**Consequences, if built.** One more proxy process per running app that has the permission. A new concept section on
-[D-Bus and the filtering proxy](../../understand/desktop/dbus.md) and the permission in the reference. The refused-names
-page would say that the accessibility names remain refused as D-Bus names because the permission, not a name, is the way
-in. Not known before it is built: Chromium, Electron, GTK 4 and X11 apps, Ubuntu and Fedora, `dbus-broker`, and a real
+**Consequences.** One more proxy process per running app that has the permission. The behaviour is on
+[D-Bus and the filtering proxy](../../understand/desktop/dbus.md#the-accessibility-bus) and the permission in the
+[reference](../../reference/permissions.md); the accessibility names stay refused as D-Bus names, and the refusal
+message points to the permission. Not measured yet: Chromium, Electron, GTK 4 and X11 apps, Ubuntu and Fedora, `dbus-broker`, and a real
 Orca with a real keyboard ([what is not known](../../develop/a11y-evidence.md#what-is-not-known)). A trial with Orca on a
 real desktop is a manual check.

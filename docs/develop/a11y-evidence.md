@@ -1,7 +1,8 @@
 # The accessibility bus: the evidence
 
 Working notes, not a specification. The behaviour today is on [D-Bus and the filtering proxy](../understand/desktop/dbus.md),
-and the proposal drawn from these measurements is [An opt-in accessibility bus](../decisions/desktop/a11y-bus.md). Written
+and the decision drawn from these measurements, built as the `accessibility` permission, is
+[An opt-in accessibility bus](../decisions/desktop/a11y-bus.md). Written
 in November 2026 from experiments in the Debian 13 guest only. "Measured" means a script ran in the guest (they are in
 `tests/a11y/`); "read" means source code or documentation only; "not done" means neither. Nothing here was run on the
 maintainer's own machine, and Ubuntu and Fedora were not measured.

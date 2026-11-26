@@ -56,8 +56,8 @@ Flatpak remains the mature route.
 - System-wide installations, and any number of remotes; appjail is per user, with GitHub, URL and file sources.
 - `flatpak ps`, `kill` and `enter` for running instances.
 - Input, USB, KVM and Bluetooth devices; `ssh-auth`, `gpg-agent`, `pcsc` and `cups` sockets.
-- The accessibility bus, through a filtered proxy on by default: screen readers work. appjail refuses
-  `org.freedesktop.a11y`, so they do not.
+- The accessibility bus, through a filtered proxy on by default: screen readers work. appjail gives the same filtered
+  bus only with the `accessibility` permission ([the decision](../desktop/a11y-bus.md)).
 - URL handlers from the app's menu entry (file types are offered with `desktop --mime`); a working Background portal
   (appjail's autostart entries say `flatpak run`); software centres and permission editors; the permission store's
   command line.
@@ -70,9 +70,9 @@ tiers, build attestations, owner pinning, quarantine, the check of the image and
 the Wayland check, refused credential paths, a network without the host's loopback, a microphone granted apart from
 sound, and AppImages run as published.
 
-**Consequences.** The gaps that fit appjail's scope are open items in [deferred work](../deferred.md): the
-accessibility bus, resource limits, file-type handlers and a debugging opt-in (a narrower view of the host's system was studied and not adopted).
-Runtimes, repositories, system-wide installs and raw device access are not planned. Re-check this page with the
+**Consequences.** The gaps that fit appjail's scope were built: the accessibility bus (opt-in, `accessibility`),
+resource limits, file-type handlers and a debugging opt-in; a narrower view of the host's system was studied and not
+adopted ([the decision](../isolation/host-view.md)). Runtimes, repositories, system-wide installs and raw device access are not planned. Re-check this page with the
 [related projects](related-projects.md) at each minor release.
 
 ## References

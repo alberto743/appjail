@@ -22,6 +22,7 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `full_wayland` | off | running although the app's Wayland socket lists privileged interfaces, or interfaces appjail does not know | | yes |
 | `devel` | off | debuggers and tracers: `ptrace` and the one `personality` value `ADDR_NO_RANDOMIZE` are allowed in the jail; `perf_event_open` stays refused ([seccomp](../understand/isolation/seccomp.md), [debugging](../decisions/isolation/debugging.md)) | | yes |
 | `raw_terminal` | off | your terminal as it is: without it, when the app's output goes to a terminal, appjail gives the app no input and cleans its output of control sequences ([untrusted text](../understand/acquisition/untrusted-text.md#limits)). With it, the app sees your terminal and a validated `TERM` | | yes |
+| `accessibility` | off | the accessibility bus (AT-SPI) behind a second `xdg-dbus-proxy` of its own, as `AT_SPI_BUS_ADDRESS`: the app's window becomes readable by screen readers, magnifiers and on-screen keyboards; the app can only register itself and send its own events and key events ([D-Bus](../understand/desktop/dbus.md#the-accessibility-bus)) | `xdg-dbus-proxy`, `dbus-send` and an accessibility bus (`at-spi2-core`); refused without them | yes |
 
 ## Values
 
