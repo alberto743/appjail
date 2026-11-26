@@ -115,6 +115,10 @@ RISKY_GRANTS = (("network", "network access (outbound only, off the host's loopb
                 ("raw_terminal", ("your terminal as it is: what the app prints is not cleaned, so it can set your clipboard or "
                                   "window title, rewrite the screen and make the terminal type replies into your input, and it "
                                   "can read what you type in that terminal")),
+                ("accessibility", ("the accessibility bus: the app's window (its controls, names and text) becomes readable by "
+                                   "assistive tools such as screen readers, magnifiers and on-screen keyboards; the app can tell "
+                                   "that one is running and can send fake key events to it. It cannot read your keys, see "
+                                   "other applications or type into their windows")),
                 ("devel", ("tracing and debugging: the app can trace its own processes (ptrace) and run them at fixed "
                            "addresses; it cannot reach processes outside its jail, and the filter still applies to what "
                            "it traces")))
@@ -164,6 +168,7 @@ def permissions_from_args(args):
         network="network" in allowed or "network_host" in allowed, network_host="network_host" in allowed,
         portals="portals" in allowed, userns="userns" in allowed, linger="linger" in allowed,
         full_wayland="full_wayland" in allowed, raw_terminal="raw_terminal" in allowed, devel="devel" in allowed,
+        accessibility="accessibility" in allowed,
         audio="audio" in allowed or "mic" in allowed, mic="mic" in allowed, audio_mode=args.audio_mode,
         gpu="gpu" in allowed, camera="camera" in allowed,
         display=args.display, display_size=args.display_size,

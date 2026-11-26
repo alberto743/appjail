@@ -62,9 +62,9 @@ FINGERPRINT_KEYS = {"size", "etag", "last_modified", "chunks"}
 CHANNELS = ("stable", "prerelease", "pinned")
 AUDIO_MODES = ("pipewire", "pulse")
 DEFAULT_AUDIO_MODE = "pipewire"
-BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal", "devel")
+BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal", "devel", "accessibility")
 LIMIT_KEYS = ("memory_max", "cpu_quota", "tasks_max")  # strings in systemd syntax; empty when not set
-PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "memory_max", "cpu_quota", "tasks_max", "dirs", "schemes"}
+PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "accessibility", "memory_max", "cpu_quota", "tasks_max", "dirs", "schemes"}
 
 
 @dataclass(frozen=True)
@@ -87,6 +87,7 @@ class Permissions:
     linger: bool = False  # keep the jail until every process in it has exited (launchers that detach the real app)
     full_wayland: bool = False  # run although the app's Wayland socket lists privileged or unknown globals (wayland.privileged)
     raw_terminal: bool = False  # the app's output reaches your terminal as it is (otherwise cleaned of control sequences when it is a terminal)
+    accessibility: bool = False  # the accessibility bus (AT-SPI) behind its own proxy: screen readers, magnifiers, on-screen keyboards (dbusproxy.A11Y_RULES)
     devel: bool = False  # debuggers and tracers: ptrace and one personality value are allowed (seccomp.DEVEL)
     memory_max: str = ""  # MemoryMax= of the app's systemd scope ("2G", "50%"); empty: no limit (docs/decisions/isolation/resource-limits.md)
     cpu_quota: str = ""  # CPUQuota= ("200%" is two CPUs)
@@ -410,6 +411,7 @@ def dumps(m):
         *(["full_wayland = true"] if p.full_wayland else []),
         *(["raw_terminal = true"] if p.raw_terminal else []),
         *(["devel = true"] if p.devel else []),
+        *(["accessibility = true"] if p.accessibility else []),
         *(f"{key} = {_quote(getattr(p, key))}" for key in LIMIT_KEYS if getattr(p, key)),
         f"dirs = {_array(p.dirs)}",
         *([f"schemes = {_array(p.schemes)}"] if p.schemes else []),

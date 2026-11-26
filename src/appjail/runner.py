@@ -252,6 +252,11 @@ def _portal_and_bus(stack, name, perms, env, proxy):
     return instance, docs, bus
 
 
+def _accessibility_bus(stack, perms, env, a11y_proxy):
+    """The accessibility bus behind its own proxy for an app with `accessibility`, else None."""
+    return stack.enter_context(a11y_proxy(env)) if perms.accessibility else None
+
+
 def _status_pipes(stack, instance, env, in_pasta):
     """The pipes that report the jail's init pid to the portal (FIFOs behind pasta); None without a portal instance."""
     if not instance:
@@ -304,7 +309,7 @@ def _check_wayland_socket(name, perms, restricted_socket, offered, warn):
 
 def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=print, warn=None, runner=None,
            extra_dirs=(), extra_files=(), proxy=dbusproxy.Proxy, restricted=wayland.RestrictedSocket,
-           registry=wayland.interfaces, raw=False):
+           registry=wayland.interfaces, raw=False, a11y_proxy=dbusproxy.A11yProxy):
     """Start the app in its jail and return its exit status.
 
     raw: this run gives the app your terminal as it is, as the `raw_terminal` permission does for every run.
@@ -330,6 +335,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
         audio, audio_backend = _private_audio(stack, name, perms, env, warn)
         life, filter_fd, filter_file = _seccomp_filter(stack, perms, env, in_pasta)
         instance, docs, bus = _portal_and_bus(stack, name, perms, env, proxy)
+        a11y_socket = _accessibility_bus(stack, perms, env, a11y_proxy)
         link_fifo = stack.enter_context(relay.serving(name)) if perms.schemes else None
         pipes = _status_pipes(stack, instance, env, in_pasta)
         args = runtimejail.runtime_args(
@@ -338,7 +344,7 @@ def launch(name, extra_args=(), host_env=None, extract=appimage.extract, say=pri
             wayland_socket=wl_sock, audio_sockets=audio and (audio.pipewire_socket, audio.pulse_socket),
             host_audio=audio_backend == audiomode.PULSE, seccomp_fd=PASTA_SECCOMP_FD if in_pasta else filter_fd, portal_docs=docs, status_fd=pipes and (PASTA_STATUS_FD if in_pasta else pipes["status_w"]),
             block_fd=pipes and (PASTA_BLOCK_FD if in_pasta else pipes["block_r"]), binds=opened.args(in_pasta), user_env=m.env,
-            link_fifo=link_fifo)
+            link_fifo=link_fifo, a11y_socket=a11y_socket)
         argv = [jail.find_bwrap(), *args]
         if in_pasta:
             argv = jail.net_wrap(opened.reopened(argv), required=True, lifeline=life.path, fd_files={

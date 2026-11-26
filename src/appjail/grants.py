@@ -120,7 +120,8 @@ def check_dbus_name(name, key="dbus_filter"):
     for blocked in DBUS_BLOCKED:
         hit = base == blocked or base.startswith(blocked + ".") or (wild and blocked.startswith(base + "."))
         if hit:
-            raise ManifestError(f"{key} entry {name!r} is refused: it reaches {blocked}, which can control the host or the desktop")
+            hint = " (an app that needs it for assistive tools takes the `accessibility` permission)" if blocked == "org.freedesktop.a11y" else ""
+            raise ManifestError(f"{key} entry {name!r} is refused: it reaches {blocked}, which can control the host or the desktop{hint}")
     return name
 
 

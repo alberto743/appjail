@@ -338,9 +338,11 @@ class App:
         flags_row, modes_row = ttk.Frame(grants), ttk.Frame(grants)
         flags_row.pack(fill="x")
         modes_row.pack(fill="x", pady=(4, 0))
-        for flag in PERMISSION_FLAGS:
+        per_row = (len(PERMISSION_FLAGS) + 1) // 2  # two rows: one is wider than the window's starting size
+        for i, flag in enumerate(PERMISSION_FLAGS):
             self.flag[flag] = tk.BooleanVar(value=False)
-            ttk.Checkbutton(flags_row, text=flag, variable=self.flag[flag]).pack(side="left", padx=4)
+            ttk.Checkbutton(flags_row, text=flag, variable=self.flag[flag]).grid(row=i // per_row, column=i % per_row,
+                                                                                 sticky="w", padx=4)
         self.audio_mode = tk.StringVar(value=manifest.DEFAULT_AUDIO_MODE)
         ttk.Label(modes_row, text="audio mode").pack(side="left", padx=4)
         ttk.Combobox(modes_row, textvariable=self.audio_mode, values=manifest.AUDIO_MODES, state="readonly", width=9).pack(side="left")

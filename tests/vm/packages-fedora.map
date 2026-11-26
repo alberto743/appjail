@@ -39,4 +39,3 @@ gstreamer1.0-pipewire pipewire-gstreamer
 libnss3               nss nspr
 gir1.2-gtk-3.0        gtk3
 gir1.2-atspi-2.0      at-spi2-core
-python3-pyqt6         python3-qt6
