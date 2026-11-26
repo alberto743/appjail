@@ -55,8 +55,8 @@ directory, and `gio open` with various inputs. The three guests have different G
 | a local file `…/-dash.txt` | the absolute path (it cannot read as an option) |
 | a file and a URL in one call | two launches, one each; the order differs between guests |
 
-Read, in the [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/exec-variables.html)
-(version 1.5; the address redirects to `specifications.freedesktop.org/desktop-entry/latest/`): `%u` "a single URL", `%U`
+Read, in the [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry/latest/exec-variables.html)
+(version 1.5): `%u` "a single URL", `%U`
 "a list of URLs. Each URL is passed as a separate argument to the executable program", and for both "local files may either
 be passed as file: URLs or as file path", so a handler has to be ready for both. Quoting in `Exec` is done by double quotes with
 backslashes before `"`, `` ` ``, `$` and `\`; a literal `%` is `%%`; at most one of `%f %u %F %U` per command line, and

@@ -64,5 +64,5 @@ So a separate microphone permission could not be a real promise on the host's so
   [the Pulse server](https://docs.pipewire.org/page_module_protocol_pulse.html),
   [the pulse-tunnel module](https://docs.pipewire.org/page_module_pulse_tunnel.html).
 - [WirePlumber documentation](https://pipewire.pages.freedesktop.org/wireplumber/).
-- PulseAudio, [Modules](https://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/Modules/) (including the
+- PulseAudio, [Modules](https://wiki.freedesktop.org/Software/PulseAudio/Documentation/User/Modules/) (including the
   LADSPA sink, which loads a plugin library by path).
