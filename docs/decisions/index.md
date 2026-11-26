@@ -19,8 +19,8 @@ the project itself:
 | Topic | Covers |
 |---|---|
 | [Acquisition](acquisition/index.md) | sources, owner pinning, evidence tiers, attestations, pinned tools |
-| [Isolation](isolation/index.md) | bubblewrap, extraction, default grants, granted paths, seccomp, Landlock, process lifetime |
-| [Desktop access](desktop/index.md) | Wayland, Xwayland, D-Bus, portals, audio, camera, network, menu entries, icons |
+| [Isolation](isolation/index.md) | bubblewrap, extraction, default grants, granted paths, seccomp, Landlock, process lifetime, terminal output, debuggers, resource limits, the host's system view |
+| [Desktop access](desktop/index.md) | Wayland, Xwayland, D-Bus, the accessibility bus, portals, audio, camera, network, menu entries, URL handlers, icons |
 | [Updates](updates/index.md) | quarantine, blocks, URL apps, manifest history |
 | [Catalog](catalog/index.md) | appjail-db, the catalog format |
 | [Project](project/index.md) | supported systems, the window, output, security reports, releases and CI, related projects |

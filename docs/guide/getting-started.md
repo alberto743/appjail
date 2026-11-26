@@ -33,6 +33,9 @@ The table gives the Debian and Ubuntu names; where Fedora's differ they follow i
 | `librsvg2-bin` (`librsvg2-tools`), `libgtk-3-bin` (`gtk-update-icon-cache`), `desktop-file-utils` | menu icons from SVG, icon caches, file types |
 | `dbus-bin` (`dbus-tools`), `libnotify-bin` (`libnotify`) | D-Bus owner checks and the document portal; error notices from the menu |
 | `pipewire`, `pipewire-bin` (`pipewire-utils`), `wireplumber`, `pipewire-pulse` (`pipewire-pulseaudio`) | sound through the private audio graph (usually already installed) |
+| `at-spi2-core` | the `accessibility` permission (usually already installed) |
+| `systemd` with a user session | the memory, CPU and process limits (`systemd-run --user`) |
+| `python3` in `/usr/bin` | the `linger` permission and URL `schemes`: their supervisor runs inside the jail |
 | `python3-tk` (`python3-tkinter`, optional) | the window, `appjail-gui` |
 
 Linux 6.12 or later with Landlock is needed for the `network_host` permission; every supported system has it.

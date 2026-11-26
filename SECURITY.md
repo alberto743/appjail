@@ -22,10 +22,11 @@ they prefer not to be.
 
 ## In scope
 
-- An app getting more than its manifest grants: files, D-Bus names, portals, sockets, network, devices.
+- An app getting more than its manifest grants: files, D-Bus names, portals, the accessibility bus, sockets, network,
+  devices; or running without a resource limit it was given.
 - A way around the hash, attestation, quarantine, tier-downgrade or owner-change checks of `add` and `update`.
 - Unsafe handling of untrusted data: catalogs, manifests, release metadata, AppImage contents (path traversal, symlinks,
-  terminal escape sequences).
+  terminal escape sequences), an app's terminal output without `raw_terminal`, links handed to an app.
 - Weaknesses in the release workflows or the pinned helper binaries (`gh`, DwarFS).
 
 ## Out of scope

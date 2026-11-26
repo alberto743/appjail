@@ -79,20 +79,22 @@ app ends or a step fails.
 2. `history.modified`: a warning if the manifest was changed outside appjail.
 3. `runner._open_grants` → `runtimejail.Grants`: each granted folder and file opened once and checked through its
    descriptor (`grants.sensitive_reason`, `grants.directory_reason`).
-4. `network_host` without Landlock is refused (`landlock.available`).
-5. Display: `wayland.RestrictedSocket` (a restricted socket when the compositor offers one), then
+4. `limits.check`: an app with memory, CPU or process limits is refused unless a systemd scope can be started.
+5. `network_host` without Landlock is refused (`landlock.available`).
+6. Display: `wayland.RestrictedSocket` (a restricted socket when the compositor offers one), then
    `runner._check_wayland_socket` (`wayland.privileged`): the registry rule, before anything else is started.
-6. `runner._private_audio` (`audiomode.resolve`, `audiojail.PrivateAudio`): the private audio graph, or the fallback.
-7. `runner._seccomp_filter` (`seccomp.program`): the filter, in memory or, behind `pasta`, in a private file; and the
+7. `runner._private_audio` (`audiomode.resolve`, `audiojail.PrivateAudio`): the private audio graph, or the fallback.
+8. `runner._seccomp_filter` (`seccomp.program`): the filter, in memory or, behind `pasta`, in a private file; and the
    lifeline (`jail.Lifeline`).
-8. `runner._portal_and_bus` (`portal.Instance`, `dbusproxy.check_owners`, `dbusproxy.Proxy`): the portal identity and
-   the filtered bus.
-9. `runtimejail.runtime_args`: the complete `bwrap` argument list. This is the one place to read to know what an app
-   sees.
-10. Wrapping: behind `pasta`, `jail.net_wrap` with `reopen.wrap` (the grants opened again in the namespace); otherwise
-    `landlock.wrap`.
-11. `runner._run_app` and `runner._wait_group`: start, publish the jail's pid to the portal, forward signals to the
-    process group, and kill what is left when the app exits.
+9. `runner._portal_and_bus` (`portal.Instance`, `dbusproxy.check_owners`, `dbusproxy.Proxy`): the portal identity and
+   the filtered bus; `dbusproxy.A11yProxy` for `accessibility`; `relay.serving`, the link FIFO, for `schemes`.
+10. `runtimejail.runtime_args`: the complete `bwrap` argument list. This is the one place to read to know what an app
+    sees.
+11. Wrapping: behind `pasta`, `jail.net_wrap` with `reopen.wrap` (the grants opened again in the namespace); otherwise
+    `landlock.wrap`; then `limits.wrap` (the systemd scope) when the app has limits.
+12. `runner._run_app` and `runner._wait_group`: start, publish the jail's pid to the portal, forward signals to the
+    process group, and kill what is left when the app exits; `termfilter` cleans the app's output when it goes to a
+    terminal and the app has no `raw_terminal`.
 
 ## Walk-through: `appjail update`
 
