@@ -82,7 +82,8 @@ Grant one name at a time, and keep only what makes a visible difference.
 
 Names that would hand over the desktop are refused, with a message, whatever you ask: the bus itself, systemd, the
 desktop shells (GNOME Shell, Mutter, Cinnamon, Muffin, KWin, Plasma's shell), the session manager, the settings
-database (`dconf`), GVfs, the accessibility bus, global shortcuts, the screensaver, the clipboard manager, and the
+database (`dconf`), GVfs, the accessibility names (`--allow accessibility` gives the accessibility bus through its own
+filter), global shortcuts, the screensaver, the clipboard manager, and the
 portals' own names (use `--allow portals`). On GNOME and Cinnamon these names are what keeps an app from capturing the
 screen and typing into other windows ([why](../decisions/desktop/dbus-refused.md)). An app cannot *own* a name in a
 desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`, ...), so it cannot impersonate the

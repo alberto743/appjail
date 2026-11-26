@@ -13,12 +13,12 @@ and codec nodes and the media controller stay out. A first version bound every v
 which needs no device in the jail.
 
 **Consequences.** Every capture device present at start is visible: there is no per-camera choice, and a camera plugged
-in later appears at the next start. The nodes are opened briefly at every start to ask the driver what they are.
-Tested with the `vivid` virtual camera (frames through GStreamer and raw ioctls, one camera, two, none); not yet with a
-real USB webcam, whose sysfs path is deeper, nor with hot-unplugging. Through the portal, the test camera's node never
-became usable because of a PipeWire bug with one of its test controls (fixed upstream, unreleased); an ordinary webcam
-has no such control, so a real camera through the portal remains a manual check. The measurements are on
-[Camera and audio measurements](../../develop/camera-audio-evidence.md).
+in later appears at the next start. The nodes are opened briefly at every start to ask the driver what they are. Tested
+with the `vivid` virtual camera (frames through GStreamer and raw ioctls, one camera, two, none); not yet with a real
+USB webcam, whose sysfs path is deeper, nor with hot-unplugging. Through the portal, the test camera's node becomes
+usable only from PipeWire 1.6.9, which fixed a bug with one of its test controls (Debian 13 and Ubuntu 26.04 ship older
+versions); an ordinary webcam has no such control, so a real camera through the portal remains a manual check. The
+measurements are on [Camera and audio measurements](../../develop/camera-audio-evidence.md).
 
 **Known limit.** The nodes are bound over placeholder files in bwrap's tmpfs `/dev`, so listing `/dev` reports them as
 regular files. Apps that enumerate `/dev` by file type (Webcamoid's V4L2 plugin) find no camera, though opening by path
@@ -27,7 +27,7 @@ narrow bind is the point of this decision) and masking everything else in it (a 
 Camera portal is no substitute: it hands a PipeWire connection to apps that ask for it, and these apps do not. The cure
 is in the app, which should open or `stat` the nodes instead of trusting the listing.
 
-The Camera portal path is tested with `vivid`'s V4L2 node (a virtual camera) where the PipeWire can read the test
+The Camera portal path is tested with `vivid`'s V4L2 node (a virtual camera) where PipeWire can read the test
 camera's controls (Fedora 45, PipeWire 1.6.11): the session manager links it and an app in its jail receives a frame
 through the portal ([measurements](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)).
 

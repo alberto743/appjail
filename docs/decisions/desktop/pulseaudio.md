@@ -18,4 +18,4 @@ credentials name systemd). A warning alone was rejected: it would describe an es
 
 **Consequences.** On a PulseAudio host, apps get sound only through the private graph, which tunnels to PulseAudio like
 to any Pulse server and refuses module requests itself. A server that cannot be identified is treated as PipeWire's,
-with the warning: that is the weak point of this check.
+with no further warning: that is the weak point of this check.

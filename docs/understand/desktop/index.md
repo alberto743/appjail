@@ -9,9 +9,9 @@ unrestricted one would allow, and how appjail narrows it.
 ## The channels
 
 <figure>
-<svg viewBox="0 0 720 430" role="img" aria-labelledby="dk-title dk-desc" style="max-width:100%;height:auto;font-family:inherit">
+<svg viewBox="0 0 720 488" role="img" aria-labelledby="dk-title dk-desc" style="max-width:100%;height:auto;font-family:inherit">
   <title id="dk-title">The channels between an app jail and the desktop</title>
-  <desc id="dk-desc">The app jail on the left; each channel to the desktop on the right passes a check or a helper that narrows it: the registry rule on the Wayland socket, a private Xwayland inside the jail, the D-Bus proxy in its own jail, the portal identity, the private audio graph in its own jail, pasta for the network, and only the device nodes granted.</desc>
+  <desc id="dk-desc">The app jail on the left; each channel to the desktop on the right passes a check or a helper that narrows it: the registry rule on the Wayland socket, a private Xwayland inside the jail, the D-Bus proxy in its own jail, the portal identity, the private audio graph in its own jail, pasta for the network, only the device nodes granted, the menu entry with its link relay, and the accessibility bus behind a proxy of its own.</desc>
   <style>
     .dk-jail { fill: var(--md-code-bg-color, #f2f4f7); stroke: var(--md-accent-fg-color, #0284c7); stroke-width: 1.6; }
     .dk-help { fill: var(--md-code-bg-color, #f2f4f7); stroke: var(--md-accent-fg-color, #0284c7); stroke-width: 1.4; stroke-dasharray: 6 3; }
@@ -20,7 +20,7 @@ unrestricted one would allow, and how appjail narrows it.
     .dk-s { fill: var(--md-default-fg-color--light, #555); font-size: 12px; }
     .dk-l { stroke: var(--md-default-fg-color--light, #777); stroke-width: 1.4; fill: none; }
   </style>
-  <rect class="dk-jail" x="10" y="10" width="170" height="410" rx="10"/>
+  <rect class="dk-jail" x="10" y="10" width="170" height="468" rx="10"/>
   <text class="dk-t" x="26" y="40">App jail</text>
   <text class="dk-s" x="26" y="60">the app, and inside it</text>
   <text class="dk-s" x="26" y="76">a private Xwayland</text>
@@ -57,7 +57,7 @@ unrestricted one would allow, and how appjail narrows it.
   <text class="dk-t" x="512" y="339">GPU, camera</text>
   <rect class="dk-help" x="230" y="370" width="220" height="44" rx="6"/>
   <text class="dk-t" x="242" y="389">menu entry by appjail</text>
-  <text class="dk-s" x="242" y="406">appjail run, one file per open</text>
+  <text class="dk-s" x="242" y="406">a file per open; links via a relay</text>
   <rect class="dk-host" x="500" y="370" width="210" height="44" rx="6"/>
   <text class="dk-t" x="512" y="397">application menu</text>
   <path class="dk-l" d="M180 44 H230 M450 44 H500"/>
@@ -67,6 +67,12 @@ unrestricted one would allow, and how appjail narrows it.
   <path class="dk-l" d="M180 276 H230 M450 276 H500"/>
   <path class="dk-l" d="M180 334 H230 M450 334 H500"/>
   <path class="dk-l" d="M180 392 H230 M450 392 H500"/>
+  <rect class="dk-help" x="230" y="428" width="220" height="44" rx="6"/>
+  <text class="dk-t" x="242" y="447">accessibility proxy</text>
+  <text class="dk-s" x="242" y="464">the app's own window only</text>
+  <rect class="dk-host" x="500" y="428" width="210" height="44" rx="6"/>
+  <text class="dk-t" x="512" y="455">accessibility bus</text>
+  <path class="dk-l" d="M180 450 H230 M450 450 H500"/>
 </svg>
 <figcaption>Only the window channel exists by default. Every other channel exists only when the manifest grants it, and
 always passes through the narrowing shown in the middle.</figcaption>
@@ -78,14 +84,14 @@ always passes through the narrowing shown in the middle.</figcaption>
    socket offers.
 2. **[X11 and the private Xwayland](xwayland.md)**: why the host's X server is never shared, and how X11-only apps get a
    server of their own.
-3. **[D-Bus and the filtering proxy](dbus.md)**: the session bus, why names alone are not enough, and confined
-   services.
+3. **[D-Bus and the filtering proxy](dbus.md)**: the session bus, why names alone are not enough, confined services,
+   and the accessibility bus.
 4. **[Portals](portals.md)**: dialogs the app does not control, and how the portals recognise a jailed app.
 5. **[Audio](audio.md)**: why the host's sound sockets cannot be shared, and the private graph each app gets instead.
 6. **[GPU and camera](devices.md)**: which device nodes are bound, and why only those.
 7. **[Network](network.md)**: the private network namespace, the host network, and the LAN.
 8. **[Menu entries and opening files](menu-entries.md)**: integrating with the desktop's menu without letting the
-   AppImage decide what runs.
+   AppImage decide what runs, and links that reach a running app.
 
 How-to pages: [D-Bus and portals](../../guide/dbus.md), [Appearance](../../guide/appearance.md). The decisions behind
 this part are in [Decisions: desktop access](../../decisions/desktop/index.md).

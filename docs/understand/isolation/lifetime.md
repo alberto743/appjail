@@ -29,7 +29,7 @@ launcher starts the real program in the background and exits would be killed the
   *lifeline*: a pipe whose writing end only appjail holds. A small watcher inside the jail's namespace reads it; when
   appjail dies, the pipe closes, and the watcher kills every process of the namespace (it acts only if it is process 1
   of a private PID namespace, so it can never reach anything outside).
-- **Helper processes die with the app.** The D-Bus proxy, the private audio graph and the portal identity are started
+- **Helper processes die with the app.** The D-Bus proxies, the private audio graph and the portal identity are started
   for the app and stopped when it ends; each of them also dies with appjail.
 - **An app's files stay while it runs.** Every launch holds a shared lock on the app (`locks/NAME.run`) from the moment
   its tree is ready until the jail ends; the kernel drops it when appjail exits, however it exits. `remove` and `reset`

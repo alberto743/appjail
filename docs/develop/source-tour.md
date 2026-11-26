@@ -7,7 +7,7 @@ to add something without breaking the rules the rest of the code relies on. Func
 
 ## Rules the code relies on
 
-Five conventions hold everywhere. Knowing them makes most modules easy to read, and a change that breaks one is
+Seven conventions hold everywhere. Knowing them makes most modules easy to read, and a change that breaks one is
 almost certainly wrong.
 
 | Rule | Where it lives | What it means for a change |
@@ -129,6 +129,8 @@ new helper jail follows the same pattern: a `*_args` builder that binds only wha
 | `tools_dir()` | the pinned helper tools |
 | `staging_root()` | temporary directories of `store.staging`, removed when the block ends |
 | `data_dir()/index/` | the catalogs (`indexstore.py`) |
+| `data_dir()/locks/` | `NAME.lock` and `NAME.run`, the per-app locks (`store.app_lock`, `store.running`) |
+| `data_dir()/run/` | `NAME.link`, the link FIFO of a running app with `schemes` (`relay.py`) |
 
 `APPJAIL_DATA_DIR` and `APPJAIL_CONFIG_DIR` override the two roots; the tests use them for a private tree per test.
 
@@ -155,7 +157,8 @@ new helper jail follows the same pattern: a `*_args` builder that binds only wha
 **A new permission.** Follow an existing one such as `linger` through the code:
 
 1. `manifest.py`: the field in `Permissions` (default denied), its name in `BOOL_PERMS` for a switch (the `--allow` and
-   `--deny` choices are taken from it) or in `PERM_KEYS` for another kind of value, the writer (`dumps`), and any
+   `--deny` choices are taken from it), `LIMIT_KEYS` for a limit or `LIST_PERMS` for a list (`PERM_KEYS`, the keys
+   the parser accepts, is made from them), the writer (`dumps`), and any
    consistency rule (`_network_consistency` is an example);
 2. `permargs.py`: `permissions_from_args`, the summary lines, and a warning in `RISKY_GRANTS` if it widens the jail;
 3. its effect, almost always in `runtimejail.runtime_args` or `runner.launch`;

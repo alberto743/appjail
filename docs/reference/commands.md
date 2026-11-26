@@ -30,7 +30,7 @@ appjail add --url URL [options]
 | `--dbus NAME` | let the app talk to this session-bus name through the filtering proxy; repeatable |
 | `--dbus-own NAME` | let the app own this session-bus name; repeatable |
 | `--portal NAME` | also allow this privileged portal interface (needs `--allow portals`); repeatable |
-| `--scheme SCHEME` | offer the app as a handler of this URL scheme (stored in lower case, never `file`); repeatable. A menu entry that registers it is made by `desktop` |
+| `--scheme SCHEME` | offer the app as a handler of this URL scheme (stored in lower case, never `file`); repeatable. The menu entry made by `--desktop` or `desktop` registers it |
 | `--audio-mode pipewire\|pulse` | with `--allow audio`: the private graph (default) or the host's Pulse socket |
 | `--display none\|wayland\|xwayland\|xwayland-rootful` | the display mode (default `wayland`) |
 | `--display-size WxH` | with `--display xwayland-rootful`: the size of its window (default 1280x800) |
@@ -136,14 +136,15 @@ installed while the app runs: that app is reported as failed, and a candidate in
 
 ### `desktop`
 
-`appjail desktop [APP] [options]`: create or refresh an app's menu entry, or manage the entries.
+`appjail desktop [APP] [options]`: create or refresh an app's menu entry, or manage the entries. The entry also
+registers the granted `schemes` that the app's own entry declares.
 
 | Option | Effect |
 |---|---|
 | `--mime TYPE` | offer the app for this file type; repeatable |
 | `--mime-all` | offer every file type the app declares, minus refused ones |
 | `--rw` | files opened from the menu are writable (default: read-only) |
-| `--show` | show the file types registered, offered by the app and refused; writes nothing |
+| `--show` | show the file types registered, offered by the app and refused, and the link schemes; writes nothing |
 | `--remove` | delete the app's menu entry and icons |
 | `--prune` | delete the entries of apps that no longer exist |
 | `--yes` | do not ask (registers no file types unless `--mime` or `--mime-all`) |

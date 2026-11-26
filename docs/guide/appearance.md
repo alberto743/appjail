@@ -12,7 +12,7 @@ Toolkits find their appearance in several places, and the jail hides most of the
 |---|---|
 | The **Settings portal** (dark or light preference, accent colour; on GNOME also theme, icon, cursor and font names) | available with `--allow portals` |
 | The desktop's settings database (`dconf` on GNOME, through D-Bus) | refused: writing it can set shortcuts that run commands ([why](../decisions/desktop/dbus-refused.md)) |
-| Environment variables (`GTK_THEME`, `XCURSOR_THEME`, `QT_QPA_PLATFORMTHEME`, ...) | cleared: no variable of yours reaches the app |
+| Environment variables (`GTK_THEME`, `XCURSOR_THEME`, `QT_QPA_PLATFORMTHEME`, ...) | cleared: none of yours reaches the app, but the manifest's `[env]` table can set them |
 | Files in your home (`~/.config/gtk-3.0`, `~/.config/kdeglobals`, `~/.local/share/fonts`, `~/.themes`, ...) | not visible; the app has a private home of its own |
 | System-wide themes, icons, cursors and fonts (`/usr/share/themes`, `/usr/share/icons`, `/usr/share/fonts`, `/etc/fonts`) | visible, read-only |
 | The compositor (scaling, and the cursor for apps that let the compositor draw it) | available: these interfaces are on the app's Wayland socket |
@@ -89,5 +89,6 @@ set with `--display-size WxH`.
 
 - Changing the theme while the app runs, through the desktop's settings, reaches only toolkits that follow the Settings
   portal (and only with `portals`).
-- Variables such as `GTK_THEME` cannot be passed to the app: the environment is always cleared. Use the settings files
-  above.
+- Your own variables such as `GTK_THEME` do not reach the app: the environment is always cleared. Set one for the app
+  with `appjail perms NAME --set-env GTK_THEME=Adwaita:dark`, or use the settings files above
+  ([environment variables](permissions.md#environment-variables)).

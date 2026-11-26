@@ -12,7 +12,8 @@ pieces depend on each other. To follow the code itself, command by command, read
 |---|---|
 | Command line | `cli.py` (the parser and the command table) and one `cmd_<name>.py` per command or family of commands |
 | Shared install steps | `install.py` (what `add` and `update` share), `imagesrc.py` (URL and file apps), `services.py` (what `add` and `update` do to the outside world, replaceable in tests) |
-| Policy, no I/O | `grants.py` (what may be granted), `valid.py` (value checks), `manifest.py` (schema, parser, writer), `permargs.py` (permission options) |
+| Policy, no I/O | `grants.py` (what may be granted), `valid.py` (value checks), `manifest.py` (schema, parser, writer) |
+| Permission options | `permargs.py` (the options of `add` and `perms`, their summaries and warnings; it also checks that `pasta` and Landlock exist) |
 | Jails | `jail.py` (helper jails, `pasta`), `runtimejail.py` (the app jail), `seccomp.py`, `landlock.py`, `reopen.py`, `linger.py`, `relay.py` |
 | Running | `runner.py` (verify, prepare, launch), `limits.py` (the systemd user scope that holds the memory, CPU and task limits), `termfilter.py` (cleans an app's terminal output), `wayland.py`, `dbusproxy.py`, `portal.py`, `audiomode.py`, `audiojail.py` |
 | Acquiring | `github.py`, `fetcher.py` (runs inside the download jail), `appimage.py`, `attest.py`, `snappy.py`, `tools.py` |

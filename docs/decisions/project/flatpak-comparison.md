@@ -60,7 +60,8 @@ Flatpak remains the mature route.
 - Input, USB, KVM and Bluetooth devices; `ssh-auth`, `gpg-agent`, `pcsc` and `cups` sockets.
 - The accessibility bus, through a filtered proxy on by default: screen readers work. appjail gives the same filtered
   bus only with the `accessibility` permission ([the decision](../desktop/a11y-bus.md)).
-- URL handlers from the app's menu entry (file types are offered with `desktop --mime`); a working Background portal
+- URL handlers from the app's own menu entry (appjail registers only the schemes you grant, one by one:
+  [links](../desktop/url-handlers.md)); a working Background portal
   (appjail's autostart entries say `flatpak run`); software centres and permission editors; the permission store's
   command line.
 - `--persist`, file forwarding, conditional permissions, a `devel` mode for profilers (appjail's `devel` is for
@@ -74,9 +75,10 @@ the Wayland check, refused credential paths, a network without the host's loopba
 sound, and AppImages run as published.
 
 **Consequences.** The gaps that fit appjail's scope were built: the accessibility bus (opt-in, `accessibility`),
-resource limits, file-type handlers and a debugging opt-in; a narrower view of the host's system was studied and not
-adopted ([the decision](../isolation/host-view.md)). Runtimes, repositories, system-wide installs and raw device access
-are not planned. Re-check this page with the [related projects](related-projects.md) at each minor release.
+resource limits, file-type handlers, URL handlers through a relay and a debugging opt-in; a narrower view of the host's
+system was studied and not adopted ([the decision](../isolation/host-view.md)). Runtimes, repositories, system-wide
+installs and raw device access are not planned. Re-check this page with the [related projects](related-projects.md) at
+each minor release.
 
 ## References
 

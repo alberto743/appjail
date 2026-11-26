@@ -23,7 +23,8 @@ meant to give it.
 
 - **Generated, never copied.** `appjail desktop NAME` (or `add --desktop`) writes the entry itself. From the AppImage's
   file it takes only display text (name, comment, generic name, categories, keywords), cleaned and capped, and adds
-  " (appjail)" to the name so an app cannot pose as a host app. The command is always `appjail run NAME`. Only files
+  " (appjail)" to the name so an app cannot pose as a host app. The command is always appjail's own: `appjail run NAME`,
+  or `appjail open` with file types or schemes (below). Only files
   carrying appjail's marker are ever replaced or deleted.
 - **File types are opt-in.** Nothing is registered unless you pick types the app declares, and only types that pass a
   filter can be picked: no executables, scripts or installers, at most 32. URL schemes are a separate opt-in, below.

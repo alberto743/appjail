@@ -1,9 +1,11 @@
 # URL handlers and a second launch: the evidence
 
-Working notes, not a specification: the open question is on [deferred work](../decisions/deferred.md) (row "URL
-handlers"); no decision has been taken and no code written. Written in November 2026 from experiments in the qemu
-guests. "Measured" means a command or test ran in a guest; "read" means documentation only; "not done" means neither.
-Nothing here was run on the maintainer's own machine. The scripts are at the end so each run can be repeated.
+Working notes, not a specification. The behaviour today is on [menu entries](../understand/desktop/menu-entries.md), and
+the decision drawn from these measurements, built as the `schemes` list and its relay, is
+[Links reach a running app through a relay](../decisions/desktop/url-handlers.md). Written in November 2026 from
+experiments in the qemu guests. "Measured" means a command or test ran in a guest; "read" means documentation only; "not
+done" means neither. Nothing here was run on the maintainer's own machine. The scripts are at the end so each run can be
+repeated.
 
 The question: appjail leaves out every `x-scheme-handler/` type of an app's own menu entry on purpose (a link opened
 anywhere on the desktop would start an untrusted program with an untrusted string). Letting the user opt in to some

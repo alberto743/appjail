@@ -54,6 +54,7 @@ the jail the app itself runs in is the *app jail*.
   <text class="lj-t" x="520" y="240">audio (private graph)</text>
   <text class="lj-t" x="520" y="276">GPU, camera</text>
   <text class="lj-t" x="520" y="312">more of the display</text>
+  <text class="lj-t" x="520" y="348">accessibility bus, links</text>
   <path class="lj-door" d="M440 300 C 480 300, 480 92, 512 92"/>
   <path class="lj-door" d="M440 304 C 485 304, 485 128, 512 128"/>
   <path class="lj-door" d="M440 308 C 490 308, 490 164, 512 164"/>
@@ -61,6 +62,7 @@ the jail the app itself runs in is the *app jail*.
   <path class="lj-door" d="M440 316 C 500 316, 500 236, 512 236"/>
   <path class="lj-door" d="M440 320 C 500 320, 500 272, 512 272"/>
   <path class="lj-door" d="M440 324 C 500 324, 500 308, 512 308"/>
+  <path class="lj-door" d="M440 328 C 500 328, 500 344, 512 344"/>
 </svg>
 <figcaption>The app jail. The grants on the right exist only when the manifest asks for them.</figcaption>
 </figure>
@@ -106,7 +108,7 @@ The helper jails are built from the same parts, with even less inside:
 | extraction | the AppImage (read-only) and one work directory | none |
 | manifest history (`git`) | appjail's configuration directory | none |
 | icon conversion | the SVG and an output directory | none |
-| D-Bus proxy | your session bus socket and a private directory for the filtered one | none |
+| D-Bus proxy (and, for `accessibility`, a second one) | your session bus socket (or the accessibility bus's) and a private directory for the filtered one | none |
 | private audio graph | its own runtime directory and your audio server's socket | none |
 
 Each helper jail also refuses nested namespaces and loads the same seccomp filter as the app jail, because some of them

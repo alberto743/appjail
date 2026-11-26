@@ -122,9 +122,9 @@ writes to the guest's own `~/.local/share/appjail` and `~/.config/appjail`.
 - **Tampering:** a changed pin, stored AppImage or extracted tree makes `run` refuse; a changed digest on `update` is a
   new candidate; a granted file, folder or parent folder swapped for a symbolic link just before the jail starts does
   not reach its target, with and without `pasta`.
-- **Policy:** the compositor registries measured on real compositors are replayed against the Wayland rule; the
-  seccomp table is checked against the kernel's header; the documentation is checked against the parser (every command
-  and option documented) and against the policy lists ([policy lists](../reference/policy.md)).
+- **Policy:** the compositor registries measured on real compositors are replayed against the Wayland rule; the seccomp
+  table is checked against the kernel's header; the documentation is checked against the parser (every command and
+  option documented), for lines over 120 columns, and against the policy lists ([policy lists](../reference/policy.md)).
 - **Measurements that are not tests:** `tests/a11y/` holds the scripts behind the
   [accessibility-bus evidence](a11y-evidence.md) (a GTK 3 and a Qt 6 window, a stand-in screen reader, a hostile client,
   the proxy in its own jail). They are run by hand in the Debian guest and pytest does not collect them; the lint test
