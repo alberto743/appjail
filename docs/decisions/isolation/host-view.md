@@ -8,7 +8,7 @@ runtime there instead ([Flatpak compared](../project/flatpak-comparison.md)). A 
 whether the host's view could be narrowed. The list of libraries an ELF file links does not answer it, because it leaves out
 the programs an app starts, the files it opens at run time and what the kernel opens by itself, so the
 [measurements](../../develop/host-view-evidence.md) traced real runs of htop, Galculator, Lagrange and ImageMagick in the
-Debian 13 guest, in four variants of the view, three rounds each:
+Debian 13 guest, in four variants of the view, three rounds each, then on Ubuntu 26.04 and Fedora 45:
 
 - **A**, a fixed minimal set (`sh`, `env`) with `/usr/bin`, `/usr/sbin`, `/usr/libexec` and `/usr/share/applications`
   emptied, broke two of four apps in every scenario: Galculator (its start-up hook runs `ln`) and ImageMagick (its `AppRun`
@@ -31,7 +31,8 @@ Debian 13 guest, in four variants of the view, three rounds each:
   What the jail does about them is [the rest of the isolation](../../understand/isolation/index.md): no network without
   `network`, no host files, no new privileges.
 - *A narrower default (A).* Rejected by the measurements: a fixed list that works for these four apps is at least `sh`,
-  `bash`, `env`, `ln`, `dirname`, `basename` and `readlink`, and it would be the list of these four. The next app, or the
+  `bash`, `env`, `ln`, `dirname`, `basename` and `readlink`, plus on Ubuntu and Fedora `bwrap`, `xdg-user-dir` and a
+  loader under `/usr/libexec/glycin-loaders` that GTK's image library runs; and it would be the list of these four. The next app, or the
   next release of one, can need another, and the failure is a missing program inside the app, not a message from appjail
   (principle 4 asks that what cannot be honoured is refused, not ignored).
 - *A per-app allowlist (A2).* It works when its list is right. It would need a way to record the list (a trace mode of `run`,

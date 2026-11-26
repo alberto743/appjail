@@ -86,7 +86,8 @@ their place. What follows from it, measured in the Debian guest
 
 - **An app can run any program of the host in those directories**, for example `ln`, `bash`, `perl` or `strace`, as the
   jail's user, with the jail's namespaces, no network unless granted, no new privileges and the system-call filter. Real
-  AppImages do: their start-up scripts call `ln`, `bash`, `dirname`, `readlink`, `basename` and `env`, and htop starts
+  AppImages do: their start-up scripts call `ln`, `bash`, `dirname`, `readlink`, `basename` and `env`, GTK's image library
+  on Ubuntu and Fedora runs `bwrap` and a loader in `/usr/libexec`, and htop starts
   `strace` for one of its screens.
 - **An app can list what is installed**: the programs (about a thousand in `/usr/bin` of a desktop system), the menu
   entries in `/usr/share/applications`, the package names in `/usr/share/doc`, every library file with its version, and the

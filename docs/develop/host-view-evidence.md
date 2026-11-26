@@ -2,9 +2,9 @@
 
 Working notes, not a specification. Today's behaviour is on [bubblewrap](../understand/isolation/bubblewrap.md),
 and the conclusion drawn from these measurements is [Narrowing the host's system view](../decisions/isolation/host-view.md).
-Written in November 2026 from experiments in the Debian 13 guest only. "Measured" means a script ran in the guest (they are
-in `tests/hostview/`); "not done" means neither. Nothing here was run on the maintainer's own machine; Ubuntu and Fedora
-were not measured.
+Written in November 2026 from experiments in the Debian 13 guest, then repeated on Ubuntu 26.04 and Fedora 45
+([below](#ubuntu-and-fedora)). "Measured" means a script ran in the guest (they are
+in `tests/hostview/`); "not done" means neither. Nothing here was run on the maintainer's own machine.
 
 The question: the jail binds the host's `/usr`, `/bin`, `/sbin` and `/lib*` read-only, so an app can list the installed
 software and run any program of the host. How much of that can be taken away without breaking the apps, and what would
@@ -92,7 +92,7 @@ Three things are plain:
 - **A fixed minimal list is not enough.** `sh` and `env` break two of four apps outright: Galculator needs `ln`,
   ImageMagick needs `bash`, `dirname` and `readlink`. A list that would have covered these four holds at least `sh`,
   `bash`, `env`, `ln`, `dirname`, `basename` and `readlink`, and is the list of these four apps: it says nothing about
-  the next one.
+  the next one; on Ubuntu and Fedora a library needs more ([below](#ubuntu-and-fedora)).
 - **A list recorded from one scenario misses the helpers of another.** Trained on htop's text screen, A2 and B had no
   `strace`, and the strace screen failed with no error to the user other than the helper's absence.
 - **A trace of open calls never shows what the kernel opens.** The first version of B started no program at all
@@ -122,12 +122,46 @@ So narrowing the programs hides which programs and desktop entries are installed
 installed packages (`/usr/share/doc`), the library versions, or the distribution: those live in `/usr/lib` and
 `/usr/share`, which the apps need (libraries, fonts, keyboard layouts, themes). Hiding them would take variant B's approach.
 
+## Ubuntu and Fedora
+
+The same apps (same hashes) and the same matrix ran once on Ubuntu 26.04 and Fedora 45, and once more on Debian with the
+final version of the script (it skips only the harness's own `bwrap` in a trace, and puts back a program at its own path,
+so a helper in a subdirectory of `/usr/libexec` counts). Debian gave the results above again.
+
+| App and scenario | Ubuntu 26.04: C / A / A2 / B | Fedora 45: C / A / A2 / B |
+|---|---|---|
+| htop: text screen; `s` trained on `s` | ok / ok, `strace` not found / ok / ok | same |
+| htop: `s` trained on the text screen only | A2 and B: `strace` not found | same |
+| htop: `l` | C runs `lsof` (installed there); A, A2, B: not found | `lsof` not installed |
+| Galculator: start | ok / **fails** / ok / **aborts** (XKB keymap) | ok / **fails** / ok / ok |
+| Lagrange: start | ok / **aborts** / ok / **aborts** | ok / **aborts** / ok / **aborts** |
+| ImageMagick: all five scenarios | ok / **all fail** / ok / ok | same |
+
+The new result is Lagrange's. On both systems the GTK image loader (glycin, which GTK uses through gdk-pixbuf) runs host
+programs itself: `/usr/bin/bwrap`, to sandbox its loader (which fails in the jail, after which glycin says "running without
+sandbox"), then the loader `/usr/libexec/glycin-loaders/2+/glycin-svg`; Ubuntu's also runs `xdg-user-dir`. With A, `bwrap`
+is missing and the app aborts. B aborts too: on Ubuntu it ran only `basename`, on Fedora glycin chose another loader,
+`glycin-image-rs`, that the training run had not used. So a host library, not the app's own scripts, can need programs in
+`/usr/bin` and in a subdirectory of `/usr/libexec`, and which one depends on the system and on the run. Galculator, which
+aborted under B in every run on Debian and Ubuntu, started under B on Fedora.
+
+What a program in the jail can list, in the same jail on each system:
+
+| | Debian 13 | Ubuntu 26.04 | Fedora 45 |
+|---|---|---|---|
+| `/usr/bin`, `/usr/sbin` | 1029, 244 | 1442, 590 | 1556 (one directory: `/usr/sbin` is a link to `bin`) |
+| `/usr/libexec`, menu entries | 25, 11 | 45, 14 | 88, 9 |
+| package directories in `/usr/share/doc` | 916 | 1164 | 565 |
+| the distribution (`/usr/lib/os-release`) | readable | readable | readable |
+
+With A, the programs and menu entries drop to the two put back (on Fedora `sh` and `env` show in both names), and the
+package directories, libraries and release stay, as on Debian.
+
 ## What is not done
 
 - **Interactive features.** The compositor had no input device, so no file dialog, print dialog, link click, drag and drop
   or "open with" ran. Those are where `xdg-open`, `gio`, `update-mime-database` and `dbus-send` would be started.
 - **Electron apps** (Obsidian, Joplin), which start more helpers, were not installed.
-- **Other systems.** Ubuntu 26.04 and Fedora 45 have other layouts and other sets of programs.
 - **The effect on an attacker.** That fewer programs make a compromised app's work harder (no `perl`, `python3`, `gcc`,
   `curl`) is the reason for the idea, not a measured result: an app can bring its own tools in its tree, and the jail
   still gives it no network without `network`.

@@ -88,14 +88,17 @@ def variant_args(variant, allow=(), files=None):
     if variant in ("A", "A2"):
         def narrowed():
             args = current()
-            for d in EMPTIED:
+            emptied = [d for d in EMPTIED if os.path.isdir(d) and not os.path.islink(d)]  # Fedora: /usr/sbin is a link to bin
+            for d in emptied:
                 args += ["--tmpfs", d]
-            for name in (*KEEP, *(allow if variant == "A2" else ())):
-                for d in ("/usr/bin", "/usr/sbin", "/usr/libexec"):
-                    if os.path.lexists(f"{d}/{name}"):
-                        args += ["--ro-bind", real(f"{d}/{name}"), f"{d}/{name}"]
-            return args + ["--remount-ro", "/usr/bin", "--remount-ro", "/usr/sbin", "--remount-ro", "/usr/libexec",
-                           "--remount-ro", "/usr/share/applications"]
+            programs = [f"/usr/bin/{n}" for n in KEEP] + list(allow if variant == "A2" else ())
+            for p in programs:  # put back at the canonical place, nested helpers (/usr/libexec/x/helper) included
+                canon = os.path.join(real(os.path.dirname(p)), os.path.basename(p))
+                if os.path.lexists(p) and canon.startswith(tuple(d + "/" for d in emptied)):
+                    args += ["--ro-bind", real(p), canon]
+            for d in emptied:
+                args += ["--remount-ro", d]
+            return args
         return narrowed
 
     def traced():  # B: only what the training run touched
@@ -179,13 +182,18 @@ def parse_trace(path):
     resumed = re.compile(r'^(\d+)\s+<\.\.\. (\w+) resumed>.*\) = (-?\d+)')
     pending = {}  # pid -> (call, path) of a call that strace printed in two halves (threads)
 
+    outer = []  # the first exec is the harness's own bwrap, on the host; a bwrap the app runs later is the app's
+
     def record(call, name, rc, fd_dir=None):
         p = os.path.join(fd_dir, name) if fd_dir and not name.startswith("/") else name  # -y names the directory fd
+        if call.startswith("exec") and not outer:
+            outer.append(p)
+            return
         if call.startswith("exec") and rc >= 0:
             ALL_EXECS.add(p)
         if not p.startswith(SEEN):
             return
-        if rc >= 0 and "bwrap" not in p:
+        if rc >= 0:
             found.add(p)
             if call.startswith("exec"):
                 execs.add(p)
@@ -271,7 +279,7 @@ def probe(app):
     """What a program in the jail can list of the host, per variant (needs `sh`, so not for B)."""
     work = tempfile.mkdtemp(prefix="hostview-")
     for v in ("C", "A", "A2"):
-        r, _ = run_once(app, "probe", v, work, ("sh", "env"))
+        r, _ = run_once(app, "probe", v, work, ("/usr/bin/sh", "/usr/bin/env"))
         print(f"-- {v} (rc={r['rc']})\n" + r["text"].strip())
     shutil.rmtree(work, ignore_errors=True)
 
@@ -301,8 +309,7 @@ def main(argv):
     base, trace = run_once(app, train, "C", work)
     execs, found, _ = parse_trace(trace)
     kernel = closure({*ALL_EXECS, "/app/AppRun"}, base["root"])  # interpreters and loaders the trace cannot show
-    progs = {Path(e).name for e in {*execs, *kernel} if e.startswith(("/usr/bin/", "/usr/sbin/", "/usr/libexec/", "/bin/", "/sbin/"))}
-    allow = sorted(progs)
+    allow = sorted(e for e in {*execs, *kernel} if e.startswith(("/usr/bin/", "/usr/sbin/", "/usr/libexec/", "/bin/", "/sbin/")))
     files = {p for p in found if os.path.exists(p)} | {i for i in {*kernel, "/lib64/ld-linux-x86-64.so.2"} if os.path.exists(i)}
     # Every parent directory of a file in the set must exist as a directory, which bwrap creates itself.
     results = [base]
@@ -312,10 +319,10 @@ def main(argv):
                 continue
             r, _ = run_once(app, sc, v, work, allow, files)
             results.append(r)
-    print(f"app={app} train={train} allowlist(A2)={allow} files(B)={len(files)}")
+    print(f"app={app} train={train} allowlist(A2)={[Path(a).name for a in allow]} files(B)={len(files)}")
     for r in results:
         ran = sorted({Path(e).name for e in r["execs"]})
-        failed = sorted({Path(e).name for e in r["failed_execs"]} - set(ran) - {"bwrap"})
+        failed = sorted({Path(e).name for e in r["failed_execs"]} - set(ran))
         print(f"{r['scenario']:12} {r['variant']:3} rc={r['rc']!s:<5} ran={ran} not-found={failed} lost-files={len(r['missing'])}")
     if out_json:
         Path(out_json).write_text(json.dumps({"allow": allow, "files": len(files), "results": results}, indent=1))
