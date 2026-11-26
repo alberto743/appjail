@@ -14,8 +14,8 @@ be writable.
 | `/etc` | only fonts, the dynamic linker's cache and configuration, the local time, `alternatives`; with `network`, the files that name resolution and TLS need (`hosts`, `nsswitch.conf`, `resolv.conf`, `ssl`, CA certificates); with `gpu`, the Vulkan and GLVND configuration; a generated `passwd` and `group` | read-only |
 | `/app` | the extracted AppImage | read-only |
 | `/home/app` | the app's private home, kept between runs in `~/.local/share/appjail/apps/NAME/home` | read-write |
-| `/tmp`, `/run` | empty, private, discarded when the app exits | read-write |
-| `/run/user/UID` | the runtime directory: only the Wayland socket and, per grant, the audio sockets, the filtered D-Bus socket and the portal's document folder | as granted |
+| `/tmp`, `/run` | empty, private, discarded when the app exits; with `schemes`, `/run/appjail-link`, the [link relay](../desktop/menu-entries.md)'s queue | read-write |
+| `/run/user/UID` | the runtime directory: only the Wayland socket and, per grant, the audio sockets, the filtered D-Bus socket, the filtered accessibility bus socket and the portal's document folder | as granted |
 | `/proc`, `/dev` | the jail's own process list; basic devices only, plus GPU and camera nodes when granted | |
 | folders and files you grant | at the same path, or under `/home/app` for paths in your home | read-only unless `:rw` |
 

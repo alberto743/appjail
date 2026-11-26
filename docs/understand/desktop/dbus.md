@@ -86,10 +86,10 @@ the variable alone; the app needs no session bus for it. The permission fails cl
 ## Limits
 
 - With `accessibility`, an app can tell that an assistive tool is running and which events it listens for, and can send
-  fake key events to a screen reader's key listener (not to other windows). Without them a screen reader would not get the
-  keys typed in that app.
-- Only a GTK 3 and a Qt 6 window and a stand-in screen reader were measured with `accessibility` (on Debian 13, Ubuntu 26.04 and Fedora 45); a real Orca, GTK 4,
-  Electron and X11 apps were not.
+  fake key events to a screen reader's key listener (not to other windows). Passing key events is needed: without it a
+  screen reader would not hear the keys typed in that app.
+- Only a GTK 3 and a Qt 6 window and a stand-in screen reader were measured with `accessibility` (on Debian 13, Ubuntu
+  26.04 and Fedora 45); a real Orca, GTK 4, Electron and X11 apps were not.
 - The owner check runs at start: a name that nobody owns then, or that changes owner while the app runs, is not checked
   again.
 - A granted name that is not a confined service reaches everything its owner serves.
