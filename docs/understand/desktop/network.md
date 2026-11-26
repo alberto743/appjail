@@ -1,6 +1,7 @@
 # Network
 
-*Part of [Desktop access](index.md). Previous: [GPU and camera](devices.md). Next: [menu entries and opening files](menu-entries.md).*
+*Part of [Desktop access](index.md). Previous: [GPU and camera](devices.md). Next:
+[menu entries and opening files](menu-entries.md).*
 
 ## What it is
 
@@ -19,15 +20,16 @@ can reach them, and the abstract unix sockets of your session, such as the X ser
 ## How appjail uses it
 
 - **No network by default.** The app jail has its own empty network namespace.
-- **`network`**: the app runs in a private namespace made by `pasta`, with outbound TCP and UDP, IPv6 where your host has
-  a route, and name resolution through a forwarder address. Your machine's loopback and its own addresses are not
+- **`network`**: the app runs in a private namespace made by `pasta`, with outbound TCP and UDP, IPv6 where your host
+  has a route, and name resolution through a forwarder address. Your machine's loopback and its own addresses are not
   reachable from inside, and nothing is forwarded in. Without `pasta`, an app with `network` is refused, never put on
   your network.
 - **`network_host`** (it implies `network`): the app shares your network namespace, for apps that need local services.
   Your abstract unix sockets are then reachable by name, so [Landlock](../isolation/landlock.md) refuses connections to
   those created outside the jail; without Landlock (Linux 6.12) this permission is refused.
 - **The download jails** use the same `pasta` namespace. Without `pasta` they are refused, since they would share the
-  host network; `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a warning on each command that does it.
+  host network; `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a warning on each command that does
+  it.
 
 ## Connections
 
@@ -39,8 +41,8 @@ can reach them, and the abstract unix sockets of your session, such as the X ser
 
 ## Limits
 
-- Other machines on your local network are reachable with `network`. Keeping apps off them is not a goal; an allowlisting
-  proxy is deferred.
+- Other machines on your local network are reachable with `network`. Keeping apps off them is not a goal; an
+  allowlisting proxy is deferred.
 - IPv6 over a real internet route has been tested only on a simulated network.
 
 ## References

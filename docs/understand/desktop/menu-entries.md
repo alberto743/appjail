@@ -26,13 +26,13 @@ meant to give it.
   " (appjail)" to the name so an app cannot pose as a host app. The command is always `appjail run NAME`. Only files
   carrying appjail's marker are ever replaced or deleted.
 - **File types are opt-in.** Nothing is registered unless you pick types the app declares, and only types that pass a
-  filter can be picked: no executables, scripts or installers, at most 32. URL schemes are a separate opt-in, below. appjail never makes an app the
-  default for anything; with types, the entry runs `appjail open NAME -- FILE...`.
-- **Links are a second opt-in.** An app may be given a list of schemes (`schemes`, `--scheme` and `perms --add-scheme`); the
-  entry registers those that the app's own entry also declares, and runs `appjail open NAME -- %U`. When the app is running, `open`
-  writes the checked link to a FIFO that a small relay inside the jail reads, and the relay starts `AppRun LINK` there, so a
-  single-instance app finds its running instance. Files cannot be handed to a running app. Decision:
-  [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
+  filter can be picked: no executables, scripts or installers, at most 32. URL schemes are a separate opt-in, below.
+  appjail never makes an app the default for anything; with types, the entry runs `appjail open NAME -- FILE...`.
+- **Links are a second opt-in.** An app may be given a list of schemes (`schemes`, `--scheme` and `perms --add-scheme`);
+  the entry registers those that the app's own entry also declares, and runs `appjail open NAME -- %U`. When the app is
+  running, `open` writes the checked link to a FIFO that a small relay inside the jail reads, and the relay starts
+  `AppRun LINK` there, so a single-instance app finds its running instance. Files cannot be handed to a running app.
+  Decision: [Links reach a running app through a relay](../../decisions/desktop/url-handlers.md).
 - **Opening binds one file.** `appjail open` grants each file alone for that run, read-only unless the entry was created
   with `--rw`, with the same path checks as any grant. Choosing the file in the file manager is the consent, as in the
   portal's file chooser.
@@ -43,7 +43,8 @@ meant to give it.
 ## Connections
 
 - Opening a file uses the same grant code as `run --file`: [the filesystem view](../isolation/filesystem.md).
-- Text from the AppImage goes through the same cleaner as everything else: [untrusted text](../acquisition/untrusted-text.md).
+- Text from the AppImage goes through the same cleaner as everything else:
+  [untrusted text](../acquisition/untrusted-text.md).
 - Decisions: [Menu entries are written by appjail](../../decisions/desktop/menu-entries.md),
   [Icons rewritten, not decoded](../../decisions/desktop/icons.md).
 

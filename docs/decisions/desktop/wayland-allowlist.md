@@ -3,8 +3,8 @@
 *Decision on [desktop access](index.md).*
 
 **Context.** A list of privileged interfaces alone lets through a dangerous interface nobody has classified yet: on a
-compositor that was not measured (niri, river, COSMIC), or in a new version of one that was. A list that refuses
-too much is no better: GNOME, the desktop most users run, lists a few globals that are not harmless to the letter, and an
+compositor that was not measured (niri, river, COSMIC), or in a new version of one that was. A list that refuses too
+much is no better: GNOME, the desktop most users run, lists a few globals that are not harmless to the letter, and an
 app that needs `full_wayland` on every common desktop is not in a jail at all.
 
 **Decision.** appjail keeps two tables (`wayland.py`): the privileged interfaces, by kind, and `RATIONALE`, the
@@ -57,9 +57,9 @@ for other reasons, so no user is refused by them today):
   the shell would open a file the app picks, and the app can write one in its own home.
 
 **Options rejected.** A separate, weaker permission for unknown interfaces (`full_wayland` already means "more than
-appjail vouches for"); measuring every compositor first (some are not packaged for the supported systems, and the
-tables protect without measuring them); refusing `wp_drm_lease_device_v1` (it was proposed in the reassessment of
-2026-11-15 and withdrawn: it puts every GNOME user on `full_wayland`, for a cost that is bounded and written down above).
+appjail vouches for"); measuring every compositor first (some are not packaged for the supported systems, and the tables
+protect without measuring them); refusing `wp_drm_lease_device_v1` (it was proposed in the reassessment of 2026-11-15
+and withdrawn: it puts every GNOME user on `full_wayland`, for a cost that is bounded and written down above).
 
 **Consequences.** A compositor update that adds a harmless interface refuses apps until it is classified; the message
 names it, and users are asked to report it. Classification is by name, not version: a new version of an allowed

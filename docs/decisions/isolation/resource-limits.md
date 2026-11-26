@@ -20,8 +20,8 @@ systemd's own syntax:
 | `cpu_quota` | `CPUQuota` | a percentage of one CPU, which may exceed 100% |
 | `tasks_max` | `TasksMax` | a number of processes and threads, or a percentage |
 
-appjail validates the value against that syntax and passes it to `systemd-run --user --scope`, which starts the
-launch (`pasta` when the app has `network`, otherwise `bwrap`). With any key set the scope also carries `OOMPolicy=kill`.
+appjail validates the value against that syntax and passes it to `systemd-run --user --scope`, which starts the launch
+(`pasta` when the app has `network`, otherwise `bwrap`). With any key set the scope also carries `OOMPolicy=kill`.
 Without a key nothing changes: no scope, no extra process. Only the app's own jail is limited; the helper jails
 (downloads, extraction, audio, the D-Bus proxy) are not.
 
@@ -34,10 +34,10 @@ Without a key nothing changes: no scope, no extra process. Only the app's own ja
   `Popen` returns is the scope's main process, still leader of the session and process group appjail created. With
   `pasta` outermost, one `run-….scope` held `pasta`, both `bwrap` processes and the app, and `SIGTERM` sent to the
   group left nothing behind on any guest. A hog inside `pasta` and the jail was killed with nothing left over.
-- **Running out of memory ends the whole app.** Exit status 137 (or 143) on Debian, Ubuntu and Fedora, no process left in
-  the scope, on Fedora with `systemd-oomd` running as well. With `OOMPolicy=kill` the status was 137; without it
-  143 on Debian and Fedora, the same teardown with a different status, so the policy makes the status predictable. The user journal names the
-  cause ("killed by the OOM killer"), which appjail can point to when a jail ends with 137.
+- **Running out of memory ends the whole app.** Exit status 137 (or 143) on Debian, Ubuntu and Fedora, no process left
+  in the scope, on Fedora with `systemd-oomd` running as well. With `OOMPolicy=kill` the status was 137; without it 143
+  on Debian and Fedora, the same teardown with a different status, so the policy makes the status predictable. The user
+  journal names the cause ("killed by the OOM killer"), which appjail can point to when a jail ends with 137.
 - **`MemorySwapMax=0`.** Otherwise the limit counts only resident memory and an app can push the rest into swap and
   slow the whole host. The limit then means what it says.
 - **No user session, no limits.** Without `XDG_RUNTIME_DIR` and the session bus (a cron job, a bare `su`)

@@ -1,10 +1,10 @@
 # The host's system view: the evidence
 
-Working notes, not a specification. Today's behaviour is on [bubblewrap](../understand/isolation/bubblewrap.md),
-and the conclusion drawn from these measurements is [Narrowing the host's system view](../decisions/isolation/host-view.md).
+Working notes, not a specification. Today's behaviour is on [bubblewrap](../understand/isolation/bubblewrap.md), and the
+conclusion drawn from these measurements is [Narrowing the host's system view](../decisions/isolation/host-view.md).
 Written in November 2026 from experiments in the Debian 13 guest, then repeated on Ubuntu 26.04 and Fedora 45
-([below](#ubuntu-and-fedora)). "Measured" means a script ran in the guest (they are
-in `tests/hostview/`); "not done" means neither. Nothing here was run on the maintainer's own machine.
+([below](#ubuntu-and-fedora)). "Measured" means a script ran in the guest (they are in `tests/hostview/`); "not done"
+means neither. Nothing here was run on the maintainer's own machine.
 
 The question: the jail binds the host's `/usr`, `/bin`, `/sbin` and `/lib*` read-only, so an app can list the installed
 software and run any program of the host. How much of that can be taken away without breaking the apps, and what would
@@ -16,12 +16,12 @@ The `NEEDED` entries of an ELF file name only the shared libraries linked at bui
 
 - programs an app starts (`ln`, `strace`, `xdg-open`);
 - files opened at run time (`dlopen` of a plug-in, keyboard layouts, fonts, locales, theme and MIME data);
-- what the kernel opens by itself when it runs a file: the ELF loader (`PT_INTERP`) and the interpreter named on a script's
-  `#!` line.
+- what the kernel opens by itself when it runs a file: the ELF loader (`PT_INTERP`) and the interpreter named on a
+  script's `#!` line.
 
 So the study traces behaviour: the real appjail jail, under `strace -f -y`, for several scenarios per app, with the
-system view narrowed in four ways. A static scan of the files for host paths is added as a pointer to where a trace would
-have to look.
+system view narrowed in four ways. A static scan of the files for host paths is added as a pointer to where a trace
+would have to look.
 
 ## Method
 
@@ -48,10 +48,10 @@ result of three identical rounds; all rounds agreed.
 
 ## What the apps run (measured, variant C)
 
-Host programs the four apps started: `ln` (htop and Galculator), `strace` (htop, on `s`), `basename` and `env` (Lagrange),
-`bash`, `dirname` and `readlink` (ImageMagick), and `sh` (the shebang of Lagrange's `AppRun`). Attempts that found nothing:
-`xdg-user-dir` (Lagrange) and `lsof` (htop, on `l`; the guest does not install it). Everything else in the `exec` calls was
-the app's own tree.
+Host programs the four apps started: `ln` (htop and Galculator), `strace` (htop, on `s`), `basename` and `env`
+(Lagrange), `bash`, `dirname` and `readlink` (ImageMagick), and `sh` (the shebang of Lagrange's `AppRun`). Attempts that
+found nothing: `xdg-user-dir` (Lagrange) and `lsof` (htop, on `l`; the guest does not install it). Everything else in
+the `exec` calls was the app's own tree.
 
 These are not features of the apps. The two "anylinux" AppImages (htop, Galculator) run a hook script that calls `ln` to
 map hard-coded paths (`/tmp/_…/galculator/ui/main_frame.ui`); ImageMagick's `AppRun` needs `bash`, `dirname` and
@@ -59,8 +59,8 @@ map hard-coded paths (`/tmp/_…/galculator/ui/main_frame.ui`); ImageMagick's `A
 
 ## A static scan names more than a run shows (measured)
 
-Scanning the extracted trees (`tests/hostview/static_refs.py`) for host paths and helper names gives a longer list, which
-shows what a scenario that was not run could use:
+Scanning the extracted trees (`tests/hostview/static_refs.py`) for host paths and helper names gives a longer list,
+which shows what a scenario that was not run could use:
 
 | App | Named in its files (not run in the scenarios) |
 |---|---|
@@ -69,9 +69,9 @@ shows what a scenario that was not run could use:
 | Lagrange | `xdg-open`, `/usr/bin/dbus-send`, `zenity`, `convert` |
 | ImageMagick | `/usr/bin/gs`, `/usr/bin/lpr`, `perl`, `make`, `pkg-config`, `xdg-open`, `curl` |
 
-A name in a file is not an `exec`: the list is noisy (a word like `ps` or `display` matches strings of other kinds) and is
-a place to look, not a result. It does show that `xdg-open`, which a link click or an "open file" would run, is named by all
-four apps and was run by none of the scenarios, because a headless compositor cannot click.
+A name in a file is not an `exec`: the list is noisy (a word like `ps` or `display` matches strings of other kinds) and
+is a place to look, not a result. It does show that `xdg-open`, which a link click or an "open file" would run, is named
+by all four apps and was run by none of the scenarios, because a headless compositor cannot click.
 
 ## Results (measured)
 
@@ -95,8 +95,8 @@ Three things are plain:
   the next one; on Ubuntu and Fedora a library needs more ([below](#ubuntu-and-fedora)).
 - **A list recorded from one scenario misses the helpers of another.** Trained on htop's text screen, A2 and B had no
   `strace`, and the strace screen failed with no error to the user other than the helper's absence.
-- **A trace of open calls never shows what the kernel opens.** The first version of B started no program at all
-  ("No such file or directory" on the app's own `AppRun`): the ELF loader and the shell or Bash named on its `#!` line were
+- **A trace of open calls never shows what the kernel opens.** The first version of B started no program at all ("No
+  such file or directory" on the app's own `AppRun`): the ELF loader and the shell or Bash named on its `#!` line were
   never opened by a process the trace could see. After adding both to the set, B started htop, Lagrange and ImageMagick.
 
 Variant B did not start Galculator in any round: its GTK start aborts with "Failed to create XKB keymap", after
@@ -120,13 +120,14 @@ the host's packages change.
 
 So narrowing the programs hides which programs and desktop entries are installed. It does not hide the names of the
 installed packages (`/usr/share/doc`), the library versions, or the distribution: those live in `/usr/lib` and
-`/usr/share`, which the apps need (libraries, fonts, keyboard layouts, themes). Hiding them would take variant B's approach.
+`/usr/share`, which the apps need (libraries, fonts, keyboard layouts, themes). Hiding them would take variant B's
+approach.
 
 ## Ubuntu and Fedora
 
 The same apps (same hashes) and the same matrix ran once on Ubuntu 26.04 and Fedora 45, and once more on Debian with the
-final version of the script (it skips only the harness's own `bwrap` in a trace, and puts back a program at its own path,
-so a helper in a subdirectory of `/usr/libexec` counts). Debian gave the results above again.
+final version of the script (it skips only the harness's own `bwrap` in a trace, and puts back a program at its own
+path, so a helper in a subdirectory of `/usr/libexec` counts). Debian gave the results above again.
 
 | App and scenario | Ubuntu 26.04: C / A / A2 / B | Fedora 45: C / A / A2 / B |
 |---|---|---|
@@ -138,12 +139,12 @@ so a helper in a subdirectory of `/usr/libexec` counts). Debian gave the results
 | ImageMagick: all five scenarios | ok / **all fail** / ok / ok | same |
 
 The new result is Lagrange's. On both systems the GTK image loader (glycin, which GTK uses through gdk-pixbuf) runs host
-programs itself: `/usr/bin/bwrap`, to sandbox its loader (which fails in the jail, after which glycin says "running without
-sandbox"), then the loader `/usr/libexec/glycin-loaders/2+/glycin-svg`; Ubuntu's also runs `xdg-user-dir`. With A, `bwrap`
-is missing and the app aborts. B aborts too: on Ubuntu it ran only `basename`, on Fedora glycin chose another loader,
-`glycin-image-rs`, that the training run had not used. So a host library, not the app's own scripts, can need programs in
-`/usr/bin` and in a subdirectory of `/usr/libexec`, and which one depends on the system and on the run. Galculator, which
-aborted under B in every run on Debian and Ubuntu, started under B on Fedora.
+programs itself: `/usr/bin/bwrap`, to sandbox its loader (which fails in the jail, after which glycin says "running
+without sandbox"), then the loader `/usr/libexec/glycin-loaders/2+/glycin-svg`; Ubuntu's also runs `xdg-user-dir`. With
+A, `bwrap` is missing and the app aborts. B aborts too: on Ubuntu it ran only `basename`, on Fedora glycin chose another
+loader, `glycin-image-rs`, that the training run had not used. So a host library, not the app's own scripts, can need
+programs in `/usr/bin` and in a subdirectory of `/usr/libexec`, and which one depends on the system and on the run.
+Galculator, which aborted under B in every run on Debian and Ubuntu, started under B on Fedora.
 
 What a program in the jail can list, in the same jail on each system:
 
@@ -159,8 +160,8 @@ package directories, libraries and release stay, as on Debian.
 
 ## What is not done
 
-- **Interactive features.** The compositor had no input device, so no file dialog, print dialog, link click, drag and drop
-  or "open with" ran. Those are where `xdg-open`, `gio`, `update-mime-database` and `dbus-send` would be started.
+- **Interactive features.** The compositor had no input device, so no file dialog, print dialog, link click, drag and
+  drop or "open with" ran. Those are where `xdg-open`, `gio`, `update-mime-database` and `dbus-send` would be started.
 - **Electron apps** (Obsidian, Joplin), which start more helpers, were not installed.
 - **The effect on an attacker.** That fewer programs make a compromised app's work harder (no `perl`, `python3`, `gcc`,
   `curl`) is the reason for the idea, not a measured result: an app can bring its own tools in its tree, and the jail
@@ -185,10 +186,12 @@ python3 -I tests/hostview/static_refs.py PATH/TO/EXTRACTED/TREE...
 
 ## References
 
-- Linux, [execve(2)](https://man7.org/linux/man-pages/man2/execve.2.html), "Interpreter scripts": a script is run through the
-  interpreter named on its `#!` line, which is why that interpreter has to exist in the jail although no process opens it.
-- Linux, [elf(5)](https://man7.org/linux/man-pages/man5/elf.5.html): `PT_INTERP` names the program interpreter (the loader).
-- [strace(1)](https://man7.org/linux/man-pages/man1/strace.1.html): `-f` follows children, and a call interrupted by another
-  thread is printed as an `unfinished` line and a `resumed` line.
-- Flatpak documentation, [Sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html): the `host-os`
-  (the host's `/usr`, `/bin`, `/sbin`, `/lib*`) and `host-etc` filesystem options.
+- Linux, [execve(2)](https://man7.org/linux/man-pages/man2/execve.2.html), "Interpreter scripts": a script is run
+  through the interpreter named on its `#!` line, which is why that interpreter has to exist in the jail although no
+  process opens it.
+- Linux, [elf(5)](https://man7.org/linux/man-pages/man5/elf.5.html): `PT_INTERP` names the program interpreter (the
+  loader).
+- [strace(1)](https://man7.org/linux/man-pages/man1/strace.1.html): `-f` follows children, and a call interrupted by
+  another thread is printed as an `unfinished` line and a `resumed` line.
+- Flatpak documentation, [Sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html): the
+  `host-os` (the host's `/usr`, `/bin`, `/sbin`, `/lib*`) and `host-etc` filesystem options.

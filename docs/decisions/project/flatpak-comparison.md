@@ -34,13 +34,15 @@ Flatpak remains the mature route.
 
 - **The host's system is hidden.** A runtime is mounted at `/usr`; the host's own files are reachable only through
   `host-os`, `host-etc` or `host`. appjail binds the host's `/usr`, `/lib*` and part of `/etc` read-only: an app can
-  list the installed software, every host library is part of what it can reach, and its behaviour depends on the host. Narrowing
-  it was studied and not adopted ([the decision](../isolation/host-view.md)).
+  list the installed software, every host library is part of what it can reach, and its behaviour depends on the host.
+  Narrowing it was studied and not adopted ([the decision](../isolation/host-view.md)).
 - **Signed transport and central builds.** OSTree commits are GPG-signed per remote, and Flathub builds most apps from a
   public manifest on its own infrastructure. appjail runs the publisher's binary; GPG is a deferred tier and nothing is
   rebuilt.
 - **Resource accounting.** Each instance runs in a systemd scope (`app-flatpak-ID-INSTANCE.scope`), where the session's
-  resource control and `systemd-oomd` apply. appjail has the three optional limits `memory_max`, `cpu_quota` and `tasks_max`, applied through a `systemd-run --user --scope` around the launch when set ([resource limits](../isolation/resource-limits.md)); without one an app can exhaust memory or CPU.
+  resource control and `systemd-oomd` apply. appjail has the three optional limits `memory_max`, `cpu_quota` and
+  `tasks_max`, applied through a `systemd-run --user --scope` around the launch when set
+  ([resource limits](../isolation/resource-limits.md)); without one an app can exhaust memory or CPU.
 - **Mediated hardware.** A USB portal with per-device grants, conditional permissions (`--device-if`, `--socket-if`) and
   parental controls. appjail binds no input, USB or Bluetooth device.
 - **Sandboxes inside the app.** `flatpak-spawn --sandbox` gives a child a stricter sandbox without letting the app
@@ -61,7 +63,8 @@ Flatpak remains the mature route.
 - URL handlers from the app's menu entry (file types are offered with `desktop --mime`); a working Background portal
   (appjail's autostart entries say `flatpak run`); software centres and permission editors; the permission store's
   command line.
-- `--persist`, file forwarding, conditional permissions, a `devel` mode for profilers (appjail's `devel` is for debuggers and tracers: no `perf_event_open`).
+- `--persist`, file forwarding, conditional permissions, a `devel` mode for profilers (appjail's `devel` is for
+  debuggers and tracers: no `perf_event_open`).
 - Masking and pinning updates, `repair`, end-of-life notices for runtimes.
 
 Some exist in both under another shape: `flatpak override` and `perms`, `--filesystem` and `dirs`, `--talk-name` and
@@ -72,8 +75,8 @@ sound, and AppImages run as published.
 
 **Consequences.** The gaps that fit appjail's scope were built: the accessibility bus (opt-in, `accessibility`),
 resource limits, file-type handlers and a debugging opt-in; a narrower view of the host's system was studied and not
-adopted ([the decision](../isolation/host-view.md)). Runtimes, repositories, system-wide installs and raw device access are not planned. Re-check this page with the
-[related projects](related-projects.md) at each minor release.
+adopted ([the decision](../isolation/host-view.md)). Runtimes, repositories, system-wide installs and raw device access
+are not planned. Re-check this page with the [related projects](related-projects.md) at each minor release.
 
 ## References
 

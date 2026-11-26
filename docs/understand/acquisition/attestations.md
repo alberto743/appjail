@@ -37,8 +37,8 @@ evidence a GitHub release can carry.
   bounded decoder. Nothing from a bundle is trusted before verification.
 - **`gh` runs in a jail** with a network (it fetches Sigstore's trusted root) that sees only the downloaded file, the
   bundles and a scratch directory. No GitHub token is passed to it.
-- **appjail re-reads the certificate** after `gh` succeeds: the issuer must be GitHub Actions, the source repository must
-  be the app's repository, and the repository owner's account id must equal the pinned `owner_id`.
+- **appjail re-reads the certificate** after `gh` succeeds: the issuer must be GitHub Actions, the source repository
+  must be the app's repository, and the repository owner's account id must equal the pinned `owner_id`.
 - **After the download, on the real bytes.** Tier 1 does not depend on GitHub publishing a digest. A failed verification
   never aborts an `add` (the app gets tier 3 or 4, with the reason), but an app already at tier 1 does not accept an
   update without an attestation that verifies.
@@ -60,8 +60,7 @@ evidence a GitHub release can carry.
 ## References
 
 - GitHub Docs, [Artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations) and
-  [Using artifact attestations to establish provenance for
-  builds](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+  [Using artifact attestations to establish provenance for builds](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
 - GitHub CLI manual, [gh attestation verify](https://cli.github.com/manual/gh_attestation_verify).
 - Sigstore, [Overview](https://docs.sigstore.dev/about/overview/): Fulcio, Rekor and keyless signing.
 - SLSA, [Provenance](https://slsa.dev/spec/v1.0/provenance).

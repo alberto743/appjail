@@ -1,9 +1,9 @@
 # URL handlers and a second launch: the evidence
 
 Working notes, not a specification: the open question is on [deferred work](../decisions/deferred.md) (row "URL
-handlers"); no decision has been taken and no code written. Written in November 2026 from experiments in the qemu guests.
-"Measured" means a command or test ran in a guest; "read" means documentation only; "not done" means neither. Nothing
-here was run on the maintainer's own machine. The scripts are at the end so each run can be repeated.
+handlers"); no decision has been taken and no code written. Written in November 2026 from experiments in the qemu
+guests. "Measured" means a command or test ran in a guest; "read" means documentation only; "not done" means neither.
+Nothing here was run on the maintainer's own machine. The scripts are at the end so each run can be repeated.
 
 The question: appjail leaves out every `x-scheme-handler/` type of an app's own menu entry on purpose (a link opened
 anywhere on the desktop would start an untrusted program with an untrusted string). Letting the user opt in to some
@@ -55,14 +55,15 @@ directory, and `gio open` with various inputs. The three guests have different G
 | a local file `…/-dash.txt` | the absolute path (it cannot read as an option) |
 | a file and a URL in one call | two launches, one each; the order differs between guests |
 
-Read, in the [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry/latest/exec-variables.html)
-(version 1.5): `%u` "a single URL", `%U`
-"a list of URLs. Each URL is passed as a separate argument to the executable program", and for both "local files may either
-be passed as file: URLs or as file path", so a handler has to be ready for both. Quoting in `Exec` is done by double quotes with
-backslashes before `"`, `` ` ``, `$` and `\`; a literal `%` is `%%`; at most one of `%f %u %F %U` per command line, and
-`%F` and `%U` only "as an argument on their own". The page does not mention `x-scheme-handler`, and the page that defines
-`MimeType` does not either; the MIME registration page was not read. Not done: KDE Plasma (KIO) and Cinnamon launchers; the
-specification leaves them free to pass `file:` URLs for local files.
+Read, in the
+[Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry/latest/exec-variables.html)
+(version 1.5): `%u` "a single URL", `%U` "a list of URLs. Each URL is passed as a separate argument to the executable
+program", and for both "local files may either be passed as file: URLs or as file path", so a handler has to be ready
+for both. Quoting in `Exec` is done by double quotes with backslashes before `"`, `` ` ``, `$` and `\`; a literal `%` is
+`%%`; at most one of `%f %u %F %U` per command line, and `%F` and `%U` only "as an argument on their own". The page does
+not mention `x-scheme-handler`, and the page that defines `MimeType` does not either; the MIME registration page was not
+read. Not done: KDE Plasma (KIO) and Cinnamon launchers; the specification leaves them free to pass `file:` URLs for
+local files.
 
 ## A second launch of a running app: Lagrange (measured, Debian)
 
@@ -81,17 +82,17 @@ they do not. Lagrange finds the running instance from the pid in `.pid`, which m
 
 ### A stale pid file (measured, Debian)
 
-`.config/lagrange/.pid` held `2` and was dated 19 November, probably left by an earlier end-to-end run that ended the app
-by a signal (not verified). With it present, **every** launch of Lagrange found "another instance" (pid 2 exists in the new
-jail: itself), tried the signal handover and exited at once; the window never appeared. Moving the file aside restored
-normal starts. This is independent of URL handlers: any app that keeps a pid file in its persistent home will do this after
-an unclean end, because every jail has its own pid namespace and the numbers repeat.
+`.config/lagrange/.pid` held `2` and was dated 19 November, probably left by an earlier end-to-end run that ended the
+app by a signal (not verified). With it present, **every** launch of Lagrange found "another instance" (pid 2 exists in
+the new jail: itself), tried the signal handover and exited at once; the window never appeared. Moving the file aside
+restored normal starts. This is independent of URL handlers: any app that keeps a pid file in its persistent home will
+do this after an unclean end, because every jail has its own pid namespace and the numbers repeat.
 
 ## A second launch of a running app: an Electron probe (measured)
 
-Chromium's single-instance lock (`app.requestSingleInstanceLock()`, which Electron apps use) is a symlink `SingletonLock`
-named `HOSTNAME-PID` in the user-data directory (here the shared private home), plus a unix socket under `/tmp`
-(`SingletonSocket`, private to each jail) and a `SingletonCookie`.
+Chromium's single-instance lock (`app.requestSingleInstanceLock()`, which Electron apps use) is a symlink
+`SingletonLock` named `HOSTNAME-PID` in the user-data directory (here the shared private home), plus a unix socket under
+`/tmp` (`SingletonSocket`, private to each jail) and a `SingletonCookie`.
 
 | Case | Debian | Ubuntu | Fedora |
 |---|---|---|---|
@@ -105,35 +106,36 @@ named `HOSTNAME-PID` in the user-data directory (here the shared private home), 
 | E4b lock naming pid 3 with a dead cookie and socket, three fresh launches | all three start | not run | not run |
 
 Reading the E2 rows: the main process of every Electron jail is pid 2 (pid 1 is bubblewrap's init), so the lock always
-reads `appjail-2` (the hostname inside the jail is `appjail`). The second jail finds a lock that names its own pid, takes
-it as stale and replaces it. Result: two full instances of the app run on **one profile directory**, and the first
+reads `appjail-2` (the hostname inside the jail is `appjail`). The second jail finds a lock that names its own pid,
+takes it as stale and replaces it. Result: two full instances of the app run on **one profile directory**, and the first
 instance's lock, cookie and socket were overwritten by the second's. Neither can receive anything from a later launch.
-Corruption of the profile was not measured; it is the risk this implies for databases such as IndexedDB and LevelDB.
-The URL handed to the second jail is not lost (it is its own first instance's argument), but nothing reaches the app the
+Corruption of the profile was not measured; it is the risk this implies for databases such as IndexedDB and LevelDB. The
+URL handed to the second jail is not lost (it is its own first instance's argument), but nothing reaches the app the
 user was already using.
 
 E3 in the same jail: the first instance logs the full command line of the second, with the URL byte for byte
-(`appjailprobe://second/a b?x=1&y="q"`, spaces, `&` and quotes intact); Electron added `--allow-file-access-from-files` to
-it. The second exits 0 at once. This is Chromium's design working as intended.
+(`appjailprobe://second/a b?x=1&y="q"`, spaces, `&` and quotes intact); Electron added `--allow-file-access-from-files`
+to it. The second exits 0 at once. This is Chromium's design working as intended.
 
 The sandbox rows: appjail clears set-id bits when it checks an extracted tree, so Electron's `chrome-sandbox` helper can
 never be set-uid in a jail. The sandbox then needs the `userns` grant or `--no-sandbox`. Ubuntu 26.04 refused the
-namespace sandbox even with the grant (not investigated); `--no-sandbox` was used for the Ubuntu rows above, with `userns`
-denied.
+namespace sandbox even with the grant (not investigated); `--no-sandbox` was used for the Ubuntu rows above, with
+`userns` denied.
 
 ## A socket from the host into a jail (measured, all three guests)
 
 A directory granted with `dirs = ["~/e7dir:rw"]` is bound into the jail at `/home/app/e7dir`. A process inside the jail
 bound a unix socket there; the host connected to the same path, sent `open appjailprobe://x` and received a reply. It
-worked on Debian, Ubuntu and Fedora. Seen from inside the jail the host peer's pid is `0` (another pid namespace) and its
-uid is the user's, so a service in a jail could tell callers apart by user and directory permissions, not by process.
+worked on Debian, Ubuntu and Fedora. Seen from inside the jail the host peer's pid is `0` (another pid namespace) and
+its uid is the user's, so a service in a jail could tell callers apart by user and directory permissions, not by
+process.
 
 ## A relay inside the running jail (measured, all three guests)
 
-A throwaway prototype (scripts at the end, not part of `src/`): the jail's start command is wrapped so that a small Python
-relay runs as pid 2 and starts the app as its child (pid 3). The relay listens on a unix socket in a directory granted
-with `dirs = ["~/relay-NAME:rw"]` (mode 700, the socket 600). A host client connects, sends one line, and the relay runs
-`/app/AppRun LINE` inside the jail, so the app's own single-instance handover finds the running instance.
+A throwaway prototype (scripts at the end, not part of `src/`): the jail's start command is wrapped so that a small
+Python relay runs as pid 2 and starts the app as its child (pid 3). The relay listens on a unix socket in a directory
+granted with `dirs = ["~/relay-NAME:rw"]` (mode 700, the socket 600). A host client connects, sends one line, and the
+relay runs `/app/AppRun LINE` inside the jail, so the app's own single-instance handover finds the running instance.
 
 | Case | Result |
 |---|---|
@@ -147,25 +149,26 @@ with `dirs = ["~/relay-NAME:rw"]` (mode 700, the socket 600). A host client conn
 | Socket directory | owner the user, mode 700 under the user's home; another user cannot traverse it (reasoned from the modes: the check with `sudo -u nobody` failed on the unreadable client script, not on the socket) |
 
 The Electron rows were repeated on Ubuntu 26.04 (with `--no-sandbox`, as in the sandbox rows above, since the namespace
-sandbox still aborts there) and on Fedora 45 (with the `userns` grant): the same results, `SingletonLock -> appjail-3`, two
-`second-instance` events with the URLs byte for byte, the control-character link refused. Lagrange was run on Debian only.
-In the process list the match for `relay.py` also caught one process outside the jail with `Seccomp: 0` (the host-side
-launcher whose command line names the script); the relay and the app themselves showed `Seccomp: 2`.
+sandbox still aborts there) and on Fedora 45 (with the `userns` grant): the same results, `SingletonLock -> appjail-3`,
+two `second-instance` events with the URLs byte for byte, the control-character link refused. Lagrange was run on Debian
+only. In the process list the match for `relay.py` also caught one process outside the jail with `Seccomp: 0` (the
+host-side launcher whose command line names the script); the relay and the app themselves showed `Seccomp: 2`.
 
-An unintended first run is worth keeping: the relay at first passed the app's own arguments to every helper, so the helper
-for the second link also carried the first URL; Lagrange then did not hand over (the extra argument changed its handling)
-and started a second instance that rewrote `.pid`. The helper must get `AppRun` and the new link only.
+An unintended first run is worth keeping: the relay at first passed the app's own arguments to every helper, so the
+helper for the second link also carried the first URL; Lagrange then did not hand over (the extra argument changed its
+handling) and started a second instance that rewrote `.pid`. The helper must get `AppRun` and the new link only.
 
-Open from this run: the real unix path limit (108 bytes) bounds the
-length of the socket directory name; a link that arrives before the app writes its own lock may start a first instance in
-the helper (Chromium's lock is atomic, Lagrange's `.pid` is not).
+Open from this run: the real unix path limit (108 bytes) bounds the length of the socket directory name; a link that
+arrives before the app writes its own lock may start a first instance in the helper (Chromium's lock is atomic,
+Lagrange's `.pid` is not).
 
 ## The desktop's own tools with appjail's entry (measured, all three guests)
 
-With the built code, not the prototype: `appjail perms probe --add-scheme appjailprobe`, `appjail desktop probe` (the entry
-says `Exec=… open probe -- %U` and `MimeType=x-scheme-handler/appjailprobe;`), `update-desktop-database`, then `xdg-mime
-default appjail-probe.desktop x-scheme-handler/appjailprobe` in a throwaway `XDG_DATA_HOME` and `XDG_CONFIG_HOME`. The
-probe ran on a headless weston (`full_wayland` granted; a menu entry is refused for `display = none`).
+With the built code, not the prototype: `appjail perms probe --add-scheme appjailprobe`, `appjail desktop probe` (the
+entry says `Exec=… open probe -- %U` and `MimeType=x-scheme-handler/appjailprobe;`), `update-desktop-database`, then
+`xdg-mime default appjail-probe.desktop x-scheme-handler/appjailprobe` in a throwaway `XDG_DATA_HOME` and
+`XDG_CONFIG_HOME`. The probe ran on a headless weston (`full_wayland` granted; a menu entry is refused for
+`display = none`).
 
 | Step | Result |
 |---|---|
@@ -176,16 +179,16 @@ probe ran on a headless weston (`full_wayland` granted; a menu entry is refused 
 | `xdg-open 'appjailprobe://via-xdg-open/z'`, app running | the same (`xdg-open` ran the entry through the desktop-neutral path: no desktop environment in the guest) |
 | `~/.local/share/appjail/run/` during the run | one FIFO, `probe.link`, mode `prw-------` |
 
-Lagrange, run through `perms`, `desktop` and `open` without the desktop tools (Debian), received two links in the running
-process ("Commands sent to Lagrange process 3"). `xdg-utils` is now in the guests (`tests/vm/packages.txt`).
+Lagrange, run through `perms`, `desktop` and `open` without the desktop tools (Debian), received two links in the
+running process ("Commands sent to Lagrange process 3"). `xdg-utils` is now in the guests (`tests/vm/packages.txt`).
 
 ## KDE's and Cinnamon's launchers (measured, Debian 13 with KDE Frameworks 6)
 
 A stand-in entry (`Exec=log.sh %U`, which logs each argument it gets) registered for a scheme and for `text/plain`, with
-`xdg-open` and `kde-open` (package `kde-cli-tools`) run under a private session bus in the `debian-compositors` guest, with
-`XDG_CURRENT_DESKTOP=KDE`, `KDE_SESSION_VERSION=6`, `XDG_MENU_PREFIX=plasma-` (KDE builds its service cache from the Plasma
-menu; without it the entry is not found and `kde-open` tries to read the URL as a file) and Qt's `offscreen` platform.
-No Plasma or Cinnamon session ran: only the launchers that `xdg-open` and the desktops call.
+`xdg-open` and `kde-open` (package `kde-cli-tools`) run under a private session bus in the `debian-compositors` guest,
+with `XDG_CURRENT_DESKTOP=KDE`, `KDE_SESSION_VERSION=6`, `XDG_MENU_PREFIX=plasma-` (KDE builds its service cache from
+the Plasma menu; without it the entry is not found and `kde-open` tries to read the URL as a file) and Qt's `offscreen`
+platform. No Plasma or Cinnamon session ran: only the launchers that `xdg-open` and the desktops call.
 
 | Input | GLib (`gio open`, also Cinnamon's `xdg-open`) | KDE (`kde-open`, also KDE's `xdg-open`) |
 |---|---|---|
@@ -198,17 +201,18 @@ No Plasma or Cinnamon session ran: only the launchers that `xdg-open` and the de
 
 Cinnamon's `xdg-open` runs `gio open` (the `cinnamon` branch of `xdg-open`, read in the script), so Cinnamon is the GLib
 column; its own menu and Nemo use GLib's application launching and were not run. Every link and file was one argument in
-both. KDE rewrites a URL (a decoded `%20` can change what a link means to an app that compares it byte for byte), so a link
-that reaches the app is not always the one that was clicked; appjail passes on what it receives. Not run: a click in
-Dolphin or Plasma, KDE's own choice of default handler (its `kdeglobals` and `mimeapps.list`, here only `mimeapps.list`), and
-the same on Ubuntu and Fedora.
+both. KDE rewrites a URL (a decoded `%20` can change what a link means to an app that compares it byte for byte), so a
+link that reaches the app is not always the one that was clicked; appjail passes on what it receives. Not run: a click
+in Dolphin or Plasma, KDE's own choice of default handler (its `kdeglobals` and `mimeapps.list`, here only
+`mimeapps.list`), and the same on Ubuntu and Fedora.
 
 ## A real Electron application: Joplin (measured, Debian)
 
-Joplin 3.7.24 (`laurent22/joplin`, the official AppImage, 212 MB, Electron; its entry declares `x-scheme-handler/joplin`)
-added with `--scheme joplin --allow userns --allow full_wayland`, on a headless weston, the entry made by `appjail desktop`,
-`xdg-mime default`, links sent with `gio open` and `xdg-open`. Its `joplin://x-callback-url/openNote?id=…` links (a note
-that does not exist, so each handled link leaves "No such note" in Joplin's log) were the test.
+Joplin 3.7.24 (`laurent22/joplin`, the official AppImage, 212 MB, Electron; its entry declares
+`x-scheme-handler/joplin`) added with `--scheme joplin --allow userns --allow full_wayland`, on a headless weston, the
+entry made by `appjail desktop`, `xdg-mime default`, links sent with `gio open` and `xdg-open`. Its
+`joplin://x-callback-url/openNote?id=…` links (a note that does not exist, so each handled link leaves "No such note" in
+Joplin's log) were the test.
 
 | Grants | Result |
 |---|---|
@@ -216,21 +220,22 @@ that does not exist, so each handled link leaves "No such note" in Joplin's log)
 | `network` (pasta) | the first instance served links 13 and 14 ("No such note" in its log, the helpers exited), but a cold start through the entry ended by itself a second after it started (`IPC: Sending message` with nobody to answer), and one helper in four stayed as a full instance |
 | `network_host` (the host's loopback) | the cold start stayed; links 22 and 23 reached the first instance; link 24 stayed as a second full instance |
 
-So the relay did what it is for in every row (each link started `AppRun LINK` in the running jail, in the same network and
-PID namespaces as the first instance), and Joplin's own handover decided what happened next. It needs `network`, and even
-then it loses about one link in three or four: a second instance of the same profile. This is the behaviour its users
-report upstream (a forum thread titled "URI callback opens second instance of Joplin"). The relay cannot repair an app
-whose own single-instance check is unreliable; Joplin is a poor example of one that has a check. An app that uses
+So the relay did what it is for in every row (each link started `AppRun LINK` in the running jail, in the same network
+and PID namespaces as the first instance), and Joplin's own handover decided what happened next. It needs `network`, and
+even then it loses about one link in three or four: a second instance of the same profile. This is the behaviour its
+users report upstream (a forum thread titled "URI callback opens second instance of Joplin"). The relay cannot repair an
+app whose own single-instance check is unreliable; Joplin is a poor example of one that has a check. An app that uses
 Electron's `requestSingleInstanceLock` (the probe) or Lagrange's pid file works through the relay on all guests.
 
 ## A real Electron application with a working check: Obsidian (measured, Debian)
 
 Obsidian 1.15.1 (`obsidianmd/obsidian-releases`, the official AppImage, 132 MiB, Electron; its entry declares
-`x-scheme-handler/obsidian`; the hash matched the digest GitHub gives) added with `--scheme obsidian --allow userns --allow
-full_wayland`, on a headless weston, the entry made by `appjail desktop`, `xdg-mime default`, links sent with `gio open`.
-Obsidian uses Chromium's lock (`SingletonLock`, `SingletonSocket`) and prints each link it handles to its standard output,
-so the first instance's own output shows what reached it. The vault was a directory with six notes in the private home,
-listed in Obsidian's `obsidian.json`; links named it (`obsidian://open?vault=vault&file=noteN`).
+`x-scheme-handler/obsidian`; the hash matched the digest GitHub gives) added with
+`--scheme obsidian --allow userns --allow full_wayland`, on a headless weston, the entry made by `appjail desktop`,
+`xdg-mime default`, links sent with `gio open`. Obsidian uses Chromium's lock (`SingletonLock`, `SingletonSocket`) and
+prints each link it handles to its standard output, so the first instance's own output shows what reached it. The vault
+was a directory with six notes in the private home, listed in Obsidian's `obsidian.json`; links named it
+(`obsidian://open?vault=vault&file=noteN`).
 
 | Case | Result |
 |---|---|
@@ -240,13 +245,15 @@ listed in Obsidian's `obsidian.json`; links named it (`obsidian://open?vault=vau
 | links that named a vault that does not exist | the first instance did not answer the second launch in time (a modal error), and Chromium **killed it and took over**: the jail ended, and the next link started a new instance. Not the relay's doing; a link to a missing vault is the app's own trouble |
 
 So with an app whose own check works, the relay does what a second jail cannot: the link reaches the instance the user
-already has, and a second instance on one profile does not start. Obsidian was tried on Debian only (one 132 MiB download).
+already has, and a second instance on one profile does not start. Obsidian was tried on Debian only (one 132 MiB
+download).
 
 ## Not measured
 
 - A click in Dolphin, Plasma, Nemo or the Cinnamon menu (a full desktop session); KDE's default-handler configuration
   beyond `mimeapps.list`; the KDE launcher on Ubuntu and Fedora.
-- A real login flow with a real service (Obsidian's links open notes; Joplin's check is unreliable); Obsidian on Ubuntu and Fedora.
+- A real login flow with a real service (Obsidian's links open notes; Joplin's check is unreliable); Obsidian on Ubuntu
+  and Fedora.
 - Profile corruption by two instances on one profile.
 - Why the Chromium namespace sandbox did not start on Ubuntu 26.04 with `userns` granted.
 - Lagrange's single-instance code (not read; its behaviour was observed).
@@ -265,8 +272,8 @@ already has, and a second instance on one profile does not start. Obsidian was t
 
 ## Scripts
 
-The probe's `main.js` (the whole app: a `package.json` with `{"name": "appjail-probe", "main": "main.js"}`, an `AppRun` of
-`exec "$here/electron/electron" $PROBE_FLAGS "$here/app" "$@"` and a `.desktop` file with
+The probe's `main.js` (the whole app: a `package.json` with `{"name": "appjail-probe", "main": "main.js"}`, an `AppRun`
+of `exec "$here/electron/electron" $PROBE_FLAGS "$here/app" "$@"` and a `.desktop` file with
 `MimeType=x-scheme-handler/appjailprobe;`):
 
 ```js
@@ -317,8 +324,8 @@ timeout 20 appjail run probe -- appjailprobe://second > /tmp/B.out 2>&1; echo "B
 cat ~/.local/share/appjail/apps/probe/home/probe.log
 ```
 
-E3 and the Lagrange case C, a second process inside the first jail: a Python script that imports `appjail.runner`, replaces
-`runner._run_app` with a wrapper that swaps the jail's start command (everything from `/app/AppRun`) for
+E3 and the Lagrange case C, a second process inside the first jail: a Python script that imports `appjail.runner`,
+replaces `runner._run_app` with a wrapper that swaps the jail's start command (everything from `/app/AppRun`) for
 `sh -c SCRIPT`, and calls `runner.launch(NAME)`. For the probe the script is:
 
 ```sh
@@ -343,12 +350,13 @@ gio open 'gemini://example.org/a b/ü?x=%20y&z=é#frag'
 gio open "$t/a b.txt" 'gemini://example.org/mixed'
 ```
 
-The socket test (a pytest function run with `APPJAIL_INTEGRATION=1`, not kept in the suite): `run_in_jail(sandbox, runtime,
-script=SERVER, dirs=("~/e7dir:rw",))` in a thread, where `SERVER` is a Python script that binds `/home/app/e7dir/sock`,
-accepts one connection, reads it and answers with its own pid and `SO_PEERCRED`; the test waits for the socket file on the
-host, connects, sends a line and reads the reply.
+The socket test (a pytest function run with `APPJAIL_INTEGRATION=1`, not kept in the suite):
+`run_in_jail(sandbox, runtime, script=SERVER, dirs=("~/e7dir:rw",))` in a thread, where `SERVER` is a Python script that
+binds `/home/app/e7dir/sock`, accepts one connection, reads it and answers with its own pid and `SO_PEERCRED`; the test
+waits for the socket file on the host, connects, sends a line and reads the reply.
 
-The relay prototype, `relay.py` (run inside the jail as `python3 relay.py SOCKDIR /app/AppRun [ARGS]`; the app is its child):
+The relay prototype, `relay.py` (run inside the jail as `python3 relay.py SOCKDIR /app/AppRun [ARGS]`; the app is its
+child):
 
 ```python
 import os, socket, subprocess, sys, threading

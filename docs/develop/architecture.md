@@ -24,7 +24,8 @@ pieces depend on each other. To follow the code itself, command by command, read
 
 ## Acquisition
 
-Explained in [Acquisition](../understand/acquisition/index.md); decisions in [Acquisition](../decisions/acquisition/index.md).
+Explained in [Acquisition](../understand/acquisition/index.md); decisions in
+[Acquisition](../decisions/acquisition/index.md).
 
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
@@ -64,7 +65,8 @@ Explained in [Isolation](../understand/isolation/index.md); decisions in [Isolat
 
 ## Desktop access
 
-Explained in [Desktop access](../understand/desktop/index.md); decisions in [Desktop access](../decisions/desktop/index.md).
+Explained in [Desktop access](../understand/desktop/index.md); decisions in
+[Desktop access](../decisions/desktop/index.md).
 
 | Concept | Mechanism | Code | Tests | User surface | Decisions / limits |
 |---|---|---|---|---|---|
@@ -123,8 +125,8 @@ Decisions in [Project](../decisions/project/index.md).
 - **Provenance chain**: source (P3) → resolver → owner id → asset digest / attestation → hash pin → tier → quarantine →
   diff review → history. A weakening anywhere is a *block*, not a warning.
 - **Two kinds of jail share one builder**: helper jails (`jail.common_args`) and the app jail (`runtimejail`) share the
-  seccomp filter, `--disable-userns` and the read-only system; the app jail adds grants. The `--appimage-extract` fallback
-  is why the extraction jail must be as tight as the app jail.
+  seccomp filter, `--disable-userns` and the read-only system; the app jail adds grants. The `--appimage-extract`
+  fallback is why the extraction jail must be as tight as the app jail.
 - **`network`** = network namespace + pasta + DNS forwarder + seccomp filter as a file + `reopen.py` for grants + FIFOs
   for the portal's pipes + uid restore + lifeline FIFO for SIGKILL. pasta closing inherited descriptors is why the
   filter, the grants and the portal pipes are reopened inside its namespace; pasta running its command as root of a
@@ -148,4 +150,5 @@ Decisions in [Project](../decisions/project/index.md).
   bind mounts do not stop `connect()` to sockets; the same reasoning as abstract sockets.
 - **Desktop entry**: the AppImage's own `.desktop` would run outside the jail → generated entry → `open` binds one file
   → choosing the file is the consent, like the portal file chooser.
-- **Catalog** is untrusted data feeding only `search`; installing is always an explicit `add`, which does its own review.
+- **Catalog** is untrusted data feeding only `search`; installing is always an explicit `add`, which does its own
+  review.

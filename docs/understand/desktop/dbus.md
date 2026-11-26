@@ -1,6 +1,7 @@
 # D-Bus and the filtering proxy
 
-*Part of [Desktop access](index.md). Previous: [X11 and the private Xwayland](xwayland.md). Next: [portals](portals.md).*
+*Part of [Desktop access](index.md). Previous: [X11 and the private Xwayland](xwayland.md). Next:
+[portals](portals.md).*
 
 ## What it is
 
@@ -43,18 +44,18 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
   media players, the status-notifier watcher) the proxy allows only the interfaces their specifications define, on
   their own object path, plus properties, introspection and ping, and passes their signals. Whoever owns the name, the
   rest of that connection is unreachable.
-- **The owner check.** Any other granted name reaches its whole connection. Before starting the proxy, `run` asks the bus
-  who owns each granted name and each refused one, and refuses to start when one connection owns both, naming them. It
-  fails closed when the owners cannot be read. Names the app may *own* are checked the same way: the proxy's own policy
-  includes talking to whoever owns the name at the moment.
+- **The owner check.** Any other granted name reaches its whole connection. Before starting the proxy, `run` asks the
+  bus who owns each granted name and each refused one, and refuses to start when one connection owns both, naming them.
+  It fails closed when the owners cannot be read. Names the app may *own* are checked the same way: the proxy's own
+  policy includes talking to whoever owns the name at the moment.
 - **Refused names.** Names that hand over the desktop are refused when you grant them and when a manifest is loaded: the
   bus itself, systemd, the desktop shells and compositors, the session manager, `dconf`, GVfs, the accessibility names
   (`org.freedesktop.a11y`; the accessibility bus has [a permission of its own](#the-accessibility-bus)),
   global shortcuts, the screensaver, the clipboard manager, the portals' own names. Wildcards need at least three name
   parts.
-- **Owning names.** An app may own a name it is granted with `--dbus-own` (a media player, a single-instance name), never
-  one in a desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`, ...), so it cannot impersonate a
-  desktop service; tray-icon names are the exception.
+- **Owning names.** An app may own a name it is granted with `--dbus-own` (a media player, a single-instance name),
+  never one in a desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`, ...), so it cannot
+  impersonate a desktop service; tray-icon names are the exception.
 
 ### The accessibility bus
 
@@ -104,9 +105,12 @@ the variable alone; the app needs no session bus for it. The permission fails cl
 - [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) and its manual page
   [xdg-dbus-proxy(1)](https://manpages.debian.org/trixie/xdg-dbus-proxy/xdg-dbus-proxy.1.en.html) (`--talk`, `--call`,
   `--broadcast`, `--own`).
-- Specifications of the confined services: [Desktop Notifications](https://specifications.freedesktop.org/notification/latest/),
+- Specifications of the confined services:
+  [Desktop Notifications](https://specifications.freedesktop.org/notification/latest/),
   [Secret Service](https://specifications.freedesktop.org/secret-service/latest/),
   [MPRIS](https://specifications.freedesktop.org/mpris/latest/).
 - GNOME, [AT-SPI2 core developer documentation](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/); Flatpak,
-  [`common/flatpak-run-dbus.c`](https://github.com/flatpak/flatpak/blob/main/common/flatpak-run-dbus.c) (`flatpak_run_add_a11y_dbus_args`).
-- Flatpak documentation, [Sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html) (D-Bus access).
+  [`common/flatpak-run-dbus.c`](https://github.com/flatpak/flatpak/blob/main/common/flatpak-run-dbus.c)
+  (`flatpak_run_add_a11y_dbus_args`).
+- Flatpak documentation, [Sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html) (D-Bus
+  access).

@@ -59,7 +59,8 @@ A limit that is silently not applied would be worse than none.
 
 ## References
 
-- systemd, [systemd.resource-control(5)](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html):
+- systemd,
+  [systemd.resource-control(5)](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html):
   `MemoryMax=`, `MemorySwapMax=`, `CPUQuota=` and `TasksMax=`.
 - systemd, [systemd.scope(5)](https://www.freedesktop.org/software/systemd/man/latest/systemd.scope.html): `OOMPolicy=`.
 - systemd, [systemd-run(1)](https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html): `--scope`,

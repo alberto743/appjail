@@ -42,8 +42,9 @@ appjail run NAME --raw -- ...                # a debugger that asks questions al
 With it the app can trace its own processes, and run them at fixed addresses (`gdb` asks for that). It cannot reach
 processes outside its jail, and the filter still applies to whatever it traces. What a debugger can attach to depends on
 your system: with `kernel.yama.ptrace_scope` at 1 (Ubuntu) it can attach only to its own descendants, so `strace CMD`
-and `gdb PROG` work and `strace -p PID` on an unrelated process does not. `perf` is not supported: it needs a sysctl
-the jail cannot change and the host's `/sys`. Revoke it when you are done (`--deny devel`). See [debugging](../decisions/isolation/debugging.md).
+and `gdb PROG` work and `strace -p PID` on an unrelated process does not. `perf` is not supported: it needs a sysctl the
+jail cannot change and the host's `/sys`. Revoke it when you are done (`--deny devel`). See
+[debugging](../decisions/isolation/debugging.md).
 
 ## Limiting memory, CPU and processes
 
@@ -64,9 +65,9 @@ limits](../understand/isolation/resource-limits.md).
 ## Apps that run in a terminal
 
 When an app's output goes to your terminal, appjail gives the app no input and removes the control sequences from what
-it prints: some of them set your clipboard or window title, rewrite the screen or make the terminal type into your input.
-A command-line tool that only prints keeps working (without colours, and its output may come late). A tool that asks
-questions, or a full-screen program such as `htop`, needs your terminal as it is:
+it prints: some of them set your clipboard or window title, rewrite the screen or make the terminal type into your
+input. A command-line tool that only prints keeps working (without colours, and its output may come late). A tool that
+asks questions, or a full-screen program such as `htop`, needs your terminal as it is:
 
 ```sh
 appjail run htop --raw                       # this run only

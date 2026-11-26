@@ -1,9 +1,9 @@
 # The accessibility bus: the evidence
 
-Working notes, not a specification. The behaviour today is on [D-Bus and the filtering proxy](../understand/desktop/dbus.md),
-and the decision drawn from these measurements, built as the `accessibility` permission, is
-[An opt-in accessibility bus](../decisions/desktop/a11y-bus.md). Written
-in November 2026 from experiments in the Debian 13 guest only. "Measured" means a script ran in the guest (they are in
+Working notes, not a specification. The behaviour today is on
+[D-Bus and the filtering proxy](../understand/desktop/dbus.md), and the decision drawn from these measurements, built as
+the `accessibility` permission, is [An opt-in accessibility bus](../decisions/desktop/a11y-bus.md). Written in November
+2026 from experiments in the Debian 13 guest only. "Measured" means a script ran in the guest (they are in
 `tests/a11y/`); "read" means source code or documentation only; "not done" means neither. Nothing here was run on the
 maintainer's own machine. The same scripts were then run on Ubuntu 26.04 and Fedora 45 ([below](#ubuntu-and-fedora)).
 
@@ -13,17 +13,17 @@ would it expose?
 
 ## Who needs it
 
-The accessibility bus (AT-SPI) is how an application describes its window to other programs: every button, label and text
-field, its role, name and state, and the events when they change. Anything that is not the application itself and wants
-to understand or drive its window reads it. That is not only blind users with a screen reader (Orca):
+The accessibility bus (AT-SPI) is how an application describes its window to other programs: every button, label and
+text field, its role, name and state, and the events when they change. Anything that is not the application itself and
+wants to understand or drive its window reads it. That is not only blind users with a screen reader (Orca):
 
 - screen magnifiers that follow the keyboard focus or the caret;
 - on-screen keyboards, which learn when a text field takes focus;
 - switch and voice control, and eye trackers, which need the names of the controls to say which one to press;
 - UI test and automation tools.
 
-A window that is missing from the bus is a blank window to all of them. Toolkits publish an app's window on the bus on their
-own; what the jail removes is the bus socket they publish it to.
+A window that is missing from the bus is a blank window to all of them. Toolkits publish an app's window on the bus on
+their own; what the jail removes is the bus socket they publish it to.
 
 ## Environment
 
@@ -40,25 +40,25 @@ own; what the jail removes is the bus socket they publish it to.
 The test apps are a GTK 3 window and a Qt 6 window with a push button (`tests/a11y/apps.py`), run in a jail built from
 appjail's own read-only system view, with the accessibility bus (and only that) behind `xdg-dbus-proxy`, which runs in a
 jail of its own like the session-bus proxy (`tests/a11y/harness.py`). The screen reader is a stand-in written with
-`libatspi` (`tests/a11y/at.py`): no real Orca ran. There is no keyboard, so no real key press was tested. No AppImage was
-downloaded.
+`libatspi` (`tests/a11y/at.py`): no real Orca ran. There is no keyboard, so no real key press was tested. No AppImage
+was downloaded.
 
 ## How an app finds the bus (read, then measured)
 
-- **Read.** Flatpak's `flatpak_run_add_a11y_dbus_args` (`common/flatpak-run-dbus.c`) uses `AT_SPI_BUS_ADDRESS` if the host
-  has it, and otherwise asks the session bus: `org.a11y.Bus.GetAddress`. It starts a second `xdg-dbus-proxy` on that
-  address with `--filter --sloppy-names` and the rules below, binds its socket into the sandbox as
+- **Read.** Flatpak's `flatpak_run_add_a11y_dbus_args` (`common/flatpak-run-dbus.c`) uses `AT_SPI_BUS_ADDRESS` if the
+  host has it, and otherwise asks the session bus: `org.a11y.Bus.GetAddress`. It starts a second `xdg-dbus-proxy` on
+  that address with `--filter --sloppy-names` and the rules below, binds its socket into the sandbox as
   `/run/flatpak/at-spi-bus` and sets `AT_SPI_BUS_ADDRESS` for the app. The app itself never calls `org.a11y.Bus`.
 - **Measured.** The accessibility bus is a second `dbus-daemon` that `at-spi-bus-launcher` starts, on
   `$XDG_RUNTIME_DIR/at-spi/bus`. With the daemon stopped, `dbus-send` to `org.a11y.Bus` `GetAddress` on the session bus,
-  from outside any jail, started the launcher and the bus and returned the address. appjail already runs `dbus-send` this
-  way (`dbusproxy.bus_owners`).
-- **Measured.** Both toolkits connected to that address with only `AT_SPI_BUS_ADDRESS` set in the jail and **no session bus
-  at all**: the screen reader saw the GTK 3 window with its whole tree (frame, panel, buttons, labels) and the Qt 6 window
-  with its button. Neither needed `QT_LINUX_ACCESSIBILITY_ALWAYS_ON`.
-- **Measured.** The toolkits register whether or not a screen reader is running: with `org.a11y.Status` `IsEnabled` set to
-  false, the GTK 3 app still called `Socket.Embed`. A grant therefore costs an app one more bus connection even for users
-  who never start an assistive tool.
+  from outside any jail, started the launcher and the bus and returned the address. appjail already runs `dbus-send`
+  this way (`dbusproxy.bus_owners`).
+- **Measured.** Both toolkits connected to that address with only `AT_SPI_BUS_ADDRESS` set in the jail and **no session
+  bus at all**: the screen reader saw the GTK 3 window with its whole tree (frame, panel, buttons, labels) and the Qt 6
+  window with its button. Neither needed `QT_LINUX_ACCESSIBILITY_ALWAYS_ON`.
+- **Measured.** The toolkits register whether or not a screen reader is running: with `org.a11y.Status` `IsEnabled` set
+  to false, the GTK 3 app still called `Socket.Embed`. A grant therefore costs an app one more bus connection even for
+  users who never start an assistive tool.
 
 ## What the accessibility bus protects (measured)
 
@@ -93,18 +93,19 @@ tree of the jailed app and received its `state-changed` and `property-change` ev
 
 Flatpak's rules allow four calls that are not the app's own registration. Two matter:
 
-- **`NotifyListenersSync` and `NotifyListenersAsync` deliver a key event to every keystroke listener.** The jailed client
-  sent a made-up key ('a', code 38) and the stand-in's listener received it, once for each call. So an app can feed fake key
-  events to a screen reader. It cannot read the user's keys, and cannot type into another window (`GenerateKeyboardEvent`
-  was denied). These calls are, by their purpose, how a toolkit passes its own key presses to a screen reader: the documentation says the
-  device event controller cannot watch the keyboard on Wayland (read), so only the app in focus can report keys. That use
-  was not measured (no keyboard). Removing the calls would likely leave a screen reader without the keys typed in that app.
-- **`GetRegisteredEvents` and `GetKeystrokeListeners` tell the app what assistive technology is listening.** The client read
-  the stand-in's listener, its bus name and object path, and the event types it had registered. That discloses that a
-  screen reader (or any key listener) is running, and its mode. Nothing says what it does with them.
+- **`NotifyListenersSync` and `NotifyListenersAsync` deliver a key event to every keystroke listener.** The jailed
+  client sent a made-up key ('a', code 38) and the stand-in's listener received it, once for each call. So an app can
+  feed fake key events to a screen reader. It cannot read the user's keys, and cannot type into another window
+  (`GenerateKeyboardEvent` was denied). These calls are, by their purpose, how a toolkit passes its own key presses to a
+  screen reader: the documentation says the device event controller cannot watch the keyboard on Wayland (read), so only
+  the app in focus can report keys. That use was not measured (no keyboard). Removing the calls would likely leave a
+  screen reader without the keys typed in that app.
+- **`GetRegisteredEvents` and `GetKeystrokeListeners` tell the app what assistive technology is listening.** The client
+  read the stand-in's listener, its bus name and object path, and the event types it had registered. That discloses that
+  a screen reader (or any key listener) is running, and its mode. Nothing says what it does with them.
 
-A third, small one: with `--sloppy-names` the app can list the unique names of the other connections on the bus, so it can
-count the apps and the assistive tools that are open. It cannot call them (all denied).
+A third, small one: with `--sloppy-names` the app can list the unique names of the other connections on the bus, so it
+can count the apps and the assistive tools that are open. It cannot call them (all denied).
 
 ## Which rules a toolkit needs (measured)
 
@@ -119,10 +120,10 @@ The tree seen by the stand-in with one of Flatpak's rules removed, for each tool
 | `Socket.Unembed`, the two `EventListener*` broadcasts | unchanged | unchanged |
 | **`Socket.Embed`** | **tree empty** | **tree empty** |
 
-Only the app's registration, `Socket.Embed`, is needed for the window to appear. The other rules support what a *running*
-assistive tool needs from the app (which events to send, its keys), which a button in a headless compositor does not
-exercise: "unchanged" shows the window stays visible, not that every function of a screen reader survives. Not measured:
-event filtering, because the events arrived in every variant; and key delivery, because there is no keyboard.
+Only the app's registration, `Socket.Embed`, is needed for the window to appear. The other rules support what
+a *running* assistive tool needs from the app (which events to send, its keys), which a button in a headless compositor
+does not exercise: "unchanged" shows the window stays visible, not that every function of a screen reader survives. Not
+measured: event filtering, because the events arrived in every variant; and key delivery, because there is no keyboard.
 
 ## The app's side channel (measured)
 
@@ -140,10 +141,10 @@ connection" and then read the tree through the bus. The tree was complete, so no
 | GTK 3, PyQt6 | 3.24.52, 6.10.2 | 3.24.52, 6.11.0 |
 | the accessibility bus daemon | `dbus-daemon` | `dbus-broker` (the session bus too) |
 
-Every section gave the same result as on Debian: both windows complete in the stand-in's tree, with their events; behind the
-proxy the same calls answered and the same ones refused, and the fake key reached the stand-in's listener twice; on the raw
-bus every attempt succeeded; only `Socket.Embed` was needed; and the toolkits registered with `IsEnabled` false. One
-difference, on the raw bus only: `dbus-broker` refuses an `eavesdrop` match (`MatchRuleInvalid`) but accepts
+Every section gave the same result as on Debian: both windows complete in the stand-in's tree, with their events; behind
+the proxy the same calls answered and the same ones refused, and the fake key reached the stand-in's listener twice; on
+the raw bus every attempt succeeded; only `Socket.Embed` was needed; and the toolkits registered with `IsEnabled` false.
+One difference, on the raw bus only: `dbus-broker` refuses an `eavesdrop` match (`MatchRuleInvalid`) but accepts
 `BecomeMonitor`, so the bus can still be monitored whole there.
 
 ## What is not known
@@ -163,8 +164,8 @@ difference, on the raw bus only: `dbus-broker` refuses an `eavesdrop` match (`Ma
 ## Reproducing
 
 In the Debian guest (`tests/vm/sync.sh`, then the files of `tests/a11y/` copied to `~/a11y`): `sh ~/a11y/run.sh`. The
-packages are in `tests/vm/packages.txt` (`weston`, `gir1.2-gtk-3.0`, `gir1.2-atspi-2.0`, `python3-pyqt6`, `python3-dbus`).
-It starts a headless weston, switches `IsEnabled` on and off, and prints the five sections above.
+packages are in `tests/vm/packages.txt` (`weston`, `gir1.2-gtk-3.0`, `gir1.2-atspi-2.0`, `python3-pyqt6`,
+`python3-dbus`). It starts a headless weston, switches `IsEnabled` on and off, and prints the five sections above.
 
 ## References
 
@@ -176,6 +177,7 @@ It starts a headless weston, switches `IsEnabled` on and off, and prints the fiv
   [Socket](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/doc-org.a11y.atspi.Socket.html),
   [Cache](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/doc-org.a11y.atspi.Cache.html) and
   [DeviceEventController](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/doc-org.a11y.atspi.DeviceEventController.html)
-  interfaces, and the [device event controller notes](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/de-controller.html).
-- [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) and its manual page (`--filter`, `--sloppy-names`, `--call`,
-  `--broadcast`).
+  interfaces, and the
+  [device event controller notes](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/de-controller.html).
+- [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) and its manual page (`--filter`, `--sloppy-names`,
+  `--call`, `--broadcast`).

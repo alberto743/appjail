@@ -26,8 +26,8 @@ The message names the interfaces and what they would allow. If you accept that f
 appjail perms NAME --allow full_wayland
 ```
 
-The app then runs, with a warning at each start. On KDE Plasma this is needed for every app until KWin hides
-the layer shell, the Plasma shell, output management, the appmenu manager and the desktop controls on restricted sockets.
+The app then runs, with a warning at each start. On KDE Plasma this is needed for every app until KWin hides the layer
+shell, the Plasma shell, output management, the appmenu manager and the desktop controls on restricted sockets.
 
 If the message says an interface is **not known to appjail**, your compositor offers something that has not been
 classified yet (a compositor that was not measured, or a new version). `full_wayland` lets the app run meanwhile; please

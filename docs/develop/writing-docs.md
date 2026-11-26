@@ -36,6 +36,13 @@ Every concept page has the same headings: **What it is**, **Why it matters**, **
 **Limits**, **References**. A new grant, mechanism or external tool needs its concept page, or a section in one, in
 the same change as the code.
 
+## Line length
+
+Prose is wrapped at 120 columns, in the site and in the Markdown files at the top of the repository (`CLAUDE.md`
+excepted). Re-wrap the whole paragraph or list item you edit, and break between words only: never inside a code span or
+a link, so `[text](target)` stays on one line. A line may be longer only when it is one link or word that cannot be
+broken. Tables, code blocks and HTML are not wrapped; code blocks are fenced. `tests/test_docs.py` checks it.
+
 ## Terminology
 
 One term per idea, used everywhere.
@@ -65,10 +72,11 @@ release.
 ## What the tests check
 
 `tests/test_docs.py` fails when a command or option of the parser is missing from
-[the command reference](../reference/commands.md), when a page is missing from the navigation in `zensical.toml` (or
-the navigation names a page that does not exist), when a concept page under `understand/` lacks one of the six headings
-or a reference link, and when [the policy lists](../reference/policy.md) no longer match the source; regenerate those
-with `python3 tests/policy_tables.py --write` in the guest. `tests/test_assessment.py` does the same for the compositor
+[the command reference](../reference/commands.md), when a page is missing from the navigation in `zensical.toml` (or the
+navigation names a page that does not exist), when a concept page under `understand/` lacks one of the six headings or a
+reference link, when a prose line is longer than [120 columns](#line-length), and when
+[the policy lists](../reference/policy.md) no longer match the source; regenerate those with
+`python3 tests/policy_tables.py --write` in the guest. `tests/test_assessment.py` does the same for the compositor
 assessment's tables. The strict build catches broken links and anchors.
 
 ## The outline

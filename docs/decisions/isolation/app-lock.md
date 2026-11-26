@@ -14,7 +14,8 @@ app's lifetime.
 process that holds them exits, so none can go stale:
 
 - `NAME.lock`, exclusive, held while the app's files change or its tree is extracted: `add`, `update`, a launch
-  preparing the tree, `remove`, `reset`. A command that finds it taken waits up to 60 seconds, then fails with a message.
+  preparing the tree, `remove`, `reset`. A command that finds it taken waits up to 60 seconds, then fails with a
+  message.
 - `NAME.run`, shared, taken by every launch before it releases `NAME.lock` and held by appjail until the jail ends.
   `remove`, `reset`, and an `update` or `add` that replaces an installed tree, try to take it exclusively while they
   hold `NAME.lock`, and refuse when a launch holds it; since a launch needs `NAME.lock` to start, none can begin between

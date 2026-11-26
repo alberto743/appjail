@@ -1,13 +1,14 @@
 # Jailed download and extraction
 
-*Part of [Acquisition](index.md). Previous: [build attestations](attestations.md). Next: [untrusted text](untrusted-text.md).*
+*Part of [Acquisition](index.md). Previous: [build attestations](attestations.md). Next:
+[untrusted text](untrusted-text.md).*
 
 ## What it is
 
 Before an app runs, two steps handle its bytes while nothing is yet known about them: the **download**, which talks to a
-server that could misbehave, and the **extraction**, which unpacks a filesystem image that could be crafted. appjail runs
-each in a [helper jail](../isolation/index.md#helper-jails) built for that step alone, and checks the result on its own
-side, without running anything from it.
+server that could misbehave, and the **extraction**, which unpacks a filesystem image that could be crafted. appjail
+runs each in a [helper jail](../isolation/index.md#helper-jails) built for that step alone, and checks the result on its
+own side, without running anything from it.
 
 ## Why it matters
 
@@ -21,15 +22,16 @@ runtime: code from the download.
 
 ### The download jail
 
-The downloader is a small Python program (`fetcher.py`) run by the system's `/usr/bin/python3 -I` inside a jail that has a
-network and almost nothing else: the read-only system, the CA certificates, the downloader itself (read-only) and one
+The downloader is a small Python program (`fetcher.py`) run by the system's `/usr/bin/python3 -I` inside a jail that has
+a network and almost nothing else: the read-only system, the CA certificates, the downloader itself (read-only) and one
 empty staging directory, the only writable place. The jail's root is read-only, every namespace is private, no
 capability is held, the environment is cleared.
 
 The network comes from **pasta** (package `passt`), which gives the jail a private network namespace with ordinary
 outbound connections: the internet is reachable, the services on your own machine's loopback and addresses are not,
 nothing can connect in, and name resolution goes through a forwarder address. Without `pasta` the download jails are
-refused (they would share the host network); `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a warning.
+refused (they would share the host network); `APPJAIL_ALLOW_HOST_NETWORK=1` accepts that for one command, with a
+warning.
 
 What the downloader may do is decided by appjail, never by the server:
 
@@ -74,7 +76,8 @@ and a hostile one can fill only its work directory.
 
 - The jails are built from the same parts as the app jail: [Isolation](../isolation/index.md).
 - Decision: [Redirects to private addresses are refused](../../decisions/acquisition/private-redirects.md).
-- `pasta` is also what the `network` permission uses for apps: Decision [Network through pasta](../../decisions/desktop/network.md).
+- `pasta` is also what the `network` permission uses for apps: Decision
+  [Network through pasta](../../decisions/desktop/network.md).
 - The tree digest is checked before every start: [the filesystem view](../isolation/filesystem.md#the-extracted-tree).
 - Decision: [Extract, never mount](../../decisions/isolation/extraction.md).
 

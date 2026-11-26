@@ -1,6 +1,7 @@
 # What blocks an update
 
-*Part of [Updates](index.md). Previous: [channels and quarantine](quarantine.md). Next: [URL and file apps](url-and-file.md).*
+*Part of [Updates](index.md). Previous: [channels and quarantine](quarantine.md). Next:
+[URL and file apps](url-and-file.md).*
 
 ## What it is
 
@@ -46,5 +47,6 @@ An update never changes permissions: the new manifest keeps the old one's grants
 
 - SLSA, [Supply chain threats](https://slsa.dev/spec/v1.0/threats-overview): source and distribution threats, among them
   changes of ownership and replaced artifacts.
-- GitHub Docs, [Renaming a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository):
+- GitHub Docs,
+  [Renaming a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository):
   how renamed repositories are redirected, which is why the account id, not the name, is pinned.

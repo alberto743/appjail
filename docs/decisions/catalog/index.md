@@ -1,6 +1,7 @@
 # Catalog
 
-Decisions about the catalogs that `search` reads. How they work is explained in [Catalog](../../understand/catalog/index.md).
+Decisions about the catalogs that `search` reads. How they work is explained in
+[Catalog](../../understand/catalog/index.md).
 
 | Decision | Covers |
 |---|---|

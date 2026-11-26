@@ -11,8 +11,8 @@ Programs reach hardware through **device nodes** in `/dev`, special files that l
   display. NVIDIA's proprietary driver adds `/dev/nvidia*`. Graphics libraries also read details of the hardware in
   `/sys` and configuration for Vulkan and GLVND.
 - Cameras are **V4L2** devices, `/dev/video*`. One camera often has several nodes: video capture, metadata, sometimes
-  output or codec nodes; a *media controller* node (`/dev/media*`) describes how they connect. A driver tells what a node
-  is through the `VIDIOC_QUERYCAP` request.
+  output or codec nodes; a *media controller* node (`/dev/media*`) describes how they connect. A driver tells what a
+  node is through the `VIDIOC_QUERYCAP` request.
 
 ## Why it matters
 
@@ -27,9 +27,9 @@ most command-line tools, converters and editors render fine without a GPU.
   and the Vulkan and GLVND data. Your supplementary groups are kept in the jail, so group-owned render nodes stay
   usable.
 - **`camera`** binds only the `/dev/video*` nodes whose driver reports video capture, and for each only its own `/sys`
-  directory (read-only, with the `/sys/dev/char` link that tools follow to identify it). Output, metadata and codec nodes
-  and the media controller stay out; the rest of `/sys` is absent unless `gpu` is granted too. The seccomp filter lets
-  the V4L2 requests through.
+  directory (read-only, with the `/sys/dev/char` link that tools follow to identify it). Output, metadata and codec
+  nodes and the media controller stay out; the rest of `/sys` is absent unless `gpu` is granted too. The seccomp filter
+  lets the V4L2 requests through.
 - **A limit.** GNOME's Wayland socket lists `wp_drm_lease_device_v1`, which sends every client with a window an
   unprivileged render-node descriptor, with or without `gpu`: the driver's attack surface, not control of the display
   ([why it is allowed](../../decisions/desktop/wayland-allowlist.md)). Not granting `gpu` keeps the device nodes and

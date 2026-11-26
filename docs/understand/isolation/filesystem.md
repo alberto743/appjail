@@ -80,25 +80,25 @@ There is no override for these. The way around a refusal is always a narrower gr
 ### The host's system directories
 
 `/usr`, `/bin`, `/sbin` and `/lib*` are the host's own, bound read-only. Apps are built for many systems and find their
-libraries, loader, keyboard layouts, fonts, locales and helper programs there; appjail has no runtime of its own to put in
-their place. What follows from it, measured in the Debian guest
+libraries, loader, keyboard layouts, fonts, locales and helper programs there; appjail has no runtime of its own to put
+in their place. What follows from it, measured in the Debian guest
 ([the evidence](../../develop/host-view-evidence.md)):
 
 - **An app can run any program of the host in those directories**, for example `ln`, `bash`, `perl` or `strace`, as the
   jail's user, with the jail's namespaces, no network unless granted, no new privileges and the system-call filter. Real
-  AppImages do: their start-up scripts call `ln`, `bash`, `dirname`, `readlink`, `basename` and `env`, GTK's image library
-  on Ubuntu and Fedora runs `bwrap` and a loader in `/usr/libexec`, and htop starts
-  `strace` for one of its screens.
+  AppImages do: their start-up scripts call `ln`, `bash`, `dirname`, `readlink`, `basename` and `env`, GTK's image
+  library on Ubuntu and Fedora runs `bwrap` and a loader in `/usr/libexec`, and htop starts `strace` for one of its
+  screens.
 - **An app can list what is installed**: the programs (about a thousand in `/usr/bin` of a desktop system), the menu
-  entries in `/usr/share/applications`, the package names in `/usr/share/doc`, every library file with its version, and the
-  distribution and release (`/usr/lib/os-release`). It cannot read your files, your `/etc` beyond the entries above, or
-  other users' data.
+  entries in `/usr/share/applications`, the package names in `/usr/share/doc`, every library file with its version, and
+  the distribution and release (`/usr/lib/os-release`). It cannot read your files, your `/etc` beyond the entries above,
+  or other users' data.
 - **Its behaviour depends on the host**: a different system has different libraries and programs.
 
-appjail keeps this view. Narrowing it was tried with four variants and traced runs of four real apps, and no variant was both
-safe to make the default and cheap: a fixed short list of programs breaks Galculator and ImageMagick, a per-app list works
-only for what was recorded, and a view of traced files alone needs a thousand mounts per app and still failed one app.
-Hiding programs would also not hide the package names or library versions, which the apps need. See
+appjail keeps this view. Narrowing it was tried with four variants and traced runs of four real apps, and no variant was
+both safe to make the default and cheap: a fixed short list of programs breaks Galculator and ImageMagick, a per-app
+list works only for what was recorded, and a view of traced files alone needs a thousand mounts per app and still failed
+one app. Hiding programs would also not hide the package names or library versions, which the apps need. See
 [Narrowing the host's system view](../../decisions/isolation/host-view.md).
 
 ### Grants are bound by descriptor
@@ -151,9 +151,10 @@ reused by another file.
 ## References
 
 - MITRE, [CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition](https://cwe.mitre.org/data/definitions/367.html).
-- Flatpak security advisory [GHSA-7hgv-f2j8-xw87](https://github.com/flatpak/flatpak/security/advisories/GHSA-7hgv-f2j8-xw87)
-  (CVE-2024-42472): a symbolic link swapped into a persistent directory let a Flatpak app reach host files; the fix
-  introduced bubblewrap's `--bind-fd`.
+- Flatpak security advisory
+  [GHSA-7hgv-f2j8-xw87](https://github.com/flatpak/flatpak/security/advisories/GHSA-7hgv-f2j8-xw87) (CVE-2024-42472): a
+  symbolic link swapped into a persistent directory let a Flatpak app reach host files; the fix introduced bubblewrap's
+  `--bind-fd`.
 - Linux manual pages [unix(7)](https://man7.org/linux/man-pages/man7/unix.7.html) (unix sockets, which a process can
   connect to when it can see their path), [open(2)](https://man7.org/linux/man-pages/man2/open.2.html) (`O_PATH`) and
   [symlink(7)](https://man7.org/linux/man-pages/man7/symlink.7.html).

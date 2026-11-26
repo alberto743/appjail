@@ -77,9 +77,10 @@ the untrusted bytes before anything about them is known. Containment cannot make
 - **It trusts the platform.** The Linux kernel, bubblewrap, the compositor, the desktop's services and the helper
   programs appjail starts are trusted. A flaw in them can let an app out. appjail reduces how much of them an app
   can reach (fewer system calls, no nested namespaces, no privileged Wayland interfaces), but cannot fix them.
-- **It does not hide your system.** An app sees the host's programs and libraries (the read-only `/usr`, `/bin`, `/sbin` and
-  `/lib*`): it can list the installed software and library versions and run any program in them, inside its jail and with
-  its grants only. appjail has no runtime of its own to put there ([the filesystem view](isolation/filesystem.md#the-hosts-system-directories)).
+- **It does not hide your system.** An app sees the host's programs and libraries (the read-only `/usr`, `/bin`, `/sbin`
+  and `/lib*`): it can list the installed software and library versions and run any program in them, inside its jail and
+  with its grants only. appjail has no runtime of its own to put there
+  ([the filesystem view](isolation/filesystem.md#the-hosts-system-directories)).
 - **It does not protect the local network.** An app with the `network` permission reaches the internet and the other
   machines of your LAN, though not the services of your own machine; one with `network_host` reaches those too.
 - **It does not stop other programs of yours.** A process of your user that runs outside appjail can change appjail's

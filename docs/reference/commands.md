@@ -81,9 +81,9 @@ instead. This is what a menu entry with file types or schemes runs. Nothing name
 
 ### `list`
 
-`appjail list [-l|--long] [--table] [--json]`: the installed apps with version, source, evidence tier, channel and any update
-seen, each app as its name and one bullet per field. `-l` adds what each app is granted; `--table` prints one aligned
-row per app instead; `--json` prints one JSON document, permissions included.
+`appjail list [-l|--long] [--table] [--json]`: the installed apps with version, source, evidence tier, channel and any
+update seen, each app as its name and one bullet per field. `-l` adds what each app is granted; `--table` prints one
+aligned row per app instead; `--json` prints one JSON document, permissions included.
 
 ### `perms`
 

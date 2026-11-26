@@ -9,9 +9,9 @@ through the catalogs of the local **index**: the built-in one, made by the siste
 [appjail-db](https://github.com/alberto743/appjail-db), and any you add yourself. A hit suggests the command to install
 the app; it never installs anything.
 
-The built-in catalog is derived from two public lists of AppImages: the install scripts of the [AM](https://github.com/ivan-hc/AM)
-project and the [AppImageHub](https://appimage.github.io/) feed. appjail-db converts and merges them weekly in its own
-CI, and publishes one JSON file.
+The built-in catalog is derived from two public lists of AppImages: the install scripts of the
+[AM](https://github.com/ivan-hc/AM) project and the [AppImageHub](https://appimage.github.io/) feed. appjail-db converts
+and merges them weekly in its own CI, and publishes one JSON file.
 
 ## Why it matters
 
@@ -24,8 +24,8 @@ lookalike repository would be a typosquat delivered by your own tool. And every 
 
 - **Data in a strict format.** A catalog is one JSON document (`appjail-catalog`, version 1) with a list of apps, each
   with a name, and optionally a description, a source (`github:`, `gitlab:`, `forgejo:`, `codeberg:`, `url:`) and a
-  note. An unknown key, a wrong version, a duplicate name, a malformed source, more than 50,000 apps or 16 MiB refuse the
-  whole catalog; texts are cleaned of control sequences and cut. appjail stores its own serialisation of what it
+  note. An unknown key, a wrong version, a duplicate name, a malformed source, more than 50,000 apps or 16 MiB refuse
+  the whole catalog; texts are cleaned of control sequences and cut. appjail stores its own serialisation of what it
   validated, never the downloaded bytes.
 - **Pinned to a commit.** `index update` asks GitHub which commit of appjail-db is current, downloads `catalog.json` at
   exactly that commit in the download jail, and records the commit, so the catalog in use can be traced to an exact
@@ -33,8 +33,8 @@ lookalike repository would be a typosquat delivered by your own tool. And every 
 - **Reviewed before it replaces the old one.** Every update shows the number of apps, the apps added and removed and
   every app whose source changed, with a loud warning when an app moves to another owner or host, and asks before
   replacing anything (the default is no). One previous catalog is kept per source for `index rollback`.
-- **Other sources.** `index add NAME --url https://...` or `--file PATH` adds a catalog in the same format, with the same
-  parsing and review.
+- **Other sources.** `index add NAME --url https://...` or `--file PATH` adds a catalog in the same format, with the
+  same parsing and review.
 - **Search.** Every keyword must appear in the name or the description. Results are ranked: exact name, name prefix, all
   keywords in the name, some in the name, description only. Only `github:` and `url:` sources get an `appjail add`
   command; the others are shown as information. An app the two origins place in different repositories has no source,
