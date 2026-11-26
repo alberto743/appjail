@@ -31,5 +31,6 @@ The Camera portal path is tested with `vivid`'s V4L2 node (a virtual camera) whe
 camera's controls (Fedora 45, PipeWire 1.6.11): the session manager links it and an app in its jail receives a frame
 through the portal ([measurements](../../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14)).
 
-**Revisit when** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted, or Debian and Ubuntu
-package a PipeWire that reads the test camera's controls (then their skipped portal camera test runs).
+**Revisit when** a real webcam shows a missing sysfs attribute, or per-camera selection is wanted. The fault that skips
+the portal camera test on Debian 13 and Ubuntu 26.04 is fixed in PipeWire 1.6.9, which their stable releases do not
+ship; the test runs by itself on a guest with that PipeWire, and nothing is waited for.

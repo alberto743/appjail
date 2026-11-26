@@ -17,7 +17,6 @@ item is to being taken up. No planned code work is pending: nothing below is sta
 
 | Item | Status | Waiting on | Next step, or why not now | Reasoning |
 |---|---|---|---|---|
-| Camera portal measurement on Debian and Ubuntu | Waiting | a PipeWire release after 1.6.2 with the V4L2 fixes (`6734d69c`, `919de4c5`), packaged by Debian and Ubuntu | Re-run the measurement and let the session manager link the `vivid` test camera instead of `pw-link`. Check the release notes; nothing to do before. Done on Fedora 45 (PipeWire 1.6.11); the test skips on Debian and Ubuntu until they package a PipeWire that reads the control | [camera](desktop/camera.md), [measurements](../develop/camera-audio-evidence.md#the-v4l2-node-and-wireplumber-explained-a-test-control-of-vivid), [Fedora 45](../develop/camera-audio-evidence.md#fedora-45-measured-2026-11-14) |
 | Re-check related projects and references | Recurring | each minor release | Re-check the facts on related projects and the references cited on the concept pages | [related projects](project/related-projects.md) |
 | Reporting upstream the crashes found while measuring | Undecided | the maintainer | Muffin and Cinnamon on `wl-copy`/`wl-paste`, Hyprland 0.53.3 when a window closes | [assessment](../compositor-assessment/ASSESSMENT.md) |
 | Other architectures (arm64) | Paused | the maintainer resumes it | Evaluated: moderate code, expensive verification | [platform](project/platform.md) |

@@ -4,7 +4,7 @@
 """The Camera portal with a real V4L2 node: an app in its jail gets a frame of the `vivid` virtual camera through the portal.
 
 A private session bus, the real xdg-desktop-portal, and a private PipeWire and WirePlumber that find the `vivid` camera
-(guest only). The node is usable only with a PipeWire that can read vivid's controls (before 1.6.11 an array control makes the node's
+(guest only). The node is usable only with a PipeWire that can read vivid's controls (before 1.6.9 an array control makes the node's
 Props unreadable and WirePlumber never links it, see docs/develop/camera-audio-evidence.md), and WirePlumber 0.5.19 starts
 its camera monitors only on an active seat, which a headless guest does not have: the private configuration turns that check
 off. Where the node does not appear or cannot be linked, the tests skip.
@@ -57,7 +57,7 @@ def camera_stack(sandbox, runtime, portal_stack):  # noqa: F811
             return None
 
     def props_readable(node):
-        """Whether the node's Props can be read: when they cannot (vivid's array control, before PipeWire 1.6.11), WirePlumber
+        """Whether the node's Props can be read: when they cannot (vivid's array control, before PipeWire 1.6.9), WirePlumber
         never activates the node and links nothing to it."""
         try:
             out = subprocess.run(["pw-cli", "enum-params", str(node), "Props"], env=env, capture_output=True, text=True, timeout=10)
@@ -69,7 +69,7 @@ def camera_stack(sandbox, runtime, portal_stack):  # noqa: F811
         if not wait_for(lambda: (runtime / "pipewire-0").is_socket(), 10) or not wait_for(lambda: camera_node() is not None, 15):
             pytest.skip("the vivid camera never became a PipeWire node")
         if not props_readable(camera_node()):
-            pytest.skip("the vivid node's Props cannot be read (PipeWire before 1.6.11): WirePlumber does not link it")
+            pytest.skip("the vivid node's Props cannot be read (PipeWire before 1.6.9): WirePlumber does not link it")
         yield env
     finally:
         for p in reversed(procs):

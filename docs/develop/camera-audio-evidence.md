@@ -99,11 +99,16 @@ both its linking policy and its portal script use.
 | `vivid`'s controls | `s32_2_element_array` (0x0098f90f) is of type INTEGER with `dims=[2]`, `has-payload`; `VIDIOC_G_CTRL` on it fails with EINVAL (an ordinary control, brightness, reads fine); the 52 non-array INTEGER, BOOLEAN and MENU controls all read |
 | `no_error_inj=1` (removes most buttons) | no change, as expected: buttons are skipped anyway |
 | Stream by name (`gst-launch-1.0 pipewiresrc target-object=v4l2_input.platform-vivid.0`) | WirePlumber: `target not found`, the stream is destroyed: with no activation there is no `node-added` event and no session item to link to |
-| PipeWire upstream | `6734d69c` (2026-08-24, "do not expose compound controls as props", skips `V4L2_CTRL_FLAG_HAS_PAYLOAD`) and `919de4c5` (2026-09-02, "keep reading the other controls when one cannot be read"); in no release yet (2026-11-13); 1.6.2's `spa_v4l2_update_controls` is the same as 1.4.2's |
+| PipeWire upstream | `6734d69c` (2026-08-24, "do not expose compound controls as props", skips `V4L2_CTRL_FLAG_HAS_PAYLOAD`) and `919de4c5` (2026-09-02, "keep reading the other controls when one cannot be read"); the second is in 1.6.9 (backported as `458b8b18`), the first in 1.6.12 (backported as `a1dadc46`), checked on 2026-11-26; 1.6.2's `spa_v4l2_update_controls` is the same as 1.4.2's |
 
 So the missing node is an artefact of the test camera with these PipeWire releases, not of WirePlumber or appjail. An
 ordinary webcam (UVC) has no INTEGER array controls, so its node would be activated; a real camera through the portal is
 still a manual check. `vimc`, another virtual camera without such controls, is not in Debian's kernel.
+
+Where the fix is packaged (checked on 2026-11-26): Debian 13 keeps 1.4.2 and Ubuntu 26.04 keeps 1.6.2, whose stable
+updates carry no V4L2 fix; trixie-backports has 1.6.9, Debian testing 1.6.11, Ubuntu 26.10 1.6.8 (without it) and Ubuntu
+27.04 1.6.11. The test guests use the stable packages, so the portal camera test skips on Debian and Ubuntu and runs by
+itself on a guest whose PipeWire is 1.6.9 or later; the measurement on those systems is not awaited.
 
 ## Fedora 45 (measured 2026-11-14)
 
