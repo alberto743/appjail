@@ -48,11 +48,11 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
   bus who owns each granted name and each refused one, and refuses to start when one connection owns both, naming them.
   It fails closed when the owners cannot be read. Names the app may *own* are checked the same way: the proxy's own
   policy includes talking to whoever owns the name at the moment.
-- **Refused names.** Names that hand over the desktop are refused when you grant them and when a manifest is loaded: the
-  bus itself, systemd, the desktop shells and compositors, the session manager, `dconf`, GVfs, the accessibility names
-  (`org.freedesktop.a11y`; the accessibility bus has [a permission of its own](#the-accessibility-bus)),
-  global shortcuts, the screensaver, the clipboard manager, the portals' own names. Wildcards need at least three name
-  parts.
+- **Refused names.** Names that hand over the desktop are refused when you grant them and when a manifest is loaded:
+  the bus itself, systemd, the desktop shells and compositors, the session manager, `dconf`, GVfs, the screensaver, the
+  clipboard manager, global shortcuts, the portals' own names and the accessibility names (the accessibility bus has
+  [a permission of its own](#the-accessibility-bus)). The complete list is in
+  [the policy reference](../../reference/policy.md#d-bus-names). Wildcards need at least three name parts.
 - **Owning names.** An app may own a name it is granted with `--dbus-own` (a media player, a single-instance name),
   never one in a desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`, ...), so it cannot
   impersonate a desktop service; tray-icon names are the exception.
@@ -65,14 +65,18 @@ tells a program its address (`org.a11y.Bus`). That bus has no policy: any client
 controls and text, register as the listener of the keyboard, send key events and monitor every message. So without a
 grant an app gets neither the bus nor its address.
 
-With the `accessibility` permission, `run` asks the session bus for the accessibility bus's address itself (outside any
-jail, which also starts the bus if needed), starts a second `xdg-dbus-proxy` on it, in a jail of its own like the
-session-bus proxy, and gives the app only that proxy's socket, named by `AT_SPI_BUS_ADDRESS`. The proxy uses Flatpak's
-rules: the app may register its window with the registry (`Socket.Embed`), learn which events assistive tools listen
-for, send its own events, and pass key events to a screen reader's listeners. Every other call is refused, so the app
-cannot see other applications, register a key listener, generate input or monitor the bus. Toolkits find the bus through
-the variable alone; the app needs no session bus for it. The permission fails closed: without `xdg-dbus-proxy`,
-`dbus-send` or an accessibility bus, the app does not start ([the measurements](../../develop/a11y-evidence.md)).
+With the `accessibility` permission:
+
+- `run` finds the accessibility bus outside any jail: from `AT_SPI_BUS_ADDRESS` when your session sets it, else by
+  asking the session bus (`org.a11y.Bus`), which also starts the bus if needed.
+- A second `xdg-dbus-proxy` filters it, in a jail of its own like the session-bus proxy. The app gets only that proxy's
+  socket, named by `AT_SPI_BUS_ADDRESS`; toolkits find the bus through this variable alone, so the app needs no session
+  bus for it.
+- The proxy uses Flatpak's rules. The app may register its window with the registry (`Socket.Embed`), learn which
+  events assistive tools listen for, send its own events, and pass its key events to a screen reader. Every other call
+  is refused: it cannot see other applications, register a key listener, generate input or monitor the bus.
+- The permission fails closed: without `xdg-dbus-proxy`, `dbus-send` or an accessibility bus, the app does not start
+  ([the measurements](../../develop/a11y-evidence.md)).
 
 ## Connections
 

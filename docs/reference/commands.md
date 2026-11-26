@@ -184,4 +184,5 @@ installed while the app runs: that app is reported as failed, and a candidate in
 ## Exit status
 
 0 on success, 1 on an error, a refusal or a cancelled confirmation (and for `update`, when any app was blocked, failed
-or not checked), 2 for a usage error, 130 after Ctrl-C.
+or not checked), 2 for a usage error, 130 after Ctrl-C. Once an app has started, `run` and `open` return the app's own
+status.

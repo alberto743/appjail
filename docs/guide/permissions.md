@@ -143,6 +143,10 @@ Start with nothing and add what the app visibly lacks:
 | an Electron or Chromium app fails setting up its sandbox | `--allow userns` |
 | it exits at once with status 0 and no window | `--allow linger` |
 | a command-line tool that needs no window | `--display none` |
+| a terminal program does not draw, or asks a question and gets no answer | `run APP --raw`, or `--allow raw_terminal` |
+| `strace` or `gdb` fails with `Operation not permitted` | `--allow devel` |
+| it uses too much memory or CPU | `--memory-max`, `--cpu-quota`, `--tasks-max` |
+| links of its own scheme (`gemini://`, `obsidian://`) do not open it | `--add-scheme`, then `appjail desktop APP` ([links](menu-entry.md#opening-links)) |
 | a screen reader, magnifier or on-screen keyboard does not see the app | `--allow accessibility` |
 | no notifications, tray icon or media keys | [D-Bus and portals](dbus.md) |
 | a light theme on a dark desktop, a different cursor or missing fonts | [Appearance](appearance.md) |

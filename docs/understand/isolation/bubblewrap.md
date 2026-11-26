@@ -34,7 +34,7 @@ appjail builds each jail as a list of `bwrap` options. The ones that matter, and
 | `--share-net` | keep the network namespace bwrap was started in | only with `network` (inside `pasta`'s private namespace) or `network_host` |
 | `--unshare-user --disable-userns` | no further user namespaces inside the jail | refuses nested namespaces, unless the app has `userns` |
 | `--cap-drop ALL` | no capabilities, even inside the jail's own namespaces | the app holds no privilege at all |
-| `--clearenv` | start with an empty environment | no variable of yours reaches the app: no tokens, no `SSH_AUTH_SOCK`, no session addresses. appjail then sets a short fixed list (home, path, language, time zone, display variables), plus the app's own `[env]` table |
+| `--clearenv` | start with an empty environment | no variable of yours reaches the app: no tokens, no `SSH_AUTH_SOCK`, no session addresses. appjail then sets a short fixed list (home, path, language, time zone, display variables, and your `TERM` for an app with `raw_terminal`), plus the app's own `[env]` table |
 | `--die-with-parent` | the jail is killed when appjail exits | no jail outlives the command that started it ([process lifetime](lifetime.md)) |
 | `--new-session` | the app runs in a new terminal session | a program that shares your terminal's session can push characters into its input with the `TIOCSTI` request, typing commands into your shell after it exits |
 | `--ro-bind`, `--symlink` | the system directories (`/usr`, `/bin`, `/lib`, ...) read-only | programs and libraries of the host are usable but not changeable ([the filesystem view](filesystem.md)) |

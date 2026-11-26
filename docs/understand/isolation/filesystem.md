@@ -50,32 +50,27 @@ one run only (`run APP --dir PATH`), or a single file for one run (`run APP --fi
 the jail to the app). Opening a file from the desktop's menu entry does the same as `--file`. A path in your home
 appears at the same place under `/home/app`; a path elsewhere appears at the same path.
 
-Some paths are never granted, whatever the mode:
+Some paths are never granted, whatever the mode. They fall into four groups; the complete lists are in
+[the policy reference](../../reference/policy.md#paths-that-are-never-granted).
 
-- **credentials and secrets**: `~/.ssh`, `~/.gnupg`, cloud and container credentials (`~/.aws`, `~/.kube`,
-  `~/.docker`, ...), package-registry tokens, password stores and vaults, messaging sessions, browser profiles, mail,
-  shell histories, and files named like keys or password databases (`*.pem`, `*.key`, `*.kdbx`, ...); also any folder
-  above one of these locations, such as `~/.config`, which holds `~/.config/gh` (grant a subfolder instead). The check
-  is by path: appjail does not search a granted folder for secrets you keep elsewhere in it;
-- **too broad**: `/`, your home directory or any of its parents, `~/.config`, `~/.local`, `~/.cache`, and the system
-  trees (`/etc`, `/usr`, `/proc`, `/sys`, `/dev`, `/run`, ...);
-- **shared temporary directories**: `/tmp` and `/var/tmp`. Programs keep their unix sockets there (the X server's,
-  tmux's, agents'), and a bind mount does not stop a process from *connecting* to a socket, even when it is read-only:
-  an app given `/tmp` could drive those programs. A single regular file there can still be opened, since a file carries
-  no socket;
+- **Secrets**: `~/.ssh`, `~/.gnupg`, cloud, container and package-registry credentials, password stores, messaging
+  sessions, browser profiles, mail, shell histories, files named like keys (`*.pem`, `*.kdbx`, ...), and any folder
+  that contains one of them, such as `~/.config` (grant a subfolder instead).
+- **Too broad**: `/`, your home and its parents, `~/.config`, `~/.local`, `~/.cache`, and the system trees (`/etc`,
+  `/usr`, `/proc`, `/run`, ...).
+- **Shared temporary directories**, `/tmp` and `/var/tmp`. Programs keep their unix sockets there (the X server's,
+  tmux's, agents'), and a bind mount does not stop a process from *connecting* to a socket, even read-only. A single
+  regular file there can still be granted: a file carries no socket.
 - **appjail's own files**, which hold the pins and the manifests.
 
-Some paths are refused **read-write** only, because something outside the jail would later run or decode what an app
-wrote there: `~/.local/bin`, `~/.local/lib` (where every Python of yours, appjail included, looks for modules),
-`~/.config/autostart`, `~/.config/systemd`, the menu entries in `~/.local/share/applications`, icon themes (the desktop
-decodes icons outside any sandbox), thumbnailers, file-manager scripts, `~/.cargo/bin`, and shell, editor and
-terminal-multiplexer startup files. A directory that holds one of those files counts as the file: `~/.config/git` is
-refused read-write because git reads `~/.config/git/config`. The same holds for the toolkit settings, themes and fonts
-that your other apps apply (`~/.config/gtk-3.0`, `~/.config/kdeglobals`, `~/.local/share/themes`,
-`~/.local/share/fonts`, ...): a style sheet written there changes how every GTK app of yours looks, and a font is parsed
-by the desktop outside any jail. Read-only grants of these stay possible.
+Other paths are refused **read-write** only, because something outside the jail later runs or decodes what is written
+there: `~/.local/bin`, `~/.local/lib` (where your Pythons, appjail's included, look for modules), autostart entries,
+systemd units, menu entries, icon themes, thumbnailers, file-manager scripts, and shell, editor and tmux startup files;
+and the toolkit settings, themes and fonts your other apps apply, which the desktop parses outside any jail. A folder
+that holds such a file counts as the file: `~/.config/git` is refused read-write because git reads
+`~/.config/git/config`. Read-only grants of these remain possible.
 
-There is no override for these. The way around a refusal is always a narrower grant.
+There is no override. The way around a refusal is always a narrower grant.
 
 ### The host's system directories
 

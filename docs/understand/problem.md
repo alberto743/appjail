@@ -48,8 +48,8 @@ escape sequences that rewrite what you see.
 **The tools that manage the software.** An installer that downloads and runs scripts, or updates itself from the
 network, can be compromised once and reach everyone who uses it. appjail was started after studying one such manager,
 [AM](https://github.com/ivan-hc/AM), which updates itself and runs install scripts fetched from its repository outside
-any sandbox, and whose install scripts almost never checked a hash or a signature (6 of 8,735 at the commit studied;
-AM's own count of apps has since changed, so the figure is a snapshot, not a rate).
+any sandbox, and whose install scripts almost never checked a hash or a signature (6 of 8,735 at the commit studied, a
+snapshot).
 
 ## What appjail does
 

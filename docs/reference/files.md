@@ -4,7 +4,8 @@
 
 Besides these two trees, appjail writes only the menu entries and icons you ask for (and refreshes the desktop's icon
 and menu caches), and short-lived files: sockets and identity files in the runtime directory while an app runs, and
-temporary files in `/tmp` (the seccomp filter of an app behind `pasta`, an icon being converted).
+temporary files in `/tmp` (the seccomp filter of a download or attestation jail behind `pasta`, an icon being
+converted).
 
 | Path | Holds |
 |---|---|
@@ -38,6 +39,8 @@ temporary files in `/tmp` (the seccomp filter of an app behind `pasta`, an icon 
 | `DBUS_SESSION_BUS_ADDRESS` | the session bus (only `unix:path=` addresses; otherwise `$XDG_RUNTIME_DIR/bus`) |
 | `XDG_DATA_HOME`, `XDG_CONFIG_HOME` | where menu entries and icons go, and where `mimeapps.list` is read |
 | `LANG` | passed to the app; `TZ` too when set |
+| `TERM` | passed to an app with `raw_terminal` (or `run --raw`) when it is a plain terminal name |
+| `AT_SPI_BUS_ADDRESS` | where the accessibility bus is, for an app with `accessibility` (otherwise asked of the session bus) |
 
 No other variable of yours reaches an app: the jail's environment is cleared and rebuilt from a fixed list.
 
@@ -51,5 +54,6 @@ No other variable of yours reaches an app: the jail's environment is cleared and
 | `TMPDIR`, `XDG_RUNTIME_DIR` | `/tmp`, the jail's runtime directory |
 | `APPDIR`, `APPIMAGE_EXTRACT_AND_RUN` | `/app`, `1` |
 | `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE` and toolkit hints (`GDK_BACKEND`, `QT_QPA_PLATFORM`, `MOZ_ENABLE_WAYLAND`, `ELECTRON_OZONE_PLATFORM_HINT`, `SDL_VIDEODRIVER`) | for a Wayland app; X11 values and `DISPLAY` for an Xwayland app; none with `display = none` |
-| `DBUS_SESSION_BUS_ADDRESS`, `PULSE_SERVER`, `GTK_USE_PORTAL` | only with the grants that need them |
-| the names in the manifest's `[env]` table | as set with `perms --set-env`; never one of the names above |
+| `DBUS_SESSION_BUS_ADDRESS`, `PULSE_SERVER`, `GTK_USE_PORTAL`, `AT_SPI_BUS_ADDRESS` | only with the grants that need them |
+| `TERM`, `TERMINFO_DIRS` | with `raw_terminal` or `run --raw`: your `TERM`, and the host's terminfo directories; the `[env]` table may set them instead |
+| the names in the manifest's `[env]` table | as set with `perms --set-env`; never one of the names above, except `TERM` and `TERMINFO_DIRS` |
