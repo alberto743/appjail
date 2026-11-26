@@ -64,7 +64,8 @@ AUDIO_MODES = ("pipewire", "pulse")
 DEFAULT_AUDIO_MODE = "pipewire"
 BOOL_PERMS = ("network", "network_host", "audio", "mic", "gpu", "camera", "portals", "userns", "linger", "full_wayland", "raw_terminal", "devel", "accessibility")
 LIMIT_KEYS = ("memory_max", "cpu_quota", "tasks_max")  # strings in systemd syntax; empty when not set
-PERM_KEYS = {"network", "network_host", "audio", "mic", "audio_mode", "gpu", "camera", "display", "display_size", "dbus_filter", "dbus_own", "portals", "portal_interfaces", "userns", "linger", "full_wayland", "raw_terminal", "devel", "accessibility", "memory_max", "cpu_quota", "tasks_max", "dirs", "schemes"}
+LIST_PERMS = ("dbus_filter", "dbus_own", "portal_interfaces", "dirs", "schemes")
+PERM_KEYS = {*BOOL_PERMS, *LIMIT_KEYS, *LIST_PERMS, "audio_mode", "display", "display_size"}
 
 
 @dataclass(frozen=True)
@@ -180,7 +181,7 @@ def _permissions(table):
     _unknown(table, PERM_KEYS, "[permissions]")
     # Only the shape is settled here (lists of strings); validate() checks every value.
     perms = {key: table[key] for key in (*BOOL_PERMS, "audio_mode", "display", "display_size", *LIMIT_KEYS) if key in table}
-    for key in ("dbus_filter", "dbus_own", "portal_interfaces", "dirs", "schemes"):
+    for key in LIST_PERMS:
         if key in table:
             perms[key] = tuple(str_list(table[key], f"permissions.{key}"))
     return Permissions(**perms)
@@ -424,5 +425,5 @@ def dumps(m):
 def dump(path, m):
     """Write atomically (temp file in the same directory, then rename)."""
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    store.make_private(path.parent)  # [env] may hold values the user would rather keep to themselves
     store.atomic_write(path, dumps(m))

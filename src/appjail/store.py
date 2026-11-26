@@ -175,8 +175,11 @@ def _open_up(path):
 def remove_tree(path, strict=False):
     """Delete a tree that may contain read-only or unreadable directories (an app can make them in its home).
     Never follows symlinks. With strict, raise OSError when anything is left; otherwise leftovers are ignored
-    (cleanup of scratch space)."""
+    (cleanup of scratch space). A symlink given as the tree is removed itself; what it points to is never touched."""
     path = str(path)
+    if os.path.islink(path):
+        os.unlink(path)
+        return
     opened = set()
     while True:
         unreadable = []

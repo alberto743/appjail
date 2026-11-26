@@ -187,7 +187,7 @@ def _pasta_resolv_conf():
     path = store.data_dir() / "resolv.conf.pasta"
     text = f"nameserver {PASTA_DNS}\n"
     if not path.is_file() or path.read_text() != text:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        store.make_private(path.parent)
         store.atomic_write(path, text)
     return path
 
@@ -318,8 +318,10 @@ def supervise(argv, timeout=1800, watch=None, env=None, pass_fds=(), max_output=
 PASTA_SECCOMP_FD = 9  # behind pasta the filter is opened inside its namespace (see net_wrap: one digit only)
 
 
-def run(args, timeout=1800, watch=None):
-    """Run bwrap with a minimal host environment and the seccomp filter of the app jail (without the userns grant)."""
+def run(args, timeout=1800, watch=None, keep=OUTPUT_KEEP):
+    """Run bwrap with a minimal host environment and the seccomp filter of the app jail (without the userns grant).
+    keep: how much of each output stream is kept from its start and from its end (see supervise); a caller that parses
+    the whole output raises it."""
     if "--share-net" in args and find_pasta():
         # pasta closes inherited descriptors: the filter reaches bwrap through a private file instead
         fd, path = tempfile.mkstemp(prefix="appjail-seccomp-")
@@ -328,13 +330,14 @@ def run(args, timeout=1800, watch=None):
                 f.write(seccomp.program(False))
             argv = net_wrap([find_bwrap(), "--seccomp", str(PASTA_SECCOMP_FD), *args],
                             fd_files={PASTA_SECCOMP_FD: path})
-            return supervise(argv, timeout=timeout, watch=watch)
+            return supervise(argv, timeout=timeout, watch=watch, keep=keep)
         finally:
             os.unlink(path)
     fd = seccomp.open_fd(False)
     try:
         argv = [find_bwrap(), "--seccomp", str(fd), *args]
-        return supervise(net_wrap(argv) if "--share-net" in args else argv, timeout=timeout, watch=watch, pass_fds=(fd,))
+        return supervise(net_wrap(argv) if "--share-net" in args else argv, timeout=timeout, watch=watch, pass_fds=(fd,),
+                         keep=keep)
     finally:
         os.close(fd)
 
