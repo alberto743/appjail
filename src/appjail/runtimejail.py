@@ -238,12 +238,15 @@ def _terminal_env(host_env, exists=os.path.isdir):
     return env
 
 
-def _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env):
+def _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env, a11y_socket=None):
     """The filtered bus socket and the document portal's directory; adds their variables to `env`."""
     args = []
     if dbus_socket:
         args += ["--ro-bind", str(dbus_socket), f"{rt}/bus"]
         env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={rt}/bus"
+    if a11y_socket:  # the accessibility bus behind its own proxy, found through this variable, not through the session bus
+        args += ["--ro-bind", str(a11y_socket), f"{rt}/at-spi-bus"]
+        env["AT_SPI_BUS_ADDRESS"] = f"unix:path={rt}/at-spi-bus"
     if perms.portals:
         args += ["--bind", str(portal_docs), f"{rt}/doc"]
         if host_rt and Path(host_rt) != Path(rt):  # the portal hands out paths under the host's runtime dir
@@ -365,13 +368,14 @@ def _base_filesystem_args(etc_dir, rt, perms):
 
 def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_socket=None, wayland_socket=None, seccomp_fd=None,
                  portal_docs=None, status_fd=None, block_fd=None, binds=(), audio_sockets=None, host_audio=True, user_env=(),
-                 link_fifo=None):
+                 link_fifo=None, a11y_socket=None):
     """Complete bwrap argv (after the bwrap binary) for running an extracted AppImage.
 
     binds: the directory and file grants, from Grants.args.
     audio_sockets: (pipewire, pulse) sockets of the app's private audio graph; without them `audio` is the host's Pulse
     socket, or nothing when host_audio is false (the private graph could not start and the app has no `mic`).
     link_fifo: the host FIFO of the link relay (relay.py); the app then runs under the relay, which reads the FIFO bound in.
+    a11y_socket: the accessibility bus behind its proxy (dbusproxy.A11yProxy); required by the `accessibility` permission.
     Nothing is read from the process environment, only from host_env; the host's files decide what can be bound (which
     system directories, GPU nodes and helper binaries exist). Anything the manifest asks for but appjail cannot enforce
     yet is refused instead of ignored.
@@ -385,6 +389,8 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
         command = xwayland_command(command, perms.rootful, perms.display_size)
     if dbusproxy.needed(perms) and not dbus_socket:
         raise RunError("dbus_filter, dbus_own and portals need the filtered bus socket from appjail.dbusproxy")
+    if perms.accessibility and not a11y_socket:
+        raise RunError("accessibility needs the accessibility bus socket from appjail.dbusproxy")
     if perms.portals and not portal_docs:
         raise RunError("portals need the document portal's directory for this app (appjail.portal.doc_dir)")
 
@@ -396,7 +402,7 @@ def runtime_args(*, root, home, etc_dir, perms, uid, host_env, command, dbus_soc
         args += _wayland_args(host_env, wayland_socket, rt)
 
     env = _app_env(host_env, rt, xwayland, perms.windowed)
-    args += _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env)
+    args += _bus_and_portal_args(perms, rt, host_rt, dbus_socket, portal_docs, env, a11y_socket)
     if perms.audio:
         args += _audio_args(host_rt, rt, env, audio_sockets, host_audio)
     if perms.gpu:

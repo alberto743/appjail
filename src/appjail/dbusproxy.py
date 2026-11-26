@@ -7,6 +7,9 @@ The app never sees the real bus socket. It gets a socket served by the proxy, wh
 and refuses every call except to the names listed in `permissions.dbus_filter` and `permissions.dbus_own` (own access).
 A listed name of a known service (`CONFINED`) reaches only that service's objects; any other gets talk access, and `run`
 first checks that its owner owns no refused name (`check_owners`).
+
+With the `accessibility` permission the app also gets the accessibility bus (AT-SPI), behind a second proxy of its own
+(`A11yProxy`): the bus has no policy, so only the proxy keeps the app to its own registration (`A11Y_RULES`).
 """
 
 import os
@@ -176,30 +179,93 @@ def check_owners(perms, bus, owners=bus_owners):
                        f"Remove the entry (appjail perms APP {option} {entry})")
 
 
+# The accessibility bus (AT-SPI) is a second bus with no policy of its own: whoever reaches its socket can list every
+# application's controls, register as the keyboard listener, send key events and monitor every message (measured in
+# docs/develop/a11y-evidence.md). An app with `accessibility` gets it behind a proxy with Flatpak's rules
+# (`flatpak_run_add_a11y_dbus_args`, common/flatpak-run-dbus.c): the app registers its own window and sends its events, and
+# may pass its own key events to a screen reader; everything else, the other applications included, is refused.
+REGISTRY = "org.a11y.atspi.Registry"
+_DEC = "/org/a11y/atspi/registry/deviceeventcontroller"
+A11Y_RULES = (
+    "--filter", "--sloppy-names",
+    f"--broadcast={REGISTRY}={REGISTRY}.EventListenerRegistered@/org/a11y/atspi/registry",
+    f"--broadcast={REGISTRY}={REGISTRY}.EventListenerDeregistered@/org/a11y/atspi/registry",
+    f"--call={REGISTRY}=org.a11y.atspi.Socket.Embed@/org/a11y/atspi/accessible/root",
+    f"--call={REGISTRY}=org.a11y.atspi.Socket.Unembed@/org/a11y/atspi/accessible/root",
+    f"--call={REGISTRY}={REGISTRY}.GetRegisteredEvents@/org/a11y/atspi/registry",
+    *(f"--call={REGISTRY}=org.a11y.atspi.DeviceEventController.{m}@{_DEC}"
+      for m in ("GetKeystrokeListeners", "GetDeviceEventListeners", "NotifyListenersSync", "NotifyListenersAsync")),
+)
+_ADDRESS = re.compile(r'^\s*string "(unix:path=[^"\\]*)"\s*$', re.MULTILINE)
+
+
+def a11y_bus(host_env, timeout=5.0):
+    """Path of the accessibility bus socket: AT_SPI_BUS_ADDRESS when the user's session has it, else what the session bus
+    answers to `org.a11y.Bus.GetAddress` (which starts the bus when it is not running), asked outside any jail.
+    Only `unix:path=` addresses are accepted. Raises RunError when there is none: the grant cannot be honoured."""
+    address = host_env.get("AT_SPI_BUS_ADDRESS", "")
+    if not address:
+        session = host_bus(host_env)
+        if not os.access(DBUS_SEND, os.X_OK):
+            raise RunError("dbus-send is needed to find the accessibility bus (package dbus-bin, or dbus-tools on Fedora)")
+        env = {"PATH": "/usr/bin:/bin", "DBUS_SESSION_BUS_ADDRESS": f"unix:path={session}"}
+        try:
+            r = subprocess.run([DBUS_SEND, "--session", "--print-reply", f"--reply-timeout={int(timeout * 1000)}",
+                                "--dest=org.a11y.Bus", "/org/a11y/bus", "org.a11y.Bus.GetAddress"],
+                               env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout + 2)
+        except (OSError, subprocess.SubprocessError) as e:
+            raise RunError(f"cannot ask the session bus for the accessibility bus: {e}") from e
+        found = _ADDRESS.findall(r.stdout) if r.returncode == 0 else []
+        if not found:
+            detail = (r.stderr.strip().splitlines() or ["?"])[-1][:200] if r.returncode else "no address in its reply"
+            raise RunError("accessibility needs the accessibility bus (package at-spi2-core), and the session bus gave no "
+                           f"address for it: {detail}")
+        address = found[0]
+    first = address.split(";")[0]
+    if not first.startswith("unix:path="):
+        raise RunError("no usable accessibility bus (only unix:path= addresses are supported)")
+    path = first[len("unix:path="):].split(",")[0]
+    if not path.startswith("/") or any(c in path for c in "\0\n=") or not Path(path).is_socket():
+        raise RunError(f"accessibility bus socket not found: {path}")
+    return path
+
+
+def _argv(bus, sockdir, rule_list, sync_fd, identity=None, seccomp_fd=None):
+    """bwrap argv (after the binary) that runs the proxy: no network, nothing but the two sockets."""
+    ident = ["--ro-bind", str(identity), "/.flatpak-info"] if identity else []
+    return ((["--seccomp", str(seccomp_fd)] if seccomp_fd is not None else []) + jail.common_args()
+            + ["--ro-bind", bus, bus, "--bind", str(sockdir), str(sockdir), *ident, "--remount-ro", "/", "--"]
+            + [PROXY, f"unix:path={bus}", f"{sockdir}/bus", f"--fd={sync_fd}"] + rule_list)
+
+
 def proxy_args(bus, sockdir, perms, sync_fd, identity=None, seccomp_fd=None):
-    """bwrap argv (after the binary) that runs the proxy: no network, nothing but the two sockets.
+    """The argv of the session-bus proxy for the manifest's D-Bus and portal grants.
 
     identity: file bound as /.flatpak-info, the portal sandbox identity of the app this proxy serves.
     seccomp_fd: the filter the helper jails share (seccomp.open_fd).
     """
-    ident = ["--ro-bind", str(identity), "/.flatpak-info"] if identity else []
-    return ((["--seccomp", str(seccomp_fd)] if seccomp_fd is not None else []) + jail.common_args()
-            + ["--ro-bind", bus, bus, "--bind", str(sockdir), str(sockdir), *ident, "--remount-ro", "/", "--"]
-            + [PROXY, f"unix:path={bus}", f"{sockdir}/bus", f"--fd={sync_fd}"] + rules(perms))
+    return _argv(bus, sockdir, rules(perms), sync_fd, identity, seccomp_fd)
 
 
-class Proxy:
-    """Context manager: starts the proxy, yields the host path of the filtered socket, stops it."""
+class _Proxy:
+    """Context manager: starts an xdg-dbus-proxy in its own jail, yields the host path of the filtered socket, stops it."""
+    NEEDED_BY = ""  # the grants that need the proxy, ending in the verb
 
-    def __init__(self, perms, host_env, popen=subprocess.Popen, identity=None, owners=bus_owners):
-        self.perms, self.host_env, self._popen, self.identity, self._owners = perms, host_env, popen, identity, owners
+    def __init__(self, host_env, popen=subprocess.Popen, identity=None):
+        self.host_env, self._popen, self.identity = host_env, popen, identity
         self.proc = self.dir = self._read_fd = None
+
+    def _upstream(self):
+        """The host path of the bus socket this proxy filters (after the checks that must hold before it starts)."""
+        raise NotImplementedError
+
+    def _rules(self):
+        raise NotImplementedError
 
     def __enter__(self):
         if not os.access(PROXY, os.X_OK):
-            raise RunError("dbus_filter, dbus_own and portals need xdg-dbus-proxy (package xdg-dbus-proxy)")
-        bus = host_bus(self.host_env)
-        check_owners(self.perms, bus, self._owners)
+            raise RunError(f"{self.NEEDED_BY} xdg-dbus-proxy (package xdg-dbus-proxy)")
+        bus = self._upstream()
         runtime_dir = self.host_env.get("XDG_RUNTIME_DIR")
         if not runtime_dir:
             raise RunError("the D-Bus proxy needs XDG_RUNTIME_DIR")
@@ -207,7 +273,7 @@ class Proxy:
         read_fd, write_fd = os.pipe()
         filter_fd = seccomp.open_fd(False)
         try:
-            argv = [jail.find_bwrap(), *proxy_args(bus, self.dir, self.perms, write_fd, self.identity, filter_fd)]
+            argv = [jail.find_bwrap(), *_argv(bus, self.dir, self._rules(), write_fd, self.identity, filter_fd)]
             self.proc = self._popen(argv, pass_fds=(write_fd, filter_fd), stdin=subprocess.DEVNULL,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env={"PATH": "/usr/bin:/bin"},
                                     start_new_session=True)
@@ -249,3 +315,35 @@ class Proxy:
             os.close(self._read_fd)
             self._read_fd = None
         self._stop()
+
+
+class Proxy(_Proxy):
+    """The proxy of the session bus: the names of dbus_filter and dbus_own and the portals (`rules`)."""
+    NEEDED_BY = "dbus_filter, dbus_own and portals need"
+
+    def __init__(self, perms, host_env, popen=subprocess.Popen, identity=None, owners=bus_owners):
+        super().__init__(host_env, popen, identity)
+        self.perms, self._owners = perms, owners
+
+    def _upstream(self):
+        bus = host_bus(self.host_env)
+        check_owners(self.perms, bus, self._owners)
+        return bus
+
+    def _rules(self):
+        return rules(self.perms)
+
+
+class A11yProxy(_Proxy):
+    """The proxy of the accessibility bus (`A11Y_RULES`): the app registers its window and nothing else."""
+    NEEDED_BY = "accessibility needs"
+
+    def __init__(self, host_env, popen=subprocess.Popen, address=None):
+        super().__init__(host_env, popen)
+        self._address = address or a11y_bus
+
+    def _upstream(self):
+        return self._address(self.host_env)
+
+    def _rules(self):
+        return list(A11Y_RULES)

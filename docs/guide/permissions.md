@@ -77,6 +77,21 @@ Grant it only to an app you trust. After a run that had sequences removed, appja
 Apps started from the menu or the window are not affected. See [untrusted
 text](../understand/acquisition/untrusted-text.md#limits) for what is and is not cleaned.
 
+## Screen readers and other assistive tools
+
+A screen reader, a magnifier that follows the focus, an on-screen keyboard or switch and voice control read an app's
+window through the accessibility bus. A jailed app is invisible to them unless you grant it:
+
+```sh
+appjail perms galculator --allow accessibility
+```
+
+The app then reaches the accessibility bus through a filter of its own: it can describe its own window and send its own
+events, nothing else. It cannot see other applications or listen to your keys. It can tell that an assistive tool is
+running, and could send it fake key events; `perms` says so when you grant it. The app finds the bus at start: one that
+was already running keeps the old setting until it is started again. See [the accessibility
+bus](../understand/desktop/dbus.md#the-accessibility-bus).
+
 ## Grant for one run only
 
 ```sh
@@ -127,5 +142,6 @@ Start with nothing and add what the app visibly lacks:
 | an Electron or Chromium app fails setting up its sandbox | `--allow userns` |
 | it exits at once with status 0 and no window | `--allow linger` |
 | a command-line tool that needs no window | `--display none` |
+| a screen reader, magnifier or on-screen keyboard does not see the app | `--allow accessibility` |
 | no notifications, tray icon or media keys | [D-Bus and portals](dbus.md) |
 | a light theme on a dark desktop, a different cursor or missing fonts | [Appearance](appearance.md) |

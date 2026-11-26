@@ -48,12 +48,30 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
   fails closed when the owners cannot be read. Names the app may *own* are checked the same way: the proxy's own policy
   includes talking to whoever owns the name at the moment.
 - **Refused names.** Names that hand over the desktop are refused when you grant them and when a manifest is loaded: the
-  bus itself, systemd, the desktop shells and compositors, the session manager, `dconf`, GVfs, the accessibility bus,
+  bus itself, systemd, the desktop shells and compositors, the session manager, `dconf`, GVfs, the accessibility names
+  (`org.freedesktop.a11y`; the accessibility bus has [a permission of its own](#the-accessibility-bus)),
   global shortcuts, the screensaver, the clipboard manager, the portals' own names. Wildcards need at least three name
   parts.
 - **Owning names.** An app may own a name it is granted with `--dbus-own` (a media player, a single-instance name), never
   one in a desktop namespace (`org.freedesktop.`, `org.gnome.`, `org.kde.`, `org.gtk.`, ...), so it cannot impersonate a
   desktop service; tray-icon names are the exception.
+
+### The accessibility bus
+
+Assistive tools (screen readers such as Orca, magnifiers that follow the focus, on-screen keyboards, switch and voice
+control, UI automation) read applications through AT-SPI, which runs on a second bus of its own: the session bus only
+tells a program its address (`org.a11y.Bus`). That bus has no policy: any client can list every application and read its
+controls and text, register as the listener of the keyboard, send key events and monitor every message. So without a
+grant an app gets neither the bus nor its address.
+
+With the `accessibility` permission, `run` asks the session bus for the accessibility bus's address itself (outside any
+jail, which also starts the bus if needed), starts a second `xdg-dbus-proxy` on it, in a jail of its own like the
+session-bus proxy, and gives the app only that proxy's socket, named by `AT_SPI_BUS_ADDRESS`. The proxy uses Flatpak's
+rules: the app may register its window with the registry (`Socket.Embed`), learn which events assistive tools listen
+for, send its own events, and pass key events to a screen reader's listeners. Every other call is refused, so the app
+cannot see other applications, register a key listener, generate input or monitor the bus. Toolkits find the bus through
+the variable alone; the app needs no session bus for it. The permission fails closed: without `xdg-dbus-proxy`,
+`dbus-send` or an accessibility bus, the app does not start ([the measurements](../../develop/a11y-evidence.md)).
 
 ## Connections
 
@@ -62,10 +80,16 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
   [Wayland socket](wayland.md) offers no privileged interface to block.
 - How to find and grant names: [D-Bus and portals](../../guide/dbus.md).
 - Decisions: [D-Bus names that are always refused](../../decisions/desktop/dbus-refused.md),
+  [An opt-in accessibility bus](../../decisions/desktop/a11y-bus.md),
   [One granted name reaches its whole connection](../../decisions/desktop/dbus-connection.md).
 
 ## Limits
 
+- With `accessibility`, an app can tell that an assistive tool is running and which events it listens for, and can send
+  fake key events to a screen reader's key listener (not to other windows). Without them a screen reader would not get the
+  keys typed in that app.
+- Only a GTK 3 and a Qt 6 window and a stand-in screen reader were measured with `accessibility` (on Debian 13, Ubuntu 26.04 and Fedora 45); a real Orca, GTK 4,
+  Electron and X11 apps were not.
 - The owner check runs at start: a name that nobody owns then, or that changes owner while the app runs, is not checked
   again.
 - A granted name that is not a confined service reaches everything its owner serves.
@@ -83,4 +107,6 @@ remote-desktop interface on GNOME Shell; through `org.freedesktop.Notifications`
 - Specifications of the confined services: [Desktop Notifications](https://specifications.freedesktop.org/notification/latest/),
   [Secret Service](https://specifications.freedesktop.org/secret-service/latest/),
   [MPRIS](https://specifications.freedesktop.org/mpris/latest/).
+- GNOME, [AT-SPI2 core developer documentation](https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/); Flatpak,
+  [`common/flatpak-run-dbus.c`](https://github.com/flatpak/flatpak/blob/main/common/flatpak-run-dbus.c) (`flatpak_run_add_a11y_dbus_args`).
 - Flatpak documentation, [Sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html) (D-Bus access).

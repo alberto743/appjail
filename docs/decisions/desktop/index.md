@@ -10,7 +10,7 @@ the network, and the menu. How it works is explained in [Desktop access](../../u
 | [X11-only apps on GNOME: rootful Xwayland](xwayland-rootful.md) | a private X server in one window, with openbox |
 | [D-Bus names that are always refused](dbus-refused.md) | the names that hand over the desktop |
 | [One granted name reaches its whole connection](dbus-connection.md) | confined services and the owner check |
-| [An opt-in accessibility bus](a11y-bus.md) | proposed: the accessibility bus behind its own proxy, `accessibility` |
+| [An opt-in accessibility bus](a11y-bus.md) | the accessibility bus behind its own proxy: the `accessibility` permission |
 | [A Flatpak identity for the portals](portal-identity.md) | how the portals recognise an app |
 | [A private audio graph per app](audio-graph.md) | `audio`, `mic`, `audio_mode` |
 | [PulseAudio's socket is never given](pulseaudio.md) | module loading, and when apps get no sound |
