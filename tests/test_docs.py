@@ -63,6 +63,25 @@ def test_every_page_is_in_the_navigation():
     assert sorted(listed - pages) == [], "nav entries without a page"
 
 
+def test_a_section_page_is_the_index_only_of_its_own_section():
+    """With navigation.indexes, an index.md listed directly in a section becomes that section's landing page: a
+    subsection's index written as a single page (`{ "Catalog" = "x/index.md" }`) would open when the parent's title is
+    clicked. Such an index is the first entry of a list, or nothing that looks like one."""
+    nav = tomllib.loads((ROOT / "zensical.toml").read_text(encoding="utf-8"))["project"]["nav"]
+    wrong = []
+
+    def walk(items, where):
+        for position, item in enumerate(items):
+            entries = item.items() if isinstance(item, dict) else [(None, item)]
+            for title, value in entries:
+                if isinstance(value, list):
+                    walk(value, f"{where} > {title}")
+                elif value.endswith("/index.md") and position != 0:
+                    wrong.append(f"{where}: {title or value}")
+    walk(nav, "nav")
+    assert wrong == [], "an index page listed as a single entry: list it first in its own section"
+
+
 def concept_pages():
     for p in sorted((ROOT / "docs" / "understand").glob("*/*.md")):
         if p.name != "index.md" or p.parent.name == "catalog":

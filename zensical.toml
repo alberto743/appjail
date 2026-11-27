@@ -57,7 +57,9 @@ nav = [
       "understand/updates/url-and-file.md",
       "understand/updates/history.md",
     ] },
-    { "Catalog" = "understand/catalog/index.md" },
+    { "Catalog" = [
+      "understand/catalog/index.md",
+    ] },
   ] },
   { "Guide" = [
     "guide/getting-started.md",
