@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Target | Cinnamon: `github.com/linuxmint/cinnamon` (the compositor is Muffin: `github.com/linuxmint/muffin`) |
-| Measured | Cinnamon 6.8.0 (Fedora 45); Cinnamon 6.4.10 and 6.4.13 do not list it (the control) |
+| Measured | Cinnamon 6.8.3 (Fedora 45); Cinnamon 6.4.10 and 6.4.13 do not list it (the control) |
 | Class | any client can draw over the desktop |
 | Our severity | medium (a full-screen opaque surface on top of the user's windows) |
 | Suggested channel | public issue (verify the project's security policy first) |
@@ -14,10 +14,10 @@
 
 **Title:** Cinnamon 6.8 (Wayland) offers `zwlr_layer_shell_v1` to every client
 
-Cinnamon 6.8.0's Wayland socket lists `zwlr_layer_shell_v1`; 6.4 does not. Any client can bind it and place a surface in
+Cinnamon 6.8.3's Wayland socket lists `zwlr_layer_shell_v1`; 6.4 does not. Any client can bind it and place a surface in
 a layer of its choosing. Measured, nested in a private Xvfb with a screenshot taken through Cinnamon's own screenshot
-service as the observer: `swaybg -c '#ff00ff'` (a plain layer-shell client) stays up and paints 94.7 % of the screen
-with its colour; the capture before starting it has none of that colour.
+service as the observer: `swaybg -c '#ff00ff'` (a plain layer-shell client) stays up and paints 78.4 % of the screen
+with its colour (94.7 % on 6.8.0); the capture before starting it has none of that colour.
 
 A layer surface on the overlay layer can cover every window, and the protocol allows exclusive keyboard interactivity
 (not tried here). If the layer shell is meant for Cinnamon's own panels and desktop, offering it only to trusted clients

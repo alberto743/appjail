@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Targets | Cinnamon (`org.Cinnamon.Eval`, `org.cinnamon.Screenshot`, `org.cinnamon.ScreenSaver`, `org.cinnamon.Muffin.DisplayConfig`); KDE Plasma (`org.kde.PlasmaShell.evaluateScript`, `org.kde.klipper getClipboardContents`); Mutter (`org.gnome.Mutter.RemoteDesktop`, `ScreenCast`, `InputCapture`) |
-| Measured | Cinnamon 6.4.10, 6.4.13, 6.8.0; Plasma 6.3.6, 6.6.6, 6.8.2; Mutter and GNOME Shell 48.7, 50.1, 51.1 |
+| Measured | Cinnamon 6.4.10, 6.4.13, 6.8.3; Plasma 6.3.6, 6.6.7, 6.8.3; Mutter and GNOME Shell 48.7, 50.1, 51.1 |
 | Class | design question: services that are privileged for any client of the session bus |
 | Our severity | informational (these are same-user services; it matters when a sandbox lets an app reach a bus name) |
 | Suggested channel | a documentation or hardening discussion, only if you want to open it; likely "works as intended" |

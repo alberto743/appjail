@@ -54,11 +54,16 @@ Each script starts the compositors it needs with fresh processes on a private ru
 the clients, and checks the result: a control (a client that sends nothing, or the version that hides the global) and
 the case. `tests/vm/ssh.sh` and `tests/vm/sync.sh` are the only host-side steps.
 
-Last full run, 2026-11-15, all three guests (versions in the output of each script): every report printed `REPRODUCED`,
-with these exceptions and notes:
+Last full run, 2026-11-27, all three guests from fresh images (versions in the output of each script; the first,
+2026-11-15): every report printed `REPRODUCED`, with these exceptions and notes:
 
-* 07: Muffin 6.4.1 ended on both distributions; the Cinnamon 6.4 shell ended on Ubuntu but survived once on Debian, so
-  it is reported as intermittent and the script only requires Muffin to end;
+* versions that moved since the first run, with the same findings: KWin and Plasma 6.6.7 (Ubuntu) and 6.8.3 (Fedora;
+  it hides the same seven globals as 6.8.2), Cinnamon 6.8.3 (the layer-shell client painted 78.4 % of the screen
+  instead of 94.7 %), Muffin 6.8.5 (the source of report 06, same text). Fedora's `muffin` package has no standalone
+  compositor to start, so Muffin is measured on Debian and Ubuntu only, as before;
+* 07: Muffin 6.4.1 ended in 5 runs of 6 (it survived once on Ubuntu, which failed that run of the script); the
+  Cinnamon 6.4 shell ended in 4 of 6 (it survived on Debian and once on Ubuntu), so it is reported as intermittent and
+  the script only requires Muffin to end;
 * 09: the crash is intermittent; on Ubuntu it ended the compositor on the first try;
 * 05, 08: the control (Cinnamon 6.4 not listing the layer shell, Hyprland 0.55 hiding the virtual input) is part of the
   output.

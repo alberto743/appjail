@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Target | Muffin: `github.com/linuxmint/muffin` (and the consumers in Cinnamon) |
-| Measured | Muffin 6.8.1 (source, Fedora 45); the global is listed by Cinnamon 6.8.0 |
+| Measured | Muffin 6.8.5 (source, Fedora 45); the global is listed by Cinnamon 6.8.3 |
 | Class | hardening (the shell may open a file the client names) |
 | Our severity | low |
 | Suggested channel | public issue |
@@ -28,7 +28,7 @@ say in the protocol text which it is.
 
 ## Evidence and reproduction in the repository
 
-* `upstream-reports/reproduce.sh 06` (fedora): downloads the Muffin 6.8.1 source RPM in the guest, extracts
+* `upstream-reports/reproduce.sh 06` (fedora): downloads the Muffin 6.8.5 source RPM in the guest, extracts
   `xapp-shell.xml` as text, prints the request text, and checks the sentence about the absolute path. Source only; the
   shell's side was not read to the end.
 

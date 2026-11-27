@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Target | Muffin: `github.com/linuxmint/muffin` |
-| Measured | Muffin 6.4.1 (Debian 13, Ubuntu 26.04) every time; Cinnamon 6.4.10 and 6.4.13 (the shell on it) in the saved surveys, intermittently on rerun; Cinnamon 6.8.0 survived |
+| Measured | Muffin 6.4.1 (Debian 13, Ubuntu 26.04) nearly every time (on 2026-11-27, 5 runs of 6); Cinnamon 6.4.10 and 6.4.13 (the shell on it) in the saved surveys, intermittently on rerun; Cinnamon 6.8.3 survived |
 | Class | crash (any client ends the session) |
 | Our severity | low to medium |
 | Suggested channel | public issue |
@@ -17,7 +17,7 @@
 Muffin 6.4.1 (Debian 13 and Ubuntu 26.04), and often the Cinnamon 6.4 shell on it, terminate with a floating-point
 exception when `wl-copy` or `wl-paste` (wl-clipboard) connect to the compositor's Wayland socket; started headless, in a
 private Xvfb (`xvfb-run`-style private Xvfb; `muffin --wayland --nested --no-x11`, and
-`cinnamon --wayland --nested --no-x11 --sm-disable`). Any client can therefore end a Wayland session. Cinnamon 6.8.0
+`cinnamon --wayland --nested --no-x11 --sm-disable`). Any client can therefore end a Wayland session. Cinnamon 6.8.3
 survived the same clients, so the cause may be fixed upstream; the question is which change fixed it, so that the 6.4
 packages can take it.
 
@@ -36,4 +36,6 @@ it (the earlier survey named `wl-copy` and `wl-paste`).
   the backtrace.
 * Which of the four clients ends it was not isolated in the saved run.
 * Intermittent for the Cinnamon shell: the saved surveys and an Ubuntu rerun (6.4.13) ended it; a rerun on Debian
-  (6.4.10) survived. Muffin 6.4.1 alone ended on both distributions every time recorded.
+  (6.4.10) survived; on 2026-11-27 the shell survived on Debian and once in five runs on Ubuntu. Muffin 6.4.1 alone
+  ended on both distributions every time until 2026-11-27, when it survived one run of five on Ubuntu: say "nearly
+  every time", not "every time".

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Targets | Mutter (GNOME): `gitlab.gnome.org/GNOME/mutter`; Muffin and Cinnamon (Linux Mint): `github.com/linuxmint/muffin` |
-| Measured | Mutter 48.7 (Debian 13), 50.1 (Ubuntu 26.04), 51.1 (Fedora 45); Muffin 6.4.1; Cinnamon 6.4.10, 6.4.13, 6.8.0 |
+| Measured | Mutter 48.7 (Debian 13), 50.1 (Ubuntu 26.04), 51.1 (Fedora 45); Muffin 6.4.1; Cinnamon 6.4.10, 6.4.13, 6.8.3 |
 | Class | focus-stealing prevention bypass; the app then receives the keys the user types |
 | Our severity | medium (user-visible, but it needs a client with a window; no data is read, only the keys typed after the steal) |
 | Suggested channel | Mutter: a confidential issue first (verify the project's security policy); Muffin: a public issue (it copies Mutter's code) |
@@ -32,7 +32,7 @@ client receives the keys the user types in what they took to be the other window
 
 Measured with two bare windows (a stdlib client that speaks the wire protocol; no GTK needed), the second one mapped
 last and focused: after the request, the first window has `wl_keyboard.enter` and the second `leave`. Mutter 48.7, 50.1,
-51.1, Muffin 6.4.1 and Cinnamon 6.4.10, 6.4.13, 6.8.0 behave the same way. (GNOME Shell 48.7 in a headless session
+51.1, Muffin 6.4.1 and Cinnamon 6.4.10, 6.4.13, 6.8.3 behave the same way. (GNOME Shell 48.7 in a headless session
 showed its overview on `present 0` and took the focus through the notify route.)
 
 Suggested fix: treat a timestamp of 0 in `present` as "no user time" (set the demands-attention state instead of
