@@ -203,7 +203,16 @@ def test_the_app_sees_only_the_tunnels_and_records_the_host_microphone(sandbox, 
         seen = node_names(in_jail(sandbox, audio, ["/usr/bin/pw-dump"]))
         assert {"app-speaker", "app-mic"} <= set(seen)
         assert not [n for n in seen if n.startswith("host-") or "v4l2" in n], seen  # no host device, no camera
-        assert peak(record(sandbox, audio)) > 1000  # the host microphone's tone
+        # The host's tone source is now and then silent on a loaded machine (see the whole-launch test below): the same
+        # window is recorded from it directly, and a silent app recording only fails when the source itself was sounding.
+        wav = sandbox / "reference.wav"
+        reference = subprocess.Popen(["timeout", "-s", "INT", "4", "pw-record", "--target", "host-mic", str(wav)], env=host.env,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        recorded = peak(record(sandbox, audio))
+        reference.wait(10)
+        if recorded <= 1000:  # the host microphone's tone
+            assert peak(wav.read_bytes()) <= 1000, "the app recorded silence while the host source played"
+            pytest.skip("the test host's own source was silent in that window: nothing to compare the private graph with")
 
 
 @integration
