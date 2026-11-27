@@ -135,6 +135,7 @@ nav = [
       "decisions/project/index.md",
       "decisions/project/platform.md",
       "decisions/project/gui.md",
+      "decisions/project/gui-look.md",
       "decisions/project/output.md",
       "decisions/project/security-reports.md",
       "decisions/project/build-pins.md",

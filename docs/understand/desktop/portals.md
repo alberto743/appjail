@@ -101,7 +101,9 @@ Asking for either in `portal_interfaces` is an error, as is any name not listed 
 
 - Portals travel on D-Bus, through the same proxy: [D-Bus and the filtering proxy](dbus.md).
 - The Camera portal is how apps that use PipeWire reach a camera: [GPU and camera](devices.md).
-- The Settings portal carries the dark-mode preference: [Appearance](../../guide/appearance.md).
+- The Settings portal carries the dark-mode preference: [Appearance](../../guide/appearance.md). The window
+  (`appjail-gui`) reads the same setting, outside any jail, to start dark or light:
+  [A drawn theme for the window](../../decisions/project/gui-look.md).
 - Decision: [A Flatpak identity for the portals](../../decisions/desktop/portal-identity.md).
 
 ## Limits

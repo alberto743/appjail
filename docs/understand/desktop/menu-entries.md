@@ -39,7 +39,9 @@ meant to give it.
   portal's file chooser.
 - **Icons are rewritten.** A PNG icon is rebuilt by appjail's own code without decoding a pixel: its structure checked,
   its data inflated to exactly the size its header states, and only the essential chunks written. An SVG icon is first
-  rendered to PNG by `rsvg-convert` in a jail without network, then rebuilt the same way.
+  rendered to PNG by `rsvg-convert` in a jail without network, then rebuilt the same way. The window (`appjail-gui`)
+  shows the rebuilt icon by decoding it in Python and handing Tk a new PNG of its own, so Tk never reads
+  the app's bytes: [A drawn theme for the window](../../decisions/project/gui-look.md).
 
 ## Connections
 

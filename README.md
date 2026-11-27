@@ -18,6 +18,14 @@ A small command-line manager for [AppImages](https://appimage.org/) that runs ev
 [bubblewrap](https://github.com/containers/bubblewrap) sandbox. It works in user mode (no sudo), supports GUI apps
 on Wayland (and X11-only apps through a private Xwayland), and treats the software you install as untrusted.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/alberto743/appjail/main/docs/assets/screenshots/apps-light.png" alt="The appjail window: installed apps with their icons, the selected app's grants and its actions" width="49%">
+  <img src="https://raw.githubusercontent.com/alberto743/appjail/main/docs/assets/screenshots/apps-dark.png" alt="The same window in the dark palette" width="49%">
+  <img src="https://raw.githubusercontent.com/alberto743/appjail/main/docs/assets/screenshots/add-light.png" alt="Adding an app: the source, the permissions and the access it gets" width="49%">
+  <img src="https://raw.githubusercontent.com/alberto743/appjail/main/docs/assets/screenshots/permissions-dark.png" alt="Editing an app's permissions" width="49%">
+</p>
+<p align="center"><sub>The optional window, <code>appjail-gui</code>: every action runs the same command as the terminal, which reviews and asks before anything changes. The apps shown are examples.</sub></p>
+
 *appjail is young software: read the [limits](#limits) before relying on it.*
 
 **Documentation: <https://alberto743.github.io/appjail/>**

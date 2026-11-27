@@ -21,7 +21,7 @@ pieces depend on each other. To follow the code itself, command by command, read
 | Desktop | `desktop.py`, `pngclean.py` |
 | Catalog | `catalog.py`, `indexstore.py`, `index.py` |
 | Text and output | `textsafe.py`, `console.py`, `errors.py` |
-| Window | `gui/`: a tkinter front end that builds command lines and runs the same CLI |
+| Window | `gui/`: a tkinter front end that builds command lines and runs the same CLI; `theme.py` and `icons.py` draw its look, `files.py` is its file chooser |
 
 ## Acquisition
 
@@ -123,7 +123,7 @@ Decisions in [Project](../decisions/project/index.md).
 |---|---|---|---|---|---|
 | **Output and consent** | Console vocabulary; stdout/stderr; prompts default No | `console.py`, `gui/` | `test_console_format.py`, `test_gui_*.py` | every command, GUI | |
 | **Command line** | one parser and command table; one module per command | `cli.py`, `cmd_*.py` | `test_cli_usage.py`, `test_docs.py` | every command | options that do not apply are refused, never ignored |
-| **Window** | tkinter; builds command lines and runs the same CLI | `gui/` | `test_gui_*.py` | `appjail-gui` | never adds `--yes` |
+| **Window** | tkinter; builds command lines and runs the same CLI; a theme and app icons drawn in Python | `gui/` | `test_gui_*.py` | `appjail-gui` | never adds `--yes`; Tk decodes only PNGs appjail wrote |
 
 ## How the pieces depend on each other
 
