@@ -16,3 +16,4 @@ wayland-utils         # wayland-info: the registry of a compositor, to compare w
 grim                  # takes a screenshot through wlr-screencopy or ext-image-copy-capture: whether a client can capture the screen (tests/compositors/probe.py)
 wl-clipboard          # wl-copy and wl-paste through data-control: whether one client can read another's clipboard
 wtype                 # types through the virtual keyboard protocol: whether a client can inject keystrokes
+systemd-coredump      # keeps the core of a crashed compositor for gdb (coredumpctl; gdb is in packages.txt), for the backtraces of upstream-reports 07 and 09

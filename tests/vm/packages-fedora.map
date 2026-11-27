@@ -6,6 +6,7 @@ python3-tk            python3-tkinter
 xvfb                  xorg-x11-server-Xvfb
 python3-venv
 linux-image-amd64     kernel kernel-modules-extra
+systemd-coredump
 libopengl0            libglvnd-opengl
 libgl1                libglvnd-glx
 libegl1               libglvnd-egl
