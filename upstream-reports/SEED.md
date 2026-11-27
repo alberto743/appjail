@@ -19,8 +19,9 @@ asks to push).
    (and `docs/compositor-assessment/` if the measurement changed), then ask for review again. A newer upstream release
    may have fixed it: say so in the text.
 2. **Where and how.** Open the project's own pages (README, `SECURITY.md`, the contribution guide, the tracker's
-   templates) and confirm the tracker and the disclosure channel. The channels written in the reports are suggestions
-   that were not opened and checked: for each, record the page you read under "Reviewer notes". Security-relevant
+   templates) and confirm the tracker and the disclosure channel. The channels were checked on 2026-11-27 (the table
+   under "Targets" and each report's "Reviewer notes" name the pages read); check again that they still hold, and
+   record any change under "Reviewer notes". Security-relevant
    reports (01, 04, 08) go to the private channel the project names, if it has one; the public tracker only if it says
    to. Do not put details in a public place first.
 3. **Not a duplicate.** Search the tracker for the interface and symbols (`gtk_surface1`, `set_dbus_properties`,
@@ -44,19 +45,19 @@ Reports 01, 04 and 08 first (their drafts are public on this branch, and the det
 the security contacts; then 02, 03, 05, 06, 07, 09, then 10 and 12; 11 only if the maintainer decides to file it at
 all.
 
-## Targets (suggestions: verify each before use)
+## Targets (checked 2026-11-27, from the guest)
 
-| Report | Tracker | Disclosure |
+| Report | Where | What the project says (page read) |
 |---|---|---|
-| 01 Mutter | `gitlab.gnome.org/GNOME/mutter` | GNOME's confidential issue or the security contact in its policy |
-| 01 Muffin | `github.com/linuxmint/muffin` | a public issue, or what its policy says |
-| 02 | `gitlab.gnome.org/GNOME/gnome-shell` | public |
-| 03 | `gitlab.gnome.org/GNOME/mutter` | public |
-| 04 | `bugs.kde.org` (kwin, plasmashell) | the KDE security contact for the clipboard read on 6.3 and 6.6 |
-| 05, 06, 07 | `github.com/linuxmint/cinnamon`, `github.com/linuxmint/muffin` | public |
-| 08, 09 | `github.com/hyprwm/Hyprland` | its security advisories, if it has them |
-| 10 | `github.com/WayfireWM/wayfire`, `github.com/cage-kiosk/cage`, `gitlab.freedesktop.org/wayland/weston` | public |
-| 12 | `gitlab.freedesktop.org/wayland/wayland-protocols` | public |
+| 01 Mutter | the security report form of `security.gnome.org`, which opens a confidential issue on GNOME's GitLab | all security bugs through that form; confidential until a fix is committed or 90 days pass, no embargoes (`security.gnome.org`; Mutter and GNOME Shell have no `SECURITY.md`) |
+| 01 Muffin | `github.com/linuxmint/muffin`, public issue | no security policy found (no `SECURITY.md` in muffin, cinnamon or linuxmint/.github; GitHub's private reporting is off for muffin and cinnamon); the details of 01 are public already |
+| 02, 03 | `gitlab.gnome.org/GNOME/gnome-shell`, `gitlab.gnome.org/GNOME/mutter`, public issues | GNOME Shell's README sends bugs to its issue tracker |
+| 04 | `security@kde.org` for the clipboard read on 6.3 and 6.6; `bugs.kde.org` (kwin) for the rest | `kde.org/info/security/` and `community.kde.org/Policies/Security_Policy`: findings about KDE software to `security@kde.org`, handled discreetly |
+| 05, 06, 07 | `github.com/linuxmint/cinnamon`, `github.com/linuxmint/muffin`, public issues | as 01 Muffin |
+| 08 | the Ubuntu Security Team: a private security bug on Launchpad (package `hyprland`) or `security@ubuntu.com` | Hyprland's `SECURITY.md` supports only the latest release (0.57.2, 2026-11-09) and lets users open no issues (a Discussion instead); 0.53.3 is what Ubuntu 26.04 ships, so Ubuntu is the party that can fix it (`ubuntu.com/security/disclosure-policy`) |
+| 09 | a Launchpad bug on Ubuntu's `hyprland`, public | Hyprland's `SECURITY.md` lists crashes as not security issues, and supports only the latest release |
+| 10 | Weston only, if at all: `gitlab.freedesktop.org/wayland/weston` | Wayfire 0.11.0 (2026-07-27) has `security-context-v1` (PR #2828); Cage's maintainer wrote in cage#505 that `wp_security_context_v1` "should be enough" to secure a socket; Weston's #206 (a security context implementation) was closed on 2024-08-01, reason not read |
+| 12 | `gitlab.freedesktop.org/wayland/wayland-protocols`: a comment on #294, or a new issue that links #294, #207 and #56 | related open issues: #294 (list the privileged protocols), #207 (expose chosen privileged globals to a context), #56 (security considerations of protocols) |
 
 ## What this session must not do
 

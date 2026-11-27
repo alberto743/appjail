@@ -52,6 +52,8 @@ on that name.
 
 ## Reviewer notes (not posted)
 
+* Duplicates checked 2026-11-27: GNOME Shell's tracker has none for `set_dbus_properties` or `unique_bus_name` (#714
+  is about app instances). Its README sends bugs to the issue tracker.
 * Only the calls made without user action were observed (DescribeAll, GetAll). Calls on user action (activating a
   window action) were not tried.
 * The same pattern exists for KDE's appmenu protocol (report 04, source only).

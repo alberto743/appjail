@@ -37,6 +37,8 @@ Measured with a stdlib client that binds the global and prints the descriptors t
 
 ## Reviewer notes (not posted)
 
+* Duplicates checked 2026-11-27: none in Mutter's tracker for the descriptor sent on bind (searched drm_lease, drm
+  lease fd; #4389 asked for DRM lease support, #3927 and #3675 are crashes).
 * The test sessions have no leasable connector; on a machine with a VR headset the global has a use. The proposal keeps
   that.
 * Not tried: what ioctls a client can do on the descriptor (render nodes are meant for unprivileged use).

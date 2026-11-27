@@ -6,7 +6,7 @@
 | Measured | 12 compositors on Debian 13, Ubuntu 26.04, Fedora 45 |
 | Class | clarification / proposal for the protocol text |
 | Our severity | n/a |
-| Suggested channel | a public issue or a merge request with the proposed text |
+| Suggested channel | a comment on wayland-protocols#294, or a new issue (or merge request) that links #294, #207 and #56 |
 | Review | pending |
 | Filed | not filed |
 
@@ -43,4 +43,7 @@ I can write the merge request if the direction is welcome.
 
 ## Reviewer notes (not posted)
 
+* Duplicates checked 2026-11-27: open and related, not the same request: #294 ("security-context: list privilegied
+  protocol", a list of privileged protocols for a Flatpak manifest), #207 (expose chosen privileged globals to a
+  security context), #56 (document the security considerations of protocols).
 * This depends on reports 04 and 08 being understood first; it can be filed with or after them.

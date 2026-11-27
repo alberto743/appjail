@@ -6,7 +6,7 @@
 | Measured | KWin 6.3.6 (Debian 13), 6.6.7 (Ubuntu 26.04), 6.8.3 (Fedora 45); Plasma's shell on the same |
 | Class | hardening of `wp_security_context_v1` sockets; with 6.3 and 6.6 a clipboard read without focus |
 | Our severity | medium on 6.3 and 6.6 (another client's clipboard read), low to medium on 6.8 (desktop-control globals) |
-| Suggested channel | security contact first for the clipboard read (verify KDE's policy); the rest as a public bug |
+| Suggested channel | `security@kde.org` first for the clipboard read on 6.3 and 6.6 (KDE's policy); the rest as a public bug on `bugs.kde.org` (kwin) |
 | Review | pending |
 | Filed | not filed |
 
@@ -50,6 +50,10 @@ Smaller points, from the protocol XML in `plasma-wayland-protocols` (not tried l
 
 ## Reviewer notes (not posted)
 
+* Channel and duplicates checked 2026-11-27: `kde.org/info/security/` and the KDE Security Policy
+  (`community.kde.org/Policies/Security_Policy`) send findings about KDE software to `security@kde.org`, handled
+  discreetly. `bugs.kde.org` (kwin) has nothing on the globals of the restricted socket (searched security context,
+  security_context, data control sandbox, layer shell sandbox; #488205 is about the CPU cost of the globals filter).
 * On 6.8.3 the probe still read the clipboard on the restricted socket: that used `wl-paste`'s fallback (a window with
   focus), the ordinary path; it is not a bypass.
 * Headless KWin (`kwin_wayland --virtual`) without a full Plasma session; `plasmashell` was started beside it.

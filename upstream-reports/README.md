@@ -34,9 +34,9 @@ install (`tests/vm/packages-compositors.txt`). Everything runs in the guests; no
 | 05 | [Cinnamon 6.8 offers the layer shell to every client](reports/05-cinnamon-layer-shell-to-every-client.md) | Cinnamon, Muffin | draw over the desktop | medium | fedora (control: debian, ubuntu) | pending | no |
 | 06 | [xapp_shell_v1 icon may be an absolute path](reports/06-muffin-xapp-shell-icon-path.md) | Muffin | hardening (source only) | low | fedora | pending | no |
 | 07 | [Muffin 6.4 ends on wl-copy and wl-paste](reports/07-muffin-crash-on-clipboard-clients.md) | Muffin | crash | low to medium | debian, ubuntu (control: fedora) | pending | no |
-| 08 | [Hyprland 0.53.3: restricted socket lists virtual input](reports/08-hyprland-0.53-restricted-socket-virtual-input.md) | Hyprland | restricted socket not restricted | medium | ubuntu (control: debian) | pending | no |
-| 09 | [Hyprland 0.53.3 aborts when a window closes](reports/09-hyprland-0.53-abort-on-window-close.md) | Hyprland | crash | low to medium | ubuntu | pending | no |
-| 10 | [No security context on Wayfire, Cage, Weston](reports/10-compositors-without-security-context.md) | Wayfire, Cage, Weston | feature request | low | debian, ubuntu, fedora | pending | no |
+| 08 | [Hyprland 0.53.3: restricted socket lists virtual input](reports/08-hyprland-0.53-restricted-socket-virtual-input.md) | Ubuntu (hyprland 0.53; fixed upstream) | restricted socket not restricted | medium | ubuntu (control: debian) | pending | no |
+| 09 | [Hyprland 0.53.3 aborts when a window closes](reports/09-hyprland-0.53-abort-on-window-close.md) | Ubuntu (hyprland 0.53) | crash | low to medium | ubuntu | pending | no |
+| 10 | [No security context on Wayfire, Cage, Weston](reports/10-compositors-without-security-context.md) | Wayfire, Cage, Weston | feature request | low | debian, ubuntu, fedora | pending (Wayfire 0.11.0 has it; Cage declines: Weston only) | no |
 | 11 | [Session-bus services privileged for any caller](reports/11-session-bus-privileged-services.md) | Cinnamon, Plasma, Mutter | design question | informational | debian, ubuntu, fedora | pending (consider not filing) | no |
 | 12 | [security-context-v1: say what must be hidden](reports/12-wayland-protocols-security-context-hide-list.md) | wayland-protocols | protocol text | n/a | debian, ubuntu, fedora | pending | no |
 

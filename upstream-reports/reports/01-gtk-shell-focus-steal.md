@@ -6,7 +6,7 @@
 | Measured | Mutter 48.7 (Debian 13), 50.1 (Ubuntu 26.04), 51.1 (Fedora 45); Muffin 6.4.1; Cinnamon 6.4.10, 6.4.13, 6.8.3 |
 | Class | focus-stealing prevention bypass; the app then receives the keys the user types |
 | Our severity | medium (user-visible, but it needs a client with a window; no data is read, only the keys typed after the steal) |
-| Suggested channel | Mutter: a confidential issue first (verify the project's security policy); Muffin: a public issue (it copies Mutter's code) |
+| Suggested channel | Mutter: the security form of `security.gnome.org` (a confidential issue); Muffin: a public issue (no security policy; it copies Mutter's code) |
 | Review | pending |
 | Filed | not filed |
 
@@ -64,6 +64,11 @@ python3 focus_client.py /tmp/b.log < <(sleep 60) &      # victim, mapped last
 
 ## Reviewer notes (not posted)
 
+* Channel and duplicates checked 2026-11-27: GNOME takes security bugs only through the form of `security.gnome.org`
+  (a confidential issue, disclosed after a fix or 90 days). Mutter's tracker has no issue on `present` with 0 or on
+  `notify_launch` and `request_focus` with an id the client picks (searched: gtk_surface1 present, notify_launch,
+  request_focus, focus stealing gtk_shell); Muffin's has none on gtk_shell (#646 and #536 are about the
+  focus-stealing setting).
 * Debian 13 GNOME Shell: `present 0` left neither window focused (the overview took it); the notify route stole. Fedora
   GNOME Shell: the first window never got focus (untestable). Mutter alone is clean on all three.
 * The real-session effect depends on what the user types while it happens; the headless keyboard comes from Mutter's

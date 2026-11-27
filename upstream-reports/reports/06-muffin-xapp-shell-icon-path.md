@@ -34,6 +34,7 @@ say in the protocol text which it is.
 
 ## Reviewer notes (not posted)
 
+* Duplicates checked 2026-11-27: none in Muffin's tracker (searched xapp icon). Channel: as report 05.
 * What the shell does with the path (which loader, which size limits) was not read or tried: do not claim a
   vulnerability.
 * In appjail the interface is refused to apps without `full_wayland` for this reason (privileged, "windows").

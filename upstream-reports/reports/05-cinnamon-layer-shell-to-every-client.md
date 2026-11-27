@@ -6,7 +6,7 @@
 | Measured | Cinnamon 6.8.3 (Fedora 45); Cinnamon 6.4.10 and 6.4.13 do not list it (the control) |
 | Class | any client can draw over the desktop |
 | Our severity | medium (a full-screen opaque surface on top of the user's windows) |
-| Suggested channel | public issue (verify the project's security policy first) |
+| Suggested channel | public issue (Linux Mint publishes no security policy; GitHub's private reporting is off) |
 | Review | pending |
 | Filed | not filed |
 
@@ -36,6 +36,9 @@ starts `swaybg`, takes a second capture, and prints the share of the colour in e
 
 ## Reviewer notes (not posted)
 
+* Channel and duplicates checked 2026-11-27: no `SECURITY.md` in cinnamon, muffin or linuxmint/.github, and GitHub's
+  private vulnerability reporting is off for cinnamon and muffin. Cinnamon's tracker has nothing on the layer shell
+  offered to clients (searched layer shell).
 * The observation uses Cinnamon's own screenshot service, which any client of the session bus can call (report 11); it
   is only the eyes of the test.
 * Exclusive keyboard interactivity was not tried. Do not claim it.

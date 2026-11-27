@@ -32,6 +32,7 @@ it (the earlier survey named `wl-copy` and `wl-paste`).
 
 ## Reviewer notes (not posted)
 
+* Duplicates checked 2026-11-27: none in Muffin's tracker (searched wl-copy, SIGFPE). Channel: as report 05.
 * No core file or backtrace was kept. Before filing, reproduce once with `coredumpctl` or `gdb` in the guest and attach
   the backtrace.
 * Which of the four clients ends it was not isolated in the saved run.

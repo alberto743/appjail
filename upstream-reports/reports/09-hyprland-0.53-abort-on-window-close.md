@@ -6,7 +6,7 @@
 | Measured | Hyprland 0.53.3 (Ubuntu 26.04); 0.55.2 did not crash in these runs |
 | Class | crash (any client can end the session by closing a window) |
 | Our severity | low to medium; intermittent |
-| Suggested channel | public issue, after checking whether 0.55 fixed it |
+| Suggested channel | a public Launchpad bug on Ubuntu's `hyprland` (upstream treats crashes as non-security and supports only its latest release) |
 | Review | pending |
 | Filed | not filed |
 
@@ -30,6 +30,10 @@ gone, so the next client fails to connect. It happens in a minority of runs: the
 
 ## Reviewer notes (not posted)
 
+* Channel and duplicates checked 2026-11-27: Hyprland's `SECURITY.md` lists crashes as not security issues and
+  supports only the latest release (0.57.2); users can no longer open issues. Related upstream, not the same crash:
+  #15096 (the dwindle layout while unmapping, 0.55.2, closed and sent to Discussions) and #14223 (a popup during
+  `CWindow::unmapWindow`, 0.54.3).
 * The backtrace was read during the original survey; it was not saved. Before filing, capture one (`coredumpctl` or the
   compositor log) and attach it.
 * If three tries do not crash, the script says so: run it again, or increase the tries.
