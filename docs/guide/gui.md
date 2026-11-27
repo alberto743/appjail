@@ -6,6 +6,8 @@ appjail-gui
 appjail-gui --desktop           # add appjail to your application menu (--remove-desktop takes it out)
 ```
 
+![The appjail window: the installed apps with their icons, and the selected app's grants and actions](../assets/screenshots/apps-light.png)
+
 The sidebar has four pages. **Apps** lists the installed apps with their icons; type in the filter box above the list
 (**Ctrl+F**) to show only the apps whose name or source contains the text. The pane beside the list shows the selected
 app's version, source, evidence tier and grants, with its actions in groups: run, run with extra access for one run and

@@ -124,10 +124,10 @@ class App:
         self.content.columnconfigure(0, weight=1)
         self.content.rowconfigure(0, weight=1)
         self.pages = {}
-        self._build_apps_tab()
-        self._build_add_tab()
-        self._build_search_tab()
-        self._build_tools_tab()
+        self._build_apps_page()
+        self._build_add_page()
+        self._build_search_page()
+        self._build_tools_page()
         self.log_frame = self._build_log(self.paned)
         self.log_shown = False
         self.status_label = ttk.Label(bar, textvariable=self.status, style="Muted.TLabel")
@@ -138,7 +138,8 @@ class App:
         self.show("apps")
         self.refresh()
         self._fit_window()
-        root.after(POLL_MS, self._poll)
+        self.polling = root.after(POLL_MS, self._poll)
+        root.bind("<Destroy>", self._closed, add="+")
 
     def px(self, n):
         return self.theme.px(n)
@@ -187,7 +188,9 @@ class App:
             self.nav[key] = ttk.Radiobutton(side, text=text, value=key, variable=self.page, style="Nav.TRadiobutton",
                                             command=lambda k=key: self.show(k))
             self.nav[key].pack(fill="x", pady=1)
-        ttk.Label(side, text=f"version {cli.version_string()}", style="SideSmall.TLabel").pack(side="bottom", anchor="w", pady=(self.px(8), 0))
+        version = cli.version_string()
+        if version != "unknown":  # a source tree has none to show (the title says so)
+            ttk.Label(side, text=f"version {version}", style="SideSmall.TLabel").pack(side="bottom", anchor="w", pady=(self.px(8), 0))
         self.dark = tk.BooleanVar(value=self.theme.dark)
         ttk.Checkbutton(side, text="Dark", variable=self.dark, style="Switch.TCheckbutton",
                         command=self.toggle_dark).pack(side="bottom", anchor="w")
@@ -293,18 +296,34 @@ class App:
         worker.spawn_detached(command, events)
 
     def _poll(self):
-        self._drain(self.events, foreground=True)
-        for q in list(self.background):
-            if self._drain(q, foreground=False):
-                self.background.remove(q)
-        self._take_icons()
-        while True:
-            try:
-                done, result, error = self.calls.get_nowait()
-            except queue.Empty:
-                break
-            done(result, error)
-        self.root.after(POLL_MS, self._poll)
+        """Hand what the threads produced to the window. It always schedules its next round, even when a step fails:
+        a window that stopped polling would look alive and never show a command's output again."""
+        try:
+            self._drain(self.events, foreground=True)
+            for q in list(self.background):
+                if self._drain(q, foreground=False):
+                    self.background.remove(q)
+            self._take_icons()
+            while True:
+                try:
+                    done, result, error = self.calls.get_nowait()
+                except queue.Empty:
+                    break
+                done(result, error)
+        finally:
+            if self.polling is not None:  # None once the window is closing
+                self.polling = self.root.after(POLL_MS, self._poll)
+
+    def _closed(self, event):
+        """The window is going: stop polling (Tk would report the pending call on a destroyed window)."""
+        if event.widget is self.root and getattr(self, "polling", None):
+            self.root.after_cancel(self.polling)
+            self.polling = None
+
+    def report(self, what, error):
+        """A failure of work done in the background, shown where a command's would be."""
+        self.say(textsafe.clean(f"error: {what}: {error}"))
+        self.status.set(f"{what} failed")
 
     def _drain(self, q, foreground):
         finished = False
@@ -485,7 +504,7 @@ class App:
             return None
         return sel[0]
 
-    def _build_apps_tab(self):
+    def _build_apps_page(self):
         page, header = self._page("apps", "Apps", "")
         ttk.Button(header, text="Update all", command=lambda: self.run(argv.update_argv())).pack(side="right")
         ttk.Button(header, text="Refresh", command=self.refresh).pack(side="right", padx=self.px(8))
@@ -530,8 +549,8 @@ class App:
         words.pack(side="left", fill="x", expand=True)
         self.card_title = ttk.Label(words, style="Title.TLabel")
         self.card_title.pack(anchor="w")
-        self.card_subtitle = ttk.Label(words, style="Muted.TLabel", wraplength=int(420 * self.scale), justify="left")
-        self.card_subtitle.pack(anchor="w")
+        self.card_subtitle = dialogs.WrapLabel(words, style="Muted.TLabel")
+        self.card_subtitle.pack(fill="x")
         self.card_body = ttk.Frame(inside)
         self.card_body.pack(fill="x")
         self.detail = tk.Text(inside, height=4, width=36, wrap="word", state="disabled", relief="flat", cursor="arrow",
@@ -636,9 +655,10 @@ class App:
 
         def done(result, error):
             self.portals_pending = False
-            self.status.set("ready")
             if error is not None:
-                raise error
+                self.report("reading the portal grants", error)
+                return
+            self.status.set("ready")
             self._portals_dialog(app, *result)
         self.off_thread(lambda: apps.portal_grants(app), done)
 
@@ -701,14 +721,14 @@ class App:
 
     # --- Add --------------------------------------------------------------------------------------------------------
 
-    def _build_add_tab(self):
-        tab, _header = self._page("add", "Add an app", "The command shows what it will install and asks before anything is written.")
-        self.add_tab = tab
+    def _build_add_page(self):
+        page, _header = self._page("add", "Add an app", "The command shows what it will install and asks before anything is written.")
+        self.add_page = page
         gap = self.px(10)
-        bottom = ttk.Frame(tab)  # packed first: the main action stays visible in a small window
+        bottom = ttk.Frame(page)  # packed first: the main action stays visible in a small window
         bottom.pack(side="bottom", fill="x", pady=(gap, 0))
         # the form scrolls only when the window is shorter than it asks (a small screen)
-        self.add_scroll = Scrolled(tab)
+        self.add_scroll = Scrolled(page)
         self.add_scroll.pack(fill="both", expand=True)
         body = self.add_scroll.body
         source = ttk.LabelFrame(body, text="Source")
@@ -743,8 +763,8 @@ class App:
         self.checks["Allow pre-releases"] = choices.add(ttk.Checkbutton(choices, text="Allow pre-releases (GitHub)", variable=self.prerelease))
         self.private_check = choices.add(ttk.Checkbutton(choices, text="Follow redirects to private addresses (URL)",
                                                          variable=self.private_redirects))
-        ttk.Label(source, text="Private addresses (the LAN, loopback) are refused by default; follow them only for a server of your own.",
-                  style="Small.TLabel", wraplength=int(480 * self.scale), justify="left").pack(anchor="w")
+        dialogs.WrapLabel(source, text="Private addresses (the LAN, loopback) are refused by default; follow them only for a server of your own.",
+                          style="Small.TLabel").pack(fill="x")
         self.kind.trace_add("write", lambda *_: self._kind_changed())
         self.flag = {}
         grants = ttk.LabelFrame(body, text="Permissions")
@@ -754,25 +774,26 @@ class App:
         for flag in PERMISSION_FLAGS:
             self.flag[flag] = tk.BooleanVar(value=False)
             flags_row.add(ttk.Checkbutton(flags_row, text=flag, variable=self.flag[flag]))
-        modes_row = dialogs.Flow(grants, gap=self.px(18))
-        modes_row.pack(fill="x", pady=(self.px(8), 0))
         self.audio_mode = tk.StringVar(value=manifest.DEFAULT_AUDIO_MODE)
         self.display = tk.StringVar(value="wayland")
         self.display_size = tk.StringVar(value=manifest.DEFAULT_DISPLAY_SIZE)
-        self.limits = {key: tk.StringVar() for key in ("memory_max", "cpu_quota", "tasks_max")}
-        for label, make in (
-                ("Audio mode", lambda p: ttk.Combobox(p, textvariable=self.audio_mode, values=manifest.AUDIO_MODES, state="readonly", width=9)),
-                ("Display", lambda p: ttk.Combobox(p, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=16)),
-                ("Window size", lambda p: ttk.Entry(p, textvariable=self.display_size, width=10)),
-                ("Memory limit", lambda p: ttk.Entry(p, textvariable=self.limits["memory_max"], width=7)),
-                ("CPU limit", lambda p: ttk.Entry(p, textvariable=self.limits["cpu_quota"], width=7)),
-                ("Process limit", lambda p: ttk.Entry(p, textvariable=self.limits["tasks_max"], width=7))):
-            pair = ttk.Frame(modes_row)
-            ttk.Label(pair, text=label, style="Muted.TLabel").pack(side="left", padx=(0, self.px(6)))
-            make(pair).pack(side="left")
-            modes_row.add(pair)
-        ttk.Label(grants, text="Window size: for the rootful Xwayland display. Limits: 2G, 200%, 512; empty for none.",
-                  style="Small.TLabel", wraplength=int(480 * self.scale), justify="left").pack(anchor="w", pady=(self.px(4), 0))
+        self.limits = {key: tk.StringVar() for key in manifest.LIMIT_KEYS}
+        # two rows, each wrapping on its own: how the app is shown and heard, then its limits
+        for fields in ((("Audio mode", lambda p: ttk.Combobox(p, textvariable=self.audio_mode, values=manifest.AUDIO_MODES, state="readonly", width=9)),
+                        ("Display", lambda p: ttk.Combobox(p, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=16)),
+                        ("Window size", lambda p: ttk.Entry(p, textvariable=self.display_size, width=10))),
+                       (("Memory limit", lambda p: ttk.Entry(p, textvariable=self.limits["memory_max"], width=7)),
+                        ("CPU limit", lambda p: ttk.Entry(p, textvariable=self.limits["cpu_quota"], width=7)),
+                        ("Process limit", lambda p: ttk.Entry(p, textvariable=self.limits["tasks_max"], width=7)))):
+            row = dialogs.Flow(grants, gap=self.px(18))
+            row.pack(fill="x", pady=(self.px(8), 0))
+            for label, make in fields:
+                pair = ttk.Frame(row)
+                ttk.Label(pair, text=label, style="Muted.TLabel").pack(side="left", padx=(0, self.px(6)))
+                make(pair).pack(side="left")
+                row.add(pair)
+        dialogs.WrapLabel(grants, text="Window size: for the rootful Xwayland display. Limits: 2G, 200%, 512; empty for none.",
+                          style="Small.TLabel").pack(fill="x", pady=(self.px(4), 0))
         # the lists, one at a time beside a column of segments; each segment counts its entries, so none is forgotten
         access = ttk.LabelFrame(body, text="Access")
         access.pack(fill="x", pady=(gap, 0))
@@ -839,10 +860,10 @@ class App:
 
     # --- Search and index -------------------------------------------------------------------------------------------
 
-    def _build_search_tab(self):
-        tab, _header = self._page("search", "Search", "A hit is only a suggestion: check the owner and repository before adding.")
+    def _build_search_page(self):
+        page, _header = self._page("search", "Search", "A hit is only a suggestion: check the owner and repository before adding.")
         gap = self.px(10)
-        row = ttk.Frame(tab)
+        row = ttk.Frame(page)
         row.pack(fill="x")
         self.keywords = tk.StringVar()
         entry = dialogs.HintEntry(row, "Keywords, such as: gemini browser", textvariable=self.keywords, width=16)
@@ -853,13 +874,13 @@ class App:
         ttk.Label(row, text="Limit", style="Muted.TLabel").pack(side="left", padx=(self.px(16), self.px(6)))
         ttk.Entry(row, textvariable=self.limit, width=5).pack(side="left")
         self.show_all = tk.BooleanVar()
-        ttk.Checkbutton(row, text="all", variable=self.show_all).pack(side="left", padx=(gap, 0))
+        ttk.Checkbutton(row, text="All", variable=self.show_all).pack(side="left", padx=(gap, 0))
         self.hits = []
         # rarely needed, so closed until asked for; packed before the results: they shrink, the buttons stay
-        self.catalogs = dialogs.Expander(tab, "Catalogs")
+        self.catalogs = dialogs.Expander(page, "Catalogs")
         self.catalogs.pack(side="bottom", fill="x", pady=(gap, 0))
         idx = self.catalogs.body
-        results = ttk.Frame(tab, style="Card.TFrame", padding=self.px(4))
+        results = ttk.Frame(page, style="Card.TFrame", padding=self.px(4))
         results.pack(fill="both", expand=True, pady=(gap, 0))
         self.hit_tree = ttk.Treeview(results, columns=("name", "description", "source", "catalog"), show="headings",
                                      selectmode="browse", height=6)
@@ -871,12 +892,12 @@ class App:
         self.hit_tree.pack(fill="both", expand=True)
         self.hit_tree.bind("<<TreeviewSelect>>", lambda _e: self._hit_selected())
         self.hit_tree.bind("<Double-1>", lambda _e: self._use_hit())
-        use = ttk.Frame(tab)
+        use = ttk.Frame(page)
         use.pack(fill="x", pady=(self.px(8), 0), before=self.catalogs)
         self.use_hit = ttk.Button(use, text="Add this app…", command=self._use_hit, state="disabled")
         self.use_hit.pack(side="right", anchor="n")
-        ttk.Label(use, text="Copies the hit into the Add page; nothing is installed until you confirm there.", style="Small.TLabel",
-                  wraplength=int(340 * self.scale), justify="left").pack(side="left")
+        dialogs.WrapLabel(use, text="Copies the hit into the Add page; nothing is installed until you confirm there.",
+                          style="Small.TLabel").pack(side="left", fill="x", expand=True)
         fields = dialogs.Flow(idx, gap=gap)
         fields.pack(fill="x")
         self.source_name = tk.StringVar()
@@ -926,11 +947,12 @@ class App:
         if seq != self.search_seq:
             return  # a newer search is running
         self.say(f"$ appjail search {words}")
-        if error is not None:
-            if not isinstance(error, IndexProblem):
-                raise error
+        if isinstance(error, IndexProblem):  # no index yet, no keyword: said as the command says it
             self.say(f"error: {error}")
             self.status.set(f"search: {error}")
+            return
+        if error is not None:
+            self.report("search", error)
             return
         hits, total, searched = result
         summary = f"{total} match(es) in {', '.join(searched)}" + (f", showing {len(hits)}" if len(hits) < total else "")
@@ -990,9 +1012,9 @@ class App:
 
     # --- Tools ------------------------------------------------------------------------------------------------------
 
-    def _build_tools_tab(self):
-        tab, _header = self._page("tools", "Tools", "Helper binaries and commands that concern every app.")
-        helpers = ttk.LabelFrame(tab, text="Helper binaries")
+    def _build_tools_page(self):
+        page, _header = self._page("tools", "Tools", "Helper binaries and commands that concern every app.")
+        helpers = ttk.LabelFrame(page, text="Helper binaries")
         helpers.pack(fill="x")
         ttk.Label(helpers, text="Pinned in appjail's source and verified before use.", style="Small.TLabel").pack(anchor="w", pady=(0, self.px(8)))
         row = ttk.Frame(helpers)
@@ -1001,7 +1023,7 @@ class App:
         self.tool = tk.StringVar(value=min(tools.TOOLS))
         ttk.Combobox(row, textvariable=self.tool, values=sorted(tools.TOOLS), state="readonly", width=16).pack(side="left", padx=(self.px(16), self.px(6)))
         ttk.Button(row, text="Install…", command=lambda: self.run(["tools", "install", self.tool.get()])).pack(side="left")
-        other = ttk.LabelFrame(tab, text="Other commands")
+        other = ttk.LabelFrame(page, text="Other commands")
         other.pack(fill="x", pady=(self.px(12), 0))
         row = dialogs.Flow(other)
         row.pack(fill="x")

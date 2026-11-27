@@ -4,6 +4,8 @@
 """The installed apps as data for the Apps page (read from the manifests, like `appjail list`). No tkinter."""
 
 import os
+import struct
+import zlib
 
 from .. import desktop, index, manifest, portal, store, textsafe, updater
 from ..cmd_apps import list_details, list_row
@@ -75,7 +77,10 @@ def icon_pngs(key, sides, margins=None):
         return None
     if len(data) > desktop.MAX_PNG_BYTES:
         return None
-    return icons.app_icon(data, sides, margins)
+    try:
+        return icons.app_icon(data, sides, margins)
+    except (ValueError, IndexError, struct.error, zlib.error):  # a file pngclean let through but the decoder cannot read
+        return None
 
 
 def file_types(name):

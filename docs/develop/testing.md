@@ -112,8 +112,9 @@ instructions.
 To try the command line in the guest: `tests/vm/ssh.sh 'cd ~/appjail && PYTHONPATH=src python3 -m appjail ...'`. It
 writes to the guest's own `~/.local/share/appjail` and `~/.config/appjail`.
 
-To look at the window after changing it, take screenshots in the guest (light and dark, every page and two dialogs,
-with three fake apps; it starts its own Xvfb and downloads nothing), then copy them out:
+To look at the window after changing it, take screenshots in the guest (light and dark, every page and four dialogs,
+cropped to the window, with made-up apps in a throwaway home; it starts its own Xvfb and downloads nothing), then copy
+them out:
 
 ```sh
 tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/appjail && python3 tests/gui_screenshots.py /tmp/shots 1024x768'
@@ -121,7 +122,8 @@ tests/vm/ssh.sh 'cd /tmp/shots && tar cf - .' | tar xf - -C SOMEWHERE
 ```
 
 800x600 is the smallest screen the window is laid out for (`test_gui_smoke.py` checks it, and 1024x768); a larger
-size shows the layout with room to spare.
+size shows the layout with room to spare. `--readme OUTDIR` instead of the size takes the four images of the README
+and the guide; when the window's look changes, take them again and replace those in `docs/assets/screenshots/`.
 
 ## What the tests cover
 

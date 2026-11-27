@@ -1,16 +1,23 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""Modal dialogs: the answers to a command's prompts, an options form, and the permissions editor."""
+"""Modal dialogs (the answers to a command's prompts, notices, a one-line prompt, an options form, the permissions
+editor) and the widgets the window shares with them: list editors, segments, rows that wrap, a section that opens."""
 
 import tkinter as tk
 from tkinter import ttk
 
 from ..grants import PORTAL_DESCRIPTIONS, PORTAL_OPT_IN
-from ..manifest import AUDIO_MODES, DEFAULT_AUDIO_MODE, DEFAULT_DISPLAY_SIZE, DISPLAYS
+from ..manifest import (
+    AUDIO_MODES,
+    DEFAULT_AUDIO_MODE,
+    DEFAULT_DISPLAY_SIZE,
+    DISPLAYS,
+    LIMIT_KEYS,
+)
 from ..permargs import PERMISSION_FLAGS
 
-LIMIT_LABELS = (("memory_max", "memory limit (2G, 50%)"), ("cpu_quota", "CPU limit (200% = 2 CPUs)"), ("tasks_max", "process limit (512, 20%)"))
+PAD = 16  # the inner margin of every dialog
 
 
 def autohide_pack(bar, widget, **pack):
@@ -22,6 +29,14 @@ def autohide_pack(bar, widget, **pack):
         elif not bar.winfo_manager():
             bar.pack(before=widget, **pack)
     return set_
+
+
+class WrapLabel(ttk.Label):
+    """A label whose text wraps at the width it is given, not at a fixed one: a wide window keeps it on one line."""
+
+    def __init__(self, parent, **options):
+        super().__init__(parent, justify="left", width=options.pop("width", 24), **options)  # asks for little: pack it to fill
+        self.bind("<Configure>", lambda e: self.configure(wraplength=max(e.width, 120)))
 
 
 class HintEntry(ttk.Entry):
@@ -44,7 +59,7 @@ class HintEntry(ttk.Entry):
 def notice(parent, text, error=False, title="appjail"):
     """A message with one OK button, in the window's theme (Tk's own message box ignores it)."""
     top = _modal(parent, title)
-    frame = ttk.Frame(top, padding=16)
+    frame = ttk.Frame(top, padding=PAD)
     frame.pack(fill="both", expand=True)
     if error:
         ttk.Label(frame, text="Something went wrong", style="ErrorHeading.TLabel").pack(anchor="w", pady=(0, 4))
@@ -60,7 +75,7 @@ def ask_text(parent, title, prompt, ok="OK"):
     """One line of text, or None when cancelled."""
     result = {"value": None}
     top = _modal(parent, title)
-    frame = ttk.Frame(top, padding=16)
+    frame = ttk.Frame(top, padding=PAD)
     frame.pack(fill="both", expand=True)
     ttk.Label(frame, text=prompt, wraplength=460, justify="left").pack(anchor="w", pady=(0, 6))
     var = tk.StringVar()
@@ -108,14 +123,14 @@ def _wait(top, focus=None):
 
 def _review_box(frame, lines):
     """What the command printed so far, so an answer is given with the facts in front of the user."""
-    holder = ttk.Frame(frame)
-    holder.pack(fill="both", expand=True, pady=(0, 8))
-    text = tk.Text(holder, width=100, height=min(len(lines) + 3, 22), wrap="word")
+    holder = ttk.Frame(frame, style="Card.TFrame", padding=2)
+    holder.pack(fill="both", expand=True, pady=(0, 10))
+    # in the output pane's type: the review's columns line up as in a terminal
+    text = tk.Text(holder, width=96, height=min(len(lines) + 1, 22), wrap="word", font="TkFixedFont", padx=10, pady=8)
     scroll = ttk.Scrollbar(holder, command=text.yview)
-    text.configure(yscrollcommand=scroll.set)
+    text.configure(yscrollcommand=autohide_pack(scroll, text, side="right", fill="y"))
     text.insert("1.0", "\n".join(lines))
     text.configure(state="disabled")
-    scroll.pack(side="right", fill="y")
     text.pack(side="left", fill="both", expand=True)
     text.see("end")
 
@@ -124,11 +139,11 @@ def answer(parent, request):
     """Show a Request and reply to it. Closing the dialog cancels (None)."""
     result = {"value": None}
     top = _modal(parent, "appjail")
-    frame = ttk.Frame(top, padding=12)
+    frame = ttk.Frame(top, padding=PAD)
     frame.pack(fill="both", expand=True)
     if request.review:
         _review_box(frame, request.review)
-    ttk.Label(frame, text=request.prompt, wraplength=700, justify="left").pack(anchor="w", pady=(0, 8))
+    ttk.Label(frame, text=request.prompt, style="Strong.TLabel", wraplength=700, justify="left").pack(anchor="w", pady=(0, 8))
     buttons = ttk.Frame(frame)
 
     def done(value):
@@ -188,10 +203,9 @@ def _scrolled_listbox(parent, items, **options):
     holder.pack(fill="both", expand=True)
     box = tk.Listbox(holder, exportselection=False, **options)
     scroll = ttk.Scrollbar(holder, command=box.yview)
-    box.configure(yscrollcommand=scroll.set)
+    box.configure(yscrollcommand=autohide_pack(scroll, box, side="right", fill="y"))
     for item in items:
         box.insert("end", item)
-    scroll.pack(side="right", fill="y")
     box.pack(side="left", fill="both", expand=True)
     return box
 
@@ -327,7 +341,7 @@ def options_dialog(parent, title, fields, intro="", ok="Continue", validate=None
     (extra: {"hint":..., "browse":...}) or "choice" (extra: {"items":..., "selected":..., "hint":...}). validate(values)
     returns an error text to keep the form open. Returns {key: value} or None when cancelled."""
     top = _modal(parent, title)
-    frame = ttk.Frame(top, padding=12)
+    frame = ttk.Frame(top, padding=PAD)
     frame.pack(fill="both", expand=True)
     if intro:
         ttk.Label(frame, text=intro, wraplength=520, justify="left").pack(anchor="w", pady=(0, 8))
@@ -469,7 +483,7 @@ def permissions_editor(parent, name, state):
     Applying only builds the `appjail perms` command; the command prints the before/after review and asks.
     """
     top = _modal(parent, f"Permissions of {name}")
-    frame = ttk.Frame(top, padding=14)
+    frame = ttk.Frame(top, padding=PAD)
     frame.pack(fill="both", expand=True)
     flags = {}
     box = ttk.LabelFrame(frame, text="Permissions")
@@ -487,7 +501,7 @@ def permissions_editor(parent, name, state):
     audio_mode = tk.StringVar(value=state.get("audio_mode", DEFAULT_AUDIO_MODE))
     display = tk.StringVar(value=state.get("display", "wayland"))
     size = tk.StringVar(value=state.get("display_size", DEFAULT_DISPLAY_SIZE))
-    limit_vars = {key: tk.StringVar(value=state.get(key, "")) for key, _label in LIMIT_LABELS}
+    limit_vars = {key: tk.StringVar(value=state.get(key, "")) for key in LIMIT_KEYS}
     for label, make in (("Audio mode", lambda p: ttk.Combobox(p, textvariable=audio_mode, values=AUDIO_MODES, state="readonly", width=9)),
                         ("Display", lambda p: ttk.Combobox(p, textvariable=display, values=DISPLAYS, state="readonly", width=16)),
                         ("Window size (rootful)", lambda p: ttk.Entry(p, textvariable=size, width=10))):

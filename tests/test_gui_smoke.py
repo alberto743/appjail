@@ -580,7 +580,7 @@ def test_search_hit_goes_to_the_add_tab(window, monkeypatch):
     assert str(window.use_hit["state"]) == "normal"
     window._use_hit()
     assert (window.kind.get(), window.source.get()) == ("github", "o/good")
-    assert window.page.get() == "add" and window.add_tab.winfo_manager() == "grid"
+    assert window.page.get() == "add" and window.add_page.winfo_manager() == "grid"
 
 
 def test_the_filter_narrows_the_list_and_says_when_nothing_matches(display, h):
@@ -752,3 +752,27 @@ def test_the_catalogs_card_is_closed_until_opened(window):
     window.catalogs.header.invoke()
     window.root.update()
     assert window.catalogs.body.winfo_ismapped() and window.catalogs.header.cget("text").startswith("▾")
+
+
+def test_a_failing_step_never_stops_the_window_polling(window):
+    def broken(_result, _error):
+        raise RuntimeError("a bug in a callback")
+    later = []
+    window.off_thread(lambda: 1, broken)
+    with pytest.raises(RuntimeError):  # Tk reports it; the next round is scheduled all the same
+        for _ in range(100):
+            window._poll()
+            time.sleep(0.01)
+    window.off_thread(lambda: 2, lambda result, _error: later.append(result))
+    pump(window, lambda: later == [2])
+
+
+def test_a_bus_failure_is_reported_not_raised(window, monkeypatch):
+    def unreachable(name):
+        from appjail.errors import RunError
+        raise RunError("the session bus did not answer")
+    monkeypatch.setattr(app.apps, "portal_grants", unreachable)
+    window._portals("app")
+    pump(window, lambda: not window.portals_pending)
+    assert "error: reading the portal grants: the session bus did not answer" in window.log.get("1.0", "end")
+    assert window.status.get() == "reading the portal grants failed"

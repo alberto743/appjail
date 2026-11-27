@@ -77,7 +77,7 @@ class Chooser:
         scale = max(float(parent.tk.call("tk", "scaling")) / (96 / 72), 1.0)
         px = lambda n: max(round(n * scale), 1)
         self.images = {"dir": self._image(icons.folder(px(18), px(6))), "file": self._image(icons.document(px(18), px(6)))}
-        frame = ttk.Frame(top, padding=px(14))
+        frame = ttk.Frame(top, padding=dialogs.PAD)
         frame.pack(fill="both", expand=True)
         bar = ttk.Frame(frame)
         bar.pack(fill="x", pady=(0, px(10)))
