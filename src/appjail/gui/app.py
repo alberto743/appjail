@@ -104,6 +104,7 @@ class App:
         self.names_before_add = None  # (names, rw) while an add waits for its file-types follow-up
         self.search_seq = 0  # the newest search; the results of an older one are dropped
         self.portals_pending = False
+        self.narrow = False  # below 900 pixels: the action groups lose their names, the list narrows
         self.images = {}  # PhotoImages by key; Tk forgets an image nobody holds
         self.icon_keys = {}  # app name: the icon_key its images were made from
         self.status = tk.StringVar(value="ready")
@@ -446,8 +447,9 @@ class App:
         font = tkfont.nametofont("TkDefaultFont")
         names = [self.tree.item(k, "text") for k in self.tree.get_children()]
         width = max([font.measure("Installed apps"), *(font.measure(n) for n in names)]) + self.px(LIST_ICON) + self.px(40)
-        cap = 170 if getattr(self, "narrow", False) else 300  # a narrow window gives the room to the actions
-        self.tree.column("#0", width=min(width, int(cap * self.scale)), minwidth=self.px(120))
+        cap = 170 if self.narrow else 300  # a narrow window gives the room to the actions
+        # not stretchable: Tk 9 fits a stretchable column to the width the list has, which is what the column asked for
+        self.tree.column("#0", width=min(width, int(cap * self.scale)), minwidth=self.px(120), stretch=False)
 
     def _show_detail(self):
         """Fill the detail pane for the selected app (or the empty state)."""
@@ -592,7 +594,7 @@ class App:
 
     def _narrow(self, width):
         narrow = width < int(900 * self.scale)
-        if narrow != getattr(self, "narrow", False):
+        if narrow != self.narrow:
             self.narrow = narrow
             self._fit_columns()
         for label in self.group_labels:

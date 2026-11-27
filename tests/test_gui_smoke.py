@@ -211,6 +211,8 @@ def test_the_list_fits_a_long_name_and_the_detail_pane_shows_the_rest(display, h
     root = tk.Tk()
     try:
         w = app.App(root)
+        root.update()  # the window at its starting size (while it is laid out, it can pass through the narrow layout)
+        assert not w.narrow
         from tkinter import font as tkfont
         font = tkfont.nametofont("TkDefaultFont")
         assert int(w.tree.column("#0", "width")) >= font.measure("a-rather-long-application-name") + w.px(app.LIST_ICON)
