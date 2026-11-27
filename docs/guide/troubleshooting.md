@@ -20,6 +20,7 @@
 | An app with `network` is refused, naming `passt` | Install `passt`. |
 | `add`, `update` or `index` fails saying a step needs a private network and `passt` is missing | Install `passt`. Only if you cannot, `APPJAIL_ALLOW_HOST_NETWORK=1 appjail ...` lets that command's download jail share the host network, with a warning. |
 | An app with `network_host` is refused, naming Landlock | The kernel lacks Landlock ABI 6 (Linux 6.12). Use `network` instead. |
+| `audio_mode pulse is refused: appjail cannot tell which program serves the host's Pulse socket` | Nothing it can see listens on the socket: no sound server runs, it runs as another user, or appjail runs in a container with its own network. Use the default mode (`perms APP --audio-mode pipewire`), or run appjail on the host's network namespace. |
 | No sound | `perms APP --allow audio`. If a warning says the private audio graph is unavailable, install the PipeWire packages listed in [Getting started](getting-started.md). |
 | `no asset in TAG matches 'PATTERN'` | The publisher renamed the release's files. Pick the right one from the list shown and run `update APP --pattern 'NEW-*-PATTERN.AppImage'` ([Updates](updates.md#when-the-release-file-was-renamed)). |
 | `redirect to a private network address refused` | The server of a URL app or catalog redirected the download to a machine of your local network. If you expect that (an intranet mirror), add `--allow-private-redirects` to that command ([why](../decisions/acquisition/private-redirects.md)). |

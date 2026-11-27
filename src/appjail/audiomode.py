@@ -9,7 +9,8 @@ with `mic` falls back to the Pulse socket and one without gets no audio, and a w
 
 The host's Pulse socket is never bound when the server behind it is PulseAudio itself: a client of PulseAudio can make it load
 a library of the client's choosing (`module-ladspa-sink` with an absolute path), which runs the client's code in the server,
-outside the jail (reproduced on PulseAudio 17.0). PipeWire's Pulse server does not implement that.
+outside the jail (reproduced on PulseAudio 17.0). PipeWire's Pulse server does not implement that. Nor is it bound when
+appjail cannot tell which program serves it (docs/decisions/desktop/pulseaudio.md): then it could be PulseAudio.
 """
 
 import os
@@ -23,6 +24,12 @@ PULSE, PIPEWIRE = "pulse", "pipewire"
 PULSEAUDIO = "pulseaudio"  # the process name of PulseAudio proper
 UNSAFE_SERVER = ("the host's Pulse server is PulseAudio, which a client can make load its own code, outside the jail "
                  "(PipeWire's Pulse server cannot be made to)")
+# Measured (docs/decisions/desktop/pulseaudio.md): on the supported systems a running or socket-activated server is told
+# in about 0.1 s, even under load; it is not told when nothing listens on the socket, when the server runs as another
+# user, or when appjail runs in another network namespace (a container), whose socket table does not list the socket.
+UNKNOWN_SERVER = ("appjail cannot tell which program serves the host's Pulse socket (none it can see listens on it: none "
+                  "runs, it runs as another user, or appjail runs in another network namespace, such as a container), "
+                  "and it could be PulseAudio, which a client can make load its own code, outside the jail")
 
 
 def host_pulse(host_env):
@@ -73,10 +80,16 @@ def host_server(path, proc="/proc", unix_table="/proc/net/unix", wait=3.0):
 
 
 def usable_pulse(host_env, server=host_server):
-    """(socket, "") when an app may be given the host's Pulse socket, else (None, why): there is none, or it is PulseAudio's."""
+    """(socket, "") when an app may be given the host's Pulse socket, else (None, why): there is none (why is then
+    empty), it is PulseAudio's, or which program serves it cannot be told."""
     path = host_pulse(host_env)
-    if path and server(path) == PULSEAUDIO:
+    if not path:
+        return None, ""
+    name = server(path)
+    if name == PULSEAUDIO:
         return None, UNSAFE_SERVER
+    if name is None:
+        return None, UNKNOWN_SERVER
     return path, ""
 
 

@@ -4,8 +4,11 @@
 """The private audio graph without a PipeWire: configuration, jail arguments, availability, the resolver and the runner's use of it."""
 
 import json
+import os
+import shutil
 import socket
 import subprocess
+import sys
 from typing import ClassVar
 
 import pytest
@@ -14,7 +17,7 @@ from appjail import audiojail, audiomode, jail, runner, store
 from appjail.errors import JailError
 from appjail.manifest import Permissions
 
-from .helpers import COMPOSITOR, Extractor, install, pairs
+from .helpers import COMPOSITOR, Extractor, install, integration, pairs
 
 
 def have(*tools):
@@ -285,7 +288,42 @@ def test_the_pulse_socket_of_pulseaudio_is_refused_in_pulse_mode(pulse_socket):
     backend, note = audiomode.resolve(perms, env, server=pulseaudio_host("pulseaudio"))
     assert backend is None and "refused" in note and "PulseAudio" in note and "load its own code" in note
     assert audiomode.resolve(perms, env, server=pulseaudio_host("pipewire-pulse")) == ("pulse", None)
-    assert audiomode.resolve(perms, env, server=pulseaudio_host(None)) == ("pulse", None)  # not told: the old behaviour, warned about
+
+
+def test_a_pulse_socket_whose_server_cannot_be_told_is_refused_too(pulse_socket):
+    """Nobody it can see listens: no server, one of another user, or appjail in another network namespace. It could be
+    PulseAudio, so the socket is not given (docs/decisions/desktop/pulseaudio.md)."""
+    env = {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))}
+    backend, note = audiomode.resolve(Permissions(audio=True, audio_mode="pulse"), env, server=pulseaudio_host(None))
+    assert backend is None and "cannot tell which program serves" in note and "no audio" in note
+    assert audiomode.usable_pulse(env, pulseaudio_host(None)) == (None, audiomode.UNKNOWN_SERVER)
+
+
+def test_no_pulse_socket_at_all_is_not_a_refusal():
+    assert audiomode.usable_pulse({"XDG_RUNTIME_DIR": "/nonexistent"}, pulseaudio_host(None)) == (None, "")
+
+
+def test_the_fallback_never_hands_over_a_socket_whose_server_cannot_be_told(pulse_socket):
+    env = {"XDG_RUNTIME_DIR": str(socket_dir(pulse_socket))}
+    backend, note = audiomode.resolve(Permissions(audio=True, mic=True), env, availability=lambda s: (False, "wireplumber is not installed"),
+                                      server=pulseaudio_host(None))
+    assert backend is None and "cannot tell which program serves" in note and "no audio" in note
+
+
+@integration
+@pytest.mark.skipif(not shutil.which("unshare"), reason="needs unshare (util-linux)")
+def test_from_another_network_namespace_the_server_cannot_be_told_and_the_socket_is_refused(pulse_socket):
+    """Measured: in a container with its own network the socket still connects, but the socket table does not list it."""
+    rt = socket_dir(pulse_socket)
+    code = ("import sys; sys.path.insert(0, sys.argv[1]); from appjail import audiomode; "
+            "print(audiomode.host_server(sys.argv[2], wait=0), audiomode.usable_pulse({'XDG_RUNTIME_DIR': sys.argv[3]})[0])")
+    src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+    here = subprocess.run([sys.executable, "-I", "-c", code, src, pulse_socket, str(rt)], capture_output=True, text=True)
+    assert here.stdout.split()[1] != "None"  # the same socket, told apart in our own namespace
+    other = subprocess.run(["unshare", "-rn", sys.executable, "-I", "-c", code, src, pulse_socket, str(rt)],
+                           capture_output=True, text=True)
+    assert other.returncode == 0, other.stderr
+    assert other.stdout.split() == ["None", "None"]
 
 
 def test_the_private_graph_is_still_used_on_a_pulseaudio_host(pulse_socket):

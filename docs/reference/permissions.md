@@ -33,7 +33,7 @@ Granted with `--allow NAME` (at `add` or with `perms`) and taken back with `--de
 | `memory_max` | `K`, `M`, `G`, `T` sizes or a percentage (`2G`, `50%`); not set = no limit | not set | `--memory-max` |
 | `cpu_quota` | a percentage of one CPU, above 100% for several (`200%`); not set = no limit | not set | `--cpu-quota` |
 | `tasks_max` | a number or a percentage (`512`, `20%`); not set = no limit | not set | `--tasks-max` |
-| `audio_mode` | `pipewire` (a private audio graph per app), `pulse` (the host's Pulse socket, which always includes capture) | `pipewire` | `--audio-mode` |
+| `audio_mode` | `pipewire` (a private audio graph per app), `pulse` (the host's Pulse socket, which always includes capture; refused when PulseAudio serves it, or when appjail cannot tell which program does) | `pipewire` | `--audio-mode` |
 
 The limits need `systemd-run` and a systemd user session; an app with a limit that cannot be applied is refused
 ([resource limits](../understand/isolation/resource-limits.md)). `perms --memory-max infinity` (and the same for the

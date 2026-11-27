@@ -36,7 +36,8 @@ So a separate microphone permission could not be a real promise on the host's so
   app appears as one stream named after it.
 - **`audio_mode = pulse`** gives the host's Pulse socket instead, which follows your desktop's device choices but
   always includes the microphone; `add` and `perms` say so. When the server behind that socket is PulseAudio itself, the
-  socket is never given, since an app could make it load its own code: the app gets no sound, with a message.
+  socket is never given, since an app could make it load its own code; nor is it when appjail cannot tell which program
+  serves it, since that could be PulseAudio. The app then gets no sound, with a message.
 - **Fallback.** When the private graph cannot run (a missing tool, no Pulse server to tunnel to, a graph that does not
   come up), an app with `mic` gets the host's Pulse socket with a warning, and an app without `mic` gets no sound, with
   a warning: silence is visible and harmless, a microphone opened without permission is not.
@@ -56,6 +57,8 @@ So a separate microphone permission could not be a real promise on the host's so
   reconnect if your audio server restarts.
 - About 36 MiB of memory and under a second of start-up per app.
 - Apps that speak only native PipeWire need `pipewire` mode.
+- When appjail runs in a container with a network namespace of its own, it cannot tell which program serves the host's
+  Pulse socket, so `pulse` mode and the `mic` fallback give no sound there; the private graph is not affected.
 - Tested with virtual devices and PipeWire 1.4, 1.6.2 and 1.6.11; not yet with a real headset.
 
 ## References
