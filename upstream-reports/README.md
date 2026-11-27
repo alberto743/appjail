@@ -1,12 +1,12 @@
 # Upstream reports
 
-Drafts of reports to the compositors and desktop environments whose Wayland sockets and bus services were measured for appjail
-(`docs/compositor-assessment/`). **Nothing here has been filed.** Each report waits for your review; then `SEED.md` says how a
-session prepares and files it.
+Drafts of reports to the compositors and desktop environments whose Wayland sockets and bus services were measured for
+appjail (`docs/compositor-assessment/`). **Nothing here has been filed.** Each report waits for your review; then
+`SEED.md` says how a session prepares and files it.
 
-> **Do not push this branch to the public `origin` before the reports are filed.** The security-relevant drafts (01, 04, 08)
-> describe unfixed behaviour in enough detail to reproduce it. File them (privately where the project asks for it) first;
-> the branch can go public afterwards. The findings that are already in `main` (the assessment pages, the
+> **Do not push this branch to the public `origin` before the reports are filed.** The security-relevant drafts (01,
+> 04, 08) describe unfixed behaviour in enough detail to reproduce it. File them (privately where the project asks for
+> it) first; the branch can go public afterwards. The findings that are already in `main` (the assessment pages, the
 > accepted limits) were pushed on 2026-11-15; see "Already public" below.
 
 ## What is here
@@ -18,10 +18,10 @@ session prepares and files it.
 | `reproduce.sh` | runs the repro scripts in the guests (from the host: `upstream-reports/reproduce.sh [-g debian\|ubuntu\|fedora] [NN ...]`) |
 | `SEED.md` | the instructions for the session that files the approved reports |
 
-The tools behind the repro scripts are in `tests/compositors/` (`probe.py`, `rule_a.py`, `clipboard.py`, `focus_steal.py` with
-`focus_client.py`, `gtk_bus_name.py`, `drm_fd.py`, `layer_shell.py`, `mutter_dbus.py`, `cinnamon_dbus.py`) and use only the Python
-standard library, the compositors and the small clients that the guests install (`tests/vm/packages-compositors.txt`).
-Everything runs in the guests; nothing runs on the host.
+The tools behind the repro scripts are in `tests/compositors/` (`probe.py`, `rule_a.py`, `clipboard.py`,
+`focus_steal.py` with `focus_client.py`, `gtk_bus_name.py`, `drm_fd.py`, `layer_shell.py`, `mutter_dbus.py`,
+`cinnamon_dbus.py`) and use only the Python standard library, the compositors and the small clients that the guests
+install (`tests/vm/packages-compositors.txt`). Everything runs in the guests; nothing runs on the host.
 
 ## The reports
 
@@ -50,17 +50,18 @@ upstream-reports/reproduce.sh 01 02      # some reports
 upstream-reports/reproduce.sh -g fedora  # one guest
 ```
 
-Each script starts the compositors it needs with fresh processes on a private runtime directory and a private bus, runs the
-clients, and checks the result: a control (a client that sends nothing, or the version that hides the global) and the case.
-`tests/vm/ssh.sh` and `tests/vm/sync.sh` are the only host-side steps.
+Each script starts the compositors it needs with fresh processes on a private runtime directory and a private bus, runs
+the clients, and checks the result: a control (a client that sends nothing, or the version that hides the global) and
+the case. `tests/vm/ssh.sh` and `tests/vm/sync.sh` are the only host-side steps.
 
-Last full run, 2026-11-15, all three guests (versions in the output of each script): every report printed `REPRODUCED`, with
-these exceptions and notes:
+Last full run, 2026-11-15, all three guests (versions in the output of each script): every report printed `REPRODUCED`,
+with these exceptions and notes:
 
-* 07: Muffin 6.4.1 ended on both distributions; the Cinnamon 6.4 shell ended on Ubuntu but survived once on Debian, so it is
-  reported as intermittent and the script only requires Muffin to end;
-* 09: the crash is intermittent; on Ubuntu it ended the compositor on the first try;
-* 05, 08: the control (Cinnamon 6.4 not listing the layer shell, Hyprland 0.55 hiding the virtual input) is part of the output.
+*  07: Muffin 6.4.1 ended on both distributions; the Cinnamon 6.4 shell ended on Ubuntu but survived once on Debian, so
+  it is reported as intermittent and the script only requires Muffin to end;
+*  09: the crash is intermittent; on Ubuntu it ended the compositor on the first try;
+*  05, 08: the control (Cinnamon 6.4 not listing the layer shell, Hyprland 0.55 hiding the virtual input) is part of the
+  output.
 
 ## Review
 
@@ -69,20 +70,21 @@ Edit the table at the top of each report: `Review: approved`, `rejected` or `cha
 
 ## Not reported, and why
 
-* **A name shared with a compositor's own D-Bus connection** (`org.kde.touchpad` on KWin 6.8's connection). The names of one
-  process share its objects; a sandbox that filters names has to know it. appjail confines it. It is not a KDE defect.
-* **Mutter's `RemoteDesktop` and `ScreenCast` answering any client of the bus**: the portal model depends on it. It is in
-  report 11 as a question, not as a bug.
-* **KWin 6.8's clipboard read through `wl-paste`**: it used the focus-based fallback, the ordinary path.
+*  **A name shared with a compositor's own D-Bus connection** (`org.kde.touchpad` on KWin 6.8's connection). The names
+  of one process share its objects; a sandbox that filters names has to know it. appjail confines it. It is not a KDE
+  defect.
+*  **Mutter's `RemoteDesktop` and `ScreenCast` answering any client of the bus**: the portal model depends on it. It is
+  in report 11 as a question, not as a bug.
+*  **KWin 6.8's clipboard read through `wl-paste`**: it used the focus-based fallback, the ordinary path.
 
 ## Already public
 
-Pushed to `main` on 2026-11-15: the Wayland assessment pages and results (`docs/compositor-assessment/`), the decision page on the
-accepted limits (which names the `gtk_shell1` focus-taking and the DRM descriptor), and the tools `focus_steal.py` and
-`focus_client.py`. Report 01 should be filed promptly for that reason.
+Pushed to `main` on 2026-11-15: the Wayland assessment pages and results (`docs/compositor-assessment/`), the decision
+page on the accepted limits (which names the `gtk_shell1` focus-taking and the DRM descriptor), and the tools
+`focus_steal.py` and `focus_client.py`. Report 01 should be filed promptly for that reason.
 
 ## Rules for the drafts
 
-No personal data (names, e-mail addresses, home paths, host names, session links) in any file here; use `~` and placeholders.
-The reporter's identity is the person who files, not this repository. Every claim is a measured one, or says it was read in
-the source only. Anything not tried says so under "Reviewer notes".
+No personal data (names, e-mail addresses, home paths, host names, session links) in any file here; use `~` and
+placeholders. The reporter's identity is the person who files, not this repository. Every claim is a measured one, or
+says it was read in the source only. Anything not tried says so under "Reviewer notes".
