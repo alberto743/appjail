@@ -31,8 +31,12 @@ lines and runs the same CLI.
   window decodes that file in Python, scales it and encodes a new PNG; Tk only ever decodes images appjail wrote. The
   decoding runs on a thread, since a large icon takes a moment in Python; an app without an icon gets a stand-in, a
   rounded square in a colour chosen by its name.
-- **Small screens.** The window asks for the size of its tallest page. Where the screen is shorter, the Add form scrolls
-  and its Add… button stays in view.
+- **Small screens, down to 800x600.** The window asks for the size of its tallest page. Where the screen is shorter,
+  the Add form and the app's detail pane scroll (the Add… button stays in view); where it is narrower, rows of buttons
+  and fields wrap instead of being cut off, and below 900 pixels the action groups lose their names and the list
+  narrows. The Catalogs card on the Search page is closed until opened, and the permissions editor shows one list at a
+  time, as the Add page does (about 700x550, where it was 1014x765). A 1920x1080 screen at 200 % scaling is 960x540
+  and fits. A phone-sized screen would need a different, single-column layout; it is not attempted.
 
 **Rejected.** A theme from PyPI, for the standard-library rule. Tk's own decoder for app icons: it would read bytes an
 app chose, in the host process, with no limit but the file's.

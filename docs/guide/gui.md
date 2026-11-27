@@ -15,14 +15,14 @@ from GitHub, a URL or a file, with every permission option and limit; options th
 greyed out, and the directories, D-Bus names, portals and URL schemes are one list at a time, each showing how many
 entries it has. **Search** shows results from the catalogs, and "Add this app…" copies a hit into the Add form.
 **Tools** has the helpers, the version and the history of all apps.
-
 The window follows the desktop's dark or light preference (read from the Settings portal when it starts); the **Dark**
 switch at the bottom of the sidebar changes it until you close the window. An app's icon is the one its menu entry
-installed; an app without a menu entry shows a coloured square. On a screen too short for the whole Add form, the form
-scrolls and the Add… button stays in view. Files and folders are chosen in the window's own chooser (places on the left,
-folders first, AppImages only unless you pick "All files", **Hidden files** to show dot files), and its messages use the
-same look. Searching the catalogs and reading an app's portal grants happen in the background: the window stays
-responsive, and a newer search replaces one still running.
+installed; an app without a menu entry shows a coloured square. The window works on screens down to 800x600: where it
+is short, the Add form and the app's detail pane scroll (the Add… button stays in view), and where it is narrow, rows
+of buttons wrap. The **Catalogs** card on the Search page opens when you click its title. Files and folders are chosen
+in the window's own chooser (places on the left, folders first, AppImages only unless you pick "All files", **Hidden
+files** to show dot files), and its messages use the same look. Searching the catalogs and reading an app's portal
+grants happen in the background: the window stays responsive, and a newer search replaces one still running.
 
 It runs the same commands as the terminal and shows their output in the output pane, which opens when a command runs
 (**Show output** and **Hide output** in the status bar), with errors, warnings and notes in their own colours. Every

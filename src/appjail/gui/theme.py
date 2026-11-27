@@ -204,6 +204,10 @@ class Theme:
             ("Pretty.switch", {"side": "left", "sticky": ""}),
             ("Checkbutton.label", {"side": "left", "sticky": "nsew"})]})])
         s.configure("Switch.TCheckbutton", padding=(px(2), px(4)), background=p["side"], foreground=p["muted"])
+        s.layout("Expander.TCheckbutton", [("Checkbutton.padding", {"sticky": "nsew", "children": [
+            ("Checkbutton.focus", {"side": "left", "sticky": "w", "children": [("Checkbutton.label", {"sticky": "nsew"})]})]})])
+        s.configure("Expander.TCheckbutton", font=self.fonts["strong"], padding=(px(2), px(4)))
+        s.map("Expander.TCheckbutton", foreground=[("active", p["accent"])])
         s.map("Switch.TCheckbutton", background=[("!disabled", p["side"])])
         # labels
         s.configure("TLabel", background=p["bg"], foreground=p["text"])

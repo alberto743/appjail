@@ -427,7 +427,8 @@ class App:
         font = tkfont.nametofont("TkDefaultFont")
         names = [self.tree.item(k, "text") for k in self.tree.get_children()]
         width = max([font.measure("Installed apps"), *(font.measure(n) for n in names)]) + self.px(LIST_ICON) + self.px(40)
-        self.tree.column("#0", width=min(width, int(300 * self.scale)), minwidth=self.px(120))
+        cap = 170 if getattr(self, "narrow", False) else 300  # a narrow window gives the room to the actions
+        self.tree.column("#0", width=min(width, int(cap * self.scale)), minwidth=self.px(120))
 
     def _show_detail(self):
         """Fill the detail pane for the selected app (or the empty state)."""
@@ -475,6 +476,7 @@ class App:
             # the flags are also plain text (hidden), so the pane reads and searches as the `list --long` line does
             t.insert("end", "\n" + " ".join(grants), "hidden")
         t.configure(state="disabled")
+        self.root.after_idle(self._fit_detail)
 
     def selected(self):
         sel = self.tree.selection()
@@ -495,7 +497,7 @@ class App:
         left = ttk.Frame(body)
         left.grid(row=0, column=0, sticky="ns", padx=(0, self.px(14)))
         self.filter = tk.StringVar()
-        self.filter_entry = dialogs.HintEntry(left, "Filter apps  (Ctrl+F)", textvariable=self.filter)
+        self.filter_entry = dialogs.HintEntry(left, "Filter apps  (Ctrl+F)", textvariable=self.filter, width=12)
         self.filter_entry.pack(fill="x", pady=(0, self.px(8)))
         self.filter.trace_add("write", lambda *_: self._fill_list())
         self.filter_entry.bind("<Escape>", lambda _e: (self.filter.set(""), self.tree.focus_set()))
@@ -513,10 +515,14 @@ class App:
         self.tree.bind("<<TreeviewSelect>>", lambda _e: self._show_detail())
         self.tree.bind("<Double-1>", lambda _e: self._for_app(lambda a: self.launch(argv.run_argv(a))))
         self.tree.bind("<Return>", lambda _e: self._for_app(lambda a: self.launch(argv.run_argv(a))))
-        # the detail pane: who the app is, what it is granted, and what can be done with it
-        card = ttk.Frame(body, style="Card.TFrame", padding=(self.px(18), self.px(14)))
+        # the detail pane: who the app is, what it is granted, and what can be done with it; it scrolls when the window
+        # is too short for it (a small screen), so no button is ever cut off
+        card = ttk.Frame(body, style="Card.TFrame", padding=(self.px(18), self.px(14), self.px(8), self.px(14)))
         card.grid(row=0, column=1, sticky="nsew")
-        top = ttk.Frame(card)
+        self.card_scroll = Scrolled(card)
+        self.card_scroll.pack(fill="both", expand=True)
+        inside = self.card_scroll.body
+        top = ttk.Frame(inside)
         top.pack(fill="x")
         self.card_icon = ttk.Label(top)
         self.card_icon.pack(side="left", padx=(0, self.px(14)))
@@ -524,21 +530,22 @@ class App:
         words.pack(side="left", fill="x", expand=True)
         self.card_title = ttk.Label(words, style="Title.TLabel")
         self.card_title.pack(anchor="w")
-        self.card_subtitle = ttk.Label(words, style="Muted.TLabel", wraplength=int(480 * self.scale), justify="left")
+        self.card_subtitle = ttk.Label(words, style="Muted.TLabel", wraplength=int(420 * self.scale), justify="left")
         self.card_subtitle.pack(anchor="w")
-        self.card_body = ttk.Frame(card)
+        self.card_body = ttk.Frame(inside)
         self.card_body.pack(fill="x")
-        self.detail = tk.Text(card, height=5, width=40, wrap="word", state="disabled", relief="flat", cursor="arrow",
-                              padx=0, pady=self.px(10), font="TkDefaultFont")
+        self.detail = tk.Text(inside, height=4, width=36, wrap="word", state="disabled", relief="flat", cursor="arrow",
+                              padx=0, pady=self.px(8), font="TkDefaultFont")
         self.detail.palette_bg = "bg"
         self.detail.retag = lambda p: self._tag_detail(p)
         self._tag_detail(self.theme.p)
-        self.detail.pack(fill="both", expand=True)
+        self.detail.pack(fill="x")
+        self.detail.bind("<Configure>", lambda _e: self._fit_detail())
 
         def on(action):
             return lambda: self._for_app(action)
 
-        self.app_buttons = []
+        self.app_buttons, self.group_labels = [], []
         groups = (
             (None, (("Run", on(lambda a: self.launch(argv.run_argv(a))), "Accent.TButton"), ("Run with…", on(self._run_with), None),
                     ("Open file…", on(self._open_file), None))),
@@ -549,16 +556,40 @@ class App:
                          ("History", on(lambda a: self.run(argv.history_argv(a))), None))),
             ("Remove", (("Reset app", on(lambda a: self.run(["reset", a])), "Danger.TButton"),
                         ("Remove app", on(lambda a: self.run(["remove", a])), "Danger.TButton"))))
-        actions = ttk.Frame(card)
-        actions.pack(fill="x", side="bottom")
-        for row, (title, buttons) in enumerate(groups):  # each row sizes its own buttons: a long label widens only its row
-            ttk.Label(actions, text=title or "", style="Small.TLabel").grid(row=row, column=0, sticky="w", padx=(0, self.px(12)))
-            line = ttk.Frame(actions)
-            line.grid(row=row, column=1, sticky="w", pady=(self.px(10) if row == 0 else self.px(3), self.px(3)))
+        actions = ttk.Frame(inside)
+        actions.pack(fill="x", pady=(self.px(4), 0))
+        for row, (title, buttons) in enumerate(groups):
+            label = ttk.Label(actions, text=title or "", style="Small.TLabel")
+            label.grid(row=row, column=0, sticky="w", padx=(0, self.px(12)))
+            self.group_labels.append(label)
+            line = dialogs.Flow(actions)
+            line.grid(row=row, column=1, sticky="ew", pady=self.px(3))
             for text, action, style in buttons:
-                button = ttk.Button(line, text=text, command=action, **({"style": style} if style else {}))
-                button.pack(side="left", padx=(0, self.px(6)))
+                button = line.add(ttk.Button(line, text=text, command=action, **({"style": style} if style else {})))
                 self.app_buttons.append(button)
+        actions.columnconfigure(1, weight=1)
+        # a narrow window drops the group names, so two or three buttons still fit on a row
+        self.root.bind("<Configure>", lambda e: e.widget is self.root and self._narrow(e.width), add="+")
+
+    def _narrow(self, width):
+        narrow = width < int(900 * self.scale)
+        if narrow != getattr(self, "narrow", False):
+            self.narrow = narrow
+            self._fit_columns()
+        for label in self.group_labels:
+            if narrow and label.winfo_manager():
+                label.grid_remove()
+            elif not narrow and not label.winfo_manager():
+                label.grid()
+
+    def _fit_detail(self):
+        """The text is as tall as its lines (it sits in a pane that scrolls), never taller."""
+        pixels = self.detail.count("1.0", "end", "ypixels")  # the chips' line is taller than a line of text
+        pixels = pixels[0] if isinstance(pixels, tuple) else pixels or 0
+        line = tkfont.nametofont("TkDefaultFont").metrics("linespace")
+        height = max(-(-pixels // line), 1)
+        if int(self.detail.cget("height")) != height:
+            self.detail.configure(height=height)
 
     def _tag_detail(self, p):
         self.detail.tag_configure("head", font=self.theme.fonts["strong"], spacing1=self.px(4), spacing3=self.px(4))
@@ -690,105 +721,90 @@ class App:
         for value, text in (("github", "GitHub owner/repo"), ("url", "https URL"), ("file", "Local file")):
             ttk.Radiobutton(kinds, text=text, value=value, variable=self.kind).pack(side="left", padx=(0, self.px(16)))
         self.source = tk.StringVar()
-        ttk.Entry(top, textvariable=self.source, width=60).grid(row=1, column=0, sticky="ew", pady=(self.px(6), 0))
+        ttk.Entry(top, textvariable=self.source, width=30).grid(row=1, column=0, sticky="ew", pady=(self.px(6), 0))
         ttk.Button(top, text="Browse…", command=self._browse).grid(row=1, column=1, padx=(self.px(8), 0), pady=(self.px(6), 0))
         top.columnconfigure(0, weight=1)
         self.text, self.entries = {}, {}
-        opts = ttk.Frame(source)
+        opts = dialogs.Flow(source, gap=gap, uniform=True)  # four fields in a row, or two, or one: as the width allows
         opts.pack(fill="x", pady=(self.px(8), 0))
-        for i, (key, label) in enumerate((("name", "Local name"), ("tag", "Release tag (GitHub)"),
-                                          ("sha256", "sha256 (url/file)"), ("max_size", "Max MiB (url)"))):
-            ttk.Label(opts, text=label, style="Muted.TLabel").grid(row=0, column=i, sticky="w", padx=(0, gap))
+        for key, label in (("name", "Local name"), ("tag", "Release tag (GitHub)"), ("sha256", "sha256 (url/file)"),
+                           ("max_size", "Max MiB (url)")):
+            cell = ttk.Frame(opts)
+            ttk.Label(cell, text=label, style="Muted.TLabel").pack(anchor="w")
             self.text[key] = tk.StringVar()
-            self.entries[key] = ttk.Entry(opts, textvariable=self.text[key], width=14)
-            self.entries[key].grid(row=1, column=i, sticky="ew", padx=(0, gap), pady=(self.px(2), 0))
-            opts.columnconfigure(i, weight=1)
+            self.entries[key] = ttk.Entry(cell, textvariable=self.text[key], width=18)
+            self.entries[key].pack(anchor="w", pady=(self.px(2), 0))
+            opts.add(cell)
         self.prerelease = tk.BooleanVar()
         self.private_redirects = tk.BooleanVar()
         self.checks = {}
-        choices = ttk.Frame(source)
+        choices = dialogs.Flow(source, gap=self.px(18))
         choices.pack(fill="x", pady=(self.px(6), 0))
-        self.checks["Allow pre-releases"] = ttk.Checkbutton(choices, text="Allow pre-releases (GitHub)", variable=self.prerelease)
-        self.checks["Allow pre-releases"].pack(side="left", padx=(0, self.px(18)))
-        self.private_check = ttk.Checkbutton(choices, text="Follow redirects to private addresses (URL)", variable=self.private_redirects)
-        self.private_check.pack(side="left")
+        self.checks["Allow pre-releases"] = choices.add(ttk.Checkbutton(choices, text="Allow pre-releases (GitHub)", variable=self.prerelease))
+        self.private_check = choices.add(ttk.Checkbutton(choices, text="Follow redirects to private addresses (URL)",
+                                                         variable=self.private_redirects))
         ttk.Label(source, text="Private addresses (the LAN, loopback) are refused by default; follow them only for a server of your own.",
-                  style="Small.TLabel").pack(anchor="w")
+                  style="Small.TLabel", wraplength=int(480 * self.scale), justify="left").pack(anchor="w")
         self.kind.trace_add("write", lambda *_: self._kind_changed())
         self.flag = {}
         grants = ttk.LabelFrame(body, text="Permissions")
         grants.pack(fill="x", pady=(gap, 0))
-        flags_row, modes_row = ttk.Frame(grants), ttk.Frame(grants)
+        flags_row = dialogs.Flow(grants, gap=gap, uniform=True)  # in columns, as many as fit
         flags_row.pack(fill="x")
-        modes_row.pack(fill="x", pady=(self.px(8), 0))
-        per_row = 5
-        for i, flag in enumerate(PERMISSION_FLAGS):
+        for flag in PERMISSION_FLAGS:
             self.flag[flag] = tk.BooleanVar(value=False)
-            ttk.Checkbutton(flags_row, text=flag, variable=self.flag[flag]).grid(row=i // per_row, column=i % per_row, sticky="w", padx=(0, gap))
-        for c in range(per_row):
-            flags_row.columnconfigure(c, weight=1, uniform="flag")
+            flags_row.add(ttk.Checkbutton(flags_row, text=flag, variable=self.flag[flag]))
+        modes_row = dialogs.Flow(grants, gap=self.px(18))
+        modes_row.pack(fill="x", pady=(self.px(8), 0))
         self.audio_mode = tk.StringVar(value=manifest.DEFAULT_AUDIO_MODE)
-        ttk.Label(modes_row, text="Audio mode", style="Muted.TLabel").pack(side="left", padx=(0, self.px(6)))
-        ttk.Combobox(modes_row, textvariable=self.audio_mode, values=manifest.AUDIO_MODES, state="readonly", width=9).pack(side="left")
         self.display = tk.StringVar(value="wayland")
-        ttk.Label(modes_row, text="Display", style="Muted.TLabel").pack(side="left", padx=(self.px(18), self.px(6)))
-        ttk.Combobox(modes_row, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=16).pack(side="left")
         self.display_size = tk.StringVar(value=manifest.DEFAULT_DISPLAY_SIZE)
-        ttk.Entry(modes_row, textvariable=self.display_size, width=10).pack(side="left", padx=(self.px(8), 0))
-        limits_row = ttk.Frame(grants)
-        limits_row.pack(fill="x", pady=(self.px(8), 0))
-        self.limits = {}
-        for key, label in (("memory_max", "Memory limit"), ("cpu_quota", "CPU limit"), ("tasks_max", "Process limit")):
-            self.limits[key] = tk.StringVar()
-            ttk.Label(limits_row, text=label, style="Muted.TLabel").pack(side="left", padx=(0 if key == "memory_max" else self.px(18), self.px(6)))
-            ttk.Entry(limits_row, textvariable=self.limits[key], width=7).pack(side="left")
-        ttk.Label(grants, text="Limits: 2G, 200%, 512; empty for none.", style="Small.TLabel").pack(anchor="w", pady=(self.px(2), 0))
+        self.limits = {key: tk.StringVar() for key in ("memory_max", "cpu_quota", "tasks_max")}
+        for label, make in (
+                ("Audio mode", lambda p: ttk.Combobox(p, textvariable=self.audio_mode, values=manifest.AUDIO_MODES, state="readonly", width=9)),
+                ("Display", lambda p: ttk.Combobox(p, textvariable=self.display, values=manifest.DISPLAYS, state="readonly", width=16)),
+                ("Window size", lambda p: ttk.Entry(p, textvariable=self.display_size, width=10)),
+                ("Memory limit", lambda p: ttk.Entry(p, textvariable=self.limits["memory_max"], width=7)),
+                ("CPU limit", lambda p: ttk.Entry(p, textvariable=self.limits["cpu_quota"], width=7)),
+                ("Process limit", lambda p: ttk.Entry(p, textvariable=self.limits["tasks_max"], width=7))):
+            pair = ttk.Frame(modes_row)
+            ttk.Label(pair, text=label, style="Muted.TLabel").pack(side="left", padx=(0, self.px(6)))
+            make(pair).pack(side="left")
+            modes_row.add(pair)
+        ttk.Label(grants, text="Window size: for the rootful Xwayland display. Limits: 2G, 200%, 512; empty for none.",
+                  style="Small.TLabel", wraplength=int(480 * self.scale), justify="left").pack(anchor="w", pady=(self.px(4), 0))
         # the lists, one at a time beside a column of segments; each segment counts its entries, so none is forgotten
         access = ttk.LabelFrame(body, text="Access")
         access.pack(fill="x", pady=(gap, 0))
-        segments = ttk.Frame(access)
-        segments.pack(side="left", fill="y", padx=(0, self.px(12)))
-        extra = ttk.Frame(access)
-        extra.pack(side="left", fill="both", expand=True)
-        extra.columnconfigure(0, weight=1)
-        extra.rowconfigure(0, weight=1)
-        self.access = tk.StringVar(value="dirs")
-        self.editors, self.segments = {}, {}
-        for key, title, hint in (("dirs", "Directories", "PATH or PATH:rw"), ("dbus", "D-Bus names (talk)", ""),
-                                 ("dbus_own", "D-Bus names (own)", ""), ("portals", "Privileged portals", ""),
-                                 ("schemes", "URL schemes", "gemini; links of these open the app")):
-            changed = lambda k=key: self._count_access(k)
-            self.editors[key] = (dialogs.PortalChecks(extra, title, (), "needs the portals permission", wrap=int(360 * self.scale),
-                                                      height=int(96 * self.scale), bare=True, on_change=changed)
-                                 if key == "portals" else
-                                 dialogs.ListEditor(extra, title, (), hint, browse="dir" if key == "dirs" else None, bare=True, on_change=changed))
-            self.segments[key] = ttk.Radiobutton(segments, text=title, value=key, variable=self.access, style="Seg.TRadiobutton",
-                                                 command=self._show_access)
-            self.segments[key].pack(fill="x", pady=(0, self.px(3)))
-        self._show_access()
+
+        def lister(title, hint="", browse=None):
+            return lambda parent, changed: dialogs.ListEditor(parent, title, (), hint, browse=browse, bare=True, on_change=changed)
+        self.access_lists = dialogs.Segmented(access, (
+            ("dirs", "Directories", lister("Directories", "PATH or PATH:rw", browse="dir")),
+            ("dbus", "D-Bus names (talk)", lister("D-Bus names (talk)")),
+            ("dbus_own", "D-Bus names (own)", lister("D-Bus names (own)")),
+            ("portals", "Privileged portals",
+             lambda parent, changed: dialogs.PortalChecks(parent, "Privileged portals", (), "needs the portals permission",
+                                                          wrap=int(360 * self.scale), height=int(96 * self.scale), bare=True,
+                                                          on_change=changed)),
+            ("schemes", "URL schemes", lister("URL schemes", "gemini; links of these open the app"))))
+        self.access_lists.pack(fill="both", expand=True)
+        self.editors, self.segments, self.access = self.access_lists.editors, self.access_lists.segments, self.access_lists.current
+        self._show_access = self.access_lists.show
         self.desktop = tk.BooleanVar()
         self.mime_all = tk.BooleanVar()
         self.mime = tk.StringVar()
         self.rw = tk.BooleanVar()
+        ttk.Button(bottom, text="Add…", style="Accent.TButton", command=self._add).pack(side="right", anchor="n", padx=(gap, 0))
+        menu = dialogs.Flow(bottom, gap=gap)  # wraps on a narrow window; the Add… button stays at the right
+        menu.pack(side="left", fill="x", expand=True)
         for var, text in ((self.desktop, "Create menu entry"), (self.mime_all, "All file types"), (self.rw, "Files writable")):
-            self.checks[text] = ttk.Checkbutton(bottom, text=text, variable=var)
-            self.checks[text].pack(side="left", padx=(0, gap))
-        ttk.Label(bottom, text="File types", style="Muted.TLabel").pack(side="left", padx=(self.px(4), self.px(6)))
-        ttk.Entry(bottom, textvariable=self.mime, width=14).pack(side="left")
-        ttk.Button(bottom, text="Add…", style="Accent.TButton", command=self._add).pack(side="right")
+            self.checks[text] = menu.add(ttk.Checkbutton(menu, text=text, variable=var))
+        types = ttk.Frame(menu)
+        ttk.Label(types, text="File types", style="Muted.TLabel").pack(side="left", padx=(0, self.px(6)))
+        ttk.Entry(types, textvariable=self.mime, width=14).pack(side="left")
+        menu.add(types)
         self._kind_changed()
-
-    def _show_access(self):
-        for key, editor in self.editors.items():
-            if key == self.access.get():
-                editor.grid(row=0, column=0, sticky="nsew")
-            else:
-                editor.grid_remove()
-
-    def _count_access(self, key):
-        editor = self.editors[key]
-        count = len(editor.values() if key == "portals" else editor.values(flush=False))
-        self.segments[key].configure(text=editor.title + (f"  {count}" if count else ""))
 
     def _kind_changed(self):
         """Options that do not apply to the chosen source are greyed out, as the CLI refuses them."""
@@ -829,7 +845,7 @@ class App:
         row = ttk.Frame(tab)
         row.pack(fill="x")
         self.keywords = tk.StringVar()
-        entry = dialogs.HintEntry(row, "Keywords, such as: gemini browser", textvariable=self.keywords, width=40)
+        entry = dialogs.HintEntry(row, "Keywords, such as: gemini browser", textvariable=self.keywords, width=16)
         entry.pack(side="left", fill="x", expand=True)
         entry.bind("<Return>", lambda _e: self._search())
         ttk.Button(row, text="Search", style="Accent.TButton", command=self._search).pack(side="left", padx=(self.px(8), 0))
@@ -839,13 +855,15 @@ class App:
         self.show_all = tk.BooleanVar()
         ttk.Checkbutton(row, text="all", variable=self.show_all).pack(side="left", padx=(gap, 0))
         self.hits = []
-        idx = ttk.LabelFrame(tab, text="Catalogs")  # packed before the results: they shrink, the buttons stay
-        idx.pack(side="bottom", fill="x", pady=(gap, 0))
+        # rarely needed, so closed until asked for; packed before the results: they shrink, the buttons stay
+        self.catalogs = dialogs.Expander(tab, "Catalogs")
+        self.catalogs.pack(side="bottom", fill="x", pady=(gap, 0))
+        idx = self.catalogs.body
         results = ttk.Frame(tab, style="Card.TFrame", padding=self.px(4))
         results.pack(fill="both", expand=True, pady=(gap, 0))
         self.hit_tree = ttk.Treeview(results, columns=("name", "description", "source", "catalog"), show="headings",
                                      selectmode="browse", height=6)
-        for c, w in (("name", 160), ("description", 380), ("source", 240), ("catalog", 90)):
+        for c, w in (("name", 150), ("description", 320), ("source", 200), ("catalog", 80)):
             self.hit_tree.heading(c, text=c.title(), anchor="w")
             self.hit_tree.column(c, width=int(w * self.scale), minwidth=40)
         bar = ttk.Scrollbar(results, command=self.hit_tree.yview)
@@ -854,26 +872,28 @@ class App:
         self.hit_tree.bind("<<TreeviewSelect>>", lambda _e: self._hit_selected())
         self.hit_tree.bind("<Double-1>", lambda _e: self._use_hit())
         use = ttk.Frame(tab)
-        use.pack(fill="x", pady=(self.px(8), 0), before=idx)
+        use.pack(fill="x", pady=(self.px(8), 0), before=self.catalogs)
         self.use_hit = ttk.Button(use, text="Add this app…", command=self._use_hit, state="disabled")
-        self.use_hit.pack(side="right")
-        ttk.Label(use, text="Copies the hit into the Add page; nothing is installed until you confirm there.", style="Small.TLabel").pack(side="left")
-        name_row = ttk.Frame(idx)
-        name_row.pack(fill="x")
+        self.use_hit.pack(side="right", anchor="n")
+        ttk.Label(use, text="Copies the hit into the Add page; nothing is installed until you confirm there.", style="Small.TLabel",
+                  wraplength=int(340 * self.scale), justify="left").pack(side="left")
+        fields = dialogs.Flow(idx, gap=gap)
+        fields.pack(fill="x")
         self.source_name = tk.StringVar()
-        ttk.Label(name_row, text="Source name", style="Muted.TLabel", width=18).pack(side="left")
-        ttk.Entry(name_row, textvariable=self.source_name, width=24).pack(side="left")
-        ttk.Label(name_row, text="optional for update and rollback", style="Small.TLabel").pack(side="left", padx=gap)
-        more_row = ttk.Frame(idx)
-        more_row.pack(fill="x", pady=(self.px(6), 0))
         self.index_commit = tk.StringVar()
-        ttk.Label(more_row, text="appjail-db commit", style="Muted.TLabel", width=18).pack(side="left")
-        ttk.Entry(more_row, textvariable=self.index_commit, width=44).pack(side="left")
-        ttk.Label(more_row, text="40 hex digits, for Update; empty: the latest", style="Small.TLabel").pack(side="left", padx=gap)
+        for label, var, width, hint in (("Source name", self.source_name, 22, "optional for Update and Rollback"),
+                                        ("appjail-db commit", self.index_commit, 42, "40 hex digits, for Update; empty: the latest")):
+            pair = ttk.Frame(fields)
+            ttk.Label(pair, text=label, style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+            ttk.Entry(pair, textvariable=var, width=width).grid(row=1, column=0, sticky="w", pady=(2, 0))
+            ttk.Label(pair, text=hint, style="Small.TLabel").grid(row=2, column=0, sticky="w")
+            fields.add(pair)
         self.index_private = tk.BooleanVar()
-        ttk.Checkbutton(idx, text="Follow redirects to private addresses (Update, Add from URL); only for a server of your own",
+        ttk.Checkbutton(idx, text="Follow redirects to private addresses (Update, Add from URL)",
                         variable=self.index_private).pack(anchor="w", pady=(self.px(6), 0))
-        buttons = ttk.Frame(idx)
+        ttk.Label(idx, text="Only for a server of your own: the LAN and loopback are refused by default.",
+                  style="Small.TLabel").pack(anchor="w")
+        buttons = dialogs.Flow(idx)
         buttons.pack(fill="x", pady=(self.px(8), 0))
         for text, action, style in (("Status", lambda: self.run(["index", "status"]), None),
                                     ("Update", lambda: self._index("update"), None),
@@ -881,7 +901,7 @@ class App:
                                     ("Add from URL…", lambda: self._index_add("--url"), None),
                                     ("Add from file…", lambda: self._index_add("--file"), None),
                                     ("Remove source", self._index_remove, "Danger.TButton")):
-            ttk.Button(buttons, text=text, command=action, **({"style": style} if style else {})).pack(side="left", padx=(0, self.px(6)))
+            buttons.add(ttk.Button(buttons, text=text, command=action, **({"style": style} if style else {})))
 
     def _search(self):
         """Search the catalogs on a thread (reading a catalog takes a moment); a newer search replaces an older one."""
@@ -983,11 +1003,11 @@ class App:
         ttk.Button(row, text="Install…", command=lambda: self.run(["tools", "install", self.tool.get()])).pack(side="left")
         other = ttk.LabelFrame(tab, text="Other commands")
         other.pack(fill="x", pady=(self.px(12), 0))
-        row = ttk.Frame(other)
+        row = dialogs.Flow(other)
         row.pack(fill="x")
         for text, command in (("Version", ["version"]), ("List apps", ["list"]), ("History (all apps)", argv.history_argv()),
                               ("Prune stale menu entries", argv.desktop_argv(prune=True))):
-            ttk.Button(row, text=text, command=lambda c=command: self.run(c)).pack(side="left", padx=(0, self.px(6)))
+            row.add(ttk.Button(row, text=text, command=lambda c=command: self.run(c)))
 
 
 def main():

@@ -224,7 +224,7 @@ class ListEditor(ttk.LabelFrame):
             holder.grid(row=0, column=0, columnspan=3, sticky="nsew")
             controls, first = self, 1
         self.var = tk.StringVar()
-        entry = ttk.Entry(controls, textvariable=self.var, width=30 if bare else 10)
+        entry = ttk.Entry(controls, textvariable=self.var, width=22 if bare else 10)
         entry.grid(row=first, column=0, sticky="ew")
         entry.bind("<Return>", lambda _e: self.add())
         ttk.Button(controls, text="Add", width=6, command=self.add).grid(row=first, column=1, padx=(4, 0))
@@ -372,49 +372,155 @@ def options_dialog(parent, title, fields, intro="", ok="Continue", validate=None
     return result["value"]
 
 
+class Segmented(ttk.Frame):
+    """Several editors in the space of one: a column of segments (each with its entry count) beside the editor shown.
+    items: (key, title, make(parent, on_change)) where make builds a bare ListEditor or PortalChecks."""
+
+    def __init__(self, parent, items, start=None):
+        super().__init__(parent)
+        column = ttk.Frame(self)
+        column.pack(side="left", fill="y", padx=(0, 12))
+        holder = ttk.Frame(self)
+        holder.pack(side="left", fill="both", expand=True)
+        holder.columnconfigure(0, weight=1)
+        holder.rowconfigure(0, weight=1)
+        self.current = tk.StringVar(value=start or items[0][0])
+        self.editors, self.segments = {}, {}
+        for key, title, make in items:
+            self.editors[key] = make(holder, lambda k=key: self.count(k))
+            self.segments[key] = ttk.Radiobutton(column, text=title, value=key, variable=self.current, style="Seg.TRadiobutton",
+                                                 command=self.show)
+            self.segments[key].pack(fill="x", pady=(0, 3))
+            self.count(key)
+        self.show()
+
+    def show(self):
+        for key, editor in self.editors.items():
+            if key == self.current.get():
+                editor.grid(row=0, column=0, sticky="nsew")
+            else:
+                editor.grid_remove()
+
+    def count(self, key):
+        editor = self.editors[key]
+        n = len(editor.values() if isinstance(editor, PortalChecks) else editor.values(flush=False))
+        self.segments[key].configure(text=editor.title + (f"  {n}" if n else ""))
+
+
+class Flow(ttk.Frame):
+    """A row of widgets that wraps onto more rows when it is narrower than they are, instead of cutting them off.
+    Make each widget with this frame as its parent, then add() it in order."""
+
+    def __init__(self, parent, gap=6, uniform=False, **options):
+        super().__init__(parent, **options)
+        self.gap, self.items, self.uniform = gap, [], uniform  # uniform: every cell as wide as the widest, in columns
+        self.bind("<Configure>", lambda e: self._place(e.width))
+
+    def add(self, widget):
+        self.items.append(widget)
+        self.after_idle(lambda: self._place(self.winfo_width()))
+        return widget
+
+    def _place(self, width):
+        shown = [w for w in self.items if not getattr(w, "flow_hidden", False)]
+        if not shown:
+            return
+        widest = max(w.winfo_reqwidth() for w in shown)
+        width = max(width, widest) if width > 1 else sum(w.winfo_reqwidth() + self.gap for w in shown)
+        x = y = row = 0
+        for w in shown:
+            wd, ht = (widest if self.uniform else w.winfo_reqwidth()), w.winfo_reqheight()
+            if x and x + wd > width:
+                x, y, row = 0, y + row + self.gap // 2, 0
+            w.place(x=x, y=y)
+            x += wd + self.gap
+            row = max(row, ht)
+        # ask for the widest widget (so the row never forces the window wider) and the height the rows take
+        self.configure(width=widest, height=y + row)
+
+
+class Expander(ttk.Frame):
+    """A titled section that opens and closes; `body` holds its content."""
+
+    def __init__(self, parent, title, opened=False):
+        super().__init__(parent)
+        self.title = title
+        self.opened = tk.BooleanVar(value=opened)
+        self.header = ttk.Checkbutton(self, text=title, variable=self.opened, style="Expander.TCheckbutton", command=self._toggle)
+        self.header.pack(anchor="w")
+        self.body = ttk.LabelFrame(self, style="Bare.TLabelframe")
+        self._toggle()
+
+    def _toggle(self):
+        self.header.configure(text=("▾  " if self.opened.get() else "▸  ") + self.title)
+        if self.opened.get():
+            self.body.pack(fill="both", expand=True, pady=(6, 0))
+        else:
+            self.body.pack_forget()
+
+    def open(self, value=True):
+        self.opened.set(value)
+        self._toggle()
+
+
 def permissions_editor(parent, name, state):
     """Edit an app's permissions. Returns the new state dict (same shape as the argument) or None when cancelled.
 
     Applying only builds the `appjail perms` command; the command prints the before/after review and asks.
     """
     top = _modal(parent, f"Permissions of {name}")
-    frame = ttk.Frame(top, padding=12)
+    frame = ttk.Frame(top, padding=14)
     frame.pack(fill="both", expand=True)
     flags = {}
-    box = ttk.LabelFrame(frame, text="Permissions", padding=6)
-    box.grid(row=0, column=0, sticky="nsw", padx=(0, 8))
-    for flag in PERMISSION_FLAGS:
+    box = ttk.LabelFrame(frame, text="Permissions")
+    box.pack(fill="x")
+    grid = ttk.Frame(box)
+    grid.pack(fill="x")
+    per_row = 4
+    for i, flag in enumerate(PERMISSION_FLAGS):
         flags[flag] = tk.BooleanVar(value=bool(state.get(flag)))
-        ttk.Checkbutton(box, text=flag, variable=flags[flag]).pack(anchor="w")
+        ttk.Checkbutton(grid, text=flag, variable=flags[flag]).grid(row=i // per_row, column=i % per_row, sticky="w", padx=(0, 10))
+    for c in range(per_row):
+        grid.columnconfigure(c, weight=1, uniform="flag")
+    modes = Flow(box, gap=8)
+    modes.pack(fill="x", pady=(8, 0))
     audio_mode = tk.StringVar(value=state.get("audio_mode", DEFAULT_AUDIO_MODE))
-    ttk.Label(box, text="audio mode").pack(anchor="w", pady=(6, 0))
-    ttk.Combobox(box, textvariable=audio_mode, values=AUDIO_MODES, state="readonly", width=16).pack(anchor="w")
     display = tk.StringVar(value=state.get("display", "wayland"))
-    ttk.Label(box, text="display").pack(anchor="w", pady=(6, 0))
-    ttk.Combobox(box, textvariable=display, values=DISPLAYS, state="readonly", width=16).pack(anchor="w")
     size = tk.StringVar(value=state.get("display_size", DEFAULT_DISPLAY_SIZE))
-    ttk.Label(box, text="window size (xwayland-rootful)").pack(anchor="w", pady=(6, 0))
-    ttk.Entry(box, textvariable=size, width=12).pack(anchor="w")
-    limit_vars = {}
-    for key, label in LIMIT_LABELS:
-        limit_vars[key] = tk.StringVar(value=state.get(key, ""))
-        ttk.Label(box, text=label).pack(anchor="w", pady=(6, 0))
-        ttk.Entry(box, textvariable=limit_vars[key], width=12).pack(anchor="w")
-    ttk.Label(box, text="limits: empty for none", style="Small.TLabel").pack(anchor="w")
-    lists = ttk.Frame(frame)
-    lists.grid(row=0, column=1, sticky="nsew")
-    editors = {
-        "dirs": ListEditor(lists, "Directories", state.get("dirs", ()), "PATH or PATH:rw", browse="dir", height=5),
-        "dbus_filter": ListEditor(lists, "D-Bus names (talk)", state.get("dbus_filter", ())),
-        "dbus_own": ListEditor(lists, "D-Bus names (own)", state.get("dbus_own", ())),
-        "portal_interfaces": PortalChecks(lists, "Privileged portals", state.get("portal_interfaces", ()), "needs the portals permission"),
-        "schemes": ListEditor(lists, "URL schemes", state.get("schemes", ()), "gemini; links of these open the app"),
-        "env": ListEditor(lists, "Environment", state.get("env", ()), "NAME=VALUE; plain text, no secrets"),
-    }
-    for i, ed in enumerate(editors.values()):
-        ed.grid(row=i // 2, column=i % 2, sticky="nsew", padx=4, pady=4)
-    frame.columnconfigure(1, weight=1)
-    frame.rowconfigure(0, weight=1)
+    limit_vars = {key: tk.StringVar(value=state.get(key, "")) for key, _label in LIMIT_LABELS}
+    for label, make in (("Audio mode", lambda p: ttk.Combobox(p, textvariable=audio_mode, values=AUDIO_MODES, state="readonly", width=9)),
+                        ("Display", lambda p: ttk.Combobox(p, textvariable=display, values=DISPLAYS, state="readonly", width=16)),
+                        ("Window size (rootful)", lambda p: ttk.Entry(p, textvariable=size, width=10))):
+        pair = ttk.Frame(modes)
+        ttk.Label(pair, text=label, style="Muted.TLabel").pack(side="left", padx=(0, 6))
+        make(pair).pack(side="left", padx=(0, 10))
+        modes.add(pair)
+    limits = Flow(box, gap=8)
+    limits.pack(fill="x", pady=(6, 0))
+    for key, label in (("memory_max", "Memory limit"), ("cpu_quota", "CPU limit"), ("tasks_max", "Process limit")):
+        pair = ttk.Frame(limits)
+        ttk.Label(pair, text=label, style="Muted.TLabel").pack(side="left", padx=(0, 6))
+        ttk.Entry(pair, textvariable=limit_vars[key], width=7).pack(side="left", padx=(0, 10))
+        limits.add(pair)
+    ttk.Label(box, text="Limits: 2G or 50% of memory, 200% = 2 CPUs, 512 processes; empty for none.",
+              style="Small.TLabel").pack(anchor="w", pady=(4, 0))
+    access = ttk.LabelFrame(frame, text="Access")
+    access.pack(fill="both", expand=True, pady=(10, 0))
+
+    def lister(title, key, hint="", browse=None):
+        return lambda parent, changed: ListEditor(parent, title, state.get(key, ()), hint, browse=browse, height=4, bare=True,
+                                                  on_change=changed)
+    lists = Segmented(access, (
+        ("dirs", "Directories", lister("Directories", "dirs", "PATH or PATH:rw", browse="dir")),
+        ("dbus_filter", "D-Bus names (talk)", lister("D-Bus names (talk)", "dbus_filter")),
+        ("dbus_own", "D-Bus names (own)", lister("D-Bus names (own)", "dbus_own")),
+        ("portal_interfaces", "Privileged portals",
+         lambda parent, changed: PortalChecks(parent, "Privileged portals", state.get("portal_interfaces", ()), "needs the portals permission",
+                                              wrap=240, height=110, bare=True, on_change=changed)),
+        ("schemes", "URL schemes", lister("URL schemes", "schemes", "gemini; links of these open the app")),
+        ("env", "Environment", lister("Environment", "env", "NAME=VALUE; plain text, no secrets"))))
+    lists.pack(fill="both", expand=True)
+    editors = lists.editors
     result = {"value": None}
 
     def apply():
@@ -428,9 +534,10 @@ def permissions_editor(parent, name, state):
         top.destroy()
 
     buttons = ttk.Frame(frame)
-    buttons.grid(row=1, column=0, columnspan=2, sticky="e", pady=(10, 0))
+    buttons.pack(fill="x", pady=(12, 0))
     ttk.Button(buttons, text="Review changes…", style="Accent.TButton", command=apply).pack(side="right")
     ttk.Button(buttons, text="Cancel", command=top.destroy).pack(side="right", padx=6)
+    ttk.Label(buttons, text="The command shows what changes and asks.", style="Small.TLabel").pack(side="left")
     top.bind("<Escape>", lambda _e: top.destroy())
     _wait(top)
     return result["value"]

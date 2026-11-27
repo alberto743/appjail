@@ -120,8 +120,8 @@ tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/appjail && python3 tests/gui_screensho
 tests/vm/ssh.sh 'cd /tmp/shots && tar cf - .' | tar xf - -C SOMEWHERE
 ```
 
-1024x768 is the smallest screen the window is checked on (`test_gui_smoke.py` uses it); a larger size shows the
-layout with room to spare.
+800x600 is the smallest screen the window is laid out for (`test_gui_smoke.py` checks it, and 1024x768); a larger
+size shows the layout with room to spare.
 
 ## What the tests cover
 

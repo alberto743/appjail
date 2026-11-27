@@ -358,10 +358,39 @@ def _assert_inside(widget, box, where):
     assert widget.winfo_rootx() + widget.winfo_width() <= box.winfo_rootx() + box.winfo_width(), (where, widget)
 
 
+@pytest.fixture(scope="module")
+def servers():
+    """X servers by screen size, kept until the module ends: Tk keeps its connection to a display after its window is
+    destroyed, and a server stopped under it ends the whole process."""
+    if not shutil.which("Xvfb"):
+        pytest.skip("Xvfb is not installed")
+    running = {}
+
+    def start(size):
+        if size not in running:
+            num = f":{600 + os.getpid() % 300 + len(running) * 300}"
+            running[size] = (num, subprocess.Popen(["Xvfb", num, "-screen", "0", f"{size}x24"], stdout=subprocess.DEVNULL,
+                                                   stderr=subprocess.DEVNULL))
+            time.sleep(1)
+        return running[size][0]
+    yield start
+    for _num, proc in running.values():
+        proc.terminate()
+        proc.wait()
+
+
+@pytest.fixture(params=["1024x768", "800x600"])
+def screen(request, servers, monkeypatch):
+    """A display at each supported smallest size (800x600 is the smallest the window is laid out for)."""
+    monkeypatch.setenv("DISPLAY", servers(request.param))
+    return request.param
+
+
 @pytest.mark.parametrize("dark", [False, True])
-def test_every_control_is_reachable_at_the_starting_size(display, h, dark):
+def test_every_control_is_reachable_at_the_starting_size(screen, h, dark):
     """The window starts at the size its layout asks for, or what the screen allows: every control is in view, except
-    in the Add form, which scrolls when the screen is too small and brings each control into view."""
+    in the Add form and the app's detail pane, which scroll when the screen is too small and bring each control into
+    view. Nothing is past the right edge: rows of buttons wrap."""
     h.add()
     root = tk.Tk()
     try:
@@ -369,8 +398,10 @@ def test_every_control_is_reachable_at_the_starting_size(display, h, dark):
         root.update()
         for key in window.pages:
             window.show(key)
+            window.catalogs.open()  # the Catalogs card opens on request: check what it holds
             root.update()
-            scroll = window.add_scroll if key == "add" else None
+            root.update()
+            scrolls = {"add": [window.add_scroll], "apps": [window.card_scroll]}.get(key, [])
             segments = list(window.segments) if key == "add" else [None]
             for segment in segments:  # the Access card shows one list at a time
                 if segment:
@@ -381,11 +412,12 @@ def test_every_control_is_reachable_at_the_starting_size(display, h, dark):
                 for widget in _controls(window.pages[key]):
                     if any(str(widget).startswith(h) for h in hidden):
                         continue  # another segment's list: checked when its segment is shown
-                    if scroll and str(widget).startswith(str(scroll.body)):
-                        scroll.see(widget)
-                        root.update()
-                        _assert_inside(widget, scroll.canvas, (key, segment))
-                    _assert_inside(widget, root, (key, segment))
+                    for scroll in scrolls:
+                        if str(widget).startswith(str(scroll.body)):
+                            scroll.see(widget)
+                            root.update()
+                            _assert_inside(widget, scroll.canvas, (screen, key, segment))
+                    _assert_inside(widget, root, (screen, key, segment))
         assert root.winfo_width() >= min(root.winfo_reqwidth(), root.winfo_screenwidth() - 40)
         assert root.winfo_height() >= min(root.winfo_reqheight(), root.winfo_screenheight() - 80)
     finally:
@@ -443,7 +475,7 @@ def _open_permissions(window, monkeypatch, act):
     """Run permissions_editor with `act(top, editors, buttons)` standing in for the person at the dialog."""
     def fake_wait(top, focus=None):
         top.update()
-        editors = {w.cget("text"): w for w in _walk(top) if isinstance(w, (dialogs.ListEditor, dialogs.PortalChecks))}
+        editors = {w.title: w for w in _walk(top) if isinstance(w, (dialogs.ListEditor, dialogs.PortalChecks))}
         buttons = {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)}
         act(top, editors, buttons)
 
@@ -462,7 +494,7 @@ def test_permissions_editor_shows_and_changes_the_limits(window, monkeypatch):
 
     def act(top, ed, bt):
         box = next(w for w in _walk(top) if isinstance(w, dialogs.ttk.LabelFrame) and w.cget("text") == "Permissions")
-        _size, memory, cpu, tasks = [w for w in box.winfo_children() if type(w) is dialogs.ttk.Entry]
+        _size, memory, cpu, tasks = [w for w in _walk(box) if type(w) is dialogs.ttk.Entry]
         assert (memory.get(), cpu.get(), tasks.get()) == ("2G", "", "")
         memory.delete(0, "end")  # emptied: the limit goes
         cpu.insert(0, "150%")
@@ -501,7 +533,7 @@ def test_permissions_editor_shows_the_granted_portals_and_builds_the_changes(win
         checks["OpenURI"].set(True)
         bt["Review changes…"].invoke()
 
-    monkeypatch.setattr(dialogs, "_wait", lambda top, focus=None: act(top, {w.cget("text"): w for w in _walk(top) if isinstance(
+    monkeypatch.setattr(dialogs, "_wait", lambda top, focus=None: act(top, {w.title: w for w in _walk(top) if isinstance(
         w, dialogs.PortalChecks)}, {w.cget("text"): w for w in _walk(top) if isinstance(w, dialogs.ttk.Button)}))
     got = dialogs.permissions_editor(window.root, "app", state)
     assert got["portal_interfaces"] == ("OpenURI", "Usb")
@@ -514,10 +546,16 @@ def test_permissions_editor_cancel_returns_none_and_every_editor_fits_the_screen
 
     def act(top, ed, bt):
         seen["titles"] = sorted(ed)
-        for widget in ed.values():
+        lists = next(w for w in _walk(top) if isinstance(w, dialogs.Segmented))
+        for key, widget in lists.editors.items():  # one list at a time, each behind its segment
+            lists.current.set(key)
+            lists.show()
+            top.update()
             assert widget.winfo_ismapped()
             assert widget.winfo_rooty() + widget.winfo_height() <= top.winfo_screenheight()
             assert widget.winfo_rootx() + widget.winfo_width() <= top.winfo_screenwidth()
+        # compact enough for a 1024x768 screen with the desktop's panels: well under its height
+        assert top.winfo_reqwidth() <= 760 and top.winfo_reqheight() <= 600, (top.winfo_reqwidth(), top.winfo_reqheight())
         for name in ("Review changes…", "Cancel"):
             assert bt[name].winfo_ismapped() and bt[name].winfo_rooty() + bt[name].winfo_height() <= top.winfo_screenheight()
         bt["Cancel"].invoke()
@@ -688,3 +726,29 @@ def test_the_chooser_lists_folders_first_filters_and_returns_the_real_path(windo
     assert names[0] == ["Sub", "b.AppImage", textsafe.clean("evil\x1b[31m.AppImage", 200)]
     assert "\x1b" not in "".join(names[0] + names[1]) and "a.txt" in names[1] and ".hidden.AppImage" not in names[1]
     assert got == str(tmp_path / "evil\x1b[31m.AppImage")  # the name shown is cleaned, the path is the real one
+
+
+def test_a_flow_row_wraps_instead_of_cutting_off(window):
+    frame = tk.Toplevel(window.root)
+    flow = dialogs.Flow(frame)
+    flow.pack(fill="x")
+    buttons = [flow.add(dialogs.ttk.Button(flow, text=f"A rather long button {i}")) for i in range(4)]
+    frame.geometry("900x200")
+    frame.update()
+    assert len({b.winfo_y() for b in buttons}) == 1  # room for one row
+    frame.geometry("300x200")
+    frame.update()
+    frame.update()
+    assert len({b.winfo_y() for b in buttons}) == 4  # one per row, none past the right edge
+    assert all(b.winfo_x() + b.winfo_width() <= flow.winfo_width() for b in buttons)
+    assert flow.winfo_height() >= sum(b.winfo_height() for b in buttons)
+    frame.destroy()
+
+
+def test_the_catalogs_card_is_closed_until_opened(window):
+    window.show("search")
+    window.root.update()
+    assert not window.catalogs.body.winfo_ismapped()
+    window.catalogs.header.invoke()
+    window.root.update()
+    assert window.catalogs.body.winfo_ismapped() and window.catalogs.header.cget("text").startswith("▾")
