@@ -21,7 +21,7 @@ pieces depend on each other. To follow the code itself, command by command, read
 | Desktop | `desktop.py`, `pngclean.py` |
 | Catalog | `catalog.py`, `indexstore.py`, `index.py` |
 | Text and output | `textsafe.py`, `console.py`, `errors.py` |
-| Window | `gui/`: a tkinter front end that builds command lines and runs the same CLI; `theme.py` and `icons.py` draw its look |
+| Window | `gui/`: a tkinter front end that builds command lines and runs the same CLI; `theme.py` and `icons.py` draw its look, `files.py` is its file chooser |
 
 ## Acquisition
 

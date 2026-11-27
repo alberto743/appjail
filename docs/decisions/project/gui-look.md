@@ -17,8 +17,16 @@ output pane that opens when a command runs and colours errors, warnings and note
 lines and runs the same CLI.
 
 - **Dark or light** follows the desktop: at start the window reads `color-scheme` from the Settings portal
-  (`org.freedesktop.portal.Settings.ReadOne`, with `dbus-send`, a one-second limit) and starts light when it cannot.
-  The switch in the sidebar changes it for the session; nothing is saved.
+  (`org.freedesktop.portal.Settings.ReadOne`, with `dbus-send`, a one-second limit) on a thread. It waits a quarter of
+  a second for the answer, starts light without one, and turns dark if a late answer says so. The switch in the sidebar
+  changes it for the session; nothing is saved.
+- **Nothing slow on the drawing thread.** Commands already ran on a worker thread; searching the catalogs (each search
+  reads them) and reading an app's portal grants from the session bus now do too, so a large catalog or a slow bus never
+  freezes the window. A newer search replaces one still running.
+- **Its own dialogs.** Tk's stock message box, text prompt and file chooser ignore the theme on X11 (grey, square,
+  light in dark mode), so the window has its own: a notice, a one-line prompt and a chooser (`gui/files.py`) with
+  places, folders first, a pattern such as AppImages, and hidden files on request. Names are shown cleaned of control
+  characters; the path returned is the real one.
 - **App icons** are the ones `desktop` installed, already rewritten by `pngclean` ([icons](../desktop/icons.md)). The
   window decodes that file in Python, scales it and encodes a new PNG; Tk only ever decodes images appjail wrote. The
   decoding runs on a thread, since a large icon takes a moment in Python; an app without an icon gets a stand-in, a

@@ -68,7 +68,7 @@ def main(out, size="1280x800"):
     setup(Path(tempfile.mkdtemp(dir=Path.home())))  # not under /tmp: appjail refuses to grant a directory there
     import tkinter as tk
 
-    from appjail.gui import app, dialogs
+    from appjail.gui import app, dialogs, files
     from appjail.gui import apps as gui_apps
     from appjail.gui.console import Request
 
@@ -106,6 +106,10 @@ def main(out, size="1280x800"):
         root.after(700, lambda: grab("confirm"))
         dialogs.answer(root, Request("confirm", "Install lagrange with these permissions?",
                                      review=("Source     : github:skyjake/lagrange", "Permissions: network, gpu, audio")))
+        root.after(700, lambda: grab("chooser"))
+        files.choose_file(root, "Choose an AppImage", patterns=[("AppImages", "*.appimage")])
+        root.after(700, lambda: grab("notice"))
+        dialogs.notice(root, "cannot read the manifest: an example of an error message", error=True)
         root.destroy()
     print(f"screenshots in {out}")
 

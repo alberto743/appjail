@@ -4,13 +4,81 @@
 """Modal dialogs: the answers to a command's prompts, an options form, and the permissions editor."""
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import ttk
 
 from ..grants import PORTAL_DESCRIPTIONS, PORTAL_OPT_IN
 from ..manifest import AUDIO_MODES, DEFAULT_AUDIO_MODE, DEFAULT_DISPLAY_SIZE, DISPLAYS
+from ..permargs import PERMISSION_FLAGS
 
 LIMIT_LABELS = (("memory_max", "memory limit (2G, 50%)"), ("cpu_quota", "CPU limit (200% = 2 CPUs)"), ("tasks_max", "process limit (512, 20%)"))
-from ..permargs import PERMISSION_FLAGS
+
+
+def autohide_pack(bar, widget, **pack):
+    """A scroll command that shows the scroll bar (packed beside `widget`) only while there is something to scroll."""
+    def set_(lo, hi):
+        bar.set(lo, hi)
+        if float(lo) <= 0.0 and float(hi) >= 1.0:
+            bar.pack_forget()
+        elif not bar.winfo_manager():
+            bar.pack(before=widget, **pack)
+    return set_
+
+
+class HintEntry(ttk.Entry):
+    """An entry that shows a muted hint while it is empty (a label over it; the text variable holds only what is typed)."""
+
+    def __init__(self, parent, hint, textvariable, **options):
+        super().__init__(parent, textvariable=textvariable, **options)
+        self.hint = ttk.Label(self, text=hint, style="Hint.TLabel", cursor="xterm")
+        self.hint.bind("<Button-1>", lambda _e: self.focus_set())
+        textvariable.trace_add("write", lambda *_: self._update(textvariable))
+        self._update(textvariable)
+
+    def _update(self, var):
+        if var.get():
+            self.hint.place_forget()
+        else:
+            self.hint.place(x=8, rely=0.5, anchor="w")
+
+
+def notice(parent, text, error=False, title="appjail"):
+    """A message with one OK button, in the window's theme (Tk's own message box ignores it)."""
+    top = _modal(parent, title)
+    frame = ttk.Frame(top, padding=16)
+    frame.pack(fill="both", expand=True)
+    if error:
+        ttk.Label(frame, text="Something went wrong", style="ErrorHeading.TLabel").pack(anchor="w", pady=(0, 4))
+    ttk.Label(frame, text=text, wraplength=460, justify="left").pack(anchor="w")
+    ok = ttk.Button(frame, text="OK", style="Accent.TButton", command=top.destroy)
+    ok.pack(anchor="e", pady=(14, 0))
+    for key in ("<Return>", "<Escape>", "<KP_Enter>"):
+        top.bind(key, lambda _e: top.destroy())
+    _wait(top, ok)
+
+
+def ask_text(parent, title, prompt, ok="OK"):
+    """One line of text, or None when cancelled."""
+    result = {"value": None}
+    top = _modal(parent, title)
+    frame = ttk.Frame(top, padding=16)
+    frame.pack(fill="both", expand=True)
+    ttk.Label(frame, text=prompt, wraplength=460, justify="left").pack(anchor="w", pady=(0, 6))
+    var = tk.StringVar()
+    entry = ttk.Entry(frame, textvariable=var, width=52)
+    entry.pack(fill="x")
+
+    def done(value):
+        result["value"] = value
+        top.destroy()
+
+    buttons = ttk.Frame(frame)
+    buttons.pack(fill="x", pady=(14, 0))
+    ttk.Button(buttons, text=ok, style="Accent.TButton", command=lambda: done(var.get())).pack(side="right")
+    ttk.Button(buttons, text="Cancel", command=lambda: done(None)).pack(side="right", padx=6)
+    entry.bind("<Return>", lambda _e: done(var.get()))
+    top.bind("<Escape>", lambda _e: done(None))
+    _wait(top, entry)
+    return result["value"]
 
 
 def _modal(parent, title):
@@ -18,6 +86,7 @@ def _modal(parent, title):
     top.title(title)
     top.transient(parent)
     top.resizable(True, True)
+    top.configure(highlightthickness=1)  # an edge where no window manager draws one
     return top
 
 
@@ -176,8 +245,8 @@ class ListEditor(ttk.LabelFrame):
         self.rowconfigure(0, weight=1)
 
     def choose(self):
-        path = filedialog.askdirectory(parent=self, title="Directory") if self.browse == "dir" else \
-            filedialog.askopenfilename(parent=self, title="File")
+        from . import files  # here: files builds on this module
+        path = files.choose_folder(self, "Choose a folder") if self.browse == "dir" else files.choose_file(self, "Choose a file")
         if path:
             self.var.set(path + (":rw" if self.writable.get() else ""))
             self.add()
@@ -289,7 +358,7 @@ def options_dialog(parent, title, fields, intro="", ok="Continue", validate=None
         value = {k: (w.values() if isinstance(w, (ListEditor, ChoiceList)) else w.get()) for k, w in widgets.items()}
         problem = validate(value) if validate else None
         if problem:
-            messagebox.showerror("appjail", problem, parent=top)
+            notice(top, problem, error=True)
             return
         result["value"] = value
         top.destroy()

@@ -115,7 +115,7 @@ def test_the_private_redirect_choice_is_for_urls_only_and_a_search_hit_never_car
 def test_open_file_asks_whether_the_app_may_change_it(window, monkeypatch):
     launched = []
     monkeypatch.setattr(window, "launch", launched.append)
-    monkeypatch.setattr(app.filedialog, "askopenfilename", lambda **kw: "/data/-notes.txt")
+    monkeypatch.setattr(app.files, "choose_file", lambda *a, **kw: "/data/-notes.txt")
     for rw in (False, True):
         monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, _rw=rw, **kw: {"rw": _rw})
         window._open_file("app")
@@ -138,7 +138,7 @@ def test_the_update_dialog_and_the_catalog_buttons_send_the_new_options(window, 
     window.index_private.set(True)
     window._index("update")
     assert seen[-1] == ["index", "update", "db", "--commit", "b" * 40, "--allow-private-redirects"]
-    monkeypatch.setattr(app.simpledialog, "askstring", lambda *a, **kw: "https://x.example/c.json")
+    monkeypatch.setattr(app.dialogs, "ask_text", lambda *a, **kw: "https://x.example/c.json")
     window._index_add("--url")
     assert seen[-1] == ["index", "add", "db", "--url", "https://x.example/c.json", "--allow-private-redirects"]
 
@@ -404,7 +404,7 @@ def test_on_a_tall_screen_the_add_form_does_not_scroll(window):
 
 def test_choice_list_returns_the_selected_types_and_keeps_the_form_open_on_a_problem(window, monkeypatch):
     shown = []
-    monkeypatch.setattr(dialogs.messagebox, "showerror", lambda *a, **k: shown.append(a[1]))
+    monkeypatch.setattr(dialogs, "notice", lambda parent, text, **k: shown.append(text))
     calls = []
 
     def fake_wait(top, focus=None):
@@ -532,6 +532,7 @@ def test_search_hit_goes_to_the_add_tab(window, monkeypatch):
     monkeypatch.setattr(app.apps, "search_hits", lambda *_a: (hits, 2, ["db"]))
     window.keywords.set("app")
     window._search()
+    pump(window, lambda: len(window.hit_tree.get_children()) == 2)
     assert len(window.hit_tree.get_children()) == 2
     window.hit_tree.selection_set("1")
     window.root.update()
@@ -542,3 +543,148 @@ def test_search_hit_goes_to_the_add_tab(window, monkeypatch):
     window._use_hit()
     assert (window.kind.get(), window.source.get()) == ("github", "o/good")
     assert window.page.get() == "add" and window.add_tab.winfo_manager() == "grid"
+
+
+def test_the_filter_narrows_the_list_and_says_when_nothing_matches(display, h):
+    h.add(extra=["--name", "lagrange"], source="skyjake/lagrange")
+    h.add(extra=["--name", "htop"], source="pkgforge-dev/htop-AppImage")
+    root = tk.Tk()
+    try:
+        w = app.App(root)
+        assert w.tree.get_children() == ("htop", "lagrange")
+        w.filter.set("LAG")
+        assert w.tree.get_children() == ("lagrange",) and w.tree.selection() == ("lagrange",)
+        w.filter.set("GITHUB:O/")  # the source counts too (the test harness installs both from o/App)
+        assert w.tree.get_children() == ("htop", "lagrange")
+        w.filter.set("nothing-like-this")
+        root.update()
+        assert w.tree.get_children() == () and w.no_match.winfo_ismapped()
+        assert w.card_title.cget("text") == "Select an app"  # apps exist: not the empty state
+        w.filter.set("")
+        root.update()
+        assert len(w.tree.get_children()) == 2 and not w.no_match.winfo_ismapped()
+        assert w.filter_entry.hint.winfo_ismapped()
+    finally:
+        root.destroy()
+
+
+def test_an_older_search_never_replaces_a_newer_one(window, monkeypatch):
+    import threading
+    release = threading.Event()
+    hit = app.apps.index.Hit
+
+    def slow(words, limit, show_all):
+        if words == "first":
+            release.wait(5)
+        return [hit(words, "", "github:o/" + words, "", "db")], 1, ["db"]
+    monkeypatch.setattr(app.apps, "search_hits", slow)
+    window.keywords.set("first")
+    window._search()
+    window.keywords.set("second")
+    window._search()
+    pump(window, lambda: window.hit_tree.get_children() == ("0",))
+    release.set()
+    for _ in range(20):
+        window.root.update()
+        time.sleep(0.02)
+    assert [h.name for h in window.hits] == ["second"]
+
+
+def test_a_search_problem_is_reported_not_raised(window, monkeypatch):
+    def missing(*a):
+        raise app.IndexProblem("no local index; run `appjail index update` first")
+    monkeypatch.setattr(app.apps, "search_hits", missing)
+    window.keywords.set("x")
+    window._search()
+    pump(window, lambda: "no local index" in window.status.get())
+    assert "error: no local index" in window.log.get("1.0", "end")
+
+
+def test_the_portals_dialog_waits_for_the_bus_without_freezing_the_window(window, monkeypatch):
+    import threading
+    release = threading.Event()
+    monkeypatch.setattr(app.apps, "portal_grants", lambda name: (release.wait(5), (["Portal interfaces: none"], []))[1])
+    shown, seen = [], []
+    monkeypatch.setattr(app.dialogs, "options_dialog", lambda *a, **k: shown.append(a[1]) or {"all": True})
+    monkeypatch.setattr(window, "run", lambda command, label=None: seen.append(command))
+    window._portals("app")
+    window._portals("app")  # a second click while the first waits does nothing
+    window.root.update()
+    assert window.status.get() == "reading the portal grants…" and shown == []
+    release.set()
+    pump(window, lambda: shown)
+    assert shown == ["Portal grants of app"] and seen == [app.argv.portals_argv("app", [], True)]
+
+
+def test_a_late_dark_answer_is_followed_once_the_window_is_up(display, h, monkeypatch):
+    import threading
+    release = threading.Event()
+    monkeypatch.setattr(app, "DARK_WAIT", 0.01)
+    monkeypatch.setattr(app.theme, "prefers_dark", lambda: release.wait(5))
+    root = tk.Tk()
+    try:
+        w = app.App(root)
+        assert not w.theme.dark  # did not wait for the desktop
+        release.set()
+        pump(w, lambda: w.theme.dark)
+        assert w.dark.get()
+    finally:
+        root.destroy()
+
+
+def test_the_themed_notice_and_text_prompt(window, monkeypatch):
+    def press(name):
+        def fake_wait(top, focus=None):
+            top.update()
+            buttons = {b.cget("text"): b for b in _walk(top) if isinstance(b, dialogs.ttk.Button)}
+            entries = [e for e in _walk(top) if isinstance(e, dialogs.ttk.Entry)]
+            if entries:
+                entries[0].insert(0, "https://x.example/c.json")
+            labels = [lab.cget("text") for lab in _walk(top) if isinstance(lab, dialogs.ttk.Label)]
+            seen.append(labels)
+            buttons[name].invoke()
+        return fake_wait
+    seen = []
+    monkeypatch.setattr(dialogs, "_wait", press("OK"))
+    dialogs.notice(window.root, "bad thing", error=True)
+    assert seen[-1][:2] == ["Something went wrong", "bad thing"]
+    monkeypatch.setattr(dialogs, "_wait", press("Add"))
+    assert dialogs.ask_text(window.root, "t", "URL:", ok="Add") == "https://x.example/c.json"
+    monkeypatch.setattr(dialogs, "_wait", press("Cancel"))
+    assert dialogs.ask_text(window.root, "t", "URL:") is None
+
+
+def test_the_chooser_lists_folders_first_filters_and_returns_the_real_path(window, monkeypatch, tmp_path):
+    from appjail.gui import files
+    (tmp_path / "Sub").mkdir()
+    (tmp_path / "b.AppImage").write_bytes(b"x")
+    (tmp_path / "a.txt").write_bytes(b"x")
+    (tmp_path / ".hidden.AppImage").write_bytes(b"x")
+    (tmp_path / "evil\x1b[31m.AppImage").write_bytes(b"x")
+    names = []
+
+    def act(top, focus=None):
+        chooser = next(c for c in _choosers)
+        top.update()
+        names.append([chooser.tree.item(i, "text") for i in chooser.tree.get_children()])
+        chooser.pattern.set("All files")
+        chooser.refresh()
+        names.append([chooser.tree.item(i, "text") for i in chooser.tree.get_children()])
+        assert str(chooser.ok.cget("state")) == "disabled"  # a folder is selected first: nothing to open
+        iid = next(i for i, (n, _d) in chooser.names.items() if n.startswith("evil"))
+        chooser.tree.selection_set(iid)
+        chooser.activate()
+
+    _choosers = []
+    real_init = files.Chooser.__init__
+
+    def init(self, *a, **k):
+        _choosers.append(self)
+        real_init(self, *a, **k)
+    monkeypatch.setattr(files.Chooser, "__init__", init)
+    monkeypatch.setattr(dialogs, "_wait", act)
+    got = files.Chooser(window.root, "Pick", patterns=[("AppImages", "*.appimage")], start=tmp_path).result
+    from appjail import textsafe
+    assert names[0] == ["Sub", "b.AppImage", textsafe.clean("evil\x1b[31m.AppImage", 200)]
+    assert "\x1b" not in "".join(names[0] + names[1]) and "a.txt" in names[1] and ".hidden.AppImage" not in names[1]
+    assert got == str(tmp_path / "evil\x1b[31m.AppImage")  # the name shown is cleaned, the path is the real one

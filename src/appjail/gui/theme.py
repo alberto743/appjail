@@ -125,6 +125,8 @@ class Theme:
         # clam paints a widget's background lighter when hovered or disabled; behind the rounded images that shows as corners
         s.map(".", foreground=[("disabled", p["disabled"])],
               background=[("disabled", p["bg"]), ("pressed", p["bg"]), ("active", p["bg"]), ("selected", p["bg"])])
+        for style in ("TButton", "TCheckbutton", "TRadiobutton"):  # clam maps these itself, ahead of "."
+            s.map(style, background=[("disabled", p["bg"]), ("pressed", p["bg"]), ("active", p["bg"])])
         s.configure("Rule.TFrame", background=p["border"])
         s.layout("Bare.TLabelframe", [("Frame.border", {"sticky": "nsew"})])
         s.configure("Bare.TLabelframe", borderwidth=0, relief="flat")
@@ -210,6 +212,8 @@ class Theme:
         s.configure("Title.TLabel", font=self.fonts["title"])
         s.configure("Heading.TLabel", font=self.fonts["heading"])
         s.configure("Strong.TLabel", font=self.fonts["strong"])
+        s.configure("ErrorHeading.TLabel", font=self.fonts["strong"], foreground=p["danger"])
+        s.configure("Hint.TLabel", background=p["field"], foreground=p["muted"])
         s.configure("Side.TFrame", background=p["side"])
         s.configure("Side.TLabel", background=p["side"], foreground=p["muted"])
         s.configure("Brand.TLabel", background=p["side"], foreground=p["text"], font=self.fonts["heading"])
@@ -252,7 +256,8 @@ class Theme:
                                ("*Listbox.highlightThickness", 1), ("*Listbox.highlightColor", p["accent"]),
                                ("*Listbox.highlightBackground", p["line"]), ("*Listbox.borderWidth", 0),
                                ("*Listbox.activeStyle", "none"), ("*Canvas.background", p["bg"]),
-                               ("*Toplevel.background", p["bg"]), ("*Menu.background", p["field"]), ("*Menu.foreground", p["text"])):
+                               ("*Toplevel.background", p["bg"]), ("*Toplevel.highlightBackground", p["line"]),
+                               ("*Toplevel.highlightColor", p["line"]), ("*Menu.background", p["field"]), ("*Menu.foreground", p["text"])):
             r.option_add(pattern, value)
         self.recolor(r)
 

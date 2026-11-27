@@ -327,6 +327,26 @@ def logo(side):
     return c.png()
 
 
+def folder(side, margin=0, colour="#f2b443"):
+    """A folder: a tab and a body, for the file chooser."""
+    s = side / 18
+    c = Canvas(side + margin, side)
+    c.paint(rounded_rect(1 * s, 3 * s, 9 * s, 8 * s, 1.5 * s), colour)
+    c.paint(rounded_rect(1 * s, 5 * s, 17 * s, 15.5 * s, 2 * s), colour)
+    c.paint(rounded_rect(1 * s, 7 * s, 17 * s, 15.5 * s, 2 * s), "#ffffff", 0.25)
+    return c.png()
+
+
+def document(side, margin=0, colour="#94a3b8"):
+    """A page with two lines of text, for the file chooser."""
+    s = side / 18
+    c = Canvas(side + margin, side)
+    c.paint(rounded_rect(3.5 * s, 1 * s, 14.5 * s, 17 * s, 2 * s), colour)
+    c.paint(rounded_rect(5 * s, 2.5 * s, 13 * s, 15.5 * s, 1 * s), "#ffffff")
+    c.paint(union(segment(6.5 * s, 7 * s, 11.5 * s, 7 * s, 1.2 * s), segment(6.5 * s, 10 * s, 11.5 * s, 10 * s, 1.2 * s)), colour)
+    return c.png()
+
+
 # soft, distinct hues for apps without an icon; the same name always gets the same one
 STAND_IN_HUES = ("#0ea5e9", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4899", "#6366f1", "#14b8a6")
 

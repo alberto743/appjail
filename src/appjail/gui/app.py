@@ -8,32 +8,23 @@ import base64
 import queue
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
 from tkinter import font as tkfont
+from tkinter import ttk
 
 from .. import cli, manifest, textsafe, tools
 from ..catalog import IndexProblem
 from ..permargs import PERMISSION_FLAGS
-from . import apps, argv, dialogs, icons, theme, worker
+from . import apps, argv, dialogs, files, icons, theme, worker
+from .dialogs import autohide_pack as autohide
 
 POLL_MS = 60
+DARK_WAIT = 0.25  # seconds the window waits for the desktop's dark-mode setting before starting light
 KEEP = "(unchanged)"
 PAGES = (("apps", "Apps"), ("add", "Add"), ("search", "Search"), ("tools", "Tools"))
 LIST_ICON, CARD_ICON = 32, 64  # sides of an app's icon in the list and in the detail pane, at 96 dpi
 # how a line of output is coloured: (tag, prefix)
 LOG_TAGS = (("cmd", "$ appjail"), ("err", "error:"), ("warn", "! warning:"), ("note", "note:"), ("ok", "-- exit status 0 --"),
             ("err", "-- exit status"), ("err", "cancelled"))
-
-
-def autohide(bar, widget, **pack):
-    """A yscrollcommand that shows the scroll bar (packed beside `widget`) only while there is something to scroll."""
-    def set_(lo, hi):
-        bar.set(lo, hi)
-        if float(lo) <= 0.0 and float(hi) >= 1.0:
-            bar.pack_forget()
-        elif not bar.winfo_manager():
-            bar.pack(before=widget, **pack)
-    return set_
 
 
 class Scrolled(ttk.Frame):
@@ -92,7 +83,15 @@ class App:
         root.title(f"appjail {cli.version_string()}")
         # width caps are in pixels for a 96 dpi screen; Tk's scaling follows the real one, and so do the fonts
         self.scale = max(float(root.tk.call("tk", "scaling")) / (96 / 72), 1.0)
-        self.theme = theme.Theme(root, theme.prefers_dark() if dark is None else dark, self.scale)
+        self.calls = queue.Queue()  # (function, result, error) of work done off the Tk thread, run by _poll
+        asked = {}
+        if dark is None:  # the portal usually answers at once; a slow one must not hold the window back
+            probe = threading.Thread(target=lambda: asked.setdefault("dark", theme.prefers_dark()), daemon=True)
+            probe.start()
+            probe.join(DARK_WAIT)
+            if probe.is_alive():
+                self._when_done(probe, lambda: asked.get("dark"))
+        self.theme = theme.Theme(root, asked.get("dark", False) if dark is None else dark, self.scale)
         font = tkfont.nametofont("TkDefaultFont")
         # ttk keeps a fixed row height: on a larger font the rows would overlap and cut the text
         ttk.Style().configure("Treeview", rowheight=font.metrics("linespace") + self.px(10))
@@ -103,6 +102,8 @@ class App:
         self.background = []  # event queues of detached children (run, open)
         self.busy = False
         self.names_before_add = None  # (names, rw) while an add waits for its file-types follow-up
+        self.search_seq = 0  # the newest search; the results of an older one are dropped
+        self.portals_pending = False
         self.images = {}  # PhotoImages by key; Tk forgets an image nobody holds
         self.icon_keys = {}  # app name: the icon_key its images were made from
         self.status = tk.StringVar(value="ready")
@@ -141,6 +142,26 @@ class App:
 
     def px(self, n):
         return self.theme.px(n)
+
+    def off_thread(self, work, done):
+        """Run work() on a thread, then done(result, error) on the Tk thread (from _poll)."""
+        def run():
+            try:
+                self.calls.put((done, work(), None))
+            except Exception as e:  # noqa: BLE001  (handed to done, which decides)
+                self.calls.put((done, None, e))
+        threading.Thread(target=run, daemon=True).start()
+
+    def _when_done(self, probe, answer):
+        """The desktop answered the dark-mode question late: follow it once the window is up."""
+        def wait():
+            probe.join()
+            return answer()
+        def follow(dark, _error):
+            if dark and not self.theme.dark:
+                self.dark.set(True)
+                self.toggle_dark()
+        self.off_thread(wait, follow)
 
     def _photo(self, key, png):
         image = self.images.get(key)
@@ -277,6 +298,12 @@ class App:
             if self._drain(q, foreground=False):
                 self.background.remove(q)
         self._take_icons()
+        while True:
+            try:
+                done, result, error = self.calls.get_nowait()
+            except queue.Empty:
+                break
+            done(result, error)
         self.root.after(POLL_MS, self._poll)
 
     def _drain(self, q, foreground):
@@ -352,21 +379,34 @@ class App:
     # --- Apps -------------------------------------------------------------------------------------------------------
 
     def refresh(self):
+        self.rows = apps.rows()
+        self._load_icons([row[0] for row in self.rows])
+        count = len(self.rows)
+        self.pages["apps"].subtitle.configure(text=f"{count} installed, each in its own jail" if count else "Nothing installed yet")
+        self._fill_list()
+
+    def _fill_list(self):
+        """The list shows the apps whose name or source contains the filter text; the selection is kept when shown."""
         keep = self.tree.selection()
         self.tree.delete(*self.tree.get_children())
-        rows = apps.rows()
-        self._load_icons([row[0] for row in rows])
-        for row in rows:
+        query = self.filter_text().lower()
+        shown = [row for row in self.rows if query in row[0].lower() or query in row[2].lower()]
+        for row in shown:
             self.tree.insert("", "end", iid=row[0], text=row[0], image=self.icon(row[0], LIST_ICON), values=row[1:])
         self._fit_columns()
         keep = [k for k in keep if self.tree.exists(k)]
         if keep:
             self.tree.selection_set(keep)
-        elif rows:
-            self.tree.selection_set(rows[0][0])
-        count = len(rows)
-        self.pages["apps"].subtitle.configure(text=f"{count} installed, each in its own jail" if count else "Nothing installed yet")
+        elif shown:
+            self.tree.selection_set(shown[0][0])
+        if self.rows and not shown:
+            self.no_match.place(relx=0.5, rely=0.3, anchor="center")
+        else:
+            self.no_match.place_forget()
         self._show_detail()
+
+    def filter_text(self):
+        return self.filter.get().strip()
 
     def _fit_window(self):
         """Start at the size the layout asks for (the tallest page), so no button is hidden by default."""
@@ -398,11 +438,11 @@ class App:
         for button in self.app_buttons:
             button.configure(state="normal" if has_app else "disabled")
         if not has_app:
-            self.card_icon.configure(image=self.logo if not self.tree.get_children() else "")
-            self.card_title.configure(text="No apps yet" if not self.tree.get_children() else "Select an app")
-            self.card_subtitle.configure(text="Add one from GitHub, a URL or a file, or find one in the catalogs."
-                                         if not self.tree.get_children() else "")
-            if not self.tree.get_children():
+            empty = not self.rows
+            self.card_icon.configure(image=self.logo if empty else "")
+            self.card_title.configure(text="No apps yet" if empty else "Select an app")
+            self.card_subtitle.configure(text="Add one from GitHub, a URL or a file, or find one in the catalogs." if empty else "")
+            if empty:
                 row = ttk.Frame(self.card_body)
                 row.pack(anchor="w", pady=(self.px(12), 0))
                 ttk.Button(row, text="Add an app", style="Accent.TButton", command=lambda: self.show("add")).pack(side="left")
@@ -439,7 +479,7 @@ class App:
     def selected(self):
         sel = self.tree.selection()
         if not sel:
-            messagebox.showinfo("appjail", "Select an app first.", parent=self.root)
+            dialogs.notice(self.root, "Select an app first.")
             return None
         return sel[0]
 
@@ -452,10 +492,21 @@ class App:
         body.columnconfigure(1, weight=1)
         body.rowconfigure(0, weight=1)
         # the list: icon and name; the rest is in the detail pane
-        holder = ttk.Frame(body, style="Card.TFrame", padding=self.px(4))
-        holder.grid(row=0, column=0, sticky="ns", padx=(0, self.px(14)))
+        left = ttk.Frame(body)
+        left.grid(row=0, column=0, sticky="ns", padx=(0, self.px(14)))
+        self.filter = tk.StringVar()
+        self.filter_entry = dialogs.HintEntry(left, "Filter apps  (Ctrl+F)", textvariable=self.filter)
+        self.filter_entry.pack(fill="x", pady=(0, self.px(8)))
+        self.filter.trace_add("write", lambda *_: self._fill_list())
+        self.filter_entry.bind("<Escape>", lambda _e: (self.filter.set(""), self.tree.focus_set()))
+        self.filter_entry.bind("<Down>", lambda _e: self.tree.focus_set())
+        self.root.bind("<Control-f>", lambda _e: (self.show("apps"), self.filter_entry.focus_set()))
+        holder = ttk.Frame(left, style="Card.TFrame", padding=self.px(4))
+        holder.pack(fill="both", expand=True)
         self.tree = ttk.Treeview(holder, columns=("version", "source", "tier", "permissions", "note"), displaycolumns=(),
                                  show="tree", selectmode="browse", style="Apps.Treeview", height=7)
+        self.no_match = ttk.Label(holder, text="No app matches", style="Muted.TLabel")
+        self.rows = []
         scroll = ttk.Scrollbar(holder, command=self.tree.yview)
         self.tree.configure(yscrollcommand=autohide(scroll, self.tree, side="right", fill="y"))
         self.tree.pack(side="left", fill="both", expand=True)
@@ -546,7 +597,21 @@ class App:
                                           got["pattern"], got["private"]))
 
     def _portals(self, app):
-        header, grants = apps.portal_grants(app)
+        """The grants are read from the session bus on a thread (a slow bus must not freeze the window)."""
+        if self.portals_pending:
+            return
+        self.portals_pending = True
+        self.status.set("reading the portal grants…")
+
+        def done(result, error):
+            self.portals_pending = False
+            self.status.set("ready")
+            if error is not None:
+                raise error
+            self._portals_dialog(app, *result)
+        self.off_thread(lambda: apps.portal_grants(app), done)
+
+    def _portals_dialog(self, app, header, grants):
         ids = {line: doc for doc, line in grants}
         fields = [("choice", "revoke", "Document grants to revoke",
                    {"items": list(ids), "width": 80, "hint": "select none to only list the grants"})] if grants else []
@@ -579,7 +644,7 @@ class App:
             self.run(argv.desktop_argv(app, got["mime"], got["mime_all"], got["rw"]))
 
     def _open_file(self, app):
-        path = filedialog.askopenfilename(parent=self.root, title=f"Open with {app}")
+        path = files.choose_file(self.root, f"Open with {app}")
         if not path:
             return
         got = dialogs.options_dialog(
@@ -592,7 +657,7 @@ class App:
         try:
             old = apps.load_permissions(app)
         except (manifest.ManifestError, OSError) as e:
-            messagebox.showerror("appjail", textsafe.clean(f"cannot read the manifest: {e}"), parent=self.root)
+            dialogs.notice(self.root, textsafe.clean(f"cannot read the manifest: {e}"), error=True)
             return
         new = dialogs.permissions_editor(self.root, app, old)
         if new is None:
@@ -734,7 +799,7 @@ class App:
         self.private_check.configure(state="normal" if kind == "url" else "disabled")
 
     def _browse(self):
-        path = filedialog.askopenfilename(parent=self.root, title="AppImage")
+        path = files.choose_file(self.root, "Choose an AppImage", patterns=[("AppImages", "*.appimage")])
         if path:
             self.kind.set("file")
             self.source.set(path)
@@ -749,7 +814,7 @@ class App:
         form.update({k: ed.values() for k, ed in self.editors.items()})
         form["allow_private_redirects"] = self.private_redirects.get()
         if not form["source"].strip():
-            messagebox.showinfo("appjail", "Give a source first.", parent=self.root)
+            dialogs.notice(self.root, "Give a source first.")
             return
         if argv.defers_menu_entry(form):  # `desktop NAME` follows the install and offers the types the app declares
             form["desktop"] = False
@@ -764,7 +829,7 @@ class App:
         row = ttk.Frame(tab)
         row.pack(fill="x")
         self.keywords = tk.StringVar()
-        entry = ttk.Entry(row, textvariable=self.keywords, width=40)
+        entry = dialogs.HintEntry(row, "Keywords, such as: gemini browser", textvariable=self.keywords, width=40)
         entry.pack(side="left", fill="x", expand=True)
         entry.bind("<Return>", lambda _e: self._search())
         ttk.Button(row, text="Search", style="Accent.TButton", command=self._search).pack(side="left", padx=(self.px(8), 0))
@@ -819,23 +884,38 @@ class App:
             ttk.Button(buttons, text=text, command=action, **({"style": style} if style else {})).pack(side="left", padx=(0, self.px(6)))
 
     def _search(self):
+        """Search the catalogs on a thread (reading a catalog takes a moment); a newer search replaces an older one."""
         words = self.keywords.get().strip()
         if not words:
             return
         limit = self.limit.get().strip()
         if limit and not (limit.isdigit() and int(limit) > 0):
-            messagebox.showerror("appjail", "The limit must be a positive number (or empty for every match).", parent=self.root)
+            dialogs.notice(self.root, "The limit must be a positive number (or empty for every match).", error=True)
             return
         self.hit_tree.delete(*self.hit_tree.get_children())
         self.hits = []
         self._hit_selected()
+        self.search_seq += 1
+        seq = self.search_seq
+        self.status.set("searching the catalogs…")
+        show_all = self.show_all.get()
+        self.off_thread(lambda: apps.search_hits(words, int(limit) if limit.isdigit() else None, show_all),
+                        lambda result, error: self._show_hits(seq, words, result, error))
+
+    def _show_hits(self, seq, words, result, error):
+        if seq != self.search_seq:
+            return  # a newer search is running
         self.say(f"$ appjail search {words}")
-        try:
-            hits, total, searched = apps.search_hits(words, int(limit) if limit.isdigit() else None, self.show_all.get())
-        except IndexProblem as e:
-            self.say(f"error: {e}")
+        if error is not None:
+            if not isinstance(error, IndexProblem):
+                raise error
+            self.say(f"error: {error}")
+            self.status.set(f"search: {error}")
             return
-        self.say(f"{total} match(es) in {', '.join(searched)}" + (f", showing {len(hits)}" if len(hits) < total else ""))
+        hits, total, searched = result
+        summary = f"{total} match(es) in {', '.join(searched)}" + (f", showing {len(hits)}" if len(hits) < total else "")
+        self.say(summary)
+        self.status.set(summary)
         self.hits = hits
         for i, h in enumerate(hits):
             description = h.description + (f" ({h.note})" if h.note else "")
@@ -856,8 +936,7 @@ class App:
             return
         target = argv.add_target(hit.source)
         if target is None:
-            messagebox.showinfo("appjail", f"{hit.name}: appjail cannot install this source ({hit.note or hit.source or 'none given'}).",
-                                parent=self.root)
+            dialogs.notice(self.root, f"{hit.name}: appjail cannot install this source ({hit.note or hit.source or 'none given'}).")
             return
         self.kind.set(target[0])
         self.source.set(target[1])
@@ -873,12 +952,12 @@ class App:
     def _index_add(self, flag):
         name = self.source_name.get().strip()
         if not name:
-            messagebox.showinfo("appjail", "Type a name for the new source first.", parent=self.root)
+            dialogs.notice(self.root, "Type a name for the new source first.")
             return
         if flag == "--file":
-            where = filedialog.askopenfilename(parent=self.root, title="Catalog file")
+            where = files.choose_file(self.root, "Choose a catalog", patterns=[("Catalogs (JSON)", "*.json")])
         else:
-            where = simpledialog.askstring("appjail", "https URL of the catalog:", parent=self.root)
+            where = dialogs.ask_text(self.root, "Add a catalog", "https URL of the catalog:", ok="Add")
         if where:
             self.run(argv.index_add_argv(name, flag, where, self.index_private.get()))
 
@@ -887,7 +966,7 @@ class App:
         if name:
             self.run(["index", "remove", name])
         else:
-            messagebox.showinfo("appjail", "Type the source name first.", parent=self.root)
+            dialogs.notice(self.root, "Type the source name first.")
 
     # --- Tools ------------------------------------------------------------------------------------------------------
 
