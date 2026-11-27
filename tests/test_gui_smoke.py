@@ -206,19 +206,18 @@ def test_the_gui_never_answers_for_the_user():
         assert "--yes" not in path.read_text(encoding="utf-8"), path.name
 
 
-def test_table_columns_fit_long_real_world_cells(display, h):
+def test_the_list_fits_a_long_name_and_the_detail_pane_shows_the_rest(display, h):
     h.add(extra=["--name", "a-rather-long-application-name"])
     root = tk.Tk()
     try:
         w = app.App(root)
-        w.tree.set("a-rather-long-application-name", "version", "3.5.3@2026-10-02_1790947336")
-        w._fit_columns()
         from tkinter import font as tkfont
         font = tkfont.nametofont("TkDefaultFont")
-        for column in ("name", "version", "source", "permissions"):
-            cell = w.tree.set("a-rather-long-application-name", column)
-            assert int(w.tree.column(column, "width")) >= font.measure(cell), column
-        assert str(w.tree.column("note", "stretch")) in ("1", "True")
+        assert int(w.tree.column("#0", "width")) >= font.measure("a-rather-long-application-name") + w.px(app.LIST_ICON)
+        w.tree.selection_set("a-rather-long-application-name")
+        root.update()
+        assert w.card_title.cget("text") == "a-rather-long-application-name"
+        assert "github:o/App" in w.card_subtitle.cget("text")  # the version and the source, whole, wrapping when long
     finally:
         root.destroy()
 
@@ -241,9 +240,84 @@ def test_detail_line_shows_the_whole_list_entry(display, h):
         w = app.App(root)
         w.tree.selection_set("app")
         root.update()
-        assert "network" in w.detail.get("1.0", "end") and "github:o/App" in w.detail.get("1.0", "end")
+        assert "network" in w.detail.get("1.0", "end") and "display: wayland" in w.detail.get("1.0", "end")
+        chips = [c.cget("text") for c in w.detail.winfo_children() if c.winfo_class() == "TLabel"]
+        assert chips == ["network"]
+        assert all(str(b.cget("state")) == "normal" for b in w.app_buttons)
+        w.tree.selection_set(())
+        root.update()
+        assert all(str(b.cget("state")) == "disabled" for b in w.app_buttons)  # nothing selected: nothing to act on
     finally:
         root.destroy()
+
+
+def test_an_empty_list_offers_the_ways_to_add_an_app(window):
+    assert window.card_title.cget("text") == "No apps yet"
+    buttons = {b.cget("text"): b for b in window.card_body.winfo_children()[0].winfo_children()}
+    buttons["Search the catalogs"].invoke()
+    assert window.page.get() == "search"
+    buttons["Add an app"].invoke()
+    assert window.page.get() == "add"
+
+
+def test_an_installed_icon_replaces_the_stand_in(display, h, monkeypatch, tmp_path):
+    from appjail.gui import icons
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "share"))
+    h.add()
+    root = tk.Tk()
+    try:
+        w = app.App(root)
+        stand_in = w.icon("app", app.LIST_ICON)
+        target = tmp_path / "share/icons/hicolor/48x48/apps/appjail-app.png"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(icons.Canvas(48, 48).paint(icons.circle(24, 24, 20), "#ff0000").png())
+        w.refresh()
+        pump(w, lambda: w.images.get(f"app:app:{app.LIST_ICON}") is not None)
+        assert str(w.tree.item("app", "image")[0]) == str(w.images[f"app:app:{app.LIST_ICON}"]) != str(stand_in)
+        target.write_bytes(b"not a png")  # changed and unusable: back to the stand-in, never Tk decoding the file
+        w.refresh()
+        assert w.images.get(f"app:app:{app.LIST_ICON}") is None
+        assert str(w.tree.item("app", "image")[0]) == str(stand_in)
+    finally:
+        root.destroy()
+
+
+def test_the_dark_switch_recolours_the_window(window):
+    light = window.log.cget("background")
+    window.dark.set(True)
+    window.toggle_dark()
+    assert window.theme.dark and window.log.cget("background") != light
+    assert window.log.cget("background") == app.theme.DARK["log"]
+    window.dark.set(False)
+    window.toggle_dark()
+    assert window.log.cget("background") == light
+
+
+def test_output_is_coloured_by_kind_and_the_pane_opens_for_a_command(window, monkeypatch):
+    monkeypatch.setattr(app.worker, "run_command", lambda *a: None)
+    assert not window.log_shown
+    window.run(["version"])
+    assert window.log_shown and window.output_button.cget("text") == "Hide output"
+    for line in ("error: bad", "! warning: careful", "note: fyi", "-- exit status 0 --", "plain"):
+        window.say(line)
+    tags = {window.log.get(f"{i}.0", f"{i}.end"): window.log.tag_names(f"{i}.0") for i in range(1, 7)}
+    assert tags["$ appjail version"] == ("cmd",) and tags["error: bad"] == ("err",) and tags["! warning: careful"] == ("warn",)
+    assert tags["note: fyi"] == ("note",) and tags["-- exit status 0 --"] == ("ok",) and tags["plain"] == ()
+    window.toggle_log()
+    assert not window.log_shown
+
+
+def test_the_access_segments_count_their_entries(window):
+    window.editors["dirs"].var.set("~/x")
+    window.editors["dirs"].add()
+    assert window.segments["dirs"].cget("text") == "Directories  1"
+    window.access.set("portals")
+    window._show_access()
+    window.root.update()
+    assert window.editors["portals"].winfo_ismapped() and not window.editors["dirs"].winfo_ismapped()
+    window.editors["dirs"].box.selection_set(0)
+    window.editors["dirs"].remove()
+    assert window.segments["dirs"].cget("text") == "Directories"
 
 
 def test_table_rows_are_tall_enough_for_the_font(display, h):
@@ -264,35 +338,68 @@ def test_table_rows_are_tall_enough_for_the_font(display, h):
         root.destroy()
 
 
-def _ancestors(widget):
-    while widget is not None:
-        widget = getattr(widget, "master", None)
-        if widget is not None:
-            yield widget
+def _controls(widget):
+    """The buttons, boxes and fields under `widget`, with each portal list as one (its rows scroll inside it)."""
+    stack = [widget]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, dialogs.PortalChecks):
+            yield w
+            continue
+        stack.extend(w.winfo_children())
+        if w.winfo_class() in ("TButton", "TCheckbutton", "TRadiobutton", "TEntry", "TCombobox"):
+            yield w
 
 
-def test_every_button_is_visible_at_the_starting_size(window):
-    """The window starts at the size its layout asks for: nothing needs enlarging to be reached."""
-    root = window.root
-    root.update()
-    for index in range(window.notebook.index("end")):
-        window.notebook.select(index)
+def _assert_inside(widget, box, where):
+    assert widget.winfo_ismapped(), (where, widget)
+    assert widget.winfo_rooty() >= box.winfo_rooty(), (where, widget)
+    assert widget.winfo_rooty() + widget.winfo_height() <= box.winfo_rooty() + box.winfo_height(), (where, widget)
+    assert widget.winfo_rootx() + widget.winfo_width() <= box.winfo_rootx() + box.winfo_width(), (where, widget)
+
+
+@pytest.mark.parametrize("dark", [False, True])
+def test_every_control_is_reachable_at_the_starting_size(display, h, dark):
+    """The window starts at the size its layout asks for, or what the screen allows: every control is in view, except
+    in the Add form, which scrolls when the screen is too small and brings each control into view."""
+    h.add()
+    root = tk.Tk()
+    try:
+        window = app.App(root, dark=dark)
         root.update()
-        tab = window.notebook.nametowidget(window.notebook.select())
-        stack = [tab]
-        while stack:
-            widget = stack.pop()
-            stack.extend(widget.winfo_children())
-            scrolled = isinstance(widget, dialogs.PortalChecks)  # its list scrolls: the box must fit, not every row in it
-            if widget.winfo_class() in ("TButton", "TCheckbutton", "TEntry", "TCombobox") or scrolled:
-                if widget.winfo_class() == "TCheckbutton" and any(isinstance(a, dialogs.PortalChecks) for a in _ancestors(widget)):
-                    continue
-                assert widget.winfo_ismapped(), (index, widget)
-                assert widget.winfo_rooty() + widget.winfo_height() <= root.winfo_rooty() + root.winfo_height(), (index, widget)
-                assert widget.winfo_rootx() + widget.winfo_width() <= root.winfo_rootx() + root.winfo_width(), (index, widget)
-    # it starts at the requested size, or at what the screen allows
-    assert root.winfo_width() >= min(root.winfo_reqwidth(), root.winfo_screenwidth() - 40)
-    assert root.winfo_height() >= min(root.winfo_reqheight(), root.winfo_screenheight() - 80)
+        for key in window.pages:
+            window.show(key)
+            root.update()
+            scroll = window.add_scroll if key == "add" else None
+            segments = list(window.segments) if key == "add" else [None]
+            for segment in segments:  # the Access card shows one list at a time
+                if segment:
+                    window.access.set(segment)
+                    window._show_access()
+                    root.update()
+                hidden = [str(e) for k, e in getattr(window, "editors", {}).items() if key == "add" and k != segment]
+                for widget in _controls(window.pages[key]):
+                    if any(str(widget).startswith(h) for h in hidden):
+                        continue  # another segment's list: checked when its segment is shown
+                    if scroll and str(widget).startswith(str(scroll.body)):
+                        scroll.see(widget)
+                        root.update()
+                        _assert_inside(widget, scroll.canvas, (key, segment))
+                    _assert_inside(widget, root, (key, segment))
+        assert root.winfo_width() >= min(root.winfo_reqwidth(), root.winfo_screenwidth() - 40)
+        assert root.winfo_height() >= min(root.winfo_reqheight(), root.winfo_screenheight() - 80)
+    finally:
+        root.destroy()
+
+
+def test_on_a_tall_screen_the_add_form_does_not_scroll(window):
+    """The form asks for its whole height: where the screen has room, nothing hides below the fold."""
+    window.show("add")
+    window.root.update()
+    assert int(window.add_scroll.canvas.cget("height")) == window.add_scroll.body.winfo_reqheight()
+    window.root.geometry(f"{window.root.winfo_width()}x{window.root.winfo_height() + 600}")  # a window with room to spare
+    window.root.update()
+    assert window.add_scroll.canvas.yview() == (0.0, 1.0)
 
 
 def test_choice_list_returns_the_selected_types_and_keeps_the_form_open_on_a_problem(window, monkeypatch):
@@ -434,4 +541,4 @@ def test_search_hit_goes_to_the_add_tab(window, monkeypatch):
     assert str(window.use_hit["state"]) == "normal"
     window._use_hit()
     assert (window.kind.get(), window.source.get()) == ("github", "o/good")
-    assert window.notebook.select() == str(window.add_tab)
+    assert window.page.get() == "add" and window.add_tab.winfo_manager() == "grid"

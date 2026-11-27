@@ -72,7 +72,7 @@ def answer(parent, request):
         entry.pack(fill="x")
         first = entry
         entry.bind("<Return>", lambda _e: done(var.get()))
-        ttk.Button(buttons, text="OK", command=lambda: done(var.get())).pack(side="right")
+        ttk.Button(buttons, text="OK", style="Accent.TButton", command=lambda: done(var.get())).pack(side="right")
         ttk.Button(buttons, text="Cancel", command=lambda: done(None)).pack(side="right", padx=6)
     elif request.kind == "confirm":
         yes = ttk.Button(buttons, text="Yes", command=lambda: done(True))
@@ -80,6 +80,7 @@ def answer(parent, request):
         no.pack(side="right")
         yes.pack(side="right", padx=6)
         first = yes if request.default else no
+        first.configure(style="Accent.TButton")  # the default answer is the one that stands out
         for button in (yes, no):  # Return presses the focused button, as in any dialog
             button.bind("<Return>", lambda e: e.widget.invoke())
     else:  # choose
@@ -92,13 +93,24 @@ def answer(parent, request):
                 done(int(sel[0]))
         box.bind("<Double-Button-1>", pick)
         box.bind("<Return>", pick)
-        ttk.Button(buttons, text="OK", command=pick).pack(side="right")
+        ttk.Button(buttons, text="OK", style="Accent.TButton", command=pick).pack(side="right")
         ttk.Button(buttons, text="Cancel", command=lambda: done(None)).pack(side="right", padx=6)
     buttons.pack(fill="x", pady=(10, 0))
     top.protocol("WM_DELETE_WINDOW", lambda: done(None))
     top.bind("<Escape>", lambda _e: done(None))
     _wait(top, first)
     request.reply(result["value"])
+
+
+def autohide_grid(bar):
+    """A scroll command that shows the (gridded) scroll bar only while there is something to scroll."""
+    def set_(lo, hi):
+        bar.set(lo, hi)
+        if float(lo) <= 0.0 and float(hi) >= 1.0:
+            bar.grid_remove()
+        else:
+            bar.grid()
+    return set_
 
 
 def _scrolled_listbox(parent, items, **options):
@@ -116,17 +128,18 @@ def _scrolled_listbox(parent, items, **options):
 
 
 class ListEditor(ttk.LabelFrame):
-    """A list of strings with add and remove. browse="dir" or "file" adds a chooser; for directories a box makes the entry writable."""
+    """A list of strings with add and remove. browse="dir" or "file" adds a chooser; for directories a box makes the entry writable.
+    bare=True draws no frame or title and puts the controls beside the list (the Add page's Access card); on_change() is
+    called when the list changes."""
 
-    def __init__(self, parent, title, values, hint="", browse=None, height=3):
-        super().__init__(parent, text=title, padding=6)
-        self.browse = browse
+    def __init__(self, parent, title, values, hint="", browse=None, height=3, bare=False, on_change=None):
+        super().__init__(parent, text="" if bare else title, padding=0 if bare else 6, **({"style": "Bare.TLabelframe"} if bare else {}))
+        self.title, self.browse, self.on_change = title, browse, on_change
         holder = ttk.Frame(self)  # long names and paths scroll sideways, a long list scrolls down
-        holder.grid(row=0, column=0, columnspan=3, sticky="nsew")
         self.box = tk.Listbox(holder, height=height, width=16, exportselection=False, selectmode="extended")
         down = ttk.Scrollbar(holder, command=self.box.yview)
         across = ttk.Scrollbar(holder, orient="horizontal", command=self.box.xview)
-        self.box.configure(yscrollcommand=down.set, xscrollcommand=across.set)
+        self.box.configure(yscrollcommand=autohide_grid(down), xscrollcommand=autohide_grid(across))
         for v in values:
             self.box.insert("end", v)
         down.grid(row=0, column=1, sticky="ns")
@@ -134,24 +147,31 @@ class ListEditor(ttk.LabelFrame):
         self.box.grid(row=0, column=0, sticky="nsew")
         holder.columnconfigure(0, weight=1)
         holder.rowconfigure(0, weight=1)
+        if bare:
+            holder.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+            controls, first = ttk.Frame(self), 0
+            controls.grid(row=0, column=1, sticky="nw")
+        else:
+            holder.grid(row=0, column=0, columnspan=3, sticky="nsew")
+            controls, first = self, 1
         self.var = tk.StringVar()
-        entry = ttk.Entry(self, textvariable=self.var, width=10)
-        entry.grid(row=1, column=0, sticky="ew")
+        entry = ttk.Entry(controls, textvariable=self.var, width=30 if bare else 10)
+        entry.grid(row=first, column=0, sticky="ew")
         entry.bind("<Return>", lambda _e: self.add())
-        ttk.Button(self, text="Add", width=6, command=self.add).grid(row=1, column=1)
+        ttk.Button(controls, text="Add", width=6, command=self.add).grid(row=first, column=1, padx=(4, 0))
         self.writable = tk.BooleanVar()
-        row = ttk.Frame(self)
-        row.grid(row=2, column=0, columnspan=3, sticky="w", pady=(2, 0))
+        row = ttk.Frame(controls)
+        row.grid(row=first + 1, column=0, columnspan=3, sticky="w", pady=(4, 0))
         ttk.Button(row, text="Remove", command=self.remove).pack(side="left")
         if browse:
             ttk.Button(row, text="Browse…", command=self.choose).pack(side="left", padx=4)
-        below = 3
+        below = first + 2
         if browse == "dir":  # on its own line: a narrow column must not push it out of sight
-            ttk.Checkbutton(self, text="writable (:rw)", variable=self.writable).grid(
+            ttk.Checkbutton(controls, text="writable (:rw)", variable=self.writable).grid(
                 row=below, column=0, columnspan=3, sticky="w")
             below += 1
         if hint:
-            ttk.Label(self, text=hint, foreground="gray40").grid(row=below, column=0, columnspan=3, sticky="w")
+            ttk.Label(controls, text=hint, style="Small.TLabel").grid(row=below, column=0, columnspan=3, sticky="w")
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
@@ -166,11 +186,17 @@ class ListEditor(ttk.LabelFrame):
         v = self.var.get().strip()
         if v and v not in self.values(flush=False):
             self.box.insert("end", v)
+            self._changed()
         self.var.set("")
 
     def remove(self):
         for i in reversed(self.box.curselection()):
             self.box.delete(i)
+        self._changed()
+
+    def _changed(self):
+        if self.on_change:
+            self.on_change()
 
     def values(self, flush=True):
         if flush:
@@ -179,13 +205,15 @@ class ListEditor(ttk.LabelFrame):
 
 
 class PortalChecks(ttk.LabelFrame):
-    """One check box for each opt-in portal, with what it lets the app do beside it; values() are the checked names."""
+    """One check box for each opt-in portal, with what it lets the app do beside it; values() are the checked names.
+    bare and on_change as for ListEditor."""
 
-    def __init__(self, parent, title, selected=(), hint="", wrap=300, height=150):
-        super().__init__(parent, text=title, padding=6)
+    def __init__(self, parent, title, selected=(), hint="", wrap=260, height=150, bare=False, on_change=None):
+        super().__init__(parent, text="" if bare else title, padding=0 if bare else 6, **({"style": "Bare.TLabelframe"} if bare else {}))
+        self.title = title
         holder = ttk.Frame(self)
         holder.pack(fill="both", expand=True)
-        canvas = tk.Canvas(holder, height=height, width=wrap + 120, highlightthickness=0)
+        canvas = tk.Canvas(holder, height=height, width=wrap + 160, highlightthickness=0)
         scroll = ttk.Scrollbar(holder, command=canvas.yview)
         canvas.configure(yscrollcommand=scroll.set)
         inner = ttk.Frame(canvas)
@@ -194,8 +222,8 @@ class PortalChecks(ttk.LabelFrame):
         self.checks = {}
         for row, name in enumerate(PORTAL_OPT_IN):
             self.checks[name] = tk.BooleanVar(value=name in selected)
-            ttk.Checkbutton(inner, text=name, variable=self.checks[name]).grid(row=row, column=0, sticky="nw")
-            ttk.Label(inner, text=PORTAL_DESCRIPTIONS[name], foreground="gray40", wraplength=wrap,
+            ttk.Checkbutton(inner, text=name, variable=self.checks[name], command=on_change).grid(row=row, column=0, sticky="nw")
+            ttk.Label(inner, text=PORTAL_DESCRIPTIONS[name], style="Small.TLabel", wraplength=wrap,
                       justify="left").grid(row=row, column=1, sticky="w", padx=(6, 0), pady=1)
         scroll.pack(side="right", fill="y")
         canvas.pack(side="left", fill="both", expand=True)
@@ -203,7 +231,7 @@ class PortalChecks(ttk.LabelFrame):
         canvas.bind("<Button-4>", lambda _e: canvas.yview_scroll(-1, "units"))
         canvas.bind("<Button-5>", lambda _e: canvas.yview_scroll(1, "units"))
         if hint:
-            ttk.Label(self, text=hint, foreground="gray40").pack(anchor="w", pady=(4, 0))
+            ttk.Label(self, text=hint, style="Small.TLabel").pack(anchor="w", pady=(4, 0))
 
     def values(self):
         return tuple(name for name in PORTAL_OPT_IN if self.checks[name].get())
@@ -219,7 +247,7 @@ class ChoiceList(ttk.LabelFrame):
             if item in selected:
                 self.box.selection_set(i)
         if hint:
-            ttk.Label(self, text=hint, foreground="gray40", wraplength=480, justify="left").pack(anchor="w", pady=(4, 0))
+            ttk.Label(self, text=hint, style="Small.TLabel", wraplength=480, justify="left").pack(anchor="w", pady=(4, 0))
 
     def values(self):
         return tuple(self.box.get(i) for i in self.box.curselection())
@@ -268,7 +296,7 @@ def options_dialog(parent, title, fields, intro="", ok="Continue", validate=None
 
     buttons = ttk.Frame(frame)
     buttons.pack(fill="x", pady=(10, 0))
-    ttk.Button(buttons, text=ok, command=accept).pack(side="right")
+    ttk.Button(buttons, text=ok, style="Accent.TButton", command=accept).pack(side="right")
     ttk.Button(buttons, text="Cancel", command=top.destroy).pack(side="right", padx=6)
     top.bind("<Escape>", lambda _e: top.destroy())
     _wait(top)
@@ -303,7 +331,7 @@ def permissions_editor(parent, name, state):
         limit_vars[key] = tk.StringVar(value=state.get(key, ""))
         ttk.Label(box, text=label).pack(anchor="w", pady=(6, 0))
         ttk.Entry(box, textvariable=limit_vars[key], width=12).pack(anchor="w")
-    ttk.Label(box, text="limits: empty for none", foreground="gray40").pack(anchor="w")
+    ttk.Label(box, text="limits: empty for none", style="Small.TLabel").pack(anchor="w")
     lists = ttk.Frame(frame)
     lists.grid(row=0, column=1, sticky="nsew")
     editors = {
@@ -332,7 +360,7 @@ def permissions_editor(parent, name, state):
 
     buttons = ttk.Frame(frame)
     buttons.grid(row=1, column=0, columnspan=2, sticky="e", pady=(10, 0))
-    ttk.Button(buttons, text="Review changes…", command=apply).pack(side="right")
+    ttk.Button(buttons, text="Review changes…", style="Accent.TButton", command=apply).pack(side="right")
     ttk.Button(buttons, text="Cancel", command=top.destroy).pack(side="right", padx=6)
     top.bind("<Escape>", lambda _e: top.destroy())
     _wait(top)

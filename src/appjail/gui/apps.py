@@ -1,16 +1,17 @@
 # SPDX-FileCopyrightText: 2026 Alberto P
 # SPDX-License-Identifier: MPL-2.0
 
-"""The installed apps as data for the Apps tab (read from the manifests, like `appjail list`). No tkinter."""
+"""The installed apps as data for the Apps page (read from the manifests, like `appjail list`). No tkinter."""
 
 import os
 
-from .. import index, manifest, portal, store, textsafe, updater
+from .. import desktop, index, manifest, portal, store, textsafe, updater
 from ..cmd_apps import list_details, list_row
 from ..cmd_desktop import file_type_state
 from ..cmd_portals import names_for
 from ..errors import RunError
 from ..permargs import PERMISSION_FLAGS
+from . import icons
 
 
 def permission_state(p, env=()):
@@ -27,19 +28,54 @@ def load_permissions(name):
     return permission_state(m.permissions, m.env)
 
 
-def detail(name):
-    """What an app is granted (directories, D-Bus names, portals) and its channel, as one line under the table."""
+def card(name):
+    """What the detail pane shows for an app, as cleaned text: {"name", "subtitle", "grants" (the flags granted),
+    "badges" [(kind, text)], "lines" (what `list --long` prints besides the flags), "error"}."""
     try:
         m = manifest.load(store.manifest_path(name))
-        seen = list_row(name, m)[5]
-        line = "; ".join([f"{name} {m.version} {m.source}", *list_details(m)] + ([f"channel: {m.channel}"] if m.channel != "stable" else [])
-                         + ([f"update seen: {seen}"] if seen else []))
-        offered, _ignored, registered, _rw, has_entry = file_types(name)
-        if has_entry:
-            line += f"; file types: {len(registered)} registered of {len(offered)} offered"
-        return textsafe.clean(line, 1000)
     except (manifest.ManifestError, OSError) as e:
-        return textsafe.clean(f"{name}: unreadable manifest ({e})", 300)
+        return {"name": name, "subtitle": "", "grants": [], "badges": [], "lines": [],
+                "error": textsafe.clean(f"unreadable manifest ({e})", 300)}
+    p = m.permissions
+    seen = list_row(name, m)[5]
+    badges = [("plain", f"tier {m.evidence_tier}")]
+    if m.channel != "stable":
+        badges.append(("plain", f"channel {m.channel}"))
+    if seen:
+        badges.append(("warn", f"update seen: {seen}"))
+    lines = [line for line in list_details(m) if not line.startswith("grants:")]
+    offered, _ignored, registered, _rw, has_entry = file_types(name)
+    badges.append(("plain", "menu entry" if has_entry else "no menu entry"))
+    if has_entry:
+        lines.append(f"file types: {len(registered)} registered of {len(offered)} offered")
+    return {"name": textsafe.clean(name, 120), "subtitle": textsafe.clean(f"{m.version}  ·  {m.source}", 300),
+            "grants": [k for k in PERMISSION_FLAGS if getattr(p, k)],
+            "badges": [(kind, textsafe.clean(text, 120)) for kind, text in badges],
+            "lines": [textsafe.clean(line, 1000) for line in lines], "error": ""}
+
+
+def icon_key(name):
+    """(path, size, mtime) of the app's installed icon, the largest one, or None: it changes when the icon does."""
+    try:
+        files = [(f.stat(), f) for f in desktop.icon_files(name)]
+    except OSError:
+        return None
+    if not files:
+        return None
+    st, path = max(files, key=lambda pair: pair[0].st_size)
+    return str(path), st.st_size, st.st_mtime_ns
+
+
+def icon_pngs(key, sides, margins=None):
+    """{side: png} of the icon `icon_key` found, re-checked, decoded and scaled in Python; None when it is not usable."""
+    try:
+        with open(key[0], "rb") as f:
+            data = f.read(desktop.MAX_PNG_BYTES + 1)
+    except OSError:
+        return None
+    if len(data) > desktop.MAX_PNG_BYTES:
+        return None
+    return icons.app_icon(data, sides, margins)
 
 
 def file_types(name):

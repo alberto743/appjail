@@ -112,6 +112,17 @@ instructions.
 To try the command line in the guest: `tests/vm/ssh.sh 'cd ~/appjail && PYTHONPATH=src python3 -m appjail ...'`. It
 writes to the guest's own `~/.local/share/appjail` and `~/.config/appjail`.
 
+To look at the window after changing it, take screenshots in the guest (light and dark, every page and two dialogs,
+with three fake apps; it starts its own Xvfb and downloads nothing), then copy them out:
+
+```sh
+tests/vm/sync.sh && tests/vm/ssh.sh 'cd ~/appjail && python3 tests/gui_screenshots.py /tmp/shots 1024x768'
+tests/vm/ssh.sh 'cd /tmp/shots && tar cf - .' | tar xf - -C SOMEWHERE
+```
+
+1024x768 is the smallest screen the window is checked on (`test_gui_smoke.py` uses it); a larger size shows the
+layout with room to spare.
+
 ## What the tests cover
 
 - **Real software:** `add` and `run` of real AppImages (SquashFS and DwarFS); tier 3 and tier 4 downloads and the
