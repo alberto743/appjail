@@ -27,20 +27,20 @@ and Fedora 45:
 
 A sandbox engine therefore has to read the registry of the socket and judge each global itself. Two requests:
 
-1.  State in the protocol which kinds of globals a restricted socket must not offer: screen capture, virtual input,
+1. State in the protocol which kinds of globals a restricted socket must not offer: screen capture, virtual input,
    input methods, data-control, foreign-toplevel and window management, layer shell, session lock, output management,
    and, with them, how a compositor can tell (a flag in the XML, or a registry file).
-2.  Say whether a client of a restricted socket may be sent a file descriptor for a DRM device (see report 03:
+2. Say whether a client of a restricted socket may be sent a file descriptor for a DRM device (see report 03:
    `wp_drm_lease_device_v1`).
 
 I can write the merge request if the direction is welcome.
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 12` (debian, ubuntu, fedora): runs the rule on every compositor and prints which hide
+* `upstream-reports/reproduce.sh 12` (debian, ubuntu, fedora): runs the rule on every compositor and prints which hide
   everything and which leave some.
-*  The per-compositor tables: `docs/compositor-assessment/ASSESSMENT.md`.
+* The per-compositor tables: `docs/compositor-assessment/ASSESSMENT.md`.
 
 ## Reviewer notes (not posted)
 
-*  This depends on reports 04 and 08 being understood first; it can be filed with or after them.
+* This depends on reports 04 and 08 being understood first; it can be filed with or after them.

@@ -18,12 +18,12 @@
 A Wayland client that has only a mapped window can take the keyboard focus from another client, with no activation token
 and no user input, through the private `gtk_shell1` protocol:
 
-1.  `gtk_surface1.present(0)`: `gtk_surface_present()` (`src/wayland/meta-wayland-gtk-shell.c`) calls
+1. `gtk_surface1.present(0)`: `gtk_surface_present()` (`src/wayland/meta-wayland-gtk-shell.c`) calls
    `meta_window_activate_full (window, timestamp, META_CLIENT_TYPE_APPLICATION, NULL)`. The focus-stealing check in
    `meta_window_activate_full()` (`src/core/window.c`) is
    `if (timestamp != 0 && XSERVER_TIME_IS_BEFORE (timestamp, display->last_user_time))`, so the timestamp 0 skips it and
    the window is focused.
-2.  `gtk_shell1.notify_launch(id)` followed by `gtk_surface1.request_focus(id)`: `notify_launch` creates a startup
+2. `gtk_shell1.notify_launch(id)` followed by `gtk_surface1.request_focus(id)`: `notify_launch` creates a startup
    sequence for any id the client picks, stamped with the current time; `request_focus` looks the id up, and activates
    the window with that timestamp.
 
@@ -56,17 +56,17 @@ python3 focus_client.py /tmp/b.log < <(sleep 60) &      # victim, mapped last
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 01` (guests: debian, ubuntu, fedora): fresh compositor processes, the control and
+* `upstream-reports/reproduce.sh 01` (guests: debian, ubuntu, fedora): fresh compositor processes, the control and
   every step.
-*  Saved results: `docs/compositor-assessment/focus-debian-13.json`, `focus-ubuntu-26.04.json`, `focus-fedora-45.json`.
-*  Source read: Mutter 48.7 `src/wayland/meta-wayland-gtk-shell.c` (`gtk_surface_present`, `gtk_surface_request_focus`,
+* Saved results: `docs/compositor-assessment/focus-debian-13.json`, `focus-ubuntu-26.04.json`, `focus-fedora-45.json`.
+* Source read: Mutter 48.7 `src/wayland/meta-wayland-gtk-shell.c` (`gtk_surface_present`, `gtk_surface_request_focus`,
   `gtk_shell_notify_launch`), `src/core/window.c` (`meta_window_activate_full`); Muffin 6.4.1 has the same file.
 
 ## Reviewer notes (not posted)
 
-*  Debian 13 GNOME Shell: `present 0` left neither window focused (the overview took it); the notify route stole. Fedora
+* Debian 13 GNOME Shell: `present 0` left neither window focused (the overview took it); the notify route stole. Fedora
   GNOME Shell: the first window never got focus (untestable). Mutter alone is clean on all three.
-*  The real-session effect depends on what the user types while it happens; the headless keyboard comes from Mutter's
+* The real-session effect depends on what the user types while it happens; the headless keyboard comes from Mutter's
   RemoteDesktop API.
-*  The existing public commits already describe this finding (`ASSESSMENT.md` item 12, the Wayland allowlist decision).
+* The existing public commits already describe this finding (`ASSESSMENT.md` item 12, the Wayland allowlist decision).
   File soon.

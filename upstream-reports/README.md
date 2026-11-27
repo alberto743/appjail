@@ -4,10 +4,10 @@ Drafts of reports to the compositors and desktop environments whose Wayland sock
 appjail (`docs/compositor-assessment/`). **Nothing here has been filed.** Each report waits for your review; then
 `SEED.md` says how a session prepares and files it.
 
-> **Do not push this branch to the public `origin` before the reports are filed.** The security-relevant drafts (01,
-> 04, 08) describe unfixed behaviour in enough detail to reproduce it. File them (privately where the project asks for
-> it) first; the branch can go public afterwards. The findings that are already in `main` (the assessment pages, the
-> accepted limits) were pushed on 2026-11-15; see "Already public" below.
+> **These drafts are public.** The branch has been on the public `origin` since mid-November 2026, so the
+> security-relevant drafts (01, 04, 08), which describe unfixed behaviour in enough detail to reproduce it, can be read
+> by anyone. File them first and promptly, through the private channel where a project names one, and say in the
+> report that the draft is public. See "Already public" below.
 
 ## What is here
 
@@ -57,10 +57,10 @@ the case. `tests/vm/ssh.sh` and `tests/vm/sync.sh` are the only host-side steps.
 Last full run, 2026-11-15, all three guests (versions in the output of each script): every report printed `REPRODUCED`,
 with these exceptions and notes:
 
-*  07: Muffin 6.4.1 ended on both distributions; the Cinnamon 6.4 shell ended on Ubuntu but survived once on Debian, so
+* 07: Muffin 6.4.1 ended on both distributions; the Cinnamon 6.4 shell ended on Ubuntu but survived once on Debian, so
   it is reported as intermittent and the script only requires Muffin to end;
-*  09: the crash is intermittent; on Ubuntu it ended the compositor on the first try;
-*  05, 08: the control (Cinnamon 6.4 not listing the layer shell, Hyprland 0.55 hiding the virtual input) is part of the
+* 09: the crash is intermittent; on Ubuntu it ended the compositor on the first try;
+* 05, 08: the control (Cinnamon 6.4 not listing the layer shell, Hyprland 0.55 hiding the virtual input) is part of the
   output.
 
 ## Review
@@ -70,18 +70,20 @@ Edit the table at the top of each report: `Review: approved`, `rejected` or `cha
 
 ## Not reported, and why
 
-*  **A name shared with a compositor's own D-Bus connection** (`org.kde.touchpad` on KWin 6.8's connection). The names
+* **A name shared with a compositor's own D-Bus connection** (`org.kde.touchpad` on KWin 6.8's connection). The names
   of one process share its objects; a sandbox that filters names has to know it. appjail confines it. It is not a KDE
   defect.
-*  **Mutter's `RemoteDesktop` and `ScreenCast` answering any client of the bus**: the portal model depends on it. It is
+* **Mutter's `RemoteDesktop` and `ScreenCast` answering any client of the bus**: the portal model depends on it. It is
   in report 11 as a question, not as a bug.
-*  **KWin 6.8's clipboard read through `wl-paste`**: it used the focus-based fallback, the ordinary path.
+* **KWin 6.8's clipboard read through `wl-paste`**: it used the focus-based fallback, the ordinary path.
 
 ## Already public
 
 Pushed to `main` on 2026-11-15: the Wayland assessment pages and results (`docs/compositor-assessment/`), the decision
 page on the accepted limits (which names the `gtk_shell1` focus-taking and the DRM descriptor), and the tools
-`focus_steal.py` and `focus_client.py`. Report 01 should be filed promptly for that reason.
+`focus_steal.py` and `focus_client.py`. This branch, with every draft, its reproduction and the tools behind them,
+has been on the public `origin` since mid-November 2026. Reports 01, 04 and 08 should be filed promptly for that
+reason.
 
 ## Rules for the drafts
 

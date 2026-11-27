@@ -27,13 +27,13 @@ it (the earlier survey named `wl-copy` and `wl-paste`).
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 07` (debian, ubuntu: 6.4 ends; fedora: 6.8 survives).
-*  Saved results: `docs/compositor-assessment/results-debian-13.json`, `results-ubuntu-26.04.json` (`survived_clients`).
+* `upstream-reports/reproduce.sh 07` (debian, ubuntu: 6.4 ends; fedora: 6.8 survives).
+* Saved results: `docs/compositor-assessment/results-debian-13.json`, `results-ubuntu-26.04.json` (`survived_clients`).
 
 ## Reviewer notes (not posted)
 
-*  No core file or backtrace was kept. Before filing, reproduce once with `coredumpctl` or `gdb` in the guest and attach
+* No core file or backtrace was kept. Before filing, reproduce once with `coredumpctl` or `gdb` in the guest and attach
   the backtrace.
-*  Which of the four clients ends it was not isolated in the saved run.
-*  Intermittent for the Cinnamon shell: the saved surveys and an Ubuntu rerun (6.4.13) ended it; a rerun on Debian
+* Which of the four clients ends it was not isolated in the saved run.
+* Intermittent for the Cinnamon shell: the saved surveys and an Ubuntu rerun (6.4.13) ended it; a rerun on Debian
   (6.4.10) survived. Muffin 6.4.1 alone ended on both distributions every time recorded.

@@ -44,14 +44,14 @@ on that name.
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 02` (debian, ubuntu, fedora): prints the calls the Shell sent to the name, and the
+* `upstream-reports/reproduce.sh 02` (debian, ubuntu, fedora): prints the calls the Shell sent to the name, and the
   control.
-*  Source read: GNOME Shell 48.7 `src/shell-app.c` (lines of `shell_app_update_window_actions`,
+* Source read: GNOME Shell 48.7 `src/shell-app.c` (lines of `shell_app_update_window_actions`,
   `shell_app_ensure_busy_watch`, `_shell_app_add_window`), Mutter 48.7 `src/wayland/meta-wayland-gtk-shell.c`
   (`gtk_surface_set_dbus_properties`).
 
 ## Reviewer notes (not posted)
 
-*  Only the calls made without user action were observed (DescribeAll, GetAll). Calls on user action (activating a
+* Only the calls made without user action were observed (DescribeAll, GetAll). Calls on user action (activating a
   window action) were not tried.
-*  The same pattern exists for KDE's appmenu protocol (report 04, source only).
+* The same pattern exists for KDE's appmenu protocol (report 04, source only).

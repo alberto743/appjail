@@ -23,13 +23,13 @@ gone, so the next client fails to connect. It happens in a minority of runs: the
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 09` (ubuntu): runs `clipboard.py --only hyprland` up to three times and reports
+* `upstream-reports/reproduce.sh 09` (ubuntu): runs `clipboard.py --only hyprland` up to three times and reports
   whether the compositor stopped answering.
-*  Reproduction rate: the crash is intermittent; the saved Ubuntu results record one run where the second direction was
+* Reproduction rate: the crash is intermittent; the saved Ubuntu results record one run where the second direction was
   untestable because of it.
 
 ## Reviewer notes (not posted)
 
-*  The backtrace was read during the original survey; it was not saved. Before filing, capture one (`coredumpctl` or the
+* The backtrace was read during the original survey; it was not saved. Before filing, capture one (`coredumpctl` or the
   compositor log) and attach it.
-*  If three tries do not crash, the script says so: run it again, or increase the tries.
+* If three tries do not crash, the script says so: run it again, or increase the tries.

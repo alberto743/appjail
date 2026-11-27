@@ -32,13 +32,13 @@ Measured with a stdlib client that binds the global and prints the descriptors t
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 03` (debian, ubuntu, fedora). Output: the node each compositor sent.
-*  Protocol: `wayland-protocols` `staging/drm-lease/drm-lease-v1.xml`, event `drm_fd`.
+* `upstream-reports/reproduce.sh 03` (debian, ubuntu, fedora). Output: the node each compositor sent.
+* Protocol: `wayland-protocols` `staging/drm-lease/drm-lease-v1.xml`, event `drm_fd`.
 
 ## Reviewer notes (not posted)
 
-*  The test sessions have no leasable connector; on a machine with a VR headset the global has a use. The proposal keeps
+* The test sessions have no leasable connector; on a machine with a VR headset the global has a use. The proposal keeps
   that.
-*  Not tried: what ioctls a client can do on the descriptor (render nodes are meant for unprivileged use).
-*  Hyprland 0.55.2 sends `card0` (non-master) on its own socket but hides the global on the restricted one: not a
+* Not tried: what ioctls a client can do on the descriptor (render nodes are meant for unprivileged use).
+* Hyprland 0.55.2 sends `card0` (non-master) on its own socket but hides the global on the restricted one: not a
   defect.

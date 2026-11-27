@@ -30,12 +30,12 @@ starts `swaybg`, takes a second capture, and prints the share of the colour in e
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 05` (fedora for 6.8; debian and ubuntu print the 6.4 control: the global is not
+* `upstream-reports/reproduce.sh 05` (fedora for 6.8; debian and ubuntu print the 6.4 control: the global is not
   listed).
-*  Saved results: `docs/compositor-assessment/results-fedora-45.json` (`cinnamon` registry), `rule-a-fedora-45.json`.
+* Saved results: `docs/compositor-assessment/results-fedora-45.json` (`cinnamon` registry), `rule-a-fedora-45.json`.
 
 ## Reviewer notes (not posted)
 
-*  The observation uses Cinnamon's own screenshot service, which any client of the session bus can call (report 11); it
+* The observation uses Cinnamon's own screenshot service, which any client of the session bus can call (report 11); it
   is only the eyes of the test.
-*  Exclusive keyboard interactivity was not tried. Do not claim it.
+* Exclusive keyboard interactivity was not tried. Do not claim it.

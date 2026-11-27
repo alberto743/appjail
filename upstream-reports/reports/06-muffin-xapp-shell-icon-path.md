@@ -28,12 +28,12 @@ say in the protocol text which it is.
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 06` (fedora): downloads the Muffin 6.8.1 source RPM in the guest, extracts
+* `upstream-reports/reproduce.sh 06` (fedora): downloads the Muffin 6.8.1 source RPM in the guest, extracts
   `xapp-shell.xml` as text, prints the request text, and checks the sentence about the absolute path. Source only; the
   shell's side was not read to the end.
 
 ## Reviewer notes (not posted)
 
-*  What the shell does with the path (which loader, which size limits) was not read or tried: do not claim a
+* What the shell does with the path (which loader, which size limits) was not read or tried: do not claim a
   vulnerability.
-*  In appjail the interface is refused to apps without `full_wayland` for this reason (privileged, "windows").
+* In appjail the interface is refused to apps without `full_wayland` for this reason (privileged, "windows").

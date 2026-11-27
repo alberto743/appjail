@@ -25,12 +25,12 @@ it, and the security-context documentation could say which release hides what.
 
 ## Evidence and reproduction in the repository
 
-*  `upstream-reports/reproduce.sh 08 -g ubuntu` (0.53.3: the three globals, typing works) and `-g debian` (0.55.2:
+* `upstream-reports/reproduce.sh 08 -g ubuntu` (0.53.3: the three globals, typing works) and `-g debian` (0.55.2:
   nothing left, typing fails).
-*  Saved results: `docs/compositor-assessment/rule-a-ubuntu-26.04.json` and `rule-a-debian-13.json` (`hyprland`).
+* Saved results: `docs/compositor-assessment/rule-a-ubuntu-26.04.json` and `rule-a-debian-13.json` (`hyprland`).
 
 ## Reviewer notes (not posted)
 
-*  The first survey of the Ubuntu run could not connect to the restricted socket (a timing problem of the probe, not of
+* The first survey of the Ubuntu run could not connect to the restricted socket (a timing problem of the probe, not of
   Hyprland); the later rule runs always connected.
-*  Fedora does not package Hyprland.
+* Fedora does not package Hyprland.
