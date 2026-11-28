@@ -32,7 +32,7 @@ build) rm -rf "$root/site"; mkdir -p "$root/site"
 serve) podman run --rm -it --userns=keep-id --security-opt=no-new-privileges --cap-drop=all --tmpfs /tmp/home:rw,mode=1777 \
 		-p "127.0.0.1:$port:8000" -v "$root:/src:rw" "$img" zensical serve -a 0.0.0.0:8000
 	;;
-check) run --network=none "$img" sh -c "$prep && rm -rf site .cache && "'ruff check --no-cache src tests && reuse lint -q &&
+check) run --network=none "$img" sh -c "$prep && rm -rf site .cache && "'ruff check --no-cache src tests .claude/hooks && reuse lint -q &&
 	/usr/bin/python3 -m pytest -q -p no:cacheprovider tests/test_lint.py tests/test_reuse.py tests/test_docs.py \
 	tests/test_check_platforms.py tests/test_bump_tools.py tests/test_commit_hygiene.py tests/test_release_notes.py' ;;
 *) echo "usage: $0 image|build|serve|check" >&2; exit 2 ;;

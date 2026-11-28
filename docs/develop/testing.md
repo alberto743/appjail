@@ -71,6 +71,27 @@ tests/container/run.sh serve    # live reload on the loopback (the URL is printe
 tests/container/run.sh check    # ruff, reuse lint, and the tests that need no jail (lint, reuse, docs, CI scripts)
 ```
 
+## Guard rails for a coding agent
+
+`.claude/settings.json` holds the host rule above for Claude Code, in every permission mode:
+
+- `permissions.blockReadsOutsideWorkingDirectories` refuses file reads outside the repository. Claude asks for another
+  directory with `/add-dir`; the agent's own directories (its memory, its plans, its temporary files) belong in the
+  untracked `.claude/settings.local.json` under `permissions.additionalDirectories`, since their paths name the user.
+- A `PreToolUse` hook on `Bash`, `.claude/hooks/host_exec_guard.py`, lets only an allowlist run on the host:
+  `git` without the options and subcommands that run other programs (`-c`, `rebase --exec`, `config` writes and
+  similar), the tracked and unmodified `tests/vm/*.sh` and `tests/container/run.sh` (with `GUEST=` before them),
+  read-only `gh` commands and read-only text tools. Interpreters, shells, absolute paths, wrappers, environment
+  assignments and writes through redirection (except to `/dev/null` and the agent's temporary directory) are denied
+  with the reason. Substitutions such as `$(...)` are checked as commands of their own; the body of a heredoc is data.
+- `permissions.disableBypassPermissionsMode` removes the mode where hooks are not documented to hold, and deny rules
+  for `Edit(./.claude/**)`, `Edit(./.git/**)` (where `core.fsmonitor` or an alias would run a program) and
+  `Edit(./.githooks/**)` keep the agent from changing its own rails: the developer edits those files.
+
+The allowlist is a list of names, not a sandbox: a repository script runs whatever it holds, so a change to one is
+reviewed in its commit before it runs, and `git` commands that write the work tree (`checkout`, `apply`) can still
+change a file the Edit rules protect. `tests/test_claude_hook.py` checks the hook against a table of commands.
+
 ## Running the tests
 
 ```sh
