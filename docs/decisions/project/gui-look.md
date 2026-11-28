@@ -31,7 +31,9 @@ lines and runs the same CLI.
   window decodes that file in Python, scales it and encodes a new PNG; Tk only ever decodes images appjail wrote. The
   decoding runs on a thread, since a large icon takes a moment in Python; an app without an icon gets a stand-in, a
   rounded square in a colour chosen by its name.
-- **Small screens, down to 800x600.** The window asks for the size of its tallest page. Where the screen is shorter,
+- **Small screens, down to 800x600.** The window asks for the size of its tallest page, measured with each page shown at
+  the starting width: rows that wrap ask for more height when narrow, and measured in the first, narrow layout they
+  made the window start as tall as the screen allowed. Where the screen is shorter,
   the Add form and the app's detail pane scroll (the Add… button stays in view); where it is narrower, rows of buttons
   and fields wrap instead of being cut off, and below 900 pixels the action groups lose their names and the list
   narrows. The Catalogs card on the Search page is closed until opened, and the permissions editor shows one list at a

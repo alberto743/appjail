@@ -429,15 +429,34 @@ class App:
         return self.filter.get().strip()
 
     def _fit_window(self):
-        """Start at the size the layout asks for (the tallest page), so no button is hidden by default."""
-        self.root.update_idletasks()
-        self.add_scroll.fit()
-        self.root.update_idletasks()
-        # every page computes the size it asks for, shown or not; the window asks for the shown one's, plus the frame
-        shown = self.pages[self.page.get()]
-        req_w = self.root.winfo_reqwidth() - shown.winfo_reqwidth() + max(p.winfo_reqwidth() for p in self.pages.values())
-        req_h = self.root.winfo_reqheight() - shown.winfo_reqheight() + max(p.winfo_reqheight() for p in self.pages.values())
+        """Start at the size the layout asks for (the tallest page), so no button is hidden by default.
+        Rows that wrap (Flow, WrapLabel, the detail text) ask for more height the narrower they are, so the heights are
+        measured with each page shown at the starting width, not at the narrow width of the first layout."""
+        key = self.page.get()
+        main = self.paned.master
+        side = self.root.grid_slaves(row=0, column=0)[0]
+
+        def asked():  # what the window asks for with each page shown: the page's size plus the frame around it
+            sizes = []
+            for name in self.pages:
+                self.show(name)
+                self.root.update_idletasks()
+                self.add_scroll.fit()
+                self.card_scroll.fit()
+                self.root.update_idletasks()
+                # the paned window keeps the request its pane made first, so the pages' holder is measured instead
+                # (it is the only pane at the start: the output pane is added on request)
+                width = side.winfo_reqwidth() + main.winfo_reqwidth() - self.paned.winfo_reqwidth() + self.content.winfo_reqwidth()
+                height = max(side.winfo_reqheight(),
+                             main.winfo_reqheight() - self.paned.winfo_reqheight() + self.content.winfo_reqheight())
+                sizes.append((width, height))
+            self.show(key)
+            return max(w for w, _h in sizes), max(h for _w, h in sizes)
+
+        req_w, _ = asked()
         width = min(max(req_w, int(1100 * self.scale)), self.root.winfo_screenwidth() - 40)
+        self.root.geometry(f"{width}x{self.root.winfo_screenheight() - 80}")  # the starting width, room for every page
+        _, req_h = asked()
         height = min(req_h + 16, self.root.winfo_screenheight() - 80)
         self.root.minsize(min(req_w, width), min(req_h, height))
         self.root.geometry(f"{width}x{height}")

@@ -426,6 +426,31 @@ def test_every_control_is_reachable_at_the_starting_size(screen, h, dark):
         root.destroy()
 
 
+@pytest.mark.parametrize("installed", [False, True])
+def test_on_a_large_screen_the_window_starts_as_tall_as_its_tallest_page(servers, h, monkeypatch, installed):
+    """The heights are those of the pages at the starting width: rows that wrap at the narrow width of the first layout
+    must not make the window start as tall as the screen allows, and an installed app must not change it."""
+    monkeypatch.setenv("DISPLAY", servers("1920x1080"))
+    if installed:
+        h.add()
+    root = tk.Tk()
+    try:
+        window = app.App(root, dark=False)
+        root.update()
+        height = root.winfo_height()
+        assert height < root.winfo_screenheight() - 80
+        tallest = 0
+        for key in window.pages:
+            window.show(key)
+            root.update()
+            tallest = max(tallest, window.pages[key].winfo_reqheight())
+            assert window.add_scroll.canvas.yview() == (0.0, 1.0) and window.card_scroll.canvas.yview() == (0.0, 1.0), key
+        chrome = height - window.content.winfo_height()  # the status line and its rule
+        assert tallest <= window.content.winfo_height() <= tallest + 16 + 2, (tallest, height, chrome)
+    finally:
+        root.destroy()
+
+
 def test_on_a_tall_screen_the_add_form_does_not_scroll(window):
     """The form asks for its whole height: where the screen has room, nothing hides below the fold."""
     window.show("add")
